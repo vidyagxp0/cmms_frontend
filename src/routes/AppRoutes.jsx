@@ -5,29 +5,56 @@ import UserRoutes from "./UserRoutes";
 
 import Login from "../pages/auth/Login/Login";
 import NotFound from "../pages/NotFound/NotFound";
+import ProtectedRoute from "./ProtectedRoute";
 
 function AppRoutes() {
-  return (
-    <Routes>
-      {/* Default Route */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+    return (
+        <Routes>
+            {/* Default Route */}
+            <Route
+                path="/"
+                element={<Navigate to="/login" replace />}
+            />
 
-      {/* Public Routes */}
-      <Route path="/login" element={<Login />} />
+            {/* Public Routes */}
+            <Route
+                path="/login"
+                element={<Login />}
+            />
 
-      {/* Admin Routes */}
-      <Route path="/admin/*" element={<AdminRoutes />} />
+            {/* Admin Routes */}
+            <Route
+                path="/admin/*"
+                element={
+                    <ProtectedRoute allowedRoles={["admin"]}>
+                        <AdminRoutes />
+                    </ProtectedRoute>
+                }
+            />
 
-      {/* User Routes */}
-      <Route path="/user/*" element={<UserRoutes />} />
+            {/* User Routes */}
+            <Route
+                path="/user/*"
+                element={
+                    <ProtectedRoute allowedRoles={["user"]}>
+                        <UserRoutes />
+                    </ProtectedRoute>
+                }
+            />
 
-      {/* 404 */}
-      <Route path="/404" element={<NotFound />} />
+            {/* 404 */}
+            <Route
+                path="/404"
+                element={<NotFound />}
+            />
 
-      {/* Unknown Route */}
-      <Route path="*" element={<Navigate to="/404" replace />} />
-    </Routes>
-  );
+            {/* Unknown Route */}
+            <Route
+                path="*"
+                element={<Navigate to="/404" replace />}
+            />
+        </Routes>
+    );
 }
 
 export default AppRoutes;

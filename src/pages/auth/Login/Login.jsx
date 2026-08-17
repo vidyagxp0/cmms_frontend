@@ -9,6 +9,7 @@ import LoginForm from "./components/LoginForm";
 import { login } from "../../../services/authApi";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuthStore } from "../../../store/authStore";
 
 /* =========================================================
    GOOGLE FONTS
@@ -40,44 +41,56 @@ const Login = () => {
   const [remember, setRemember] = useState(true);
   const [focusField, setFocusField] = useState(null);
   const [loading, setLoading] = useState(false);
+  const setUser = useAuthStore((state) => state.setUser);
 
   useGoogleFonts();
   const navigate = useNavigate();
 
 const handleLogin = async (event) => {
-  event.preventDefault();
+    event.preventDefault();
 
-  const formData = new FormData(event.currentTarget);
+    const formData = new FormData(event.currentTarget);
 
-  const payload = {
-    email: formData.get("email"),
-    password: formData.get("password"),
-  };
+    const payload = {
+        email: formData.get("email"),
+        password: formData.get("password"),
+    };
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    const response = await login(payload);
-    const { user, token } = response.data.data;
+    try {
+        const response = await login(payload);
+        const { user: apiUser, token } = response.data.data;
 
-    localStorage.setItem("access_token", token);
+        const roles = apiUser?.roles || [];
+        const role = roles.includes("admin") ? "admin" : "user";
 
-    toast.success("Login successful");
+        const user = {
+            id: apiUser.id,
+            name: apiUser.name,
+            email: apiUser.email,
+            roles,
+            role,
+        };
 
-    const roles = user?.roles || [];
+        localStorage.setItem("access_token", token);
+        setUser(user);
 
-    if (roles.includes("admin")) {
-      navigate("/admin/dashboard");
-    } else {
-      navigate("/user/dashboard");
+        toast.success("Login successful");
+
+        navigate(
+            role === "admin"
+                ? "/admin/dashboard"
+                : "/user/dashboard"
+        );
+    } catch (error) {
+        toast.error(
+            error.response?.data?.message ||
+            "Login failed. Please try again."
+        );
+    } finally {
+        setLoading(false);
     }
-  } catch (error) {
-    toast.error(
-      error.response?.data?.message || "Login failed. Please try again."
-    );
-  } finally {
-    setLoading(false);
-  }
 };
 
   return (

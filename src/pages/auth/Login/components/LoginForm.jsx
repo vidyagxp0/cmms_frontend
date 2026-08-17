@@ -10,6 +10,7 @@ const LoginForm = ({
   focusField,
   setFocusField,
   handleLogin,
+  loading
 }) => {
   return (
     <form onSubmit={handleLogin} className="space-y-5">
@@ -35,7 +36,7 @@ const LoginForm = ({
           htmlFor="email"
           className="mb-1.5 block text-[13px] font-medium text-slate-700"
         >
-          Username or email
+          Email
         </label>
 
         <div
@@ -52,7 +53,7 @@ const LoginForm = ({
             name="email"
             type="email"
             autoComplete="username"
-            placeholder="Enter your username or email"
+            placeholder="Enter your email"
             onFocus={() => setFocusField("email")}
             onBlur={() => setFocusField(null)}
             className="w-full bg-transparent text-[14px] text-slate-800 outline-none placeholder:text-slate-400"
@@ -122,23 +123,37 @@ const LoginForm = ({
       </div>
 
       {/* Submit */}
-      <motion.button
+        <motion.button
         type="submit"
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.98 }}
-        className="group flex w-full items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-semibold text-white shadow-[0_8px_20px_rgba(15,58,99,0.25)] transition-shadow duration-200 hover:shadow-[0_10px_26px_rgba(18,165,148,0.35)]"
+        disabled={loading}
+        whileHover={!loading ? { scale: 1.01 } : {}}
+        whileTap={!loading ? { scale: 0.98 } : {}}
+        className={`group flex w-full items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-semibold text-white shadow-[0_8px_20px_rgba(15,58,99,0.25)] transition-all duration-200 ${
+            loading
+            ? "cursor-not-allowed opacity-80"
+            : "hover:shadow-[0_10px_26px_rgba(18,165,148,0.35)]"
+        }`}
         style={{
-          background:
+            background:
             "linear-gradient(135deg, #0F3A63 0%, #12A594 130%)",
         }}
-      >
-        Sign in
+        >
+        {loading ? (
+            <>
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            Logging in...
+            </>
+        ) : (
+            <>
+            Log In
 
-        <ArrowRight
-          size={16}
-          className="transition-transform duration-200 group-hover:translate-x-0.5"
-        />
-      </motion.button>
+            <ArrowRight
+                size={16}
+                className="transition-transform duration-200 group-hover:translate-x-0.5"
+            />
+            </>
+        )}
+        </motion.button>
     </form>
   );
 };

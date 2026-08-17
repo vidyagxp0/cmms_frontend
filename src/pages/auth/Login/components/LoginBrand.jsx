@@ -1,15 +1,8 @@
 import React from "react";
-import { motion } from "framer-motion";
 
 const LoginBrand = () => {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{
-        duration: 0.6,
-        delay: 0.1,
-      }}
+    <div
       className="mb-4 flex flex-col items-center text-center"
     >
       {/* VidyaGxp Actual Logo */}
@@ -34,11 +27,7 @@ const LoginBrand = () => {
         Computerized Maintenance Management System
       </p>
 
-      {/* Description */}
-      <p className="mt-2 max-w-[330px] text-[12px] leading-5 text-slate-400">
-        Smart maintenance. Reliable equipment. Compliant operations.
-      </p>
-    </motion.div>
+    </div>
   );
 };
 

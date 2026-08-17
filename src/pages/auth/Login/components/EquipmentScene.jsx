@@ -1,225 +1,465 @@
 import React from "react";
+import { motion } from "framer-motion";
+import {
+  Activity,
+  Wrench,
+  Gauge,
+  ShieldCheck,
+  Cog,
+} from "lucide-react";
+
+const FloatingBubble = ({
+  size = "h-2 w-2",
+  position = "",
+  duration = 6,
+  delay = 0,
+}) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{
+        opacity: [0.15, 0.5, 0.15],
+        y: [0, -18, 0],
+        x: [0, 6, 0],
+        scale: [1, 1.15, 1],
+      }}
+      transition={{
+        duration,
+        delay,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+      className={`absolute ${position} ${size} rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,0.45)]`}
+    />
+  );
+};
+
+const FloatingInfo = ({
+  icon: Icon,
+  text,
+  position,
+  delay = 0,
+}) => {
+  return (
+    <motion.div
+      initial={{
+        opacity: 0,
+        y: 8,
+      }}
+      animate={{
+        opacity: [0.35, 0.65, 0.35],
+        y: [0, -6, 0],
+      }}
+      transition={{
+        duration: 5,
+        delay,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+      className={`absolute ${position} z-20 flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.035] px-3 py-2 backdrop-blur-md`}
+    >
+      <Icon className="h-3.5 w-3.5 text-cyan-300/70" />
+
+      <span className="text-[10px] font-medium text-white/35">
+        {text}
+      </span>
+    </motion.div>
+  );
+};
 
 const EquipmentScene = () => {
   return (
-  <svg
-  viewBox="0 0 700 800"
-  className="absolute inset-0 h-full w-full"
-  preserveAspectRatio="xMidYMid slice"
-  >
-  <defs>
+    <div className="relative hidden h-screen w-1/2 overflow-hidden lg:block">
+      {/* Background */}
+      <div className="absolute inset-0 bg-[#061b2e]" />
 
-  {/* Tank gradients */}
-  <linearGradient
-  id="tankBody"
-  x1="0"
-  y1="0"
-  x2="1"
-  y2="0"
-  >
-  <stop offset="0%" stopColor="#2C4A6E"/>
+      <div className="absolute inset-0 bg-gradient-to-br from-[#082a47] via-[#071f36] to-[#041321]" />
 
-  <stop offset="45%" stopColor="#4A6C93"/>
+      <motion.div
+        animate={{
+          x: [0, 40, 0],
+          y: [0, 30, 0],
+          scale: [1, 1.15, 1],
+          opacity: [0.16, 0.26, 0.16],
+        }}
+        transition={{
+          duration: 10,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="absolute -left-[180px] -top-[180px] h-[520px] w-[520px] rounded-full bg-cyan-400/20 blur-[100px]"
+      />
 
-  <stop offset="55%" stopColor="#4A6C93"/>
+      <motion.div
+        animate={{
+          x: [0, -40, 0],
+          y: [0, -30, 0],
+          scale: [1, 1.12, 1],
+          opacity: [0.1, 0.2, 0.1],
+        }}
+        transition={{
+          duration: 12,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="absolute -bottom-[180px] -right-[150px] h-[500px] w-[500px] rounded-full bg-blue-500/20 blur-[110px]"
+      />
 
-  <stop offset="100%" stopColor="#213A57"/>
-  </linearGradient>
+      <div
+        className="absolute inset-0 opacity-[0.045]"
+        style={{
+          backgroundImage: `
+                linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)
+              `,
+          backgroundSize: "55px 55px",
+        }}
+      />
 
-  <linearGradient
-  id="tankBody2"
-  x1="0"
-  y1="0"
-  x2="1"
-  y2="0"
-  >
-  <stop offset="0%" stopColor="#22405f"/>
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{
+          duration: 45,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+        className="absolute left-1/2 top-[53%] h-[570px] w-[570px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/[0.06]"
+      />
 
-  <stop offset="50%" stopColor="#3d5c80"/>
+      <motion.div
+        animate={{ rotate: -360 }}
+        transition={{
+          duration: 35,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+        className="absolute left-1/2 top-[53%] h-[430px] w-[430px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-blue-300/[0.08]"
+      />
 
-  <stop offset="100%" stopColor="#1a2f47"/>
-  </linearGradient>
+      <motion.div
+        animate={{
+          rotate: 360,
+          scale: [1, 1.03, 1],
+        }}
+        transition={{
+          rotate: {
+            duration: 25,
+            repeat: Infinity,
+            ease: "linear",
+          },
+          scale: {
+            duration: 5,
+            repeat: Infinity,
+            ease: "easeInOut",
+          },
+        }}
+        className="absolute left-1/2 top-[53%] h-[310px] w-[310px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/[0.1]"
+      />
 
-  {/* Glow */}
-  <radialGradient
-  id="glow"
-  cx="50%"
-  cy="50%"
-  r="50%"
-  >
-  <stop offset="0%" stopColor="#2DD4C8" stopOpacity="0.55"/>
+      <FloatingBubble
+        size="h-3 w-3"
+        position="left-[18%] top-[22%]"
+        duration={5}
+        delay={0}
+      />
 
-  <stop offset="100%" stopColor="#2DD4C8" stopOpacity="0"/>
-  </radialGradient>
+      <FloatingBubble
+        size="h-2 w-2"
+        position="left-[28%] top-[72%]"
+        duration={6}
+        delay={1}
+      />
 
-  {/* Connection line */}
-  <linearGradient
-  id="lineGrad"
-  x1="0"
-  y1="0"
-  x2="1"
-  y2="0"
-  >
-  <stop offset="0%" stopColor="#2DD4C8" stopOpacity="0"/>
+      <FloatingBubble
+        size="h-4 w-4"
+        position="right-[20%] top-[24%]"
+        duration={7}
+        delay={0.5}
+      />
 
-  <stop offset="50%" stopColor="#2DD4C8" stopOpacity="0.9"/>
+      <FloatingBubble
+        size="h-2.5 w-2.5"
+        position="right-[13%] top-[65%]"
+        duration={5.5}
+        delay={1.5}
+      />
 
-  <stop offset="100%" stopColor="#2DD4C8" stopOpacity="0"/>
-  </linearGradient>
+      <FloatingBubble
+        size="h-5 w-5"
+        position="left-[13%] bottom-[18%]"
+        duration={8}
+        delay={0.8}
+      />
 
-  </defs>
+      <FloatingBubble
+        size="h-2 w-2"
+        position="right-[32%] bottom-[15%]"
+        duration={5}
+        delay={2}
+      />
 
-  {/* Blueprint grid */}
-  <g
-  opacity="0.06"
-  stroke="#BFE3F0"
-  strokeWidth="1"
-  >
-  {Array.from({ length: 15 }).map((_, i) => (
-  <line key={`h-${i}`} x1="0" y1={i * 55} x2="700" y2={i * 55}/>
-  ))}
+      <FloatingBubble
+        size="h-3 w-3"
+        position="left-[40%] top-[12%]"
+        duration={6}
+        delay={1.2}
+      />
 
-  {Array.from({ length: 13 }).map((_, i) => (
-  <line key={`v-${i}`} x1={i * 58} y1="0" x2={i * 58} y2="800"/>
-  ))}
-  </g>
+      <FloatingBubble
+        size="h-2 w-2"
+        position="right-[8%] top-[42%]"
+        duration={7}
+        delay={0.4}
+      />
 
-  {/* Molecular pattern */}
-  <g
-  opacity="0.12"
-  stroke="#7FD4E0"
-  strokeWidth="1.2"
-  fill="none"
-  >
-  <circle cx="110" cy="120" r="4" fill="#7FD4E0"/>
+      <div className="absolute left-[18%] top-[35%] h-px w-[120px] rotate-[25deg] bg-gradient-to-r from-transparent via-cyan-300/20 to-transparent" />
 
-  <circle cx="160" cy="90" r="4" fill="#7FD4E0"/>
+      <div className="absolute right-[15%] top-[38%] h-px w-[130px] rotate-[-25deg] bg-gradient-to-r from-transparent via-blue-300/20 to-transparent" />
 
-  <circle cx="150" cy="150" r="4" fill="#7FD4E0"/>
+      <div className="absolute bottom-[27%] left-[20%] h-px w-[150px] rotate-[-18deg] bg-gradient-to-r from-transparent via-cyan-300/15 to-transparent" />
 
-  <line x1="110" y1="120" x2="160" y2="90"/>
+      <motion.div
+        initial={{
+          opacity: 0,
+          y: -15,
+        }}
+        animate={{
+          opacity: 1,
+          y: 0,
+        }}
+        transition={{
+          duration: 0.7,
+        }}
+        className="absolute left-10 top-9 z-30 flex items-center gap-3"
+      >
+        <motion.div
+          whileHover={{
+            scale: 1.08,
+            rotate: 5,
+          }}
+          className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/20 bg-white/[0.07] shadow-[0_0_30px_rgba(34,211,238,0.08)] backdrop-blur-xl"
+        >
+          <Wrench className="h-5 w-5 text-cyan-300" />
+        </motion.div>
 
-  <line x1="110" y1="120" x2="150" y2="150"/>
+        <div>
+          <h1
+            className="text-xl font-extrabold tracking-tight text-white"
+            style={{
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+            }}
+          >
+            Maintenix
+          </h1>
 
-  <circle cx="600" cy="680" r="4" fill="#7FD4E0"/>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-white/35">
+            Maintenance Intelligence
+          </p>
+        </div>
+      </motion.div>
 
-  <circle cx="650" cy="650" r="4" fill="#7FD4E0"/>
+      <div className="absolute left-1/2 top-[51%] z-20 w-full -translate-x-1/2 -translate-y-1/2 px-8 text-center">
+        {/* Small badge */}
 
-  <circle cx="640" cy="710" r="4" fill="#7FD4E0"/>
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 15,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            duration: 0.7,
+            delay: 0.2,
+          }}
+          className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/10 bg-cyan-300/[0.06] px-4 py-2 backdrop-blur-md"
+        >
+          <Activity className="h-3.5 w-3.5 text-cyan-300" />
 
-  <line x1="600" y1="680" x2="650" y2="650"/>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200/70">
+            Intelligent Maintenance
+          </span>
+        </motion.div>
 
-  <line x1="600" y1="680" x2="640" y2="710"/>
-  </g>
+        {/* Heading */}
 
-  {/* Connection lines */}
-  <g
-  fill="none"
-  strokeWidth="1.5"
-  >
-  <path d="M 210 300 C 300 300, 320 420, 430 430" stroke="url(#lineGrad)" strokeDasharray="6 8">
-  <animate attributeName="stroke-dashoffset" from="0" to="-28" dur="2.4s" repeatCount="indefinite"/>
-  </path>
+        <motion.h2
+          initial={{
+            opacity: 0,
+            y: 20,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            duration: 0.8,
+            delay: 0.3,
+          }}
+          className="relative z-30 text-[34px] font-extrabold leading-tight tracking-[-1.2px] text-white xl:text-[40px]"
+          style={{
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
+          }}
+        >
+          Smarter maintenance.
+          <br />
+          <span className="bg-gradient-to-r from-cyan-300 via-sky-300 to-blue-400 bg-clip-text text-transparent">
+            Better operations.
+          </span>
+        </motion.h2>
 
-  <path d="M 430 430 C 470 470, 470 560, 400 610" stroke="url(#lineGrad)" strokeDasharray="6 8">
-  <animate attributeName="stroke-dashoffset" from="0" to="-28" dur="2.8s" repeatCount="indefinite"/>
-  </path>
+        {/* Description */}
 
-  <path d="M 210 300 C 150 380, 160 500, 230 560" stroke="url(#lineGrad)" strokeDasharray="6 8">
-  <animate attributeName="stroke-dashoffset" from="0" to="-28" dur="3.2s" repeatCount="indefinite"/>
-  </path>
-  </g>
+        <motion.p
+          initial={{
+            opacity: 0,
+            y: 15,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            duration: 0.7,
+            delay: 0.45,
+          }}
+          className="mx-auto mt-4 max-w-[440px] text-[13px] leading-6 text-white/40"
+        >
+          A centralized workspace for managing equipment, preventive
+          maintenance, calibration and compliance.
+        </motion.p>
 
-  {/* Main pharmaceutical tank */}
-  <g transform="translate(140,190)">
+        <div className="relative mx-auto mt-8 h-[180px] w-[180px]">
+          {/* Glow */}
 
-  <ellipse cx="70" cy="0" rx="70" ry="18" fill="url(#tankBody)"/>
+          <motion.div
+            animate={{
+              scale: [1, 1.15, 1],
+              opacity: [0.15, 0.28, 0.15],
+            }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            className="absolute left-1/2 top-1/2 h-[210px] w-[210px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-400/10 blur-[50px]"
+          />
 
-  <rect x="0" y="0" width="140" height="180" fill="url(#tankBody)"/>
+          {/* Main circle */}
 
-  <ellipse cx="70" cy="180" rx="70" ry="18" fill="#1a2f47"/>
+          <motion.div
+            animate={{
+              scale: [1, 1.05, 1],
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            className="absolute left-1/2 top-1/2 flex h-[145px] w-[145px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-cyan-300/20 bg-[#0a2b46]/75 shadow-[0_0_80px_rgba(34,211,238,0.1)] backdrop-blur-xl"
+          >
+            {/* Inner ring */}
 
-  <ellipse cx="70" cy="0" rx="70" ry="18" fill="none" stroke="#9FC6DE" strokeOpacity="0.35"/>
+            <div className="absolute inset-3 rounded-full border border-white/[0.05]" />
 
-  {[40, 75, 110, 145].map((y) => (
-  <line key={y} x1="0" y1={y} x2="140" y2={y} stroke="#0D2136" strokeOpacity="0.25"/>
-  ))}
+            {/* Rotating gear */}
 
-  {/* Tank top */}
-  <rect x="55" y="-26" width="30" height="26" rx="3" fill="#22405f" stroke="#7FD4E0" strokeOpacity="0.4"/>
+            <motion.div
+              animate={{
+                rotate: 360,
+              }}
+              transition={{
+                duration: 18,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              className="absolute"
+            >
+              <Cog className="h-[82px] w-[82px] text-cyan-300/[0.1]" />
+            </motion.div>
 
-  {/* Gauge */}
-  <circle cx="70" cy="70" r="22" fill="#0F2A45" stroke="#2DD4C8" strokeWidth="1.5"/>
+            {/* Main icon */}
 
-  <circle cx="70" cy="70" r="22" fill="url(#glow)"/>
+            <div className="relative flex h-[64px] w-[64px] items-center justify-center rounded-[20px] bg-gradient-to-br from-cyan-300/20 to-blue-400/10 shadow-[0_0_35px_rgba(34,211,238,0.12)]">
+              <Wrench className="h-7 w-7 text-cyan-300" />
+            </div>
+          </motion.div>
 
-  <line x1="70" y1="70" x2="82" y2="58" stroke="#2DD4C8" strokeWidth="2" strokeLinecap="round">
-  <animateTransform attributeName="transform" type="rotate" from="0 70 70" to="360 70 70" dur="6s" repeatCount="indefinite"/>
-  </line>
+          {/* Orbit dot */}
 
-  <circle cx="70" cy="70" r="2.5" fill="#2DD4C8"/>
+          <motion.div
+            animate={{
+              rotate: 360,
+            }}
+            transition={{
+              duration: 7,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+            className="absolute inset-[-20px]"
+          >
+            <div className="absolute left-1/2 top-0 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-cyan-300 shadow-[0_0_15px_rgba(103,232,249,0.8)]" />
+          </motion.div>
 
-  </g>
+          {/* Second orbit */}
 
-  {/* Piping */}
-  <path d="M 210 260 h 60 v 40 h 90" fill="none" stroke="#3d5c80" strokeWidth="10" strokeLinecap="round"/>
+          <motion.div
+            animate={{
+              rotate: -360,
+            }}
+            transition={{
+              duration: 11,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+            className="absolute inset-[-38px]"
+          >
+            <div className="absolute bottom-0 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-blue-300 shadow-[0_0_15px_rgba(147,197,253,0.8)]" />
+          </motion.div>
+        </div>
+      </div>
 
-  <path d="M 210 260 h 60 v 40 h 90" fill="none" stroke="#2DD4C8" strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round"/>
+      <FloatingInfo
+        icon={Activity}
+        text="Equipment"
+        position="left-[11%] top-[47%]"
+        delay={0.4}
+      />
 
-  {/* Calibration tank */}
-  <g transform="translate(370,380)">
+      <FloatingInfo
+        icon={Gauge}
+        text="Maintenance"
+        position="right-[10%] top-[48%]"
+        delay={0.8}
+      />
 
-  <ellipse cx="55" cy="0" rx="55" ry="14" fill="url(#tankBody2)"/>
+      <FloatingInfo
+        icon={ShieldCheck}
+        text="Compliance"
+        position="left-[18%] bottom-[21%]"
+        delay={1.1}
+      />
 
-  <rect x="0" y="0" width="110" height="140" fill="url(#tankBody2)"/>
+      <motion.div
+        initial={{
+          opacity: 0,
+        }}
+        animate={{
+          opacity: 1,
+        }}
+        transition={{
+          delay: 1,
+        }}
+        className="absolute bottom-8 left-10 z-30 flex items-center gap-2 text-[10px] font-medium text-white/30"
+      >
+        <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(74,222,128,0.7)]" />
+        System operational
+      </motion.div>
 
-  <ellipse cx="55" cy="140" rx="55" ry="14" fill="#152538"/>
-
-  {[30, 60, 90, 118].map((y) => (
-  <line key={y} x1="0" y1={y} x2="110" y2={y} stroke="#0D2136" strokeOpacity="0.25"/>
-  ))}
-
-  <circle cx="55" cy="55" r="16" fill="#0F2A45" stroke="#7ED957" strokeWidth="1.5"/>
-
-  <text
-  x="55"
-  y="59"
-  textAnchor="middle"
-  fontSize="10"
-  fill="#7ED957"
-  fontFamily="monospace"
-  >
-  OK
-  </text>
-
-  </g>
-
-  {/* Gauge cluster */}
-  <g transform="translate(190,560)">
-
-  <circle cx="0" cy="0" r="26" fill="#0F2A45" stroke="#2DD4C8" strokeWidth="1.5"/>
-
-  <line x1="0" y1="0" x2="10" y2="-14" stroke="#2DD4C8" strokeWidth="2" strokeLinecap="round">
-  <animateTransform attributeName="transform" type="rotate" values="0;40;-20;0" dur="4s" repeatCount="indefinite"/>
-  </line>
-
-  <circle cx="60" cy="20" r="18" fill="#0F2A45" stroke="#9FC6DE" strokeOpacity="0.6" strokeWidth="1.5"/>
-
-  </g>
-
-  {/* Sensor pulse nodes */}
-  {[
-  [210, 300],
-  [430, 430],
-  [230, 560],
-  ].map(([cx, cy], i) => (
-  <circle key={i} cx={cx} cy={cy} r="4" fill="#2DD4C8">
-  <animate attributeName="r" values="4;9;4" dur="2.4s" repeatCount="indefinite" begin={`${i * 0.5}s`}/>
-
-  <animate attributeName="opacity" values="0.9;0.15;0.9" dur="2.4s" repeatCount="indefinite" begin={`${i * 0.5}s`}/>
-  </circle>
-  ))}
-  </svg>
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#041321]/70 to-transparent" />
+    </div>
   );
 };
 

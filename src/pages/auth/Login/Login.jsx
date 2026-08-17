@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Activity, Gauge, CheckCircle2, ShieldCheck } from "lucide-react";
+import {
+  Activity,
+  Eye,
+  EyeOff,
+  Mail,
+  LockKeyhole,
+  ArrowRight,
+  ShieldCheck,
+  Wrench,
+  Gauge,
+  Cog,
+  Zap,
+} from "lucide-react";
 
-import EquipmentScene from "./components/EquipmentScene";
-import GlassCard from "./components/GlassCard";
-import LoginBrand from "./components/LoginBrand";
-import LoginForm from "./components/LoginForm";
 import { login } from "../../../services/authApi";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -14,6 +22,7 @@ import { useAuthStore } from "../../../store/authStore";
 /* =========================================================
    GOOGLE FONTS
 ========================================================= */
+import EquipmentScene from "./components/EquipmentScene";
 
 const FONT_LINKS = [
   "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap",
@@ -32,10 +41,6 @@ function useGoogleFonts() {
   }, []);
 }
 
-/* =========================================================
-   LOGIN
-========================================================= */
-
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
@@ -44,6 +49,7 @@ const Login = () => {
   const setUser = useAuthStore((state) => state.setUser);
 
   useGoogleFonts();
+
   const navigate = useNavigate();
 
 const handleLogin = async (event) => {
@@ -95,140 +101,335 @@ const handleLogin = async (event) => {
 
   return (
     <div
-      className="flex min-h-screen w-full bg-white"
+      className="h-screen w-full overflow-hidden bg-[#f8fafc]"
       style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
     >
-      {/* =================================================
-          LEFT SIDE
-      ================================================= */}
+      <div className="flex h-screen w-full">
+        <EquipmentScene/>
 
-      <div className="relative hidden w-[58%] overflow-hidden lg:block">
-        {/* Background */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(160deg, #0B2A4A 0%, #0F3A63 45%, #0A2540 100%)",
-          }}
-        />
+        {/* =====================================================
+            RIGHT SIDE - EXACT 50%
+        ===================================================== */}
 
-        {/* Pharmaceutical Equipment */}
-        <EquipmentScene />
+        <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-white px-6 lg:w-1/2">
+          {/* Mobile glow */}
 
-        {/* Main heading */}
-        <div className="relative z-10 px-12 pt-12">
-          <div
-            className="max-w-lg text-[28px] font-bold leading-tight text-white"
-            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          <div className="pointer-events-none absolute -right-40 -top-40 h-[400px] w-[400px] rounded-full bg-cyan-100/60 blur-[100px] lg:hidden" />
+
+          <div className="pointer-events-none absolute -bottom-40 -left-40 h-[350px] w-[350px] rounded-full bg-blue-50 blur-[100px] lg:hidden" />
+
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 20,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.7,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="relative z-10 w-full max-w-[400px]"
           >
-            Smart maintenance for pharmaceutical operations.
-          </div>
+            {/* =================================================
+                MOBILE BRAND
+            ================================================= */}
 
-          <div
-            className="mt-3 max-w-lg text-[14px] leading-6 text-white/55"
-          >
-            A centralized system for managing equipment, maintenance,
-            calibration, work orders and compliance.
-          </div>
+            <div className="mb-9 flex items-center gap-3 lg:hidden">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#082943] shadow-lg">
+                <Wrench className="h-5 w-5 text-cyan-300" />
+              </div>
+
+              <div>
+                <h1
+                  className="text-xl font-extrabold tracking-tight text-[#082943]"
+                  style={{
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  }}
+                >
+                  Maintenix
+                </h1>
+
+                <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-gray-400">
+                  Maintenance Intelligence
+                </p>
+              </div>
+            </div>
+
+            {/* =================================================
+                LOGIN HEADER
+            ================================================= */}
+
+            <div className="mb-8 flex flex-col items-center text-center">
+              {/* Logo */}
+              <div className="mb-2 flex w-full items-center justify-center">
+                <img
+                  src="/vidyagxp_logo.png"
+                  alt="VidyaGxP Logo"
+                  className="block h-auto w-[175px] object-contain"
+                  draggable="false"
+                />
+              </div>
+
+              {/* Heading */}
+              <h2
+                className="text-[30px] font-extrabold leading-tight tracking-[-1px] text-[#091f33]"
+                style={{
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                }}
+              >
+                Welcome back
+              </h2>
+
+              {/* Description */}
+              <p className="mt-2.5 max-w-[360px] text-[13px] leading-5 text-gray-500">
+                Sign in to access your maintenance workspace.
+              </p>
+
+            </div>
+
+            {/* =================================================
+                LOGIN FORM
+            ================================================= */}
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              {/* EMAIL */}
+
+              <div>
+                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-gray-600">
+                  Email address
+                </label>
+
+                <div
+                  className={`group flex h-[54px] items-center rounded-2xl border bg-[#f8fafc] transition-all duration-300 ${
+                    focusField === "email"
+                      ? "border-cyan-400 bg-white shadow-[0_0_0_4px_rgba(34,211,238,0.08)]"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-white"
+                  }`}
+                >
+                  <Mail
+                    className={`ml-4 h-[18px] w-[18px] transition-colors duration-300 ${
+                      focusField === "email" ? "text-cyan-500" : "text-gray-400"
+                    }`}
+                  />
+
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    placeholder="Enter your email"
+                    onFocus={() => setFocusField("email")}
+                    onBlur={() => setFocusField(null)}
+                    className="h-full w-full bg-transparent px-3 text-[14px] font-medium text-gray-800 outline-none placeholder:text-gray-400"
+                  />
+                </div>
+              </div>
+
+              {/* PASSWORD */}
+
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-600">
+                    Password
+                  </label>
+
+                  <button
+                    type="button"
+                    className="text-[11px] font-semibold text-cyan-600 transition-colors hover:text-cyan-700"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+
+                <div
+                  className={`group flex h-[54px] items-center rounded-2xl border bg-[#f8fafc] transition-all duration-300 ${
+                    focusField === "password"
+                      ? "border-cyan-400 bg-white shadow-[0_0_0_4px_rgba(34,211,238,0.08)]"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-white"
+                  }`}
+                >
+                  <LockKeyhole
+                    className={`ml-4 h-[18px] w-[18px] transition-colors duration-300 ${
+                      focusField === "password"
+                        ? "text-cyan-500"
+                        : "text-gray-400"
+                    }`}
+                  />
+
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    required
+                    placeholder="Enter your password"
+                    onFocus={() => setFocusField("password")}
+                    onBlur={() => setFocusField(null)}
+                    className="h-full w-full bg-transparent px-3 text-[14px] font-medium text-gray-800 outline-none placeholder:text-gray-400"
+                  />
+
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="mr-3 rounded-xl p-2 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-700"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-[18px] w-[18px]" />
+                    ) : (
+                      <Eye className="h-[18px] w-[18px]" />
+                    )}
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* OPTIONS */}
+
+              <div className="flex items-center justify-between pt-1">
+                <label className="group flex cursor-pointer items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="sr-only"
+                  />
+
+                  <motion.span
+                    animate={{
+                      scale: remember ? 1 : 0.96,
+                    }}
+                    className={`flex h-[18px] w-[18px] items-center justify-center rounded-md border transition-all duration-200 ${
+                      remember
+                        ? "border-cyan-500 bg-cyan-500"
+                        : "border-gray-300 bg-white group-hover:border-gray-400"
+                    }`}
+                  >
+                    {remember && (
+                      <svg
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        className="h-3.5 w-3.5 text-white"
+                      >
+                        <path
+                          d="M5 10.5L8.5 14L15.5 6.5"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
+                  </motion.span>
+
+                  <span className="text-[12px] font-medium text-gray-500">
+                    Remember me
+                  </span>
+                </label>
+
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-400">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                  Secure login
+                </div>
+              </div>
+
+              {/* LOGIN BUTTON */}
+
+              <motion.button
+                whileHover={
+                  !loading
+                    ? {
+                        scale: 1.01,
+                        y: -1,
+                      }
+                    : {}
+                }
+                whileTap={
+                  !loading
+                    ? {
+                        scale: 0.98,
+                      }
+                    : {}
+                }
+                disabled={loading}
+                type="submit"
+                className="group relative mt-2 flex h-[56px] w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-r from-[#082943] via-[#0b3858] to-[#0b4969] text-[14px] font-bold text-white shadow-lg shadow-[#082943]/20 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-900/20 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {/* Shine */}
+
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.12] to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+
+                {loading ? (
+                  <div className="relative flex items-center gap-3">
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+
+                    <span>Signing you in...</span>
+                  </div>
+                ) : (
+                  <div className="relative flex items-center gap-2">
+                    <span>Sign in to dashboard</span>
+
+                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                  </div>
+                )}
+              </motion.button>
+            </form>
+
+            {/* =================================================
+                FOOTER
+            ================================================= */}
+
+            <motion.div
+              initial={{
+                opacity: 0,
+              }}
+              animate={{
+                opacity: 1,
+              }}
+              transition={{
+                delay: 0.8,
+              }}
+              className="mt-7"
+            >
+              <div className="h-px w-full bg-gray-100" />
+
+              <div className="mt-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50">
+                    <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-semibold text-gray-500">
+                      Protected
+                    </p>
+
+                    <p className="text-[9px] text-gray-400">
+                      Secure authentication
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-50">
+                    <Zap className="h-4 w-4 text-cyan-500" />
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-semibold text-gray-500">
+                      Maintenix
+                    </p>
+
+                    <p className="text-[9px] text-gray-400">
+                      Maintenance platform
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
-
-        {/* =================================================
-            FLOATING CARDS
-        ================================================= */}
-
-        <GlassCard
-          icon={Activity}
-          label="Equipment health"
-          value="98%"
-          tone="teal"
-          className="right-[8%] top-[24%]"
-          delay={0.65}
-          floatDelay={0.6}
-        />
-
-        <GlassCard
-          icon={Gauge}
-          label="Preventive maintenance"
-          value="92%"
-          tone="sky"
-          className="left-[10%] top-[58%]"
-          delay={0.8}
-          floatDelay={1.2}
-        />
-
-        <GlassCard
-          icon={CheckCircle2}
-          label="Next calibration"
-          value="24 Aug 2026"
-          tone="green"
-          className="right-[6%] bottom-[16%]"
-          delay={0.95}
-          floatDelay={0.3}
-        />
-
-        <GlassCard
-          icon={ShieldCheck}
-          label="Compliance"
-          value="100%"
-          tone="teal"
-          className="left-[24%] bottom-[8%]"
-          delay={1.1}
-          floatDelay={0.9}
-        />
-
-        {/* Bottom fade */}
-        <div
-          className="
-            absolute inset-x-0 bottom-0 h-40
-            bg-gradient-to-t from-[#0A2540] to-transparent
-          "
-        />
-      </div>
-
-      {/* =================================================
-          RIGHT SIDE
-      ================================================= */}
-
-      <div
-        className="
-          flex w-full flex-col items-center justify-center
-          bg-white px-6 py-12 lg:w-[42%]
-        "
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            duration: 0.7,
-            ease: [0.22, 1, 0.36, 1],
-          }}
-          className="w-full max-w-[380px]"
-        >
-          {/* =================================================
-              BRAND
-          ================================================= */}
-
-          <LoginBrand />
-
-          {/* =================================================
-              LOGIN FORM
-          ================================================= */}
-
-          <LoginForm
-            showPassword={showPassword}
-            setShowPassword={setShowPassword}
-            remember={remember}
-            setRemember={setRemember}
-            focusField={focusField}
-            setFocusField={setFocusField}
-            handleLogin={handleLogin}
-            loading={loading}
-          />
-
-        </motion.div>
       </div>
     </div>
   );
-};
-
+};  
 export default Login;

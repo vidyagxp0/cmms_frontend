@@ -7,40 +7,27 @@ import Login from "../pages/auth/Login/Login";
 import NotFound from "../pages/NotFound/NotFound";
 
 function AppRoutes() {
-    return (
-        <Routes>
+  return (
+    <Routes>
+      {/* Default Route */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
-            {/* Public Routes */}
-            <Route
-                path="/login"
-                element={<Login />}
-            />
+      {/* Public Routes */}
+      <Route path="/login" element={<Login />} />
 
-            {/* Admin Routes */}
-            <Route
-                path="/admin/*"
-                element={<AdminRoutes />}
-            />
+      {/* Admin Routes */}
+      <Route path="/admin/*" element={<AdminRoutes />} />
 
-            {/* User Routes */}
-            <Route
-                path="/user/*"
-                element={<UserRoutes />}
-            />
+      {/* User Routes */}
+      <Route path="/user/*" element={<UserRoutes />} />
 
-            {/* Unknown Route */}
-            <Route
-                path="/404"
-                element={<NotFound />}
-            />
+      {/* 404 */}
+      <Route path="/404" element={<NotFound />} />
 
-            <Route
-                path="*"
-                element={<Navigate to="/404" replace />}
-            />
-
-        </Routes>
-    );
+      {/* Unknown Route */}
+      <Route path="*" element={<Navigate to="/404" replace />} />
+    </Routes>
+  );
 }
 
 export default AppRoutes;

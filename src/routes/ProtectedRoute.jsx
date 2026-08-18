@@ -5,6 +5,7 @@ function ProtectedRoute({ children, allowedRoles = ["admin", "user"] }) {
   const location = useLocation();
 
   const user = useAuthStore((state) => state.user);
+  console.log(user)
 
   // Not logged in
   if (!user) {
@@ -12,7 +13,7 @@ function ProtectedRoute({ children, allowedRoles = ["admin", "user"] }) {
   }
 
   // Role is not allowed
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
     return <Navigate to="/not-authorized" replace />;
   }
 

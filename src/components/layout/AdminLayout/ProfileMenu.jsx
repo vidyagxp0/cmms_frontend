@@ -29,8 +29,8 @@ const ProfileMenu = ({
     try {
         await logout();
 
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("user");
+        sessionStorage.removeItem("access_token");
+        sessionStorage.removeItem("auth-storage");
 
         setShowLogoutModal(false);
 
@@ -38,8 +38,8 @@ const ProfileMenu = ({
     } catch (error) {
         console.error("Logout failed:", error);
 
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("user");
+        sessionStorage.removeItem("access_token");
+        sessionStorage.removeItem("user");
 
         setShowLogoutModal(false);
 

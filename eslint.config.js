@@ -20,7 +20,7 @@ export default [
       globals: {
         window: "readonly",
         document: "readonly",
-        localStorage: "readonly",
+        sessionStorage: "readonly",
         console: "readonly"
       }
     },

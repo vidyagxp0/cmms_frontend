@@ -17,12 +17,12 @@ import {
 import { login } from "../../../services/authApi";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useAuthStore } from "../../../store/authStore";
 
 /* =========================================================
    GOOGLE FONTS
 ========================================================= */
 import EquipmentScene from "./components/EquipmentScene";
+import { useAuthStore } from "../../../store/authStore";
 
 const FONT_LINKS = [
   "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap",
@@ -69,23 +69,22 @@ const handleLogin = async (event) => {
         const { user: apiUser, token } = response.data.data;
 
         const roles = apiUser?.roles || [];
-        const role = roles.includes("admin") ? "admin" : "user";
+        const role = roles.includes("Admin") ? "Admin" : "User";
 
-        const user = {
-            id: apiUser.id,
-            name: apiUser.name,
-            email: apiUser.email,
-            roles,
-            role,
-        };
+     const user = {
+    id: apiUser.id,
+    name: apiUser.name,
+    email: apiUser.email,
+    roles: apiUser?.roles || [],
+};
 
-        localStorage.setItem("access_token", token);
+        sessionStorage.setItem("access_token", token);
         setUser(user);
 
         toast.success("Login successful");
 
         navigate(
-            role === "admin"
+            role === "Admin"
                 ? "/admin/dashboard"
                 : "/user/dashboard"
         );
@@ -362,11 +361,11 @@ const handleLogin = async (event) => {
                   <div className="relative flex items-center gap-3">
                     <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
 
-                    <span>Signing you in...</span>
+                    <span>Log in...</span>
                   </div>
                 ) : (
                   <div className="relative flex items-center gap-2">
-                    <span>Sign in to dashboard</span>
+                    <span>Log In </span>
 
                     <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                   </div>

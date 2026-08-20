@@ -19,20 +19,20 @@ const AdminSidebar = ({ collapsed, setCollapsed }) => {
             icon: LayoutDashboard,
             path: "/admin/dashboard",
         },
-        {
-            label: "Users Management",
-            icon: Users,
-            path: "/admin/users-management",
+         {
+            label: "Department Management",
+            icon: Settings,
+            path: "/admin/department-management",
         },
-        {
+         {
             label: "Role Management",
             icon: ClipboardList,
             path: "/admin/roles-management",
         },
         {
-            label: "Department Management",
-            icon: Settings,
-            path: "/admin/department-management",
+            label: "Users Management",
+            icon: Users,
+            path: "/admin/users-management",
         },
         {
             label: "Audit History",

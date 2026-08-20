@@ -23,7 +23,6 @@ const ProfileMenu = ({
     const handleLogout = async () => {
         if (isLoggingOut) return;
         setIsLoggingOut(true);
-
         try {
             await logout();
             sessionStorage.removeItem("access_token");

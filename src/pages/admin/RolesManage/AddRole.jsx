@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     ShieldPlus,
@@ -10,16 +10,17 @@ import {
 } from "lucide-react";
 import Dropdown from "../../../components/ui/Dropdown";
 import { addRole } from "../../../services/adminApis/rolesApi";
+import { getDepartments } from "../../../services/adminApis/departmentApi";
+import { toast } from "sonner";
 
-const departments = [
-    { value: 1, label: "Engineering" },
-    { value: 2, label: "QA" },
-];
 
 const permissionOptions = ["Create", "Edit", "View"];
 
 const AddRole = () => {
     const navigate = useNavigate();
+
+    const [departments, setDepartments] = useState([]);
+    const [departmentLoading, setDepartmentLoading] = useState(false);
 
     const [department, setDepartment] = useState("");
     const [roleName, setRoleName] = useState("");
@@ -28,8 +29,39 @@ const AddRole = () => {
         view: false,
         edit: false,
     });
+
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+    const fetchDepartments = async () => {
+        try {
+            setDepartmentLoading(true);
+
+            const response = await getDepartments();
+
+            const data = response?.data?.data || [];
+
+            setDepartments(
+                data.map((department) => ({
+                    value: department.id,
+                    label: department.name,
+                }))
+            );
+        } catch (error) {
+            setErrors((prev) => ({
+                ...prev,
+                department:
+                    error?.response?.data?.message ||
+                    "Failed to load departments.",
+            }));
+        } finally {
+            setDepartmentLoading(false);
+        }
+    };
+
+    fetchDepartments();
+}, []);
 
     const togglePermission = (perm) => {
         const permissionKey = perm.toLowerCase();
@@ -74,18 +106,16 @@ const AddRole = () => {
             permissions: [permissions],
             is_active: 1,
         };
-
         try {
             setLoading(true);
-
             const response = await addRole(payload);
-
-            console.log("Role created successfully:", response?.data);
-
+            toast.success("Role created successfully!");
             navigate("/admin/roles-management");
         } catch (error) {
-            console.error("Failed to create role:", error);
-
+            toast.error(
+                error?.response?.data?.message ||
+                    "Failed to create role. Please try again."
+            );
             const message =
                 error?.response?.data?.message ||
                 "Failed to create role. Please try again.";

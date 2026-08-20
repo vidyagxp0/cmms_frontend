@@ -160,7 +160,7 @@ const RolesManagementList = () => {
                                         {/* DEPARTMENT */}
                                         <td className="px-6 py-4">
                                             <span className="inline-flex rounded-full border border-[#D6E8DE] bg-[#F5FAF7] px-2.5 py-1 text-[11px] font-medium text-[#3E5A4D]">
-                                                Department {role.department_id}
+                                                 {role.department?.name}
                                             </span>
                                         </td>
 

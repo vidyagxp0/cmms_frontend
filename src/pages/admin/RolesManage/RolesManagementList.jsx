@@ -83,18 +83,20 @@ const RolesManagementList = () => {
 
             await deleteRole(selectedRole.id);
 
+            toast.success("Role deleted successfully", {
+                description: `${selectedRole.name} has been removed.`,
+            });
+
             closeDeleteModal();
             await fetchRoles();
         } catch (err) {
             console.error("Error deleting role:", err);
 
-            setError(
-                err?.response?.data?.message ||
-                    "Failed to delete role."
-            );
-
-            setDeleteModal(false);
-            setSelectedRole(null);
+            toast.error("Failed to delete role", {
+                description:
+                    err?.response?.data?.message ||
+                    "Something went wrong while deleting the role.",
+            });
         } finally {
             setDeleting(false);
         }

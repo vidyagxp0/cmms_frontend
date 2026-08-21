@@ -60,7 +60,13 @@ const AdminModal = ({
                     </button>
                 </div>
 
-                <form onSubmit={onSubmit}>
+                {/* <form onSubmit={onSubmit}> */}
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            onSubmit(e);
+                        }}
+                    >
                     <div className="px-6 py-6">
                         {children}
                     </div>

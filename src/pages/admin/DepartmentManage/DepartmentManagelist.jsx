@@ -126,30 +126,29 @@ const DepartmentManagemelist = () => {
         }
     };
 
-    const handleDelete = async () => {
-        if (!departmentToDelete) return;
+  const handleDelete = async () => {
+    if (!departmentToDelete) return;
 
-        try {
-            setDeleting(true);
+    try {
+        setDeleting(true);
 
-            await deleteDepartment(departmentToDelete.id);
+        await deleteDepartment(departmentToDelete.id);
 
-            toast.success(
-                `${departmentToDelete.name} deleted successfully`
-            );
+        toast.success("Department deleted successfully", {
+            description: `${departmentToDelete.name} has been removed.`,
+        });
 
-            closeDeleteModal();
-            await fetchDepartments();
-        } catch (err) {
-            toast.error(
-                err?.response?.data?.message ||
-                    "Failed to delete department."
-            );
-        } finally {
-            setDeleting(false);
-        }
-    };
-
+        closeDeleteModal();
+        await fetchDepartments();
+    } catch (err) {
+        toast.error(
+            err?.response?.data?.message ||
+                "Failed to delete department."
+        );
+    } finally {
+        setDeleting(false);
+    }
+};
     return (
         <div className="w-full">
             {/* PAGE HEADER */}
@@ -274,7 +273,7 @@ const DepartmentManagemelist = () => {
                                                 </button>
 
                                                 {/* DELETE */}
-                                                <button
+                                                {/* <button
                                                     type="button"
                                                     onClick={() =>
                                                         openDeleteModal(
@@ -288,7 +287,7 @@ const DepartmentManagemelist = () => {
                                                         size={14}
                                                         strokeWidth={1.9}
                                                     />
-                                                </button>
+                                                </button> */}
                                             </div>
                                         </td>
                                     </tr>

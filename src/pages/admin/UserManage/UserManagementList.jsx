@@ -11,6 +11,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { getUsers, deleteUser } from "../../../services/adminApis/userApi";
 import AdminModal from "../../../components/common/AdminModal/AdminModal";
+import { toast } from "sonner";
 
 const UserManagementList = () => {
     const navigate = useNavigate();
@@ -67,7 +68,9 @@ const UserManagementList = () => {
             setDeleteError("");
 
             await deleteUser(selectedUser.id);
-
+            toast.success("User deleted successfully", {
+                description: `${selectedUser.name} has been removed.`,
+            });
             setDeleteModalOpen(false);
             setSelectedUser(null);
             await fetchUsers();
@@ -75,6 +78,9 @@ const UserManagementList = () => {
             setDeleteError(
                 err?.response?.data?.message || "Failed to delete user."
             );
+            toast.success("User deleted successfully", {
+              description: `${selectedUser.name} has been removed.`,
+          });
         } finally {
             setDeleting(false);
         }

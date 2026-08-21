@@ -13,15 +13,12 @@ import { addRole } from "../../../services/adminApis/rolesApi";
 import { getDepartments } from "../../../services/adminApis/departmentApi";
 import { toast } from "sonner";
 
-
 const permissionOptions = ["Create", "Edit", "View"];
 
 const AddRole = () => {
     const navigate = useNavigate();
-
     const [departments, setDepartments] = useState([]);
     const [departmentLoading, setDepartmentLoading] = useState(false);
-
     const [department, setDepartment] = useState("");
     const [roleName, setRoleName] = useState("");
     const [permissions, setPermissions] = useState({
@@ -29,43 +26,38 @@ const AddRole = () => {
         view: false,
         edit: false,
     });
-
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-    const fetchDepartments = async () => {
-        try {
-            setDepartmentLoading(true);
+        const fetchDepartments = async () => {
+            try {
+                setDepartmentLoading(true);
+                const response = await getDepartments();
+                const data = response?.data?.data || [];
+                setDepartments(
+                    data.map((department) => ({
+                        value: department.id,
+                        label: department.name,
+                    }))
+                );
+            } catch (error) {
+                setErrors((prev) => ({
+                    ...prev,
+                    department:
+                        error?.response?.data?.message ||
+                        "Failed to load departments.",
+                }));
+            } finally {
+                setDepartmentLoading(false);
+            }
+        };
 
-            const response = await getDepartments();
-
-            const data = response?.data?.data || [];
-
-            setDepartments(
-                data.map((department) => ({
-                    value: department.id,
-                    label: department.name,
-                }))
-            );
-        } catch (error) {
-            setErrors((prev) => ({
-                ...prev,
-                department:
-                    error?.response?.data?.message ||
-                    "Failed to load departments.",
-            }));
-        } finally {
-            setDepartmentLoading(false);
-        }
-    };
-
-    fetchDepartments();
-}, []);
+        fetchDepartments();
+    }, []);
 
     const togglePermission = (perm) => {
         const permissionKey = perm.toLowerCase();
-
         setPermissions((prev) => ({
             ...prev,
             [permissionKey]: !prev[permissionKey],
@@ -106,6 +98,7 @@ const AddRole = () => {
             permissions: [permissions],
             is_active: 1,
         };
+
         try {
             setLoading(true);
             const response = await addRole(payload);
@@ -116,6 +109,7 @@ const AddRole = () => {
                 error?.response?.data?.message ||
                     "Failed to create role. Please try again."
             );
+
             const message =
                 error?.response?.data?.message ||
                 "Failed to create role. Please try again.";
@@ -159,7 +153,6 @@ const AddRole = () => {
                         <h1 className="text-[21px] font-semibold tracking-[-0.02em] text-[#142A20]">
                             Create New Role
                         </h1>
-
                         <p className="mt-0.5 text-[12px] text-[#698276]">
                             Define a role and configure its access permissions.
                         </p>
@@ -191,7 +184,6 @@ const AddRole = () => {
                             <h2 className="text-[13px] font-semibold text-[#1A3528]">
                                 Role Details
                             </h2>
-
                             <p className="text-[10.5px] text-[#82978D]">
                                 Enter the basic information for this role.
                             </p>
@@ -213,7 +205,6 @@ const AddRole = () => {
                             searchable
                             onChange={(value) => {
                                 setDepartment(value);
-
                                 setErrors((prev) => ({
                                     ...prev,
                                     department: undefined,
@@ -241,7 +232,6 @@ const AddRole = () => {
                                 value={roleName}
                                 onChange={(e) => {
                                     setRoleName(e.target.value);
-
                                     setErrors((prev) => ({
                                         ...prev,
                                         roleName: undefined,
@@ -300,7 +290,6 @@ const AddRole = () => {
                                         type="button"
                                         onClick={() => {
                                             togglePermission(perm);
-
                                             setErrors((prev) => ({
                                                 ...prev,
                                                 permissions: undefined,

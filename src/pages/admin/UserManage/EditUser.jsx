@@ -12,15 +12,9 @@ import {
     Loader2,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-
-import {
-    getUsersDetail,
-    updateUsers,
-} from "../../../services/adminApis/userApi";
-
+import { getUsersDetail, updateUsers } from "../../../services/adminApis/userApi";
 import { getDepartments } from "../../../services/adminApis/departmentApi";
 import { getRoles } from "../../../services/adminApis/rolesApi";
-
 import Dropdown from "../../../components/ui/Dropdown";
 import MultiSelectDropdown from "../../../components/ui/MultiSelectDropdown";
 import FieldLabel from "../../../components/ui/FieldLabel";
@@ -36,7 +30,6 @@ const EditUser = () => {
     const [loadingData, setLoadingData] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
-
     const [form, setForm] = useState({
         salutation: "",
         person_id: "",
@@ -48,7 +41,6 @@ const EditUser = () => {
         department_id: "",
         roles: [],
     });
-
     const [errors, setErrors] = useState({});
 
     useEffect(() => {
@@ -65,7 +57,6 @@ const EditUser = () => {
                     ]);
 
                 const user = userResponse?.data?.data;
-
                 setDepartments(departmentResponse?.data?.data || []);
                 setRoles(rolesResponse?.data?.data || []);
 
@@ -85,11 +76,7 @@ const EditUser = () => {
                     department_id: user.department_id || "",
                     roles: Array.isArray(user.roles)
                         ? user.roles.map((role) =>
-                              Number(
-                                  typeof role === "object"
-                                      ? role.id
-                                      : role
-                              )
+                              Number(typeof role === "object" ? role.id : role)
                           )
                         : [],
                 });
@@ -125,33 +112,23 @@ const EditUser = () => {
 
         if (!form.salutation)
             nextErrors.salutation = "Salutation is required.";
-
-        if (!form.name.trim())
-            nextErrors.name = "Name is required.";
-
+        if (!form.name.trim()) nextErrors.name = "Name is required.";
         if (!form.username.trim())
             nextErrors.username = "Username is required.";
-
-        if (!form.email.trim())
-            nextErrors.email = "Email is required.";
-
+        if (!form.email.trim()) nextErrors.email = "Email is required.";
         if (!form.mobile_no.trim())
             nextErrors.mobile_no = "Mobile number is required.";
-
         if (!form.department_id)
             nextErrors.department_id = "Department is required.";
-
         if (!form.roles.length)
             nextErrors.roles = "Select at least one role.";
 
         setErrors(nextErrors);
-
         return Object.keys(nextErrors).length === 0;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         if (!validate()) return;
 
         try {
@@ -179,8 +156,7 @@ const EditUser = () => {
             navigate("/admin/users-management");
         } catch (err) {
             setError(
-                err?.response?.data?.message ||
-                    "Failed to update user."
+                err?.response?.data?.message || "Failed to update user."
             );
             toast.error(
                 err?.response?.data?.message ||
@@ -233,7 +209,6 @@ const EditUser = () => {
                     <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-[#152C20]">
                         Edit User
                     </h1>
-
                     <p className="mt-0.5 text-[11.5px] text-[#6C8679]">
                         Update user details and access permissions.
                     </p>
@@ -267,10 +242,7 @@ const EditUser = () => {
 
                     {/* PERSON ID */}
                     <div>
-                        <FieldLabel icon={Hash}>
-                            Person ID
-                        </FieldLabel>
-
+                        <FieldLabel icon={Hash}>Person ID</FieldLabel>
                         <input
                             value={form.person_id}
                             disabled
@@ -282,10 +254,7 @@ const EditUser = () => {
 
                     {/* NAME */}
                     <div>
-                        <FieldLabel icon={User}>
-                            Name
-                        </FieldLabel>
-
+                        <FieldLabel icon={User}>Name</FieldLabel>
                         <input
                             value={form.name}
                             onChange={(e) =>
@@ -294,7 +263,6 @@ const EditUser = () => {
                             placeholder="Enter full name"
                             className={inputClass("name")}
                         />
-
                         {errors.name && (
                             <p className="mt-1.5 text-[10.5px] font-medium text-[#C43D3D]">
                                 {errors.name}
@@ -304,22 +272,15 @@ const EditUser = () => {
 
                     {/* USERNAME */}
                     <div>
-                        <FieldLabel icon={AtSign}>
-                            Username
-                        </FieldLabel>
-
+                        <FieldLabel icon={AtSign}>Username</FieldLabel>
                         <input
                             value={form.username}
                             onChange={(e) =>
-                                updateField(
-                                    "username",
-                                    e.target.value
-                                )
+                                updateField("username", e.target.value)
                             }
                             placeholder="Enter username"
                             className={inputClass("username")}
                         />
-
                         {errors.username && (
                             <p className="mt-1.5 text-[10.5px] font-medium text-[#C43D3D]">
                                 {errors.username}
@@ -329,23 +290,16 @@ const EditUser = () => {
 
                     {/* EMAIL */}
                     <div>
-                        <FieldLabel icon={Mail}>
-                            Email
-                        </FieldLabel>
-
+                        <FieldLabel icon={Mail}>Email</FieldLabel>
                         <input
                             type="email"
                             value={form.email}
                             onChange={(e) =>
-                                updateField(
-                                    "email",
-                                    e.target.value
-                                )
+                                updateField("email", e.target.value)
                             }
                             placeholder="Enter email address"
                             className={inputClass("email")}
                         />
-
                         {errors.email && (
                             <p className="mt-1.5 text-[10.5px] font-medium text-[#C43D3D]">
                                 {errors.email}
@@ -355,23 +309,16 @@ const EditUser = () => {
 
                     {/* MOBILE */}
                     <div>
-                        <FieldLabel icon={Phone}>
-                            Mobile Number
-                        </FieldLabel>
-
+                        <FieldLabel icon={Phone}>Mobile Number</FieldLabel>
                         <input
                             type="tel"
                             value={form.mobile_no}
                             onChange={(e) =>
-                                updateField(
-                                    "mobile_no",
-                                    e.target.value
-                                )
+                                updateField("mobile_no", e.target.value)
                             }
                             placeholder="Enter mobile number"
                             className={inputClass("mobile_no")}
                         />
-
                         {errors.mobile_no && (
                             <p className="mt-1.5 text-[10.5px] font-medium text-[#C43D3D]">
                                 {errors.mobile_no}
@@ -381,27 +328,19 @@ const EditUser = () => {
 
                     {/* PASSWORD */}
                     <div>
-                        <FieldLabel
-                            icon={LockKeyhole}
-                            required={false}
-                        >
+                        <FieldLabel icon={LockKeyhole} required={false}>
                             Password
                         </FieldLabel>
-
                         <input
                             type="password"
                             value={form.password}
                             onChange={(e) =>
-                                updateField(
-                                    "password",
-                                    e.target.value
-                                )
+                                updateField("password", e.target.value)
                             }
                             placeholder="Password"
                             className={inputClass("password")}
                             disabled
                         />
-
                     </div>
 
                     {/* DEPARTMENT */}
@@ -423,9 +362,7 @@ const EditUser = () => {
                         label="Roles"
                         icon={ShieldCheck}
                         value={form.roles}
-                        onChange={(value) =>
-                            updateField("roles", value)
-                        }
+                        onChange={(value) => updateField("roles", value)}
                         options={roleOptions}
                         placeholder="Select roles"
                         error={errors.roles}
@@ -457,7 +394,6 @@ const EditUser = () => {
                                 className="animate-spin"
                             />
                         )}
-
                         {saving ? "Updating..." : "Update User"}
                     </button>
                 </div>

@@ -12,22 +12,10 @@ import {
     Loader2,
     UserRound,
 } from "lucide-react";
-
 import { useNavigate } from "react-router-dom";
-
-import {
-    addUsers,
-    getPid
-} from "../../../services/adminApis/userApi";
-
-import {
-    getDepartments,
-} from "../../../services/adminApis/departmentApi";
-
-import {
-    getRoles,
-} from "../../../services/adminApis/rolesApi";
-
+import { addUsers, getPid } from "../../../services/adminApis/userApi";
+import { getDepartments } from "../../../services/adminApis/departmentApi";
+import { getRoles } from "../../../services/adminApis/rolesApi";
 import AdminModal from "../../../components/common/AdminModal/AdminModal";
 import Dropdown from "../../../components/ui/Dropdown";
 import MultiSelectDropdown from "../../../components/ui/MultiSelectDropdown";
@@ -37,16 +25,13 @@ import { toast } from "sonner";
 
 const AddUser = () => {
     const navigate = useNavigate();
-
     const [departments, setDepartments] = useState([]);
     const [roles, setRoles] = useState([]);
     const [personId, setPersonId] = useState("");
     const [pidLoading, setPidLoading] = useState(true);
-
     const [loadingData, setLoadingData] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
-
     const [form, setForm] = useState({
         salutation: "",
         person_id: "",
@@ -58,47 +43,34 @@ const AddUser = () => {
         department_id: "",
         roles: [],
     });
-
     const [errors, setErrors] = useState({});
 
     useEffect(() => {
-    const fetchPid = async () => {
-        try {
-            setPidLoading(true);
-
-            const response = await getPid();
-
-            const pid =
-                response?.data?.data ||
-                "";
-
-            setPersonId(pid);
-        } catch (error) {
-            console.error("Failed to generate Person ID:", error);
-            setPersonId("");
-        } finally {
-            setPidLoading(false);
-        }
-    };
-
-    fetchPid();
-}, []);
+        const fetchPid = async () => {
+            try {
+                setPidLoading(true);
+                const response = await getPid();
+                const pid = response?.data?.data || "";
+                setPersonId(pid);
+            } catch (error) {
+                console.error("Failed to generate Person ID:", error);
+                setPersonId("");
+            } finally {
+                setPidLoading(false);
+            }
+        };
+        fetchPid();
+    }, []);
 
     useEffect(() => {
         const loadData = async () => {
             try {
                 setLoadingData(true);
-
-                const [departmentResponse, rolesResponse] =
-                    await Promise.all([
-                        getDepartments(),
-                        getRoles(),
-                    ]);
-
-                setDepartments(
-                    departmentResponse?.data?.data || []
-                );
-
+                const [departmentResponse, rolesResponse] = await Promise.all([
+                    getDepartments(),
+                    getRoles(),
+                ]);
+                setDepartments(departmentResponse?.data?.data || []);
                 setRoles(rolesResponse?.data?.data || []);
             } catch (err) {
                 setError(
@@ -109,10 +81,8 @@ const AddUser = () => {
                 setLoadingData(false);
             }
         };
-
         loadData();
     }, []);
-
 
     const updateField = (field, value) => {
         setForm((prev) => ({
@@ -133,37 +103,25 @@ const AddUser = () => {
 
         if (!form.salutation)
             nextErrors.salutation = "Salutation is required.";
-
-        if (!form.name.trim())
-            nextErrors.name = "Name is required.";
-
+        if (!form.name.trim()) nextErrors.name = "Name is required.";
         if (!form.username.trim())
             nextErrors.username = "Username is required.";
-
-        if (!form.email.trim())
-            nextErrors.email = "Email is required.";
-
+        if (!form.email.trim()) nextErrors.email = "Email is required.";
         if (!form.mobile_no.trim())
             nextErrors.mobile_no = "Mobile number is required.";
-
         if (!form.password)
             nextErrors.password = "Password is required.";
-
         if (!form.department_id)
-            nextErrors.department_id =
-                "Department is required.";
-
+            nextErrors.department_id = "Department is required.";
         if (!form.roles.length)
             nextErrors.roles = "Select at least one role.";
 
         setErrors(nextErrors);
-
         return Object.keys(nextErrors).length === 0;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         if (!validate()) return;
 
         try {
@@ -182,12 +140,12 @@ const AddUser = () => {
                 roles: form.roles.map(Number),
                 is_active: true,
             });
+
             toast.success("Role created successfully!");
             navigate("/admin/users-management");
         } catch (err) {
             setError(
-                err?.response?.data?.message ||
-                    "Failed to create user."
+                err?.response?.data?.message || "Failed to create user."
             );
             toast.error(
                 error?.response?.data?.message ||
@@ -220,12 +178,10 @@ const AddUser = () => {
                         className="text-[#17734C]"
                     />
                 </span>
-
                 <div>
                     <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-[#152C20]">
                         Add User
                     </h1>
-
                     <p className="mt-0.5 text-[11.5px] text-[#6C8679]">
                         Create a new user and assign access.
                     </p>
@@ -250,45 +206,33 @@ const AddUser = () => {
                         onChange={(value) =>
                             updateField("salutation", value)
                         }
-                        options={[
-                            "Mr.",
-                            "Mrs.",
-                            "Ms.",
-                        ]}
+                        options={["Mr.", "Mrs.", "Ms."]}
                         placeholder="Select salutation"
                         error={errors.salutation}
                     />
 
                     <div>
-                        <FieldLabel icon={UserRound}>
-                            Person ID
-                        </FieldLabel>
-
+                        <FieldLabel icon={UserRound}>Person ID</FieldLabel>
                         <input
                             type="text"
                             value={pidLoading ? "Generating..." : personId}
                             disabled
-                            className={`${inputClass("person_id")} cursor-not-allowed bg-[#F1F6F3] text-[#557267]`}
+                            className={`${inputClass(
+                                "person_id"
+                            )} cursor-not-allowed bg-[#F1F6F3] text-[#557267]`}
                         />
                     </div>
 
                     <div>
-                        <FieldLabel icon={User}>
-                            Name
-                        </FieldLabel>
-
+                        <FieldLabel icon={User}>Name</FieldLabel>
                         <input
                             value={form.name}
                             onChange={(e) =>
-                                updateField(
-                                    "name",
-                                    e.target.value
-                                )
+                                updateField("name", e.target.value)
                             }
                             placeholder="Enter full name"
                             className={inputClass("name")}
                         />
-
                         {errors.name && (
                             <p className="mt-1.5 text-[10.5px] font-medium text-[#C43D3D]">
                                 {errors.name}
@@ -297,22 +241,15 @@ const AddUser = () => {
                     </div>
 
                     <div>
-                        <FieldLabel icon={AtSign}>
-                            Username
-                        </FieldLabel>
-
+                        <FieldLabel icon={AtSign}>Username</FieldLabel>
                         <input
                             value={form.username}
                             onChange={(e) =>
-                                updateField(
-                                    "username",
-                                    e.target.value
-                                )
+                                updateField("username", e.target.value)
                             }
                             placeholder="Enter username"
                             className={inputClass("username")}
                         />
-
                         {errors.username && (
                             <p className="mt-1.5 text-[10.5px] font-medium text-[#C43D3D]">
                                 {errors.username}
@@ -321,23 +258,16 @@ const AddUser = () => {
                     </div>
 
                     <div>
-                        <FieldLabel icon={Mail}>
-                            Email
-                        </FieldLabel>
-
+                        <FieldLabel icon={Mail}>Email</FieldLabel>
                         <input
                             type="email"
                             value={form.email}
                             onChange={(e) =>
-                                updateField(
-                                    "email",
-                                    e.target.value
-                                )
+                                updateField("email", e.target.value)
                             }
                             placeholder="Enter email address"
                             className={inputClass("email")}
                         />
-
                         {errors.email && (
                             <p className="mt-1.5 text-[10.5px] font-medium text-[#C43D3D]">
                                 {errors.email}
@@ -346,23 +276,16 @@ const AddUser = () => {
                     </div>
 
                     <div>
-                        <FieldLabel icon={Phone}>
-                            Mobile Number
-                        </FieldLabel>
-
+                        <FieldLabel icon={Phone}>Mobile Number</FieldLabel>
                         <input
                             type="tel"
                             value={form.mobile_no}
                             onChange={(e) =>
-                                updateField(
-                                    "mobile_no",
-                                    e.target.value
-                                )
+                                updateField("mobile_no", e.target.value)
                             }
                             placeholder="Enter mobile number"
                             className={inputClass("mobile_no")}
                         />
-
                         {errors.mobile_no && (
                             <p className="mt-1.5 text-[10.5px] font-medium text-[#C43D3D]">
                                 {errors.mobile_no}
@@ -371,23 +294,16 @@ const AddUser = () => {
                     </div>
 
                     <div>
-                        <FieldLabel icon={LockKeyhole}>
-                            Password
-                        </FieldLabel>
-
+                        <FieldLabel icon={LockKeyhole}>Password</FieldLabel>
                         <input
                             type="password"
                             value={form.password}
                             onChange={(e) =>
-                                updateField(
-                                    "password",
-                                    e.target.value
-                                )
+                                updateField("password", e.target.value)
                             }
                             placeholder="Enter password"
                             className={inputClass("password")}
                         />
-
                         {errors.password && (
                             <p className="mt-1.5 text-[10.5px] font-medium text-[#C43D3D]">
                                 {errors.password}
@@ -400,10 +316,7 @@ const AddUser = () => {
                         icon={Building2}
                         value={form.department_id}
                         onChange={(value) =>
-                            updateField(
-                                "department_id",
-                                value
-                            )
+                            updateField("department_id", value)
                         }
                         options={departmentOptions}
                         placeholder={
@@ -419,14 +332,10 @@ const AddUser = () => {
                         label="Roles"
                         icon={ShieldCheck}
                         value={form.roles}
-                        onChange={(value) =>
-                            updateField("roles", value)
-                        }
+                        onChange={(value) => updateField("roles", value)}
                         options={roleOptions}
                         placeholder={
-                            loadingData
-                                ? "Loading roles..."
-                                : "Select roles"
+                            loadingData ? "Loading roles..." : "Select roles"
                         }
                         error={errors.roles}
                         disabled={loadingData}
@@ -456,10 +365,7 @@ const AddUser = () => {
                                 className="animate-spin"
                             />
                         )}
-
-                        {saving
-                            ? "Creating..."
-                            : "Create User"}
+                        {saving ? "Creating..." : "Create User"}
                     </button>
                 </div>
             </form>

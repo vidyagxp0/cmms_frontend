@@ -18,7 +18,6 @@ const UserManagementList = () => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [deleting, setDeleting] = useState(false);
@@ -33,8 +32,7 @@ const UserManagementList = () => {
             setUsers(response?.data?.data || []);
         } catch (err) {
             setError(
-                err?.response?.data?.message ||
-                    "Failed to load users."
+                err?.response?.data?.message || "Failed to load users."
             );
         } finally {
             setLoading(false);
@@ -72,12 +70,10 @@ const UserManagementList = () => {
 
             setDeleteModalOpen(false);
             setSelectedUser(null);
-
             await fetchUsers();
         } catch (err) {
             setDeleteError(
-                err?.response?.data?.message ||
-                    "Failed to delete user."
+                err?.response?.data?.message || "Failed to delete user."
             );
         } finally {
             setDeleting(false);
@@ -101,7 +97,6 @@ const UserManagementList = () => {
                         <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-[#152C20]">
                             User Management
                         </h1>
-
                         <p className="mt-0.5 text-[11.5px] text-[#6C8679]">
                             View and manage users, roles, and access.
                         </p>
@@ -127,31 +122,24 @@ const UserManagementList = () => {
                                 <th className="w-[80px] border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
                                     S.No
                                 </th>
-
                                 <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
                                     Person ID
                                 </th>
-
                                 <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
                                     User
                                 </th>
-
                                 <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
                                     Username
                                 </th>
-
                                 <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
                                     Department
                                 </th>
-
                                 <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
                                     Roles
                                 </th>
-
                                 <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
                                     Status
                                 </th>
-
                                 <th className="w-[110px] border-b border-[#E3F0E8] px-5 py-3.5 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
                                     Action
                                 </th>
@@ -239,7 +227,6 @@ const UserManagementList = () => {
                                                         <p className="text-[12.5px] font-semibold text-[#152C20]">
                                                             {user.name || "-"}
                                                         </p>
-
                                                         <p className="text-[10.5px] text-[#8FA79B]">
                                                             {user.email || "-"}
                                                         </p>

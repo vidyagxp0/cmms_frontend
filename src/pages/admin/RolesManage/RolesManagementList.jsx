@@ -15,6 +15,7 @@ import {
 } from "../../../services/adminApis/rolesApi";
 import AdminModal from "../../../components/common/AdminModal/AdminModal";
 import { toast } from "sonner";
+import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const RolesManagementList = () => {
     const navigate = useNavigate();
@@ -168,23 +169,24 @@ const RolesManagementList = () => {
 
                         <tbody className="divide-y divide-[#E3F0E8]">
                             {/* LOADING */}
-                            {loading && (
-                                <tr>
-                                    <td
-                                        colSpan="5"
-                                        className="px-6 py-12 text-center"
-                                    >
-                                        <div className="flex items-center justify-center gap-2 text-[12px] font-medium text-[#5C7A6C]">
-                                            <Loader2
-                                                size={16}
-                                                className="animate-spin text-[#17734C]"
-                                            />
-                                            Loading roles...
-                                        </div>
-                                    </td>
-                                </tr>
-                            )}
-
+                          {loading && (
+                    <tr>
+                        <td colSpan="5" className="p-0">
+                            <Skeleton
+                            variant="table"
+                            rows={6}
+                            showHeader={false}
+                          columnDefinitions={[
+                        { type: "number", width: "10%", align: "center" },
+                        { type: "text", width: "40%" },
+                        { type: "text", width: "40%" },
+                        { type: "badge", width: "25%", align: "center" },
+                        { type: "actions", width: "25%", align: "right" },
+                    ]}
+                            />
+                        </td>
+                    </tr>
+                )}
                             {/* ERROR */}
                             {!loading && error && (
                                 <tr>

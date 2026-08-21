@@ -16,6 +16,7 @@ import {
 } from "../../../services/adminApis/departmentApi";
 import AdminModal from "../../../components/common/AdminModal/AdminModal";
 import { toast } from "sonner";
+import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const DepartmentManagemelist = () => {
     const [departments, setDepartments] = useState([]);
@@ -198,19 +199,22 @@ const DepartmentManagemelist = () => {
                         </thead>
 
                         <tbody className="divide-y divide-[#E3F0E8]">
-                            {loading && (
-                                <tr>
-                                    <td colSpan="3" className="px-6 py-12">
-                                        <div className="flex items-center justify-center gap-2 text-[12px] font-medium text-[#5C7A6C]">
-                                            <Loader2
-                                                size={16}
-                                                className="animate-spin text-[#17734C]"
-                                            />
-                                            Loading departments...
-                                        </div>
-                                    </td>
-                                </tr>
-                            )}
+                     {loading && (
+                    <tr>
+                        <td colSpan="3" className="p-0">
+                            <Skeleton
+                            variant="table"
+                            rows={6}
+                            showHeader={false}
+                            columnDefinitions={[
+                            { type: "number", width: "15%", align: "center" },
+                            { type: "text", width: "60%" },
+                            { type: "actions", width: "25%", align: "right" },
+                        ]}
+                            />
+                        </td>
+                    </tr>
+                )}
 
                             {!loading && error && (
                                 <tr>

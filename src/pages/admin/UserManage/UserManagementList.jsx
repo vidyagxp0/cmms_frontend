@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { getUsers, deleteUser } from "../../../services/adminApis/userApi";
 import AdminModal from "../../../components/common/AdminModal/AdminModal";
 import { toast } from "sonner";
+import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const UserManagementList = () => {
     const navigate = useNavigate();
@@ -156,14 +157,19 @@ const UserManagementList = () => {
                             {/* LOADING */}
                             {loading && (
                                 <tr>
-                                    <td colSpan="8" className="px-6 py-14">
-                                        <div className="flex items-center justify-center gap-2 text-[12px] font-medium text-[#5C7A6C]">
-                                            <Loader2
-                                                size={16}
-                                                className="animate-spin text-[#17734C]"
-                                            />
-                                            Loading users...
-                                        </div>
+                            <td colSpan="8" className="">
+                            <Skeleton
+                            variant="table"
+                            rows={6}
+                            showHeader={false}
+                            columnDefinitions={[
+                            { type: "number", width: "7%", align: "center" },
+                            { type: "avatarText", width: "25%" },
+                            { type: "email", width: "25%" },
+                            { type: "badge", width: "18%", align: "center" },
+                            { type: "actions", width: "25%", align: "right" },
+                        ]}
+                            />
                                     </td>
                                 </tr>
                             )}

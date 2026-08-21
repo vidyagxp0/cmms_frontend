@@ -210,6 +210,7 @@ const AddRole = () => {
                             options={departments}
                             placeholder="Select department"
                             error={errors.department}
+                            searchable
                             onChange={(value) => {
                                 setDepartment(value);
 

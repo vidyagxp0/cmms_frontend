@@ -1,13 +1,31 @@
 import React, { useEffect, useState } from "react";
-import { Eye, Pencil, ShieldCheck, Plus, Loader2 } from "lucide-react";
+import {
+    Eye,
+    Pencil,
+    Trash2,
+    ShieldCheck,
+    Plus,
+    Loader2,
+    AlertTriangle,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { getRoles } from "../../../services/adminApis/rolesApi";
+import {
+    getRoles,
+    deleteRole,
+} from "../../../services/adminApis/rolesApi";
+import AdminModal from "../../../components/common/AdminModal/AdminModal";
+import { toast } from "sonner";
 
 const RolesManagementList = () => {
     const navigate = useNavigate();
+
     const [roles, setRoles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+
+    const [deleteModal, setDeleteModal] = useState(false);
+    const [selectedRole, setSelectedRole] = useState(null);
+    const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
         fetchRoles();
@@ -19,15 +37,66 @@ const RolesManagementList = () => {
             setError("");
 
             const response = await getRoles();
-            const data = response?.data?.data || [];
-
-            setRoles(data);
+            setRoles(response?.data?.data || []);
         } catch (err) {
             console.error("Error fetching roles:", err);
-            setError("Failed to load roles.");
+            setError(
+                err?.response?.data?.message ||
+                    "Failed to load roles."
+            );
             setRoles([]);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const getPermissions = (role) => {
+        const permissions = role?.permissions?.[0]?.name?.[0];
+
+        if (!permissions) return [];
+
+        return Object.entries(permissions)
+            .filter(([, value]) => value)
+            .map(
+                ([key]) =>
+                    key.charAt(0).toUpperCase() + key.slice(1)
+            );
+    };
+
+    const openDeleteModal = (role) => {
+        setSelectedRole(role);
+        setDeleteModal(true);
+    };
+
+    const closeDeleteModal = () => {
+        if (deleting) return;
+
+        setDeleteModal(false);
+        setSelectedRole(null);
+    };
+
+    const handleDelete = async () => {
+        if (!selectedRole) return;
+
+        try {
+            setDeleting(true);
+
+            await deleteRole(selectedRole.id);
+
+            closeDeleteModal();
+            await fetchRoles();
+        } catch (err) {
+            console.error("Error deleting role:", err);
+
+            setError(
+                err?.response?.data?.message ||
+                    "Failed to delete role."
+            );
+
+            setDeleteModal(false);
+            setSelectedRole(null);
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -51,7 +120,8 @@ const RolesManagementList = () => {
                     </div>
 
                     <p className="pl-[46px] text-[12.5px] text-[#5C7A6C]">
-                        View and manage roles, departments, and access permissions.
+                        View and manage roles, departments, and access
+                        permissions.
                     </p>
                 </div>
 
@@ -85,7 +155,7 @@ const RolesManagementList = () => {
                                 </th>
 
                                 <th className="border-b border-[#E3F0E8] px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
-                                    Status
+                                    Permissions
                                 </th>
 
                                 <th className="w-[130px] border-b border-[#E3F0E8] px-6 py-3.5 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
@@ -126,94 +196,121 @@ const RolesManagementList = () => {
                             )}
 
                             {/* EMPTY */}
-                            {!loading && !error && roles.length === 0 && (
-                                <tr>
-                                    <td
-                                        colSpan="5"
-                                        className="px-6 py-12 text-center text-[12px] text-[#8FA79B]"
-                                    >
-                                        No roles found.
-                                    </td>
-                                </tr>
-                            )}
+                            {!loading &&
+                                !error &&
+                                roles.length === 0 && (
+                                    <tr>
+                                        <td
+                                            colSpan="5"
+                                            className="px-6 py-12 text-center text-[12px] text-[#8FA79B]"
+                                        >
+                                            No roles found.
+                                        </td>
+                                    </tr>
+                                )}
 
                             {/* ROLES */}
                             {!loading &&
                                 !error &&
-                                roles.map((role, index) => (
-                                    <tr
-                                        key={role.id}
-                                        className="transition-colors duration-150 hover:bg-[#F6FBF8]"
-                                    >
-                                        {/* S.NO */}
-                                        <td className="px-6 py-4 text-[12.5px] font-medium text-[#5C7A6C]">
-                                            {String(index + 1).padStart(2, "0")}
-                                        </td>
+                                roles.map((role, index) => {
+                                    const permissions =
+                                        getPermissions(role);
 
-                                        {/* ROLE NAME */}
-                                        <td className="px-6 py-4">
-                                            <span className="text-[13px] font-semibold text-[#152C20]">
-                                                {role.name}
-                                            </span>
-                                        </td>
+                                    return (
+                                        <tr
+                                            key={role.id}
+                                            className="transition-colors duration-150 hover:bg-[#F6FBF8]"
+                                        >
+                                            {/* S.NO */}
+                                            <td className="px-6 py-4 text-[12.5px] font-medium text-[#5C7A6C]">
+                                                {String(index + 1).padStart(
+                                                    2,
+                                                    "0"
+                                                )}
+                                            </td>
 
-                                        {/* DEPARTMENT */}
-                                        <td className="px-6 py-4">
-                                            <span className="inline-flex rounded-full border border-[#D6E8DE] bg-[#F5FAF7] px-2.5 py-1 text-[11px] font-medium text-[#3E5A4D]">
-                                                 {role.department?.name}
-                                            </span>
-                                        </td>
+                                            {/* ROLE NAME */}
+                                            <td className="px-6 py-4">
+                                                <span className="text-[13px] font-semibold text-[#152C20]">
+                                                    {role.name}
+                                                </span>
+                                            </td>
 
-                                        {/* STATUS */}
-                                        <td className="px-6 py-4">
-                                            <span
-                                                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10.5px] font-semibold ${
-                                                    role.is_active
-                                                        ? "border-[#BFE0CC] bg-[#EDF8F1] text-[#17734C]"
-                                                        : "border-[#E5CCCC] bg-[#FEF3F3] text-[#B33A3A]"
-                                                }`}
-                                            >
-                                                <span
-                                                    className={`h-1.5 w-1.5 rounded-full ${
-                                                        role.is_active
-                                                            ? "bg-[#23845D]"
-                                                            : "bg-[#C43D3D]"
-                                                    }`}
-                                                />
-                                                {role.is_active
-                                                    ? "Active"
-                                                    : "Inactive"}
-                                            </span>
-                                        </td>
+                                            {/* DEPARTMENT */}
+                                            <td className="px-6 py-4">
+                                                <span className="inline-flex rounded-full border border-[#D6E8DE] bg-[#F5FAF7] px-2.5 py-1 text-[11px] font-medium text-[#3E5A4D]">
+                                                    {role.department?.name ||
+                                                        "—"}
+                                                </span>
+                                            </td>
 
-                                        {/* ACTION */}
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    type="button"
-                                                    aria-label={`View ${role.name}`}
-                                                    className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#CBE3D6] bg-white text-[#5C7A6C] transition-all duration-150 hover:border-[#1F8A5F]/35 hover:bg-[#F1F9F4] hover:text-[#17734C]"
-                                                >
-                                                    <Eye
-                                                        size={15}
-                                                        strokeWidth={1.9}
-                                                    />
-                                                </button>
+                                            {/* PERMISSIONS */}
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {permissions.length > 0 ? (
+                                                        permissions.map(
+                                                            (permission) => (
+                                                                <span
+                                                                    key={
+                                                                        permission
+                                                                    }
+                                                                    className="rounded-full border border-[#CBE3D6] bg-[#EAF5EE] px-2.5 py-1 text-[10.5px] font-medium text-[#17734C]"
+                                                                >
+                                                                    {
+                                                                        permission
+                                                                    }
+                                                                </span>
+                                                            )
+                                                        )
+                                                    ) : (
+                                                        <span className="text-[11px] text-[#9AAEA4]">
+                                                            No permissions
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
 
-                                                <button
-                                                    type="button"
-                                                    aria-label={`Edit ${role.name}`}
-                                                    className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#CBE3D6] bg-white text-[#5C7A6C] transition-all duration-150 hover:border-[#B8933A]/40 hover:bg-[#FCF8EE] hover:text-[#B8933A]"
-                                                >
-                                                    <Pencil
-                                                        size={14}
-                                                        strokeWidth={1.9}
-                                                    />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            {/* ACTION */}
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {/* EDIT */}
+                                                    <button
+                                                        type="button"
+                                                        aria-label={`Edit ${role.name}`}
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/admin/update-role/${role.id}`
+                                                            )
+                                                        }
+                                                        className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#CBE3D6] bg-white text-[#5C7A6C] transition-all duration-150 hover:border-[#B8933A]/40 hover:bg-[#FFFCF5] hover:text-[#B8933A]"
+                                                    >
+                                                        <Pencil
+                                                            size={14}
+                                                            strokeWidth={1.9}
+                                                        />
+                                                    </button>
+
+                                                    {/* DELETE */}
+                                                    <button
+                                                        type="button"
+                                                        aria-label={`Delete ${role.name}`}
+                                                        onClick={() =>
+                                                            openDeleteModal(
+                                                                role
+                                                            )
+                                                        }
+                                                        className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#E7CCCC] bg-white text-[#A65A5A] transition-all duration-150 hover:border-[#D88A8A] hover:bg-[#FFF7F7] hover:text-[#C43D3D]"
+                                                    >
+                                                        <Trash2
+                                                            size={14}
+                                                            strokeWidth={1.9}
+                                                        />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                         </tbody>
                     </table>
                 </div>
@@ -226,6 +323,33 @@ const RolesManagementList = () => {
                     {roles.length !== 1 ? "s" : ""}
                 </p>
             )}
+
+            {/* DELETE CONFIRMATION MODAL */}
+            <AdminModal
+                open={deleteModal}
+                onClose={closeDeleteModal}
+                onSubmit={handleDelete}
+                title="Delete Role"
+                description="This action cannot be undone."
+                icon={AlertTriangle}
+                submitText="Delete Role"
+                loading={deleting}
+            >
+                <div className="rounded-xl border border-[#F0D6D6] bg-[#FFF8F8] p-4">
+                    <p className="text-[12.5px] leading-5 text-[#5A3838]">
+                        Are you sure you want to delete{" "}
+                        <span className="font-semibold text-[#3F2424]">
+                            {selectedRole?.name}
+                        </span>
+                        ?
+                    </p>
+
+                    <p className="mt-1.5 text-[11px] leading-5 text-[#9A6E6E]">
+                        The role and its associated permissions will be
+                        permanently removed.
+                    </p>
+                </div>
+            </AdminModal>
         </div>
     );
 };

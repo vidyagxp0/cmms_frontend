@@ -1,22 +1,24 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, Search, X } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import {
+    Check,
+    ChevronDown,
+    Search,
+} from "lucide-react";
 
-const Dropdown = ({
-    value,
+const MultiSelectDropdown = ({
+    value = [],
     onChange,
     options = [],
-    placeholder = "Select an option",
+    placeholder = "Select options",
     label,
     icon: LabelIcon,
     error,
     disabled = false,
-    searchable = false,
-    searchPlaceholder = "Search options...",
 }) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
+    const [placement, setPlacement] = useState("down");
     const selectRef = useRef(null);
-    const searchRef = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -32,43 +34,66 @@ const Dropdown = ({
     }, []);
 
     useEffect(() => {
-        if (open && searchable) {
-            setTimeout(() => searchRef.current?.focus(), 50);
-        }
-    }, [open, searchable]);
+        if (!open) return;
 
-    const selectedOption = options.find((option) =>
-        typeof option === "object"
-            ? option.value === value
-            : option === value
+        const updatePlacement = () => {
+            const rect = selectRef.current?.getBoundingClientRect();
+            if (!rect) return;
+
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const spaceAbove = rect.top;
+
+            setPlacement(
+                spaceBelow < 280 && spaceAbove > spaceBelow
+                    ? "up"
+                    : "down"
+            );
+        };
+
+        updatePlacement();
+
+        window.addEventListener("resize", updatePlacement);
+        window.addEventListener("scroll", updatePlacement, true);
+
+        return () => {
+            window.removeEventListener("resize", updatePlacement);
+            window.removeEventListener("scroll", updatePlacement, true);
+        };
+    }, [open]);
+
+    const selectedOptions = options.filter((option) =>
+        value.includes(
+            typeof option === "object" ? option.value : option
+        )
     );
 
-    const selectedLabel =
-        typeof selectedOption === "object"
-            ? selectedOption.label
-            : selectedOption;
+    const filteredOptions = options.filter((option) => {
+        const label =
+            typeof option === "object" ? option.label : option;
 
-    const filteredOptions = useMemo(() => {
-        if (!search.trim()) return options;
+        return label
+            ?.toLowerCase()
+            .includes(search.toLowerCase());
+    });
 
-        const query = search.toLowerCase();
-
-        return options.filter((option) => {
-            const optionLabel =
-                typeof option === "object" ? option.label : option;
-
-            return String(optionLabel).toLowerCase().includes(query);
-        });
-    }, [options, search]);
-
-    const handleSelect = (option) => {
-        const nextValue =
+    const toggleOption = (option) => {
+        const optionValue =
             typeof option === "object" ? option.value : option;
 
-        onChange(nextValue);
-        setOpen(false);
-        setSearch("");
+        const exists = value.includes(optionValue);
+
+        onChange(
+            exists
+                ? value.filter((item) => item !== optionValue)
+                : [...value, optionValue]
+        );
     };
+
+    const selectedLabel = selectedOptions.length
+        ? selectedOptions.map((option) =>
+              typeof option === "object" ? option.label : option
+          ).join(", ")
+        : "";
 
     return (
         <div className="relative" ref={selectRef}>
@@ -102,7 +127,7 @@ const Dropdown = ({
                 aria-haspopup="listbox"
             >
                 <span
-                    className={`text-[12.5px] font-medium ${
+                    className={`truncate pr-3 text-[12.5px] font-medium ${
                         selectedLabel
                             ? "text-[#1C382A]"
                             : "text-[#94A79E]"
@@ -114,55 +139,44 @@ const Dropdown = ({
                 <ChevronDown
                     size={15}
                     strokeWidth={1.8}
-                    className={`text-[#71877C] transition-transform duration-200 ${
+                    className={`shrink-0 text-[#71877C] transition-transform duration-200 ${
                         open ? "rotate-180 text-[#287653]" : ""
                     }`}
                 />
             </button>
 
             {open && (
-                <div className="absolute left-0 right-0 top-[calc(100%+7px)] z-50 overflow-hidden rounded-xl border border-[#CBE3D6] bg-white p-1.5 shadow-[0_18px_40px_-18px_rgba(21,61,45,0.38)]">
+                <div
+                    className={`absolute left-0 right-0 z-50 overflow-hidden rounded-xl border border-[#CBE3D6] bg-white p-1.5 shadow-[0_18px_40px_-18px_rgba(21,61,45,0.38)] ${
+                        placement === "up"
+                            ? "bottom-[calc(100%+7px)]"
+                            : "top-[calc(100%+7px)]"
+                    }`}
+                >
                     <div className="px-2.5 pb-1.5 pt-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#91A39A]">
                         {label || "Options"}
                     </div>
 
-                    {searchable && (
-                        <div className="relative mb-1.5 px-1">
-                            <Search
-                                size={14}
-                                strokeWidth={1.8}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8AA096]"
-                            />
+                    <div className="mb-1.5 flex h-9 items-center gap-2 rounded-lg border border-[#E1EEE7] bg-[#F9FCFA] px-2.5">
+                        <Search
+                            size={14}
+                            className="shrink-0 text-[#82958B]"
+                        />
 
-                            <input
-                                ref={searchRef}
-                                type="text"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                placeholder={searchPlaceholder}
-                                className="h-9 w-full rounded-lg border border-[#DCEAE2] bg-[#F8FBF9] pl-8 pr-8 text-[11.5px] font-medium text-[#1C382A] outline-none transition-all placeholder:text-[#9BAAA3] focus:border-[#79B89A] focus:bg-white focus:shadow-[0_0_0_3px_rgba(31,138,95,0.06)]"
-                            />
-
-                            {search && (
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSearch("");
-                                        searchRef.current?.focus();
-                                    }}
-                                    className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center justify-center text-[#91A39A] transition-colors hover:text-[#39785D]"
-                                >
-                                    <X size={13} strokeWidth={2} />
-                                </button>
-                            )}
-                        </div>
-                    )}
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder={`Search ${label || "options"}...`}
+                            className="w-full bg-transparent text-[11.5px] text-[#1C382A] outline-none placeholder:text-[#9AAEA4]"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
 
                     <div
-                        className="max-h-56 overflow-y-auto"
+                        className="max-h-56 overflow-y-auto pr-0.5"
                         role="listbox"
+                        aria-multiselectable="true"
                     >
                         {filteredOptions.length > 0 ? (
                             filteredOptions.map((option) => {
@@ -181,7 +195,8 @@ const Dropdown = ({
                                         ? option.icon
                                         : null;
 
-                                const selected = value === optionValue;
+                                const selected =
+                                    value.includes(optionValue);
 
                                 return (
                                     <button
@@ -189,20 +204,22 @@ const Dropdown = ({
                                         type="button"
                                         role="option"
                                         aria-selected={selected}
-                                        onClick={() => handleSelect(option)}
+                                        onClick={() =>
+                                            toggleOption(option)
+                                        }
                                         className={`group flex w-full items-center justify-between rounded-lg px-2.5 py-2.5 text-left transition-all duration-150 ${
                                             selected
                                                 ? "bg-[#EEF8F2] text-[#176B49]"
                                                 : "text-[#3B5549] hover:bg-[#F5FAF7] hover:text-[#176B49]"
                                         }`}
                                     >
-                                        <div className="flex items-center gap-2.5">
+                                        <div className="flex min-w-0 items-center gap-2.5">
                                             {OptionIcon && (
                                                 <span
-                                                    className={`flex h-7 w-7 items-center justify-center rounded-lg border ${
+                                                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
                                                         selected
                                                             ? "border-[#B8DAC6] bg-white text-[#23845D]"
-                                                            : "border-[#DCEAE2] bg-[#FAFCFB] text-[#82958B] group-hover:border-[#C4DED0] group-hover:text-[#39785D]"
+                                                            : "border-[#DCEAE2] bg-[#FAFCFB] text-[#82958B]"
                                                     }`}
                                                 >
                                                     <OptionIcon
@@ -212,37 +229,31 @@ const Dropdown = ({
                                                 </span>
                                             )}
 
-                                            <span className="text-[12px] font-medium">
+                                            <span className="truncate text-[12px] font-medium">
                                                 {optionLabel}
                                             </span>
                                         </div>
 
-                                        {selected && (
-                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#23845D] text-white">
+                                        <span
+                                            className={`ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                                                selected
+                                                    ? "border-[#23845D] bg-[#23845D] text-white"
+                                                    : "border-[#CBE3D6] bg-white"
+                                            }`}
+                                        >
+                                            {selected && (
                                                 <Check
                                                     size={11}
                                                     strokeWidth={2.5}
                                                 />
-                                            </span>
-                                        )}
+                                            )}
+                                        </span>
                                     </button>
                                 );
                             })
                         ) : (
-                            <div className="flex flex-col items-center justify-center px-4 py-7 text-center">
-                                <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-[#F3F8F5] text-[#8AA096]">
-                                    <Search size={14} strokeWidth={1.8} />
-                                </span>
-
-                                <p className="text-[11.5px] font-medium text-[#526A5E]">
-                                    No options found
-                                </p>
-
-                                {search && (
-                                    <p className="mt-0.5 text-[10px] text-[#9AA9A1]">
-                                        Try a different search
-                                    </p>
-                                )}
+                            <div className="px-3 py-6 text-center text-[11px] text-[#8FA79B]">
+                                No options found
                             </div>
                         )}
                     </div>
@@ -258,4 +269,4 @@ const Dropdown = ({
     );
 };
 
-export default Dropdown;
+export default MultiSelectDropdown;

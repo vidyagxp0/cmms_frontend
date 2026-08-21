@@ -3,6 +3,9 @@ import api from "../api";
 export const getUsers = () =>
     api.get("/admin/users-listing");
 
+export const getPid = () =>
+    api.get("/admin/users-pid");
+
 export const getUsersDetail = (id) =>
     api.get(`/admin/user-detail/${id}`);
 

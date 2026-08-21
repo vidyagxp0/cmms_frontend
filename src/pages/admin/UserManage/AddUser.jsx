@@ -10,12 +10,14 @@ import {
     Hash,
     AtSign,
     Loader2,
+    UserRound,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
 
 import {
     addUsers,
+    getPid
 } from "../../../services/adminApis/userApi";
 
 import {
@@ -38,6 +40,8 @@ const AddUser = () => {
 
     const [departments, setDepartments] = useState([]);
     const [roles, setRoles] = useState([]);
+    const [personId, setPersonId] = useState("");
+    const [pidLoading, setPidLoading] = useState(true);
 
     const [loadingData, setLoadingData] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -56,6 +60,29 @@ const AddUser = () => {
     });
 
     const [errors, setErrors] = useState({});
+
+    useEffect(() => {
+    const fetchPid = async () => {
+        try {
+            setPidLoading(true);
+
+            const response = await getPid();
+
+            const pid =
+                response?.data?.data ||
+                "";
+
+            setPersonId(pid);
+        } catch (error) {
+            console.error("Failed to generate Person ID:", error);
+            setPersonId("");
+        } finally {
+            setPidLoading(false);
+        }
+    };
+
+    fetchPid();
+}, []);
 
     useEffect(() => {
         const loadData = async () => {
@@ -86,28 +113,6 @@ const AddUser = () => {
         loadData();
     }, []);
 
-    useEffect(() => {
-        // Generate Person ID automatically.
-        // Replace this with your backend-generated value if needed.
-        const generatePersonId = () => {
-            const lastId =
-                Number(
-                    sessionStorage.getItem("lastPersonId") || 0
-                ) + 1;
-
-            sessionStorage.setItem(
-                "lastPersonId",
-                String(lastId)
-            );
-
-            return `P${String(lastId).padStart(4, "0")}`;
-        };
-
-        setForm((prev) => ({
-            ...prev,
-            person_id: generatePersonId(),
-        }));
-    }, []);
 
     const updateField = (field, value) => {
         setForm((prev) => ({
@@ -167,7 +172,7 @@ const AddUser = () => {
 
             await addUsers({
                 salutation: form.salutation,
-                person_id: form.person_id,
+                person_id: personId,
                 name: form.name.trim(),
                 username: form.username.trim(),
                 email: form.email.trim(),
@@ -249,21 +254,21 @@ const AddUser = () => {
                             "Mr.",
                             "Mrs.",
                             "Ms.",
-                            "Dr.",
                         ]}
                         placeholder="Select salutation"
                         error={errors.salutation}
                     />
 
                     <div>
-                        <FieldLabel icon={Hash}>
+                        <FieldLabel icon={UserRound}>
                             Person ID
                         </FieldLabel>
 
                         <input
-                            value={form.person_id}
+                            type="text"
+                            value={pidLoading ? "Generating..." : personId}
                             disabled
-                            className={`${inputClass("person_id")} cursor-not-allowed bg-[#F1F6F3] text-[#6D8579]`}
+                            className={`${inputClass("person_id")} cursor-not-allowed bg-[#F1F6F3] text-[#557267]`}
                         />
                     </div>
 
@@ -432,7 +437,7 @@ const AddUser = () => {
                     <button
                         type="button"
                         onClick={() =>
-                            navigate("admin/users-management")
+                            navigate("/admin/users-management")
                         }
                         disabled={saving}
                         className="h-10 rounded-[10px] border border-[#CBE3D6] bg-white px-5 text-[12px] font-semibold text-[#557064] transition-all hover:bg-[#F5FAF7]"

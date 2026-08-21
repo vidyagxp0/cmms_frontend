@@ -397,13 +397,11 @@ const EditUser = () => {
                                     e.target.value
                                 )
                             }
-                            placeholder="Leave blank to keep current password"
+                            placeholder="Password"
                             className={inputClass("password")}
+                            disabled
                         />
 
-                        <p className="mt-1.5 text-[10px] text-[#8FA79B]">
-                            Leave blank if you don't want to change it.
-                        </p>
                     </div>
 
                     {/* DEPARTMENT */}

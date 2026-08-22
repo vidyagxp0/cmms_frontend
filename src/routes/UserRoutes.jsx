@@ -4,6 +4,7 @@ import UserLayout from "../components/layout/UserLayout/UserLayout";
 import UserDashboard from "../pages/user/UserDashboard/userDashboard";
 import ProcessPage from "../pages/user/ProcessPage/ProcessPage";
 import EquipDashboard from "../pages/user/Equipment/EquipDashboard";
+import EquipmentPanel from "../pages/user/Equipment/EquipmentPanel";
 
 function UserRoutes() {
   return (
@@ -16,6 +17,7 @@ function UserRoutes() {
 
 
         <Route path="equipment-dashboard" element={<EquipDashboard />} />
+        <Route path="equipment-panel/:id" element={<EquipmentPanel/>} />
       </Route>
     </Routes>
   );

@@ -1,8 +1,10 @@
 import api from "../api";
 
-export const getAllEquipment = () =>
-    api.get("/user/equipment-master-listing");
-
+export const getAllEquipment = (params = {}) => {
+    return api.get("/user/equipment-master-listing", {
+        params,
+    });
+};
 export const getEquipmentDetail = (id) =>
     api.get(`/user/equipment-master-detail/${id}`);
 

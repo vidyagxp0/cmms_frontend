@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import InputField from "../../../components/ui/Input";
 import UserModal from "../../../components/common/UserModal/UserModal";
 import { addEquipment } from "../../../services/usersApi/equipmentApi";
+import { toast } from "sonner";
 
 const initialForm = {
     name: "",
@@ -12,7 +13,7 @@ const initialForm = {
     equipment_type: "",
 };
 
-const CreateEquipmentModal = ({ open, onClose }) => {
+const CreateEquipmentModal = ({ open, onClose, onSuccess }) => {
     const [form, setForm] = useState(initialForm);
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,31 +60,39 @@ const CreateEquipmentModal = ({ open, onClose }) => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async () => {
-        if (!validate()) return;
+const handleSubmit = async () => {
+    if (!validate()) return;
 
-        try {
-            setIsSubmitting(true);
+    try {
+        setIsSubmitting(true);
 
-            const payload = {
-                name: form.name.trim(),
-                equipment_id: form.equipment_id.trim(),
-                make: form.make.trim(),
-                model: form.model.trim(),
-                equipment_type: form.equipment_type.trim(),
-            };
+        const payload = {
+            name: form.name.trim(),
+            equipment_id: form.equipment_id.trim(),
+            make: form.make.trim(),
+            model: form.model.trim(),
+            equipment_type: form.equipment_type.trim(),
+        };
 
-            await addEquipment(payload);
+        await addEquipment(payload);
 
-            setForm(initialForm);
-            setErrors({});
-            onClose();
-        } catch (error) {
-            console.error("Failed to create equipment:", error);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+        toast.success("Equipment created successfully.");
+
+        setForm(initialForm);
+        setErrors({});
+        onSuccess?.();
+        onClose();
+    } catch (error) {
+        console.error("Failed to create equipment:", error);
+
+        toast.error(
+            error?.response?.data?.message ||
+                "Failed to create equipment. Please try again."
+        );
+    } finally {
+        setIsSubmitting(false);
+    }
+};
 
     const handleClose = () => {
         if (isSubmitting) return;

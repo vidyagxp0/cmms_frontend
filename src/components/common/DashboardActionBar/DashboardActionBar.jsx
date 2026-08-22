@@ -1,29 +1,17 @@
 import React from "react";
-
 import {
     ChevronRight,
     Home,
     Plus,
     ArrowUpRight,
 } from "lucide-react";
-
 import { useNavigate } from "react-router-dom";
 
 const DashboardActionBar = ({
     title = "Dashboard",
-    createPath = "/user/create-record",
     onCreate,
 }) => {
     const navigate = useNavigate();
-
-    const handleCreate = () => {
-        if (onCreate) {
-            onCreate();
-            return;
-        }
-
-        navigate(createPath);
-    };
 
     return (
         <div
@@ -41,8 +29,6 @@ const DashboardActionBar = ({
 
                 {/* LEFT — BREADCRUMB */}
                 <div className="flex items-center">
-
-                    {/* HOME */}
                     <button
                         type="button"
                         onClick={() => navigate("/user/dashboard")}
@@ -74,7 +60,6 @@ const DashboardActionBar = ({
                         className="mx-1 text-[#d2dad5]"
                     />
 
-                    {/* CURRENT PAGE */}
                     <span
                         className="
                             rounded-md
@@ -92,7 +77,7 @@ const DashboardActionBar = ({
                 {/* RIGHT — CREATE RECORD */}
                 <button
                     type="button"
-                    onClick={handleCreate}
+                    onClick={onCreate}
                     className="
                         group relative
                         flex h-[36px] items-center gap-2.5
@@ -115,7 +100,6 @@ const DashboardActionBar = ({
                         active:scale-[0.98]
                     "
                 >
-                    {/* ICON */}
                     <span
                         className="
                             flex h-[22px] w-[22px]
@@ -142,7 +126,6 @@ const DashboardActionBar = ({
                         Create Record
                     </span>
 
-                    {/* ARROW */}
                     <ArrowUpRight
                         size={13}
                         strokeWidth={1.8}

@@ -1,42 +1,26 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 
-
 import UserLayout from "../components/layout/UserLayout/UserLayout";
 import UserDashboard from "../pages/user/UserDashboard/userDashboard";
-import Calibration from "../pages/user/Calibration/Calibration";
-
+import ProcessPage from "../pages/user/ProcessPage/ProcessPage";
+import EquipDashboard from "../pages/user/Equipment/EquipDashboard";
+import EquipmentPanel from "../pages/user/Equipment/EquipmentPanel";
 
 function UserRoutes() {
-    return (
-        <Routes>
+  return (
+    <Routes>
+      <Route element={<UserLayout />}>
+        <Route index element={<Navigate to="equipment-dashboard" replace />} />
 
-            <Route element={<UserLayout />}>
-
-                <Route
-                    index
-                    element={
-                        <Navigate
-                            to="dashboard"
-                            replace
-                        />
-                    }
-                />
-
-                <Route
-                    path="dashboard"
-                    element={<UserDashboard />}
-                />
-
-                <Route
-                    path="calibration"
-                    element={<Calibration />}
-                />
+        <Route path="cmms-dashboard" element={<UserDashboard />} />
+        <Route path="create-record" element={<ProcessPage />} />
 
 
-            </Route>
-
-        </Routes>
-    );
+        <Route path="equipment-dashboard" element={<EquipDashboard />} />
+        <Route path="equipment-panel/:id" element={<EquipmentPanel/>} />
+      </Route>
+    </Routes>
+  );
 }
 
 export default UserRoutes;

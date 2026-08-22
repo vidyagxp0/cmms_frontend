@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-
 import {
     Columns3,
     RotateCcw,
@@ -61,9 +60,7 @@ const DataTableToolbar = ({
                         <input
                             value={globalFilter ?? ""}
                             onChange={(event) =>
-                                setGlobalFilter(
-                                    event.target.value
-                                )
+                                setGlobalFilter(event.target.value)
                             }
                             placeholder={searchPlaceholder}
                             className="
@@ -92,9 +89,7 @@ const DataTableToolbar = ({
                         {globalFilter && (
                             <button
                                 type="button"
-                                onClick={() =>
-                                    setGlobalFilter("")
-                                }
+                                onClick={() => setGlobalFilter("")}
                                 className="
                                     absolute
                                     right-2.5
@@ -141,148 +136,128 @@ const DataTableToolbar = ({
 
             {/* Right actions */}
             <div className="flex shrink-0 items-center gap-2">
-                {showColumnVisibility &&
-                    visibleColumns.length > 0 && (
-                        <div className="relative">
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setShowColumns(
-                                        (previous) =>
-                                            !previous
-                                    )
-                                }
-                                className="
-                                    flex
-                                    h-9
-                                    items-center
-                                    gap-2
-                                    rounded-lg
-                                    border
-                                    border-slate-200
-                                    bg-white
-                                    px-3
-                                    text-xs
-                                    font-semibold
-                                    text-slate-500
-                                    transition-all
-                                    hover:border-slate-300
-                                    hover:bg-slate-50
-                                    hover:text-slate-700
-                                "
-                            >
-                                <Columns3 size={14} />
+                {showColumnVisibility && visibleColumns.length > 0 && (
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setShowColumns((previous) => !previous)
+                            }
+                            className="
+                                flex
+                                h-9
+                                items-center
+                                gap-2
+                                rounded-lg
+                                border
+                                border-slate-200
+                                bg-white
+                                px-3
+                                text-xs
+                                font-semibold
+                                text-slate-500
+                                transition-all
+                                hover:border-slate-300
+                                hover:bg-slate-50
+                                hover:text-slate-700
+                            "
+                        >
+                            <Columns3 size={14} />
+                            <span>Columns</span>
+                            <ChevronDown
+                                size={13}
+                                className={`
+                                    transition-transform
+                                    ${showColumns ? "rotate-180" : ""}
+                                `}
+                            />
+                        </button>
 
-                                <span>Columns</span>
-
-                                <ChevronDown
-                                    size={13}
-                                    className={`
-                                        transition-transform
-                                        ${
-                                            showColumns
-                                                ? "rotate-180"
-                                                : ""
-                                        }
-                                    `}
+                        {showColumns && (
+                            <>
+                                <div
+                                    className="
+                                        fixed
+                                        inset-0
+                                        z-40
+                                    "
+                                    onClick={() => setShowColumns(false)}
                                 />
-                            </button>
 
-                            {showColumns && (
-                                <>
-                                    <div
+                                <div
+                                    className="
+                                        absolute
+                                        right-0
+                                        top-11
+                                        z-50
+                                        w-56
+                                        overflow-hidden
+                                        rounded-xl
+                                        border
+                                        border-slate-200
+                                        bg-white
+                                        p-2
+                                        shadow-[0_15px_40px_rgba(15,23,42,0.14)]
+                                    "
+                                >
+                                    <p
                                         className="
-                                            fixed
-                                            inset-0
-                                            z-40
-                                        "
-                                        onClick={() =>
-                                            setShowColumns(false)
-                                        }
-                                    />
-
-                                    <div
-                                        className="
-                                            absolute
-                                            right-0
-                                            top-11
-                                            z-50
-                                            w-56
-                                            overflow-hidden
-                                            rounded-xl
-                                            border
-                                            border-slate-200
-                                            bg-white
-                                            p-2
-                                            shadow-[0_15px_40px_rgba(15,23,42,0.14)]
+                                            px-2
+                                            py-2
+                                            text-[10px]
+                                            font-bold
+                                            uppercase
+                                            tracking-[0.08em]
+                                            text-slate-400
                                         "
                                     >
-                                        <p
+                                        Table Columns
+                                    </p>
+
+                                    {visibleColumns.map((column) => (
+                                        <label
+                                            key={column.id}
                                             className="
+                                                flex
+                                                cursor-pointer
+                                                items-center
+                                                gap-2.5
+                                                rounded-lg
                                                 px-2
                                                 py-2
-                                                text-[10px]
-                                                font-bold
-                                                uppercase
-                                                tracking-[0.08em]
-                                                text-slate-400
+                                                text-xs
+                                                font-medium
+                                                text-slate-600
+                                                transition
+                                                hover:bg-slate-50
                                             "
                                         >
-                                            Table Columns
-                                        </p>
+                                            <input
+                                                type="checkbox"
+                                                checked={column.getIsVisible()}
+                                                onChange={column.getToggleVisibilityHandler()}
+                                                className="
+                                                    h-3.5
+                                                    w-3.5
+                                                    rounded
+                                                    border-slate-300
+                                                    accent-indigo-600
+                                                "
+                                            />
 
-                                        {visibleColumns.map(
-                                            (column) => (
-                                                <label
-                                                    key={
-                                                        column.id
-                                                    }
-                                                    className="
-                                                        flex
-                                                        cursor-pointer
-                                                        items-center
-                                                        gap-2.5
-                                                        rounded-lg
-                                                        px-2
-                                                        py-2
-                                                        text-xs
-                                                        font-medium
-                                                        text-slate-600
-                                                        transition
-                                                        hover:bg-slate-50
-                                                    "
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={column.getIsVisible()}
-                                                        onChange={column.getToggleVisibilityHandler()}
-                                                        className="
-                                                            h-3.5
-                                                            w-3.5
-                                                            rounded
-                                                            border-slate-300
-                                                            accent-indigo-600
-                                                        "
-                                                    />
-
-                                                    <span className="truncate">
-                                                        {typeof column
-                                                            .columnDef
-                                                            .header ===
-                                                        "string"
-                                                            ? column
-                                                                  .columnDef
-                                                                  .header
-                                                            : column.id}
-                                                    </span>
-                                                </label>
-                                            )
-                                        )}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
+                                            <span className="truncate">
+                                                {typeof column.columnDef
+                                                    .header === "string"
+                                                    ? column.columnDef.header
+                                                    : column.id}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
 
                 {toolbarActions}
             </div>

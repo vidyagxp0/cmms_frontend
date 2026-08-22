@@ -15,6 +15,7 @@ import {
     updateEquipment,
 } from "../../../services/usersApi/equipmentApi";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
+import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const initialForm = {
     name: "",
@@ -146,16 +147,15 @@ const EquipmentPanel = () => {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex h-full min-h-0 items-center justify-center bg-[#F7F9F8]">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-                    <Loader2 size={17} className="animate-spin" />
-                    Loading equipment...
-                </div>
+if (loading) {
+    return (
+        <div className="h-full min-h-0 overflow-auto bg-[#F7F9F8] px-5 py-5 sm:px-8 sm:py-6">
+            <div className="mx-auto w-full max-w-6xl">
+                <Skeleton variant="form" fields={5} />
             </div>
-        );
-    }
+        </div>
+    );
+}
 
     if (!equipment) {
         return (

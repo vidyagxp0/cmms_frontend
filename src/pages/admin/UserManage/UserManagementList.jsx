@@ -3,10 +3,13 @@ import {
     Users,
     Pencil,
     Trash2,
-    Loader2,
     Plus,
     UserCheck,
+    Loader2,
     UserX,
+    ChevronLeft,
+    ChevronRight,
+    Search,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getUsers, deleteUser } from "../../../services/adminApis/userApi";
@@ -24,26 +27,56 @@ const UserManagementList = () => {
     const [selectedUser, setSelectedUser] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
+    const [search, setSearch] = useState("");
+    const [page, setPage] = useState(1);
+    const [perPage] = useState(10);
 
-    const fetchUsers = async () => {
-        try {
-            setLoading(true);
-            setError("");
+    const [pagination, setPagination] = useState({
+            current_page: 1,
+            last_page: 1,
+            total: 0,
+            from: 0,
+            to: 0,
+});
+        const fetchUsers = async (currentPage = 1, searchValue = "") => {
+            try {
+                setLoading(true);
+                setError("");
 
-            const response = await getUsers();
-            setUsers(response?.data?.data || []);
-        } catch (err) {
-            setError(
-                err?.response?.data?.message || "Failed to load users."
-            );
-        } finally {
-            setLoading(false);
-        }
-    };
+                const params = {
+                    page: currentPage,
+                    per_page: perPage,
+                };
+
+                if (searchValue.trim()) {
+                    params.search = searchValue.trim();
+                }
+
+                const response = await getUsers(params);
+                const data = response?.data?.data;
+
+                setUsers(data?.data ?? []);
+
+                setPagination({
+                    current_page: data?.current_page ?? 1,
+                    last_page: data?.last_page ?? 1,
+                    total: data?.total ?? 0,
+                    from: data?.from ?? 0,
+                    to: data?.to ?? 0,
+                });
+            } catch (err) {
+                setUsers([]);
+                setError(
+                    err?.response?.data?.message || "Failed to load users."
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
 
     useEffect(() => {
-        fetchUsers();
-    }, []);
+    fetchUsers(page, search);
+    }, [page, search]);
 
     const openDeleteModal = (user) => {
         setSelectedUser(user);
@@ -121,224 +154,283 @@ const UserManagementList = () => {
             </div>
 
             {/* TABLE */}
-            <div className="w-full overflow-hidden rounded-2xl border border-[#CBE3D6] bg-white shadow-[0_10px_30px_-18px_rgba(21,44,32,0.35)]">
-                <div className="w-full overflow-x-auto">
-                    <table className="w-full border-collapse text-left">
-                        <thead>
-                            <tr className="bg-[#F3F9F5]">
-                                <th className="w-[80px] border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
-                                    S.No
-                                </th>
-                                <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
-                                    Person ID
-                                </th>
-                                <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
-                                    User
-                                </th>
-                                <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
-                                    Username
-                                </th>
-                                <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
-                                    Department
-                                </th>
-                                <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
-                                    Roles
-                                </th>
-                                <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
-                                    Status
-                                </th>
-                                <th className="w-[110px] border-b border-[#E3F0E8] px-5 py-3.5 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
-                                    Action
-                                </th>
-                            </tr>
-                        </thead>
+            <div className="mb-4 flex items-center justify-between">
+    <div className="relative w-full max-w-[320px]">
+        <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8FA79B]"
+        />
 
-                        <tbody className="divide-y divide-[#E3F0E8]">
-                            {/* LOADING */}
-                            {loading && (
-                                <tr>
-                            <td colSpan="8" className="">
-                            <Skeleton
-                            variant="table"
-                            rows={6}
-                            showHeader={false}
-                            columnDefinitions={[
-                            { type: "number", width: "7%", align: "center" },
-                            { type: "avatarText", width: "25%" },
-                            { type: "email", width: "25%" },
-                            { type: "badge", width: "18%", align: "center" },
-                            { type: "actions", width: "25%", align: "right" },
-                        ]}
-                            />
-                                    </td>
+        <input
+            type="text"
+            value={search}
+            onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+            }}
+            placeholder="Search users..."
+            className="h-[42px] w-full rounded-[10px] border border-[#CBE3D6] bg-[#F9FCFA] pl-9 pr-3 text-[12px] text-[#152C20] outline-none transition-all placeholder:text-[#94A79E] focus:border-[#79B89A] focus:bg-white focus:ring-2 focus:ring-[#1F8A5F]/[0.07]"
+        />
+    </div>
+</div>
+                    <div className="w-full overflow-hidden rounded-2xl border border-[#CBE3D6] bg-white shadow-[0_10px_30px_-18px_rgba(21,44,32,0.35)]">
+                         <div className="custom-scrollbar max-h-[calc(100vh-250px)] overflow-y-auto overflow-x-auto">                       <table className="w-full border-collapse text-left">
+                                <thead className="sticky top-0 z-10">
+                                    <tr className="bg-[#F3F9F5]">
+                                    <th className="w-[80px] border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
+                                        S.No
+                                    </th>
+                                    <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
+                                        Person ID
+                                    </th>
+                                    <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
+                                        User
+                                    </th>
+                                    <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
+                                        Username
+                                    </th>
+                                    <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
+                                        Department
+                                    </th>
+                                    <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
+                                        Roles
+                                    </th>
+                                    <th className="border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
+                                        Status
+                                    </th>
+                                    <th className="w-[110px] border-b border-[#E3F0E8] px-5 py-3.5 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
+                                        Action
+                                    </th>
                                 </tr>
-                            )}
+                            </thead>
 
-                            {/* ERROR */}
-                            {!loading && error && (
-                                <tr>
-                                    <td
-                                        colSpan="8"
-                                        className="px-6 py-14 text-center text-[12px] font-medium text-[#C43D3D]"
-                                    >
-                                        {error}
-                                    </td>
-                                </tr>
-                            )}
-
-                            {/* EMPTY */}
-                            {!loading &&
-                                !error &&
-                                users.length === 0 && (
+                            <tbody className="divide-y divide-[#E3F0E8]">
+                                {/* LOADING */}
+                                {loading && (
                                     <tr>
-                                        <td
-                                            colSpan="8"
-                                            className="px-6 py-14 text-center text-[12px] text-[#8FA79B]"
-                                        >
-                                            No users found.
+                                <td colSpan="8" className="">
+                                <Skeleton
+                                variant="table"
+                                rows={6}
+                                showHeader={false}
+                                columnDefinitions={[
+                                { type: "number", width: "7%", align: "center" },
+                                { type: "avatarText", width: "25%" },
+                                { type: "email", width: "25%" },
+                                { type: "badge", width: "18%", align: "center" },
+                                { type: "actions", width: "25%", align: "right" },
+                            ]}
+                                />
                                         </td>
                                     </tr>
                                 )}
 
-                            {/* USERS */}
-                            {!loading &&
-                                !error &&
-                                users.map((user, index) => {
-                                    const roles = user.roles || [];
-                                    const department =
-                                        user.department?.name || "-";
-
-                                    return (
-                                        <tr
-                                            key={user.id}
-                                            className="transition-colors duration-150 hover:bg-[#F6FBF8]"
+                                {/* ERROR */}
+                                {!loading && error && (
+                                    <tr>
+                                        <td
+                                            colSpan="8"
+                                            className="px-6 py-14 text-center text-[12px] font-medium text-[#C43D3D]"
                                         >
-                                            <td className="px-5 py-4 text-[12.5px] font-medium text-[#5C7A6C]">
-                                                {String(index + 1).padStart(
-                                                    2,
-                                                    "0"
-                                                )}
-                                            </td>
+                                            {error}
+                                        </td>
+                                    </tr>
+                                )}
 
-                                            <td className="px-5 py-4">
-                                                <span className="rounded-md border border-[#DCEAE2] bg-[#F8FCFA] px-2 py-1 text-[11px] font-semibold text-[#39785D]">
-                                                    {user.person_id || "-"}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-2.5">
-                                                    <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#CBE3D6] bg-[#EEF8F2] text-[11px] font-bold text-[#17734C]">
-                                                        {user.name
-                                                            ?.charAt(0)
-                                                            ?.toUpperCase() ||
-                                                            "U"}
-                                                    </span>
-
-                                                    <div>
-                                                        <p className="text-[12.5px] font-semibold text-[#152C20]">
-                                                            {user.name || "-"}
-                                                        </p>
-                                                        <p className="text-[10.5px] text-[#8FA79B]">
-                                                            {user.email || "-"}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-5 py-4 text-[12px] font-medium text-[#3E5A4D]">
-                                                {user.username || "-"}
-                                            </td>
-
-                                            <td className="px-5 py-4 text-[12px] text-[#3E5A4D]">
-                                                {department}
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <div className="flex max-w-[220px] flex-wrap gap-1.5">
-                                                    {roles.length > 0 ? (
-                                                        roles.map((role) => (
-                                                            <span
-                                                                key={role.id}
-                                                                className="rounded-full border border-[#CBE3D6] bg-[#EAF5EE] px-2.5 py-1 text-[10.5px] font-medium text-[#17734C]"
-                                                            >
-                                                                {role.name ||
-                                                                    "-"}
-                                                            </span>
-                                                        ))
-                                                    ) : (
-                                                        <span className="text-[11px] text-[#8FA79B]">
-                                                            No role
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                {user.is_active ? (
-                                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#CBE3D6] bg-[#EEF8F2] px-2.5 py-1 text-[10.5px] font-semibold text-[#17734C]">
-                                                        <UserCheck size={12} />
-                                                        Active
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E8D7D7] bg-[#FFF6F6] px-2.5 py-1 text-[10.5px] font-semibold text-[#B84A4A]">
-                                                        <UserX size={12} />
-                                                        Inactive
-                                                    </span>
-                                                )}
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    {/* EDIT */}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            navigate(
-                                                                `/admin/update-user/${user.id}`
-                                                            )
-                                                        }
-                                                        aria-label={`Edit ${user.name}`}
-                                                        className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#CBE3D6] bg-white text-[#5C7A6C] transition-all duration-150 hover:border-[#B8933A]/40 hover:bg-[#FFFCF5] hover:text-[#B8933A]"
-                                                    >
-                                                        <Pencil
-                                                            size={14}
-                                                            strokeWidth={1.9}
-                                                        />
-                                                    </button>
-
-                                                    {/* DELETE */}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            openDeleteModal(
-                                                                user
-                                                            )
-                                                        }
-                                                        aria-label={`Delete ${user.name}`}
-                                                        className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#E8D7D7] bg-white text-[#B84A4A] transition-all duration-150 hover:border-[#D9A5A5] hover:bg-[#FFF6F6] hover:text-[#A83D3D]"
-                                                    >
-                                                        <Trash2
-                                                            size={14}
-                                                            strokeWidth={1.9}
-                                                        />
-                                                    </button>
-                                                </div>
+                                {/* EMPTY */}
+                                {!loading &&
+                                    !error &&
+                                    users.length === 0 && (
+                                        <tr>
+                                            <td
+                                                colSpan="8"
+                                                className="px-6 py-14 text-center text-[12px] text-[#8FA79B]"
+                                            >
+                                                No users found.
                                             </td>
                                         </tr>
-                                    );
-                                })}
-                        </tbody>
-                    </table>
+                                    )}
+
+                                {/* USERS */}
+                                {!loading &&
+                                    !error &&
+                                    users.map((user, index) => {
+                                        const roles = user.roles || [];
+                                        const department =
+                                            user.department?.name || "-";
+
+                                        return (
+                                            <tr
+                                                key={user.id}
+                                                className="transition-colors duration-150 hover:bg-[#F6FBF8]"
+                                            >
+                                                <td className="px-5 py-4 text-[12.5px] font-medium text-[#5C7A6C]">
+                                                    {String(pagination.from + index).padStart(2, "0")}
+                                                </td>
+
+                                                <td className="px-5 py-4">
+                                                    <span className="rounded-md border border-[#DCEAE2] bg-[#F8FCFA] px-2 py-1 text-[11px] font-semibold text-[#39785D]">
+                                                        {user.person_id || "-"}
+                                                    </span>
+                                                </td>
+
+                                                <td className="px-5 py-4">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#CBE3D6] bg-[#EEF8F2] text-[11px] font-bold text-[#17734C]">
+                                                            {user.name
+                                                                ?.charAt(0)
+                                                                ?.toUpperCase() ||
+                                                                "U"}
+                                                        </span>
+
+                                                        <div>
+                                                            <p className="text-[12.5px] font-semibold text-[#152C20]">
+                                                                {user.name || "-"}
+                                                            </p>
+                                                            <p className="text-[10.5px] text-[#8FA79B]">
+                                                                {user.email || "-"}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <td className="px-5 py-4 text-[12px] font-medium text-[#3E5A4D]">
+                                                    {user.username || "-"}
+                                                </td>
+
+                                                <td className="px-5 py-4 text-[12px] text-[#3E5A4D]">
+                                                    {department}
+                                                </td>
+
+                                                <td className="px-5 py-4">
+                                                    <div className="flex max-w-[220px] flex-wrap gap-1.5">
+                                                        {roles.length > 0 ? (
+                                                            roles.map((role) => (
+                                                                <span
+                                                                    key={role.id}
+                                                                    className="rounded-full border border-[#CBE3D6] bg-[#EAF5EE] px-2.5 py-1 text-[10.5px] font-medium text-[#17734C]"
+                                                                >
+                                                                    {role.name ||
+                                                                        "-"}
+                                                                </span>
+                                                            ))
+                                                        ) : (
+                                                            <span className="text-[11px] text-[#8FA79B]">
+                                                                No role
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                <td className="px-5 py-4">
+                                                    {user.is_active ? (
+                                                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#CBE3D6] bg-[#EEF8F2] px-2.5 py-1 text-[10.5px] font-semibold text-[#17734C]">
+                                                            <UserCheck size={12} />
+                                                            Active
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E8D7D7] bg-[#FFF6F6] px-2.5 py-1 text-[10.5px] font-semibold text-[#B84A4A]">
+                                                            <UserX size={12} />
+                                                            Inactive
+                                                        </span>
+                                                    )}
+                                                </td>
+
+                                                <td className="px-5 py-4">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {/* EDIT */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                navigate(
+                                                                    `/admin/update-user/${user.id}`
+                                                                )
+                                                            }
+                                                            aria-label={`Edit ${user.name}`}
+                                                            className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#CBE3D6] bg-white text-[#5C7A6C] transition-all duration-150 hover:border-[#B8933A]/40 hover:bg-[#FFFCF5] hover:text-[#B8933A]"
+                                                        >
+                                                            <Pencil
+                                                                size={14}
+                                                                strokeWidth={1.9}
+                                                            />
+                                                        </button>
+
+                                                        {/* DELETE */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                openDeleteModal(
+                                                                    user
+                                                                )
+                                                            }
+                                                            aria-label={`Delete ${user.name}`}
+                                                            className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#E8D7D7] bg-white text-[#B84A4A] transition-all duration-150 hover:border-[#D9A5A5] hover:bg-[#FFF6F6] hover:text-[#A83D3D]"
+                                                        >
+                                                            <Trash2
+                                                                size={14}
+                                                                strokeWidth={1.9}
+                                                            />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                         </tbody>
+                     </table>
+                    </div>
                 </div>
-            </div>
 
             {/* FOOTER */}
-            {!loading && !error && (
-                <p className="mt-3 px-1 text-[11.5px] text-[#8FA79B]">
-                    Showing {users.length} user
-                    {users.length !== 1 ? "s" : ""}
-                </p>
+            {!loading && !error && users.length > 0 && (
+                 <div className="mt-3 flex items-center justify-between px-1">
+                    <p className="text-[11.5px] text-[#8FA79B]">
+                        Showing{" "}
+                        <span className="font-semibold text-[#5C7A6C]">
+                            {pagination.from}
+                        </span>{" "}
+                        to{" "}
+                        <span className="font-semibold text-[#5C7A6C]">
+                            {pagination.to}
+                        </span>{" "}
+                        of{" "}
+                        <span className="font-semibold text-[#5C7A6C]">
+                            {pagination.total}
+                        </span>{" "}
+                        users
+                    </p>
+
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            disabled={pagination.current_page === 1}
+                            onClick={() =>
+                                setPage(pagination.current_page - 1)
+                            }
+                            className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#CBE3D6] bg-white text-[#5C7A6C] transition-all hover:bg-[#F1F9F4] hover:text-[#17734C] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            <ChevronLeft size={15} />
+                        </button>
+
+                        <div className="flex h-8 min-w-8 items-center justify-center rounded-[8px] border border-[#176B49] bg-[#17734C] px-2 text-[11px] font-semibold text-white">
+                            {pagination.current_page}
+                        </div>
+
+                        <button
+                            type="button"
+                            disabled={
+                                pagination.current_page ===
+                                pagination.last_page
+                            }
+                            onClick={() =>
+                                setPage(pagination.current_page + 1)
+                            }
+                            className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#CBE3D6] bg-white text-[#5C7A6C] transition-all hover:bg-[#F1F9F4] hover:text-[#17734C] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            <ChevronRight size={15} />
+                        </button>
+                    </div>
+                </div>
             )}
 
             {/* DELETE CONFIRMATION MODAL */}

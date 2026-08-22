@@ -12,6 +12,8 @@ const Dropdown = ({
     disabled = false,
     searchable = false,
     searchPlaceholder = "Search options...",
+    openUp = false,
+    className = "",
 }) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
@@ -71,7 +73,7 @@ const Dropdown = ({
     };
 
     return (
-        <div className="relative" ref={selectRef}>
+    <div className={`relative ${className}`} ref={selectRef}>
             {label && (
                 <label className="mb-2 flex items-center gap-1.5 text-[11.5px] font-semibold text-[#263F33]">
                     {LabelIcon && (
@@ -121,7 +123,13 @@ const Dropdown = ({
             </button>
 
             {open && (
-                <div className="absolute left-0 right-0 top-[calc(100%+7px)] z-50 overflow-hidden rounded-xl border border-[#CBE3D6] bg-white p-1.5 shadow-[0_18px_40px_-18px_rgba(21,61,45,0.38)]">
+                <div 
+                // className="absolute left-0 right-0 top-[calc(100%+7px)] z-50 overflow-hidden rounded-xl border border-[#CBE3D6] bg-white p-1.5 shadow-[0_18px_40px_-18px_rgba(21,61,45,0.38)]">
+                className={`absolute left-0 right-0 z-50 overflow-hidden rounded-xl border border-[#CBE3D6] bg-white p-1.5 shadow-lg ${
+    openUp
+        ? "bottom-[calc(100%+7px)]"
+        : "top-[calc(100%+7px)]"
+}`}>
                     <div className="px-2.5 pb-1.5 pt-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#91A39A]">
                         {label || "Options"}
                     </div>

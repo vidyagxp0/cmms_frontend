@@ -11,33 +11,38 @@ const ProfileMenu = ({
     onSettings,
     onLogout,
 }) => {
-    const user = useAuthStore((state) => state.user);
-    const navigate = useNavigate();
-    const userName = user?.name 
-    const userRole = user?.roles?.[0] 
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
-    const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const user = useAuthStore((state) => state.user);
+const clearAuth = useAuthStore((state) => state.clearAuth);
 
-    const handleLogoutClick = () => setShowLogoutModal(true);
+const navigate = useNavigate();
 
-    const handleLogout = async () => {
-        if (isLoggingOut) return;
-        setIsLoggingOut(true);
-        try {
-            await logout();
-            sessionStorage.removeItem("access_token");
-            setShowLogoutModal(false);
-            navigate("/login", { replace: true });
-        } catch (error) {
-            console.error("Logout failed:", error);
-            sessionStorage.removeItem("access_token");
-            setShowLogoutModal(false);
-            navigate("/login", { replace: true });
-        } finally {
-            setIsLoggingOut(false);
-        }
-    };
+const userName = user?.name;
+const userRole = user?.roles?.[0];
 
+const [showLogoutModal, setShowLogoutModal] = useState(false);
+const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+const handleLogoutClick = () => setShowLogoutModal(true);
+
+const handleLogout = async () => {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+
+    try {
+        await logout();
+    } catch (error) {
+        console.error("Logout failed:", error);
+    } finally {
+        clearAuth();
+        setShowLogoutModal(false);
+        setIsLoggingOut(false);
+
+        navigate("/login", {
+            replace: true,
+        });
+    }
+};
     const initial = userName?.charAt(0)?.toUpperCase() || "A";
 
     return (

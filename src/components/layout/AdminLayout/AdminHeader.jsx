@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, CircleHelp, ShieldCheck } from "lucide-react";
-import ProfileMenu from "./ProfileMenu";
+import ProfileMenu from "../UserLayout/ProfileMenu";
 import { useAuthStore } from "../../../store/authStore";
 
 
@@ -28,37 +28,40 @@ const AdminHeader = ({
 
     return (
         <header
-            className="fixed top-0 right-0 z-50 h-[74px] w-full border-b border-[#CBE3D6] bg-[#E4F1EA]"
+            className="fixed top-0 right-0 z-50 h-[74px] w-full border-b border-[#CBE3D6] bg-[#F4FAF7]"
             style={{
                 boxShadow: "0 6px 20px -14px rgba(21,44,32,0.28)",
             }}
         >
-            {/* MAIN HEADER */}
-            <div className="flex h-full items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
-                {/* Shilpa LOGO*/}
-                <div className="flex min-w-0 items-center gap-6">
-                    <div className="flex shrink-0 items-center">
-                        <img
-                            src="/shilpaimage.png"
-                            alt="Shilpa Logo"
-                            className="h-[44px] w-auto max-w-[220px] object-contain"
-                        />
-                    </div>
+ <div className="flex h-full items-center justify-between sm:px-6 lg:px-8">
+    {/* Shilpa LOGO */}
+    <div className="flex min-w-0 items-center gap-3">
+        <div className="flex shrink-0 items-center">
+            <img
+                src="/shilpaimage.png"
+                alt="Shilpa Logo"
+                className="h-[44px] w-auto max-w-[220px] object-contain"
+            />
+        </div>
 
-                    <div className="hidden h-8 w-px bg-[#CBE3D6] lg:block" />
-                    {/* Vidya gxp LOGO */}
-                    <div className="flex shrink-0 items-center ml-2">
-                        <img
-                            src="/vidyagxp_logo.png"
-                            alt="VidyaGxP"
-                            className="h-[44px] w-auto max-w-[220px] object-contain"
-                        />
-                    </div>
 
-                    {/* VERTICAL DIVIDER */}
-                    <div className="hidden h-8 w-px bg-[#CBE3D6] lg:block" />
-                </div>
-               
+        {/* STRONG DIVIDER */}
+        <div className="hidden h-10 border-l-2 border-[#A8CDB9] lg:block" />
+
+
+        {/* VidyaGxP LOGO */}
+        <div className="flex shrink-0 items-center mr-5">
+            <img
+                src="/vidyagxp_logo.png"
+                alt="VidyaGxP"
+                className="h-[44px] w-auto max-w-[220px] object-contain"
+            />
+        </div>
+
+
+        {/* STRONG DIVIDER */}
+        <div className="hidden h-10 border-l-2 border-[#A8CDB9] lg:block" />
+    </div>
 
                 {/* RIGHT SECTION */}
                 <div className="flex shrink-0 items-center gap-2">
@@ -88,7 +91,7 @@ const AdminHeader = ({
                     </button>
 
                     {/* DIVIDER */}
-                    <div className="mx-1 h-7 w-px bg-[#CBE3D6]" />
+                    <div className="mx-2 h-8 border-l-2 border-[#A8CDB9]" />
 
                     {/* USER PROFILE */}
                     <div ref={dropdownRef} className="relative">

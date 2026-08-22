@@ -1,20 +1,26 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
+
 import UserHeader from "./UserHeader";
+import UserNav from "./UserNav";
 
 function UserLayout() {
+    const location = useLocation();
+
+    const showNav =
+        location.pathname === "/user/cmms-dashboard" ||
+        location.pathname === "/user/equipment-dashboard";
+
     return (
-        <div className="min-h-screen flex">
+        <div className="min-h-screen bg-[#F7F9F8]">
+            <UserHeader />
 
-            <div className="flex-1">
+            {showNav && <UserNav />}
 
-                <UserHeader />
-
-                <main className="p-6">
+            <main className={showNav ? "pt-[138px]" : "pt-[74px]"}>
+                <div className="p-6">
                     <Outlet />
-                </main>
-
-            </div>
-
+                </div>
+            </main>
         </div>
     );
 }

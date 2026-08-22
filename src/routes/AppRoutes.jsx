@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 import AdminRoutes from "./AdminRoutes";
 import UserRoutes from "./UserRoutes";
-
 import Login from "../pages/auth/Login/Login";
 import NotFound from "../pages/NotFound/NotFound";
 import ProtectedRoute from "./ProtectedRoute";
@@ -26,7 +25,11 @@ function AppRoutes() {
             <Route
                 path="/admin/*"
                 element={
-                    <ProtectedRoute allowedRoles={["Admin"]}>
+                    <ProtectedRoute
+                        tokenKey="admin_token"
+                        authType="Admin"
+                        allowedRoles={["Admin"]}
+                    >
                         <AdminRoutes />
                     </ProtectedRoute>
                 }
@@ -36,7 +39,10 @@ function AppRoutes() {
             <Route
                 path="/user/*"
                 element={
-                    <ProtectedRoute allowedRoles={["user"]}>
+                    <ProtectedRoute
+                        tokenKey="user_token"
+                        authType="User"
+                    >
                         <UserRoutes />
                     </ProtectedRoute>
                 }

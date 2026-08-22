@@ -312,7 +312,7 @@ const AdminDashboard = () => {
                             icon={UserPlus}
                             title="Create User"
                             description="Add a new system user"
-                            onClick={() => navigate("/admin/create-user")}
+                            onClick={() => navigate("/admin/new-user")}
                         />
 
                         <QuickAction

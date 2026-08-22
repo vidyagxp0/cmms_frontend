@@ -8,6 +8,7 @@ export const useAuthStore = create((set) => ({
     setUser: (user) =>
         set({
             user,
+            permissions: user?.permissions || [],
         }),
 
     setPermissions: (permissions) =>
@@ -20,10 +21,15 @@ export const useAuthStore = create((set) => ({
             loading,
         }),
 
-    clearAuth: () =>
+    clearAuth: () => {
+        sessionStorage.removeItem("admin_token");
+        sessionStorage.removeItem("user_token");
+        sessionStorage.removeItem("auth_type");
+
         set({
             user: null,
             permissions: [],
             loading: false,
-        }),
+        });
+    },
 }));

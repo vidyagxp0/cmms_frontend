@@ -3,12 +3,46 @@ import { useAuthStore } from "../store/authStore";
 
 function ProtectedRoute({
     children,
-    allowedRoles = ["Admin", "User"],
+    tokenKey,
+    authType,
+    allowedRoles = [],
 }) {
     const location = useLocation();
 
     const user = useAuthStore((state) => state.user);
+    const loading = useAuthStore((state) => state.loading);
 
+    const token = sessionStorage.getItem(tokenKey);
+    const storedAuthType = sessionStorage.getItem("auth_type");
+
+    // Wait until authentication restoration is complete
+    if (loading) {
+        return null;
+    }
+
+    // No token
+    if (!token) {
+        return (
+            <Navigate
+                to="/login"
+                replace
+                state={{ from: location }}
+            />
+        );
+    }
+
+    // Wrong authentication type
+    if (storedAuthType !== authType) {
+        return (
+            <Navigate
+                to="/login"
+                replace
+                state={{ from: location }}
+            />
+        );
+    }
+
+    // User restoration failed
     if (!user) {
         return (
             <Navigate
@@ -19,11 +53,19 @@ function ProtectedRoute({
         );
     }
 
+    // Role authorization
     if (
         allowedRoles.length > 0 &&
-        !allowedRoles.includes(user?.roles?.[0])
+        !user.roles?.some((role) =>
+            allowedRoles.includes(role)
+        )
     ) {
-        return <Navigate to="/not-authorized" replace />;
+        return (
+            <Navigate
+                to="/not-authorized"
+                replace
+            />
+        );
     }
 
     return children;

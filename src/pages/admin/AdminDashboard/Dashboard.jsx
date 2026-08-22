@@ -36,7 +36,7 @@ const AdminDashboard = () => {
                 getDepartments(),
             ]);
 
-            setUsers(usersRes?.data?.data || []);
+             setUsers(usersRes?.data?.data?.data ?? []);
             setRoles(rolesRes?.data?.data || []);
             setDepartments(departmentsRes?.data?.data || []);
         } catch (err) {
@@ -312,7 +312,7 @@ const AdminDashboard = () => {
                             icon={UserPlus}
                             title="Create User"
                             description="Add a new system user"
-                            onClick={() => navigate("/admin/create-user")}
+                            onClick={() => navigate("/admin/new-user")}
                         />
 
                         <QuickAction

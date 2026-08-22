@@ -9,6 +9,7 @@ import AddRole from "../pages/admin/RolesManage/AddRole";
 import EditRole from "../pages/admin/RolesManage/EditRole";
 import AddUser from "../pages/admin/UserManage/AddUser";
 import EditUser from "../pages/admin/UserManage/EditUser";
+import UserMonitoring from "../pages/admin/UserMonitoring/UserMonitoring";
 
 function AdminRoutes() {
   return (
@@ -26,6 +27,7 @@ function AdminRoutes() {
         <Route path="update-role/:id" element={<EditRole />} />
         <Route path="department-management" element={<DepartmentManagelist />} />
         <Route path="audit-history" element={<AuditHistory />} />
+        <Route path="users-monitoring" element={<UserMonitoring />} />
       </Route>
     </Routes>
   );

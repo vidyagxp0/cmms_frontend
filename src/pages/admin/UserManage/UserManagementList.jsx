@@ -3,10 +3,13 @@ import {
     Users,
     Pencil,
     Trash2,
-    Loader2,
     Plus,
     UserCheck,
+    Loader2,
     UserX,
+    ChevronLeft,
+    ChevronRight,
+    Search,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getUsers, deleteUser } from "../../../services/adminApis/userApi";
@@ -15,6 +18,8 @@ import AdminModal from "../../../components/common/AdminModal/AdminModal";
 import SearchInput from "../../../components/ui/SearchInput";
 import Dropdown from "../../../components/ui/Dropdown";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const UserManagementList = () => {
     const navigate = useNavigate();
@@ -31,21 +36,48 @@ const UserManagementList = () => {
     const [selectedRole, setSelectedRole] = useState("");
     const [sortOrder, setSortOrder] = useState("");
 
-    const fetchUsers = async () => {
-        try {
-            setLoading(true);
-            setError("");
+    const [pagination, setPagination] = useState({
+            current_page: 1,
+            last_page: 1,
+            total: 0,
+            from: 0,
+            to: 0,
+});
+        const fetchUsers = async (currentPage = 1, searchValue = "") => {
+            try {
+                setLoading(true);
+                setError("");
 
-            const response = await getUsers();
-            setUsers(response?.data?.data || []);
-        } catch (err) {
-            setError(
-                err?.response?.data?.message || "Failed to load users."
-            );
-        } finally {
-            setLoading(false);
-        }
-    };
+                const params = {
+                    page: currentPage,
+                    per_page: perPage,
+                };
+
+                if (searchValue.trim()) {
+                    params.search = searchValue.trim();
+                }
+
+                const response = await getUsers(params);
+                const data = response?.data?.data;
+
+                setUsers(data?.data ?? []);
+
+                setPagination({
+                    current_page: data?.current_page ?? 1,
+                    last_page: data?.last_page ?? 1,
+                    total: data?.total ?? 0,
+                    from: data?.from ?? 0,
+                    to: data?.to ?? 0,
+                });
+            } catch (err) {
+                setUsers([]);
+                setError(
+                    err?.response?.data?.message || "Failed to load users."
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
 
     const fetchRoles = async () => {
         try {
@@ -85,7 +117,9 @@ const UserManagementList = () => {
             setDeleteError("");
 
             await deleteUser(selectedUser.id);
-
+            toast.success("User deleted successfully", {
+                description: `${selectedUser.name} has been removed.`,
+            });
             setDeleteModalOpen(false);
             setSelectedUser(null);
             await fetchUsers();
@@ -93,6 +127,9 @@ const UserManagementList = () => {
             setDeleteError(
                 err?.response?.data?.message || "Failed to delete user."
             );
+            toast.success("User deleted successfully", {
+              description: `${selectedUser.name} has been removed.`,
+          });
         } finally {
             setDeleting(false);
         }
@@ -223,14 +260,19 @@ const UserManagementList = () => {
                             {/* LOADING */}
                             {loading && (
                                 <tr>
-                                    <td colSpan="8" className="px-6 py-14">
-                                        <div className="flex items-center justify-center gap-2 text-[12px] font-medium text-[#5C7A6C]">
-                                            <Loader2
-                                                size={16}
-                                                className="animate-spin text-[#17734C]"
-                                            />
-                                            Loading users...
-                                        </div>
+                            <td colSpan="8" className="">
+                            <Skeleton
+                            variant="table"
+                            rows={6}
+                            showHeader={false}
+                            columnDefinitions={[
+                            { type: "number", width: "7%", align: "center" },
+                            { type: "avatarText", width: "25%" },
+                            { type: "email", width: "25%" },
+                            { type: "badge", width: "18%", align: "center" },
+                            { type: "actions", width: "25%", align: "right" },
+                         ]}
+                            />
                                     </td>
                                 </tr>
                             )}
@@ -284,10 +326,7 @@ const UserManagementList = () => {
                                             className="group transition-all duration-250 hover:bg-[#F6FAF8]/70"
                                         >
                                             <td className="px-5 py-4 text-[12.5px] font-medium text-[#5C7A6C]">
-                                                {String(index + 1).padStart(
-                                                    2,
-                                                    "0"
-                                                )}
+                                                {String(pagination.from + index).padStart(2, "0")}
                                             </td>
 
                                             <td className="px-5 py-4">

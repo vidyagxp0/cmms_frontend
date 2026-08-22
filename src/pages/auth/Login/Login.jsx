@@ -64,38 +64,50 @@ const handleLogin = async (event) => {
 
     setLoading(true);
 
-    try {
-        const response = await login(payload);
-        const { user: apiUser, token } = response.data.data;
+ try {
+    const response = await login(payload);
 
-        const roles = apiUser?.roles || [];
-        const role = roles.includes("Admin") ? "Admin" : "User";
+    const { user: apiUser, token } = response.data.data;
 
-     const user = {
-    id: apiUser.id,
-    name: apiUser.name,
-    email: apiUser.email,
-    roles: apiUser?.roles || [],
-};
+    const user = {
+        id: apiUser.id,
+        name: apiUser.name,
+        email: apiUser.email,
+        roleType: apiUser.role_type,
+        roles: apiUser.roles || [],
+        permissions: apiUser.permissions || [],
+    };
 
-        sessionStorage.setItem("access_token", token);
-        setUser(user);
+    const isAdmin = apiUser.role_type === "Admin";
 
-        toast.success("Login successful");
-
-        navigate(
-            role === "Admin"
-                ? "/admin/dashboard"
-                : "/user/dashboard"
-        );
-    } catch (error) {
-        toast.error(
-            error.response?.data?.message ||
-            "Login failed. Please try again."
-        );
-    } finally {
-        setLoading(false);
+    if (isAdmin) {
+        sessionStorage.setItem("admin_token", token);
+        sessionStorage.removeItem("user_token");
+    } else {
+        sessionStorage.setItem("user_token", token);
+        sessionStorage.removeItem("admin_token");
     }
+
+    sessionStorage.setItem("auth_type", apiUser.role_type);
+
+    setUser(user);
+
+    toast.success("Login successful");
+
+    navigate(
+        isAdmin
+            ? "/admin/dashboard"
+            : "/user/equipment-dashboard",
+        { replace: true }
+    );
+} catch (error) {
+    toast.error(
+        error.response?.data?.message ||
+        "Login failed. Please try again."
+    );
+} finally {
+    setLoading(false);
+}
 };
 
   return (

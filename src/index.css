@@ -68,3 +68,26 @@ button:disabled {
 }
 
 
+@keyframes premiumShimmer {
+    0% {
+        transform: translateX(-120%);
+        opacity: 0;
+    }
+
+    15% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    85% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+}

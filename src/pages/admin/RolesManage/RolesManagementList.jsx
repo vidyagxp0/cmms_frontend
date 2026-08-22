@@ -19,6 +19,7 @@ import AdminModal from "../../../components/common/AdminModal/AdminModal";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import SearchInput from "../../../components/ui/SearchInput";
+import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const RolesManagementList = () => {
     const navigate = useNavigate();
@@ -88,18 +89,20 @@ const RolesManagementList = () => {
 
             await deleteRole(selectedRole.id);
 
+            toast.success("Role deleted successfully", {
+                description: `${selectedRole.name} has been removed.`,
+            });
+
             closeDeleteModal();
             await fetchRoles();
         } catch (err) {
             console.error("Error deleting role:", err);
 
-            setError(
-                err?.response?.data?.message ||
-                    "Failed to delete role."
-            );
-
-            setDeleteModal(false);
-            setSelectedRole(null);
+            toast.error("Failed to delete role", {
+                description:
+                    err?.response?.data?.message ||
+                    "Something went wrong while deleting the role.",
+            });
         } finally {
             setDeleting(false);
         }
@@ -185,23 +188,24 @@ const RolesManagementList = () => {
 
                         <tbody className="divide-y divide-[#E8EFEA]">
                             {/* LOADING */}
-                            {loading && (
-                                <tr>
-                                    <td
-                                        colSpan="5"
-                                        className="px-6 py-12 text-center"
-                                    >
-                                        <div className="flex items-center justify-center gap-2 text-[12px] font-medium text-[#5C7A6C]">
-                                            <Loader2
-                                                size={16}
-                                                className="animate-spin text-[#17734C]"
-                                            />
-                                            Loading roles...
-                                        </div>
-                                    </td>
-                                </tr>
-                            )}
-
+                          {loading && (
+                    <tr>
+                        <td colSpan="5" className="p-0">
+                            <Skeleton
+                            variant="table"
+                            rows={6}
+                            showHeader={false}
+                          columnDefinitions={[
+                        { type: "number", width: "10%", align: "center" },
+                        { type: "text", width: "40%" },
+                        { type: "text", width: "40%" },
+                        { type: "badge", width: "25%", align: "center" },
+                        { type: "actions", width: "25%", align: "right" },
+                    ]}
+                            />
+                        </td>
+                    </tr>
+                )}
                             {/* ERROR */}
                             {!loading && error && (
                                 <tr>

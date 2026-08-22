@@ -35,6 +35,11 @@ const AdminSidebar = ({ collapsed, setCollapsed }) => {
             path: "/admin/users-management",
         },
         {
+            label: "Users Monitoring",
+            icon: Users,
+            path: "/admin/users-monitoring",
+        },
+        {
             label: "Audit History",
             icon: FileText,
             path: "/admin/audit-history",

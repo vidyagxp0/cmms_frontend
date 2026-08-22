@@ -20,6 +20,7 @@ import AdminModal from "../../../components/common/AdminModal/AdminModal";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import SearchInput from "../../../components/ui/SearchInput";
+import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const DepartmentManagemelist = () => {
     const [departments, setDepartments] = useState([]);
@@ -131,29 +132,25 @@ const DepartmentManagemelist = () => {
         }
     };
 
-    const handleDelete = async () => {
-        if (!departmentToDelete) return;
+  const handleDelete = async () => {
+    if (!departmentToDelete) return;
 
-        try {
-            setDeleting(true);
+    try {
+        setDeleting(true);
 
-            await deleteDepartment(departmentToDelete.id);
+        await deleteDepartment(departmentToDelete.id);
 
-            toast.success(
-                `${departmentToDelete.name} deleted successfully`
-            );
-
-            closeDeleteModal();
-            await fetchDepartments();
-        } catch (err) {
-            toast.error(
-                err?.response?.data?.message ||
-                    "Failed to delete department."
-            );
-        } finally {
-            setDeleting(false);
-        }
-    };
+        toast.success("Department deleted successfully", {
+            description: `${departmentToDelete.name} has been removed.`,
+        });
+    } catch (err) {
+        const message =
+            err?.response?.data?.message ||
+            "Failed to delete department.";
+        toast.error(message);
+    } finally {
+        setDeleting(false);
+    }
 
     const filteredDepartments = departments.filter((dept) =>
         dept.name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -217,21 +214,23 @@ const DepartmentManagemelist = () => {
                             </tr>
                         </thead>
 
-                        <tbody className="divide-y divide-[#E8EFEA]">
-                            {/* LOADING */}
-                            {loading && (
-                                <tr>
-                                    <td colSpan="3" className="px-6 py-12">
-                                        <div className="flex items-center justify-center gap-2 text-[12px] font-medium text-[#5C7A6C]">
-                                            <Loader2
-                                                size={16}
-                                                className="animate-spin text-[#17734C]"
-                                            />
-                                            Loading departments...
-                                        </div>
-                                    </td>
-                                </tr>
-                            )}
+                        <tbody className="divide-y divide-[#E3F0E8]">
+                     {loading && (
+                    <tr>
+                        <td colSpan="3" className="p-0">
+                            <Skeleton
+                            variant="table"
+                            rows={6}
+                            showHeader={false}
+                            columnDefinitions={[
+                            { type: "number", width: "15%", align: "center" },
+                            { type: "text", width: "60%" },
+                            { type: "actions", width: "25%", align: "right" },
+                        ]}
+                            />
+                        </td>
+                    </tr>
+                )}
 
                             {/* ERROR */}
                             {!loading && error && (
@@ -305,7 +304,7 @@ const DepartmentManagemelist = () => {
                                                 </button>
 
                                                 {/* DELETE */}
-                                                <button
+                                                {/* <button
                                                     type="button"
                                                     onClick={() =>
                                                         openDeleteModal(
@@ -319,7 +318,7 @@ const DepartmentManagemelist = () => {
                                                         size={14}
                                                         strokeWidth={1.9}
                                                     />
-                                                </button>
+                                                </button> */}
                                             </div>
                                         </td>
                                     </tr>
@@ -434,6 +433,6 @@ const DepartmentManagemelist = () => {
             </AdminModal>
         </div>
     );
-};
+  }};
 
-export default DepartmentManagemelist;
+export default DepartmentManagemelist;  

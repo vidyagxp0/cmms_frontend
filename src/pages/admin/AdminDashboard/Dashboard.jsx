@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { getUsers } from "../../../services/adminApis/userApi";
 import { getRoles } from "../../../services/adminApis/rolesApi";
 import { getDepartments } from "../../../services/adminApis/departmentApi";
+import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -35,7 +36,7 @@ const AdminDashboard = () => {
                 getDepartments(),
             ]);
 
-            setUsers(usersRes?.data?.data || []);
+             setUsers(usersRes?.data?.data?.data ?? []);
             setRoles(rolesRes?.data?.data || []);
             setDepartments(departmentsRes?.data?.data || []);
         } catch (err) {
@@ -163,6 +164,12 @@ const AdminDashboard = () => {
             )}
 
             {/* STAT CARDS */}
+            {loading ? (
+    <Skeleton
+        variant="cards"
+        count={3}
+    />
+) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {stats.map((stat) => {
                     const Icon = stat.icon;
@@ -211,6 +218,7 @@ const AdminDashboard = () => {
                     );
                 })}
             </div>
+)}
 
             {/* MAIN CONTENT */}
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.35fr_0.65fr]">

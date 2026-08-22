@@ -1,7 +1,7 @@
 import api from "../api";
 
-export const getUsers = () =>
-    api.get("/admin/users-listing");
+export const getUsers = (params = {}) =>
+    api.get("/admin/users-listing", { params });
 
 export const getPid = () =>
     api.get("/admin/users-pid");

@@ -1,5 +1,5 @@
 {
-  "name": "calibration",
+  "name": "cmms",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.4",
+    "antd": "^6.6.1",
     "axios": "^1.19.0",
     "clsx": "^2.1.1",
     "framer-motion": "^13.1.0",

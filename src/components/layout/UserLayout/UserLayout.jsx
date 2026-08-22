@@ -8,7 +8,8 @@ function UserLayout() {
 
     const showNav =
         location.pathname === "/user/cmms-dashboard" ||
-        location.pathname === "/user/equipment-dashboard";
+        location.pathname === "/user/equipment-dashboard" ||
+        location.pathname === "/user/engineering-dashboard"; 
 
     return (
         <div className="min-h-screen bg-[#F7F9F8]">

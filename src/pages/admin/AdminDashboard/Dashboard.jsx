@@ -36,7 +36,7 @@ const AdminDashboard = () => {
                 getDepartments(),
             ]);
 
-            setUsers(usersRes?.data?.data || []);
+             setUsers(usersRes?.data?.data?.data ?? []);
             setRoles(rolesRes?.data?.data || []);
             setDepartments(departmentsRes?.data?.data || []);
         } catch (err) {

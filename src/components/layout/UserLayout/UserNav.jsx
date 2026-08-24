@@ -11,7 +11,7 @@ const UserNav = () => {
         {
             id: "dashboard",
             label: "Dashboard",
-            path: "/user/dashboard",
+            path: "/user/cmms-dashboard",
             icon: LayoutDashboard,
         },
         {
@@ -21,9 +21,9 @@ const UserNav = () => {
             icon: Wrench,
         },
         {
-            id: "engineer",
-            label: "Engineer Dashboard",
-            path: "/user/engineer-dashboard",
+            id: "engineering",
+            label: "Engineering Dashboard",
+            path: "/user/engineering-dashboard",
             icon: HardHat,
         },
     ];

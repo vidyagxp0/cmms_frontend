@@ -1,24 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
-
 import { useNavigate } from "react-router-dom";
-
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
-
 import CreateEquipmentModal from "./CreateEquipmentModal";
-
 import { getAllEquipment } from "../../../services/usersApi/equipmentApi";
-
 import DataTable from "../../../components/common/DataTable/DataTable";
-
 import { Eye } from "lucide-react";
 
 const EquipDashboard = () => {
     const navigate = useNavigate();
-
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
     const [equipment, setEquipment] = useState([]);
-
     const [loading, setLoading] = useState(true);
 
     // Backend pagination state
@@ -32,7 +23,6 @@ const EquipDashboard = () => {
     const fetchEquipment = async (page = 1, perPage = 10) => {
         try {
             setLoading(true);
-
             const response = await getAllEquipment({
                 page,
                 per_page: perPage,
@@ -41,31 +31,20 @@ const EquipDashboard = () => {
             console.log("Equipment API Response:", response);
 
             const paginationData = response?.data?.data;
-
             const equipmentData = paginationData?.data || [];
 
             setEquipment(
-                Array.isArray(equipmentData)
-                    ? equipmentData
-                    : []
+                Array.isArray(equipmentData) ? equipmentData : []
             );
 
             setPagination({
-                currentPage:
-                    paginationData?.current_page || page,
-
-                lastPage:
-                    paginationData?.last_page || 1,
-
-                perPage:
-                    paginationData?.per_page || perPage,
-
-                total:
-                    paginationData?.total || 0,
+                currentPage: paginationData?.current_page || page,
+                lastPage: paginationData?.last_page || 1,
+                perPage: paginationData?.per_page || perPage,
+                total: paginationData?.total || 0,
             });
         } catch (error) {
             console.error("Failed to fetch equipment:", error);
-
             setEquipment([]);
 
             setPagination({
@@ -87,9 +66,7 @@ const EquipDashboard = () => {
         () => [
             {
                 accessorKey: "equipment_id",
-
                 header: "Equipment ID",
-
                 cell: ({ row, getValue }) => {
                     const value = getValue();
 
@@ -129,12 +106,9 @@ const EquipDashboard = () => {
                     );
                 },
             },
-
             {
                 accessorKey: "name",
-
                 header: "Equipment",
-
                 cell: ({ row }) => {
                     const name = row.original?.name || "-";
 
@@ -156,12 +130,9 @@ const EquipDashboard = () => {
                     );
                 },
             },
-
             {
                 accessorKey: "equipment_type",
-
                 header: "Type",
-
                 cell: ({ getValue }) => {
                     const value = getValue();
 
@@ -180,12 +151,9 @@ const EquipDashboard = () => {
                     );
                 },
             },
-
             {
                 accessorKey: "make",
-
                 header: "Make",
-
                 cell: ({ getValue }) => (
                     <span
                         className="
@@ -198,12 +166,9 @@ const EquipDashboard = () => {
                     </span>
                 ),
             },
-
             {
                 accessorKey: "model",
-
                 header: "Model",
-
                 cell: ({ getValue }) => (
                     <span
                         className="
@@ -220,20 +185,15 @@ const EquipDashboard = () => {
                     </span>
                 ),
             },
-
             {
                 accessorKey: "created_at",
-
                 header: "Created",
-
                 cell: ({ getValue }) => {
                     const value = getValue();
 
                     if (!value) {
                         return (
-                            <span className="text-slate-400">
-                                -
-                            </span>
+                            <span className="text-slate-400">-</span>
                         );
                     }
 
@@ -257,14 +217,11 @@ const EquipDashboard = () => {
                                     text-[#456B6B]
                                 "
                             >
-                                {date.toLocaleDateString(
-                                    "en-IN",
-                                    {
-                                        day: "2-digit",
-                                        month: "short",
-                                        year: "numeric",
-                                    }
-                                )}
+                                {date.toLocaleDateString("en-IN", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                })}
                             </span>
 
                             <span
@@ -275,34 +232,26 @@ const EquipDashboard = () => {
                                     text-[#7A9997]
                                 "
                             >
-                                {date.toLocaleTimeString(
-                                    "en-IN",
-                                    {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                        second: "2-digit",
-                                        hour12: false,
-                                    }
-                                )}
+                                {date.toLocaleTimeString("en-IN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit",
+                                    hour12: false,
+                                })}
                             </span>
                         </div>
                     );
                 },
             },
-
             {
                 id: "actions",
-
                 header: "Action",
-
                 enableSorting: false,
-
                 cell: ({ row }) => (
                     <button
                         type="button"
                         onClick={(event) => {
                             event.stopPropagation();
-
                             alert("Report coming soon");
                         }}
                         className="
@@ -329,14 +278,8 @@ const EquipDashboard = () => {
                         "
                         title="View equipment report"
                     >
-                        <Eye
-                            size={14}
-                            strokeWidth={2}
-                        />
-
-                        <span>
-                            View Report
-                        </span>
+                        <Eye size={14} strokeWidth={2} />
+                        <span>View Report</span>
                     </button>
                 ),
             },
@@ -358,9 +301,7 @@ const EquipDashboard = () => {
             <div className="shrink-0">
                 <DashboardActionBar
                     title="Equipment Dashboard"
-                    onCreate={() =>
-                        setIsCreateModalOpen(true)
-                    }
+                    onCreate={() => setIsCreateModalOpen(true)}
                 />
             </div>
 
@@ -379,37 +320,22 @@ const EquipDashboard = () => {
                     data={equipment}
                     columns={columns}
                     loading={loading}
-
                     searchable
                     searchPlaceholder="Search equipment..."
-
                     pagination
                     pageSize={pagination.perPage}
                     pageSizeOptions={[10, 20, 50]}
-
                     sortable
                     showColumnVisibility
                     hoverable
-
-                    /*
-                     * Backend pagination
-                     */
+                    /* Backend pagination */
                     manualPagination
                     pageCount={pagination.lastPage}
                     totalRows={pagination.total}
-
-                    onPaginationChange={({
-                        pageIndex,
-                        pageSize,
-                    }) => {
+                    onPaginationChange={({ pageIndex, pageSize }) => {
                         const nextPage = pageIndex + 1;
-
-                        fetchEquipment(
-                            nextPage,
-                            pageSize
-                        );
+                        fetchEquipment(nextPage, pageSize);
                     }}
-
                     emptyTitle="No equipment found"
                     emptyDescription="
                         Equipment records will appear here
@@ -420,9 +346,7 @@ const EquipDashboard = () => {
 
             <CreateEquipmentModal
                 open={isCreateModalOpen}
-                onClose={() =>
-                    setIsCreateModalOpen(false)
-                }
+                onClose={() => setIsCreateModalOpen(false)}
                 onSuccess={fetchEquipment}
             />
         </div>

@@ -355,6 +355,7 @@ const EditUser = () => {
                         placeholder="Select department"
                         error={errors.department_id}
                         disabled={loadingData}
+                        searchable
                     />
 
                     {/* ROLES */}

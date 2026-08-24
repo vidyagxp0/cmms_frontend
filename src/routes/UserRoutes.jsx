@@ -5,6 +5,7 @@ import UserDashboard from "../pages/user/UserDashboard/userDashboard";
 import ProcessPage from "../pages/user/ProcessPage/ProcessPage";
 import EquipDashboard from "../pages/user/Equipment/EquipDashboard";
 import EquipmentPanel from "../pages/user/Equipment/EquipmentPanel";
+import EngineeringDashboard from "../pages/user/Engineering/EngineeringDashboard";
 
 function UserRoutes() {
   return (
@@ -18,6 +19,9 @@ function UserRoutes() {
 
         <Route path="equipment-dashboard" element={<EquipDashboard />} />
         <Route path="equipment-panel/:id" element={<EquipmentPanel/>} />
+
+        <Route path="engineering-dashboard" element={<EngineeringDashboard />} />
+        {/* <Route path="equipment-panel/:id" element={<EquipmentPanel/>} /> */}
       </Route>
     </Routes>
   );

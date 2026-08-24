@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
     Building2,
     Pencil,
@@ -19,11 +19,27 @@ import AdminModal from "../../../components/common/AdminModal/AdminModal";
 import { toast } from "sonner";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import  Pagination  from "../../../components/common/AdminModal/PaginationModel";
+import SearchInput from "../../../components/common/SearchInput/SearchInput";
+import useDebounce from "../../../hooks/useDebounce";
 
 const DepartmentManagemelist = () => {
     const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [search, setSearch] = useState("");
+    const debouncedSearch = useDebounce(search, 300);
+
+    const filteredDepartments = useMemo(() => {
+        const query = debouncedSearch.trim().toLowerCase();
+        if (!query) return departments;
+        return departments.filter((dept) =>
+            dept.name?.toLowerCase().includes(query)
+        );
+    }, [departments, debouncedSearch]);
+
+    const suggestions = useMemo(() => {
+        return departments.map((dept) => dept.name).filter(Boolean);
+    }, [departments]);
 
     const [modalOpen, setModalOpen] = useState(false);
     const [departmentName, setDepartmentName] = useState("");
@@ -183,6 +199,13 @@ const DepartmentManagemelist = () => {
                 </button>
             </div>
 
+            <SearchInput
+                value={search}
+                onChange={setSearch}
+                suggestions={suggestions}
+                placeholder="Search departments..."
+            />
+
             {/* TABLE */}
             <div className="w-full overflow-visible rounded-2xl border border-[#CBE3D6] bg-white shadow-[0_10px_30px_-18px_rgba(21,44,32,0.35)]">
                 <div className="w-full overflow-x-visible">
@@ -236,7 +259,7 @@ const DepartmentManagemelist = () => {
 
                             {!loading &&
                                 !error &&
-                                departments.length === 0 && (
+                                filteredDepartments.length === 0 && (
                                     <tr>
                                         <td
                                             colSpan="3"
@@ -249,7 +272,7 @@ const DepartmentManagemelist = () => {
 
                             {!loading &&
                                 !error &&
-                                currentItems.map((department, index) => (
+                                filteredDepartments.map((department, index) => (
                                     <tr
                                         key={department.id}
                                         className="transition-colors duration-150 hover:bg-[#F6FBF8]"

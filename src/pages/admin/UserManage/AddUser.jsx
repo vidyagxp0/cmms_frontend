@@ -326,6 +326,7 @@ const AddUser = () => {
                         }
                         error={errors.department_id}
                         disabled={loadingData}
+                        searchable
                     />
 
                     <MultiSelectDropdown

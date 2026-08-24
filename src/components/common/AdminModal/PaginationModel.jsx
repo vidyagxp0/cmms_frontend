@@ -1,11 +1,12 @@
 import Dropdown from "../../../components/ui/Dropdown";
 import React, { useState } from 'react'
 
+
 const Pagination = ({items,children}) => {
 
     const [currentPage, setCurrentPage] = useState(1);
 
-    const itemsPerPage=2
+    const itemsPerPage=10
 
     const totalPage=Math.ceil(items.length/itemsPerPage)
   

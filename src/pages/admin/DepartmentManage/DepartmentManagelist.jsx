@@ -203,9 +203,9 @@ const DepartmentManagemelist = () => {
 
             {/* TABLE */}
             <div className="w-full overflow-hidden rounded-2xl border border-[#CBE3D6] bg-white shadow-[0_10px_30px_-18px_rgba(21,44,32,0.35)]">
-                <div className="w-full overflow-x-auto">
+                <div className="custom-scrollbar max-h-[calc(100vh-310px)] overflow-y-auto overflow-x-auto">
                     <table className="w-full border-collapse text-left">
-                        <thead>
+                        <thead className="sticky top-0 z-10 bg-[#F3F9F5]">
                             <tr className="bg-[#F3F9F5]">
                                 <th className="w-[100px] border-b border-[#E3F0E8] px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
                                     S.No

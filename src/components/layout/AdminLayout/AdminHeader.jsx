@@ -1,18 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Bell, ChevronDown, CircleHelp, ShieldCheck } from "lucide-react";
+import { ChevronDown,ShieldCheck} from "lucide-react";
 import ProfileMenu from "../UserLayout/ProfileMenu";
 import { useAuthStore } from "../../../store/authStore";
+import SessionTimer from "../../common/SessionTimer/SessionTimer";
 
 
-const AdminHeader = ({
-    notificationCount = 3,
-}) => {
+const AdminHeader = () => {
     const user = useAuthStore((state) => state.user);
     const [showProfile, setShowProfile] = useState(false);
     const dropdownRef = useRef(null);
     const userName = user?.name 
     const userRole = user?.roles?.[0] 
     console.log("AdminHeader user:", user);
+
+   
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -65,33 +66,11 @@ const AdminHeader = ({
 
                 {/* RIGHT SECTION */}
                 <div className="flex shrink-0 items-center gap-2">
-                    {/* HELP */}
-                    <button
-                        type="button"
-                        aria-label="Help and support"
-                        className="flex h-[38px] w-[38px] items-center justify-center rounded-[10px] border border-[#CBE3D6] bg-white text-[#5C7A6C] transition-colors duration-150 hover:border-[#1F8A5F]/35 hover:text-[#17734C]"
-                    >
-                        <CircleHelp size={18} strokeWidth={1.75} />
-                    </button>
-
-                    {/* NOTIFICATIONS */}
-                    <button
-                        type="button"
-                        aria-label={`Notifications (${notificationCount} unread)`}
-                        className="relative flex h-[38px] w-[38px] items-center justify-center rounded-[10px] border border-[#CBE3D6] bg-white text-[#5C7A6C] transition-colors duration-150 hover:border-[#1F8A5F]/35 hover:text-[#17734C]"
-                    >
-                        <Bell size={18} strokeWidth={1.75} />
-
-                        {notificationCount > 0 && (
-                            <span
-                                className="absolute right-[3px] top-[3px] h-[7px] w-[7px] rounded-full border border-white"
-                                style={{ background: "#B8933A" }}
-                            />
-                        )}
-                    </button>
-
+                    {/* SESSION TIMER */}
+                    <SessionTimer />
+                    
                     {/* DIVIDER */}
-                    <div className="mx-2 h-8 border-l-2 border-[#A8CDB9]" />
+                    {user && <div className="mx-2 h-8 border-l-2 border-[#A8CDB9]" />}
 
                     {/* USER PROFILE */}
                     <div ref={dropdownRef} className="relative">

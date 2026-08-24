@@ -8,6 +8,8 @@ import {
     Pencil,
     ShieldCheck,
     XCircle,
+    Search,
+    X,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -25,6 +27,7 @@ const EditRole = () => {
     const [roleName, setRoleName] = useState("");
     const [department, setDepartment] = useState("");
     const [departments, setDepartments] = useState([]);
+    const [deptSearch, setDeptSearch] = useState("");
 
     const [permissions, setPermissions] = useState({
         create: false,
@@ -105,6 +108,7 @@ const EditRole = () => {
                 !departmentRef.current.contains(event.target)
             ) {
                 setDepartmentOpen(false);
+                setDeptSearch("");
             }
         };
 
@@ -369,56 +373,99 @@ toast.success("Role updated successfully!");
                                             Departments
                                         </div>
 
-                                        {departments.map((dept) => {
-                                            const selected =
-                                                String(department) ===
-                                                String(dept.id);
+                                        <div className="relative mb-1.5 px-1 flex items-center">
+                                            <Search
+                                                size={14}
+                                                strokeWidth={1.8}
+                                                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8AA096]"
+                                            />
 
-                                            return (
+                                            <input
+                                                type="text"
+                                                value={deptSearch}
+                                                onChange={(e) => setDeptSearch(e.target.value)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                placeholder="Search departments..."
+                                                className="h-9 w-full rounded-lg border border-[#DCEAE2] bg-[#F8FBF9] pl-8 pr-8 text-[11.5px] font-medium text-[#1C382A] outline-none transition-all placeholder:text-[#9BAAA3] focus:border-[#79B89A] focus:bg-white focus:shadow-[0_0_0_3px_rgba(31,138,95,0.06)]"
+                                            />
+
+                                            {deptSearch && (
                                                 <button
-                                                    key={dept.id}
                                                     type="button"
-                                                    onClick={() => {
-                                                        setDepartment(
-                                                            String(
-                                                                dept.id
-                                                            )
-                                                        );
-                                                        setDepartmentOpen(
-                                                            false
-                                                        );
-
-                                                        setFormErrors(
-                                                            (prev) => ({
-                                                                ...prev,
-                                                                department:
-                                                                    "",
-                                                            })
-                                                        );
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setDeptSearch("");
                                                     }}
-                                                    className={`group flex w-full items-center justify-between rounded-lg px-2.5 py-2.5 text-left transition-all duration-150 ${
-                                                        selected
-                                                            ? "bg-[#EEF8F2] text-[#176B49]"
-                                                            : "text-[#3B5549] hover:bg-[#F5FAF7] hover:text-[#176B49]"
-                                                    }`}
+                                                    className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center justify-center text-[#91A39A] transition-colors hover:text-[#39785D]"
                                                 >
-                                                    <span className="text-[12px] font-medium">
-                                                        {dept.name}
-                                                    </span>
-
-                                                    {selected && (
-                                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#23845D] text-white">
-                                                            <Check
-                                                                size={11}
-                                                                strokeWidth={
-                                                                    2.5
-                                                                }
-                                                            />
-                                                        </span>
-                                                    )}
+                                                    <X size={13} strokeWidth={2} />
                                                 </button>
-                                            );
-                                        })}
+                                            )}
+                                        </div>
+
+                                        {departments
+                                            .filter((dept) =>
+                                                dept.name?.toLowerCase().includes(deptSearch.toLowerCase())
+                                            )
+                                            .map((dept) => {
+                                                const selected =
+                                                    String(department) ===
+                                                    String(dept.id);
+
+                                                return (
+                                                    <button
+                                                        key={dept.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setDepartment(
+                                                                String(
+                                                                    dept.id
+                                                                )
+                                                            );
+                                                            setDepartmentOpen(
+                                                                false
+                                                            );
+                                                            setDeptSearch("");
+
+                                                            setFormErrors(
+                                                                (prev) => ({
+                                                                    ...prev,
+                                                                    department:
+                                                                        "",
+                                                                })
+                                                            );
+                                                        }}
+                                                        className={`group flex w-full items-center justify-between rounded-lg px-2.5 py-2.5 text-left transition-all duration-150 ${
+                                                            selected
+                                                                ? "bg-[#EEF8F2] text-[#176B49]"
+                                                                : "text-[#3B5549] hover:bg-[#F5FAF7] hover:text-[#176B49]"
+                                                        }`}
+                                                    >
+                                                        <span className="text-[12px] font-medium">
+                                                            {dept.name}
+                                                        </span>
+
+                                                        {selected && (
+                                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#23845D] text-white">
+                                                                <Check
+                                                                    size={11}
+                                                                    strokeWidth={
+                                                                        2.5
+                                                                    }
+                                                                />
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+
+                                        {departments.filter((dept) =>
+                                            dept.name?.toLowerCase().includes(deptSearch.toLowerCase())
+                                        ).length === 0 && (
+                                            <div className="px-3 py-6 text-center text-[11.5px] text-[#8FA79B]">
+                                                No departments found
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

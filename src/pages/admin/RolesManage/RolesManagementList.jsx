@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
     Eye,
     Pencil,
@@ -16,6 +16,8 @@ import {
 import AdminModal from "../../../components/common/AdminModal/AdminModal";
 import { toast } from "sonner";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
+import SearchInput from "../../../components/common/SearchInput/SearchInput";
+import useDebounce from "../../../hooks/useDebounce";
 
 const RolesManagementList = () => {
     const navigate = useNavigate();
@@ -23,6 +25,21 @@ const RolesManagementList = () => {
     const [roles, setRoles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [search, setSearch] = useState("");
+    const debouncedSearch = useDebounce(search, 300);
+
+    const filteredRoles = useMemo(() => {
+        const query = debouncedSearch.trim().toLowerCase();
+        if (!query) return roles;
+        return roles.filter((role) =>
+            role.name?.toLowerCase().includes(query) ||
+            role.department?.name?.toLowerCase().includes(query)
+        );
+    }, [roles, debouncedSearch]);
+
+    const suggestions = useMemo(() => {
+        return roles.map((role) => role.name).filter(Boolean);
+    }, [roles]);
 
     const [deleteModal, setDeleteModal] = useState(false);
     const [selectedRole, setSelectedRole] = useState(null);
@@ -139,6 +156,13 @@ const RolesManagementList = () => {
                 </button>
             </div>
 
+            <SearchInput
+                value={search}
+                onChange={setSearch}
+                suggestions={suggestions}
+                placeholder="Search roles or departments..."
+            />
+
             {/* TABLE */}
             <div className="w-full overflow-hidden rounded-2xl border border-[#CBE3D6] bg-white shadow-[0_10px_30px_-18px_rgba(21,44,32,0.35)]">
                 <div className="w-full overflow-x-auto">
@@ -202,7 +226,7 @@ const RolesManagementList = () => {
                             {/* EMPTY */}
                             {!loading &&
                                 !error &&
-                                roles.length === 0 && (
+                                filteredRoles.length === 0 && (
                                     <tr>
                                         <td
                                             colSpan="5"
@@ -216,7 +240,7 @@ const RolesManagementList = () => {
                             {/* ROLES */}
                             {!loading &&
                                 !error &&
-                                roles.map((role, index) => {
+                                filteredRoles.map((role, index) => {
                                     const permissions =
                                         getPermissions(role);
 

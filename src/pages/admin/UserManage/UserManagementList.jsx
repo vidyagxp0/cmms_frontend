@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
     Users,
     Pencil,
@@ -16,6 +16,10 @@ import { getUsers, deleteUser } from "../../../services/adminApis/userApi";
 import AdminModal from "../../../components/common/AdminModal/AdminModal";
 import { toast } from "sonner";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
+import { getRoles } from "../../../services/adminApis/rolesApi";
+import Dropdown from "../../../components/ui/Dropdown";
+import SearchInput from "../../../components/common/SearchInput/SearchInput";
+import useDebounce from "../../../hooks/useDebounce";
 
 const UserManagementList = () => {
     const navigate = useNavigate();
@@ -38,6 +42,28 @@ const UserManagementList = () => {
             from: 0,
             to: 0,
 });
+    const [allRoles, setAllRoles] = useState([]);
+    const [roleFilter, setRoleFilter] = useState("");
+
+    const filteredUsers = useMemo(() => {
+        if (!roleFilter) return users;
+        return users.filter((user) =>
+            user.roles?.some((role) => String(role.name) === String(roleFilter))
+        );
+    }, [users, roleFilter]);
+
+    useEffect(() => {
+        const fetchAllRoles = async () => {
+            try {
+                const response = await getRoles();
+                setAllRoles(response?.data?.data || []);
+            } catch (err) {
+                console.error("Failed to fetch roles:", err);
+            }
+        };
+        fetchAllRoles();
+    }, []);
+
         const fetchUsers = async (currentPage = 1, searchValue = "") => {
             try {
                 setLoading(true);
@@ -74,9 +100,19 @@ const UserManagementList = () => {
             }
         };
 
+    const debouncedSearch = useDebounce(search, 350);
+
+    const suggestions = useMemo(() => {
+        return users.map((user) => user.name).filter(Boolean);
+    }, [users]);
+
     useEffect(() => {
-    fetchUsers(page, search);
-    }, [page, search]);
+        setPage(1);
+    }, [search]);
+
+    useEffect(() => {
+        fetchUsers(page, debouncedSearch);
+    }, [page, debouncedSearch]);
 
     const openDeleteModal = (user) => {
         setSelectedUser(user);
@@ -154,25 +190,33 @@ const UserManagementList = () => {
             </div>
 
             {/* TABLE */}
-            <div className="mb-4 flex items-center justify-between">
-    <div className="relative w-full max-w-[320px]">
-        <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8FA79B]"
-        />
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center w-full">
+                    <SearchInput
+                        value={search}
+                        onChange={setSearch}
+                        suggestions={suggestions}
+                        placeholder="Search users..."
+                        className="mb-0"
+                    />
 
-        <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-            }}
-            placeholder="Search users..."
-            className="h-[42px] w-full rounded-[10px] border border-[#CBE3D6] bg-[#F9FCFA] pl-9 pr-3 text-[12px] text-[#152C20] outline-none transition-all placeholder:text-[#94A79E] focus:border-[#79B89A] focus:bg-white focus:ring-2 focus:ring-[#1F8A5F]/[0.07]"
-        />
-    </div>
-</div>
+                    <div className="w-full max-w-[200px]">
+                        <Dropdown
+                            value={roleFilter}
+                            onChange={setRoleFilter}
+                            options={[
+                                { value: "", label: "All Roles" },
+                                ...allRoles.map((role) => ({
+                                    value: String(role.name),
+                                    label: role.name,
+                                })),
+                            ]}
+                            placeholder="All Roles"
+                            searchable
+                        />
+                    </div>
+                </div>
+            </div>
                     <div className="w-full overflow-hidden rounded-2xl border border-[#CBE3D6] bg-white shadow-[0_10px_30px_-18px_rgba(21,44,32,0.35)]">
                          <div className="custom-scrollbar max-h-[calc(100vh-250px)] overflow-y-auto overflow-x-auto">                       <table className="w-full border-collapse text-left">
                                 <thead className="sticky top-0 z-10">
@@ -240,7 +284,7 @@ const UserManagementList = () => {
                                 {/* EMPTY */}
                                 {!loading &&
                                     !error &&
-                                    users.length === 0 && (
+                                    filteredUsers.length === 0 && (
                                         <tr>
                                             <td
                                                 colSpan="8"
@@ -254,7 +298,7 @@ const UserManagementList = () => {
                                 {/* USERS */}
                                 {!loading &&
                                     !error &&
-                                    users.map((user, index) => {
+                                    filteredUsers.map((user, index) => {
                                         const roles = user.roles || [];
                                         const department =
                                             user.department?.name || "-";

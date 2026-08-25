@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
     LayoutDashboard,
@@ -10,6 +10,7 @@ import {
     PanelLeftClose,
     PanelLeftOpen,
     ShieldCheck,
+    Search,
 } from "lucide-react";
 
 const AdminSidebar = ({ collapsed, setCollapsed }) => {
@@ -46,6 +47,12 @@ const AdminSidebar = ({ collapsed, setCollapsed }) => {
         },
     ];
 
+    const [search,setSearch]=useState("")
+
+    const filteredMenuItems= menuItems.filter((item)=>
+        item.label.toLowerCase().includes(search.toLowerCase())
+    );
+
     return (
         <aside
             className={`fixed left-0 top-0 z-40 flex h-screen flex-col overflow-visible border-r border-white/[0.07] bg-[#121a16] text-white shadow-[8px_0_30px_rgba(0,0,0,0.18)] transition-[width] duration-300 ease-out ${
@@ -79,11 +86,28 @@ const AdminSidebar = ({ collapsed, setCollapsed }) => {
                         : "overflow-x-hidden overflow-y-auto px-3.5"
                 }`}
             >
+           
 
+    {/* SEARCH BAR */}
+    {!collapsed && (
+        <div className="relative mb-4">
+            <Search
+                size={17}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7FA391]"
+            />
+            <input
+            type="text"
+            placeholder="Search menu..."
+            value={search}
+            onChange={(e)=>setSearch(e.target.value)}
+            className="h-[42px] w-full rounded-[10px] border border-white/[0.08] bg-white/[0.035] pl-10 pr-3 text-[12px] text-white outline-none placeholder:text-[#7FA391] focus:border-[#4FBE8B]/50"
+            />
+        </div>
+    )}
                 <div className="space-y-1">
-                    {menuItems.map((item) => {
+                    {filteredMenuItems.map((item) => {
                         const Icon = item.icon;
-
+                          
                         return (
                             <div key={item.label} className="group relative">
                                 <NavLink

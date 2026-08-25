@@ -7,6 +7,7 @@ import {
     XCircle,
     Trash2,
     AlertTriangle,
+    Component,
 } from "lucide-react";
 import {
     addDepartment,
@@ -17,6 +18,7 @@ import {
 import AdminModal from "../../../components/common/AdminModal/AdminModal";
 import { toast } from "sonner";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
+import  Pagination  from "../../../components/common/AdminModal/PaginationModel";
 import SearchInput from "../../../components/common/SearchInput/SearchInput";
 import useDebounce from "../../../hooks/useDebounce";
 
@@ -48,6 +50,9 @@ const DepartmentManagemelist = () => {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [departmentToDelete, setDepartmentToDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
+   
+ 
+ 
 
     const fetchDepartments = async () => {
         try {
@@ -69,7 +74,7 @@ const DepartmentManagemelist = () => {
     useEffect(() => {
         fetchDepartments();
     }, []);
-
+    
     const openAddModal = () => {
         setEditingDepartment(null);
         setDepartmentName("");
@@ -202,10 +207,12 @@ const DepartmentManagemelist = () => {
             />
 
             {/* TABLE */}
-            <div className="w-full overflow-hidden rounded-2xl border border-[#CBE3D6] bg-white shadow-[0_10px_30px_-18px_rgba(21,44,32,0.35)]">
-                <div className="custom-scrollbar max-h-[calc(100vh-310px)] overflow-y-auto overflow-x-auto">
-                    <table className="w-full border-collapse text-left">
-                        <thead className="sticky top-0 z-10 bg-[#F3F9F5]">
+            <div className="w-full overflow-visible rounded-2xl border border-[#CBE3D6] bg-white shadow-[0_10px_30px_-18px_rgba(21,44,32,0.35)]">
+                <div className="w-full overflow-x-visible">
+                     <Pagination items={departments}>
+                         {(currentItems, startIndex) => (
+                               <table className="w-full border-collapse text-left">
+                        <thead>
                             <tr className="bg-[#F3F9F5]">
                                 <th className="w-[100px] border-b border-[#E3F0E8] px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
                                     S.No
@@ -271,7 +278,7 @@ const DepartmentManagemelist = () => {
                                         className="transition-colors duration-150 hover:bg-[#F6FBF8]"
                                     >
                                         <td className="px-6 py-4 text-[12.5px] font-medium text-[#5C7A6C]">
-                                            {String(index + 1).padStart(2, "0")}
+                                            {String(startIndex+index + 1).padStart(2, "0")}
                                         </td>
 
                                         <td className="px-6 py-4">
@@ -321,6 +328,9 @@ const DepartmentManagemelist = () => {
                                 ))}
                         </tbody>
                     </table>
+                         )}
+                    
+                </Pagination>
                 </div>
             </div>
 
@@ -432,6 +442,7 @@ const DepartmentManagemelist = () => {
                     </div>
                 </div>
             </AdminModal>
+          
         </div>
     );
 };

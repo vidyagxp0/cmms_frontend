@@ -16,6 +16,7 @@ import {
 import AdminModal from "../../../components/common/AdminModal/AdminModal";
 import { toast } from "sonner";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
+import  Pagination  from "../../../components/common/AdminModal/PaginationModel";
 import SearchInput from "../../../components/common/SearchInput/SearchInput";
 import useDebounce from "../../../hooks/useDebounce";
 
@@ -165,9 +166,11 @@ const RolesManagementList = () => {
 
             {/* TABLE */}
             <div className="w-full overflow-hidden rounded-2xl border border-[#CBE3D6] bg-white shadow-[0_10px_30px_-18px_rgba(21,44,32,0.35)]">
-                <div className="custom-scrollbar max-h-[calc(100vh-310px)] overflow-y-auto overflow-x-auto">
-                    <table className="w-full border-collapse text-left">
-                        <thead className="sticky top-0 z-10 bg-[#F3F9F5]">
+                <div className="w-full overflow-x-auto">
+                    <Pagination items={roles}>
+                      {(currentItems,startIndex)=>(
+                        <table className="w-full border-collapse text-left">
+                        <thead>
                             <tr className="bg-[#F3F9F5]">
                                 <th className="w-[90px] border-b border-[#E3F0E8] px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
                                     S.No
@@ -251,7 +254,7 @@ const RolesManagementList = () => {
                                         >
                                             {/* S.NO */}
                                             <td className="px-6 py-4 text-[12.5px] font-medium text-[#5C7A6C]">
-                                                {String(index + 1).padStart(
+                                                {String(startIndex+index + 1).padStart(
                                                     2,
                                                     "0"
                                                 )}
@@ -341,6 +344,8 @@ const RolesManagementList = () => {
                                 })}
                         </tbody>
                     </table>
+                      )}
+                    </Pagination>
                 </div>
             </div>
 

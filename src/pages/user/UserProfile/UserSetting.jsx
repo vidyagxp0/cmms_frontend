@@ -131,6 +131,8 @@ const UserSetting = () => {
     // Submit Edit Profile Details
     const handleEditFormSubmit = async (e) => {
         e.preventDefault();
+       
+
         if (!validateEditForm()) return;
 
         try {
@@ -154,6 +156,7 @@ const UserSetting = () => {
                     email: editForm.email.trim(),
                 });
             }
+            navigate('/user/cmms-dashboard')
         } catch (error) {
             console.error("Failed to update profile details:", error);
             const apiMsg = error?.response?.data?.message || "Failed to update profile details.";

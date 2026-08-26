@@ -6,12 +6,14 @@ import ProcessPage from "../pages/user/ProcessPage/ProcessPage";
 import EquipDashboard from "../pages/user/Equipment/EquipDashboard";
 import EquipmentPanel from "../pages/user/Equipment/EquipmentPanel";
 import EngineeringDashboard from "../pages/user/Engineering/EngineeringDashboard";
+import UserProfile from "../pages/user/UserProfile/UserProfile";
 
 function UserRoutes() {
   return (
     <Routes>
       <Route element={<UserLayout />}>
         <Route index element={<Navigate to="equipment-dashboard" replace />} />
+        <Route path="user-profile" element={<UserProfile />} />
 
         <Route path="cmms-dashboard" element={<UserDashboard />} />
         <Route path="create-record" element={<ProcessPage />} />

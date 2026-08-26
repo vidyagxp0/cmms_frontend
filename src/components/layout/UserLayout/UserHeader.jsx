@@ -2,12 +2,14 @@ import React, { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, CircleHelp, ShieldCheck } from "lucide-react";
 import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "../../../store/authStore";
+import { useNavigate } from "react-router-dom";
 
 
 const UserHeader = ({
     notificationCount = 3,
 }) => {
     const user = useAuthStore((state) => state.user);
+    const navigate = useNavigate();
     const [showProfile, setShowProfile] = useState(false);
     const dropdownRef = useRef(null);
     const userName = user?.name 
@@ -147,7 +149,7 @@ const UserHeader = ({
                             userName={userName}
                             userRole={userRole}
                             onProfile={() => {
-                                console.log("Profile clicked");
+                                navigate("/user/user-profile");
                                 setShowProfile(false);
                             }}
                             onSettings={() => {

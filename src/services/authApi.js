@@ -6,6 +6,6 @@ export const logout = () => api.post("/logout");
 
 export const getProfile = () => api.get("/profile");
 
-export const updateProfile = () => api.put("/update/profile");
+export const updateProfile = (payload) => api.put("/update/profile", payload);
 
-export const changePasword = () => api.put("/change-password");
+export const changePasword = (payload) => api.put("/change-password", payload);

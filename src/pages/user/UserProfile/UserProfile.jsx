@@ -1,75 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { User, ArrowLeft, Loader2 } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
+import { User, ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../store/authStore";
-import { getProfile, updateProfile, changePasword } from "../../../services/authApi";
-
-// Import modular child components
-import ProfileSidebar from "./ProfileSidebar";
+import { getProfile } from "../../../services/authApi";
 import ProfileDetails from "./ProfileDetails";
-import UpdateProfileForm from "./UpdateProfileForm";
-import ChangePasswordForm from "./ChangePasswordForm";
 
 const UserProfile = () => {
-    const user = useAuthStore((state) => state.user);
-    const setUser = useAuthStore((state) => state.setUser);
     const navigate = useNavigate();
-
-    // Active Sidebar Tab State
-    const [activeTab, setActiveTab] = useState("profile"); // 'profile' | 'update' | 'password'
 
     // Profile details state (loaded fresh from API on mount)
     const [profileData, setProfileData] = useState(null);
     const [loadingProfile, setLoadingProfile] = useState(true);
-
-    // Update Profile form states (Name and Email are editable)
-    const [editForm, setEditForm] = useState({
-        name: "",
-        email: "",
-    });
-    const [editErrors, setEditErrors] = useState({});
-    const [updatingProfile, setUpdatingProfile] = useState(false);
-
-    // Change Password form states
-    const [passwordForm, setPasswordForm] = useState({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-    });
-    const [showPasswords, setShowPasswords] = useState({
-        current: false,
-        new: false,
-        confirm: false,
-    });
-    const [passwordErrors, setPasswordErrors] = useState({});
-    const [changingPassword, setChangingPassword] = useState(false);
-
-    // Password strength check helper
-    const getPasswordStrength = (pwd) => {
-        if (!pwd) return { score: 0, label: "", color: "bg-gray-200" };
-        let score = 0;
-        if (pwd.length >= 8) score++;
-        if (/[A-Z]/.test(pwd)) score++;
-        if (/[0-9]/.test(pwd)) score++;
-        if (/[^A-Za-z0-9]/.test(pwd)) score++;
-
-        switch (score) {
-            case 1:
-                return { score: 25, label: "Weak", color: "bg-red-500" };
-            case 2:
-                return { score: 50, label: "Fair", color: "bg-orange-400" };
-            case 3:
-                return { score: 75, label: "Good", color: "bg-yellow-500" };
-            case 4:
-                return { score: 100, label: "Strong", color: "bg-emerald-500" };
-            default:
-                return { score: 0, label: "", color: "bg-gray-200" };
-        }
-    };
-
-    const passwordStrength = getPasswordStrength(passwordForm.newPassword);
 
     // Fetch user details from profile endpoint
     const fetchUserProfile = async () => {
@@ -79,10 +20,6 @@ const UserProfile = () => {
             const apiUser = response?.data?.data;
             if (apiUser) {
                 setProfileData(apiUser);
-                setEditForm({
-                    name: apiUser.name || "",
-                    email: apiUser.email || "",
-                });
             }
         } catch (error) {
             console.error("Failed to load user profile:", error);
@@ -103,111 +40,6 @@ const UserProfile = () => {
             navigate("/admin/dashboard");
         } else {
             navigate("/user/equipment-dashboard");
-        }
-    };
-
-    // Update Field state for Edit Form
-    const handleEditFieldChange = (field, value) => {
-        setEditForm((prev) => ({ ...prev, [field]: value }));
-        if (editErrors[field]) {
-            setEditErrors((prev) => ({ ...prev, [field]: "" }));
-        }
-    };
-
-    // Validate Edit Profile Form (Name and Email)
-    const validateEditForm = () => {
-        const errors = {};
-        if (!editForm.name.trim()) {
-            errors.name = "Full Name is required";
-        }
-        if (!editForm.email.trim()) {
-            errors.email = "Email address is required";
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) {
-            errors.email = "Invalid email address format";
-        }
-        setEditErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
-
-    // Submit Edit Profile Details
-    const handleEditFormSubmit = async (e) => {
-        e.preventDefault();
-        if (!validateEditForm()) return;
-
-        try {
-            setUpdatingProfile(true);
-            const payload = {
-                name: editForm.name.trim(),
-                email: editForm.email.trim(),
-            };
-
-            await updateProfile(payload);
-            toast.success("Profile updated successfully!");
-
-            // Update local state details
-            setProfileData((prev) => ({ ...prev, ...payload }));
-
-            // Update Zustand global store
-            if (user) {
-                setUser({
-                    ...user,
-                    name: editForm.name.trim(),
-                    email: editForm.email.trim(),
-                });
-            }
-
-            setActiveTab("profile");
-        } catch (error) {
-            console.error("Failed to update profile:", error);
-            const apiMsg = error?.response?.data?.message || "Failed to update profile details.";
-            toast.error(apiMsg);
-        } finally {
-            setUpdatingProfile(false);
-        }
-    };
-
-    // Validate Change Password Form
-    const validatePasswordForm = () => {
-        const errors = {};
-        if (!passwordForm.currentPassword) {
-            errors.currentPassword = "Current Password is required";
-        }
-        if (!passwordForm.newPassword) {
-            errors.newPassword = "New Password is required";
-        } else if (passwordForm.newPassword.length < 8) {
-            errors.newPassword = "Password must be at least 8 characters long";
-        }
-        if (passwordForm.confirmPassword !== passwordForm.newPassword) {
-            errors.confirmPassword = "Passwords do not match";
-        }
-
-        setPasswordErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
-
-    // Submit Change Password Form
-    const handlePasswordSubmit = async (e) => {
-        e.preventDefault();
-        if (!validatePasswordForm()) return;
-
-        try {
-            setChangingPassword(true);
-            const payload = {
-                current_password: passwordForm.currentPassword,
-                new_password: passwordForm.newPassword,
-                new_password_confirmation: passwordForm.confirmPassword,
-            };
-
-            await changePasword(payload);
-            toast.success("Password changed successfully!");
-            setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-            setActiveTab("profile");
-        } catch (error) {
-            console.error("Failed to change password:", error);
-            const apiMsg = error?.response?.data?.message || "Failed to change password. Please check current password.";
-            toast.error(apiMsg);
-        } finally {
-            setChangingPassword(false);
         }
     };
 
@@ -252,10 +84,10 @@ const UserProfile = () => {
                     </span>
                     <div>
                         <h1 className="text-[22px] font-bold tracking-tight text-[#152C20]">
-                            Account Workspace
+                            User Profile
                         </h1>
                         <p className="mt-0.5 text-[12px] text-[#6C8679]">
-                            Manage your user information, profile settings, and credentials.
+                            Review your primary user identity and settings.
                         </p>
                     </div>
                 </div>
@@ -272,67 +104,47 @@ const UserProfile = () => {
 
             {/* Split Layout Container */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-                {/* 1. Left Sidebar component */}
+                {/* 1. Left Static Info Card (No Tabs) */}
                 <div className="lg:col-span-4 xl:col-span-3">
-                    <ProfileSidebar
-                        profileData={profileData}
-                        activeTab={activeTab}
-                        setActiveTab={setActiveTab}
-                    />
+                    <div className="flex flex-col rounded-2xl border border-[#CBE3D6] bg-white p-5 shadow-[0_8px_30px_rgba(21,44,32,0.06)]">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="relative">
+                                <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#EEF8F2] shadow-[0_4px_15px_rgba(23,115,76,0.12)] ring-2 ring-[#CBE3D6]">
+                                    <span className="text-[32px] font-extrabold text-[#17734C]">
+                                        {profileData?.name?.charAt(0)?.toUpperCase() || "U"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <h2 className="mt-4 text-[16px] font-bold text-[#152C20]">
+                                {profileData?.salutation} {profileData?.name}
+                            </h2>
+                            <p className="mt-1 text-[11.5px] font-medium text-[#5C7A6C] max-w-full truncate px-2">
+                                {profileData?.email}
+                            </p>
+
+                            <div className="mt-3.5 flex flex-wrap justify-center gap-1.5">
+                                {profileData?.roles?.map((role) => (
+                                    <span
+                                        key={role.id || role}
+                                        className="inline-flex items-center gap-1 rounded-full border border-[#B8DAC6] bg-[#EEF8F2] px-2.5 py-0.5 text-[10.5px] font-bold text-[#17734C]"
+                                    >
+                                        <ShieldCheck size={11} className="text-[#17734C]" />
+                                        {role.name || role}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* 2. Right Interactive Content Panel */}
                 <div className="lg:col-span-8 xl:col-span-9">
-                    <div className="relative min-h-[500px] overflow-hidden rounded-2xl border border-[#CBE3D6] bg-white p-6 shadow-[0_10px_30px_-18px_rgba(21,44,32,0.25)] sm:p-8">
-                        <AnimatePresence mode="wait">
-                            {activeTab === "profile" && (
-                                <ProfileDetails
-                                    profileData={profileData}
-                                    joinedDate={joinedDate}
-                                />
-                            )}
-
-                            {activeTab === "update" && (
-                                <UpdateProfileForm
-                                    editForm={editForm}
-                                    editErrors={editErrors}
-                                    updatingProfile={updatingProfile}
-                                    handleEditFieldChange={handleEditFieldChange}
-                                    handleEditFormSubmit={handleEditFormSubmit}
-                                    onCancel={() => {
-                                        setEditForm({
-                                            name: profileData?.name || "",
-                                            email: profileData?.email || "",
-                                        });
-                                        setEditErrors({});
-                                        setActiveTab("profile");
-                                    }}
-                                />
-                            )}
-
-                            {activeTab === "password" && (
-                                <ChangePasswordForm
-                                    passwordForm={passwordForm}
-                                    setPasswordForm={setPasswordForm}
-                                    showPasswords={showPasswords}
-                                    setShowPasswords={setShowPasswords}
-                                    passwordErrors={passwordErrors}
-                                    setPasswordErrors={setPasswordErrors}
-                                    changingPassword={changingPassword}
-                                    passwordStrength={passwordStrength}
-                                    handlePasswordSubmit={handlePasswordSubmit}
-                                    onCancel={() => {
-                                        setPasswordForm({
-                                            currentPassword: "",
-                                            newPassword: "",
-                                            confirmPassword: "",
-                                        });
-                                        setPasswordErrors({});
-                                        setActiveTab("profile");
-                                    }}
-                                />
-                            )}
-                        </AnimatePresence>
+                    <div className="relative min-h-[400px] overflow-hidden rounded-2xl border border-[#CBE3D6] bg-white p-6 shadow-[0_10px_30px_-18px_rgba(21,44,32,0.25)] sm:p-8">
+                        <ProfileDetails
+                            profileData={profileData}
+                            joinedDate={joinedDate}
+                        />
                     </div>
                 </div>
             </div>

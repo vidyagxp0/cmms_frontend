@@ -1,11 +1,11 @@
 import React from "react";
-import { User, UserPen, KeyRound, ShieldCheck } from "lucide-react";
+import { UserPen, KeyRound, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 
 const ProfileSidebar = ({ profileData, activeTab, setActiveTab }) => {
     return (
         <div className="flex flex-col rounded-2xl border border-[#CBE3D6] bg-white p-5 shadow-[0_8px_30px_rgba(21,44,32,0.06)] animate-fadeIn">
-            {/* Profile Photo Display Block (Non-editable custom visual circle avatar) */}
+            {/* Profile Photo Display Block (Non-editable custom circle avatar) */}
             <div className="flex flex-col items-center pb-6 text-center border-b border-[#E3F0E8]">
                 <div className="relative">
                     <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#EEF8F2] shadow-[0_4px_15px_rgba(23,115,76,0.12)] ring-2 ring-[#CBE3D6]">
@@ -35,34 +35,8 @@ const ProfileSidebar = ({ profileData, activeTab, setActiveTab }) => {
                 </div>
             </div>
 
-            {/* Navigation Links List */}
+            {/* Navigation Links List (Settings Actions only) */}
             <nav className="mt-6 flex flex-col gap-1.5">
-                <button
-                    type="button"
-                    onClick={() => setActiveTab("profile")}
-                    className={`group flex items-center justify-between rounded-xl px-4 py-3 text-left text-[13px] font-semibold transition-all duration-200 ${
-                        activeTab === "profile"
-                            ? "bg-[#EEF8F2] text-[#17734C] border border-[#B8D9C8]"
-                            : "text-[#5C7A6C] hover:bg-[#F4FAF7] hover:text-[#17734C] border border-transparent"
-                    }`}
-                >
-                    <span className="flex items-center gap-3">
-                        <User
-                            size={16}
-                            className={`transition-colors duration-200 ${
-                                activeTab === "profile" ? "text-[#17734C]" : "text-[#8FA79B]"
-                            }`}
-                        />
-                        Profile Details
-                    </span>
-                    {activeTab === "profile" && (
-                        <motion.div
-                            layoutId="tabGlow"
-                            className="h-1.5 w-1.5 rounded-full bg-[#17734C]"
-                        />
-                    )}
-                </button>
-
                 <button
                     type="button"
                     onClick={() => setActiveTab("update")}

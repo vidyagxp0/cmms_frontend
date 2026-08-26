@@ -153,7 +153,7 @@ const UserHeader = ({
                                 setShowProfile(false);
                             }}
                             onSettings={() => {
-                            navigate("/user/user-setting");
+                                navigate("/user/user-setting");
                                 setShowProfile(false);
                             }}
                             onLogout={() => {

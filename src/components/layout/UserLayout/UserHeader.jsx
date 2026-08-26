@@ -3,6 +3,7 @@ import { Bell, ChevronDown, CircleHelp, ShieldCheck } from "lucide-react";
 import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "../../../store/authStore";
 import { useNavigate } from "react-router-dom";
+import SessionTimer from "../../common/SessionTimer/SessionTimer";
 
 
 const UserHeader = ({
@@ -63,6 +64,9 @@ const UserHeader = ({
 
                 {/* RIGHT SECTION */}
                 <div className="flex shrink-0 items-center gap-2">
+                    {/* SESSION TIMER */}
+                    <SessionTimer />
+
                     {/* HELP */}
                     <button
                         type="button"

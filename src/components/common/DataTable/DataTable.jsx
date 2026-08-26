@@ -283,14 +283,10 @@ const DataTable = ({
             {/* Table internal scroll */}
             <div
                 className="
+                    flex-1 min-h-0
                     overflow-y-auto overflow-x-auto
-                    scrollbar-thin scrollbar-track-transparent
-                    scrollbar-thumb-slate-200
-                    hover:scrollbar-thumb-slate-300
+                    custom-scrollbar
                 "
-                style={{
-                    height: "280px",
-                }}
             >
                 <table className="w-full min-w-[900px] border-collapse">
                     <thead className="sticky top-0 z-20">
@@ -320,6 +316,8 @@ const DataTable = ({
                                                         : undefined,
                                             }}
                                             className="
+                                                sticky top-0 z-20
+                                                bg-[#dcf0f3]
                                                 whitespace-nowrap
                                                 border-r border-[#CFE6E2]
                                                 px-5 py-3.5

@@ -1,7 +1,6 @@
 import React from "react";
 import { User, Mail, AlertCircle, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { inputClass } from "../../../components/ui/formStyles";
 
 const UpdateProfileForm = ({
     editForm,
@@ -10,7 +9,32 @@ const UpdateProfileForm = ({
     handleEditFieldChange,
     handleEditFormSubmit,
     onCancel,
+    theme,
 }) => {
+    // Default fallbacks for safety
+    const t = theme || {
+        isSystemAdmin: true,
+        textAccent: "text-[#17734C]",
+        bgAccent: "bg-[#17734C]",
+        bgHoverAccent: "hover:bg-[#125D3E]",
+        lightBg: "bg-[#EEF8F2]",
+        borderLight: "border-[#CBE3D6]",
+        textAccentHover: "hover:text-[#17734C]",
+    };
+
+    // Dynamic focus ring inputs helper
+    const getInputClass = (field, errors = {}) => {
+        const base = "h-[46px] w-full rounded-[10px] border px-3.5 text-[12.5px] font-medium outline-none transition-all duration-200";
+        if (errors[field]) {
+            return `${base} bg-red-50/10 border-[#C43D3D] text-[#7A2A2A] focus:shadow-[0_0_0_3px_rgba(196,61,61,0.07)]`;
+        }
+        if (t.isSystemAdmin) {
+            return `${base} bg-[#F9FCFA] border-[#CBE3D6] text-[#1C382A] focus:border-[#79B89A] focus:bg-white focus:shadow-[0_0_0_3px_rgba(31,138,95,0.07)] placeholder:text-[#94A79E]`;
+        } else {
+            return `${base} bg-[#F8FAFC] border-[#D1D5DB] text-[#1E293B] focus:border-[#3B82F6] focus:bg-white focus:shadow-[0_0_0_3px_rgba(59,130,246,0.07)] placeholder:text-[#94A3B8]`;
+        }
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 15 }}
@@ -32,7 +56,7 @@ const UpdateProfileForm = ({
                     {/* Full Name */}
                     <div>
                         <label className="mb-2 flex items-center gap-1.5 text-[11.5px] font-semibold text-[#263F33]">
-                            <User size={13} strokeWidth={1.9} className="text-[#39785D]" />
+                            <User size={13} strokeWidth={1.9} className={t.textAccent} />
                             Full Name
                         </label>
                         <input
@@ -40,7 +64,7 @@ const UpdateProfileForm = ({
                             value={editForm.name}
                             onChange={(e) => handleEditFieldChange("name", e.target.value)}
                             placeholder="Enter full name"
-                            className={inputClass("name", editErrors)}
+                            className={getInputClass("name", editErrors)}
                         />
                         {editErrors.name && (
                             <p className="mt-1.5 text-[11px] font-semibold text-[#C43D3D] flex items-center gap-1">
@@ -52,7 +76,7 @@ const UpdateProfileForm = ({
                     {/* Email Address */}
                     <div>
                         <label className="mb-2 flex items-center gap-1.5 text-[11.5px] font-semibold text-[#263F33]">
-                            <Mail size={13} strokeWidth={1.9} className="text-[#39785D]" />
+                            <Mail size={13} strokeWidth={1.9} className={t.textAccent} />
                             Email Address
                         </label>
                         <input
@@ -60,7 +84,7 @@ const UpdateProfileForm = ({
                             value={editForm.email}
                             onChange={(e) => handleEditFieldChange("email", e.target.value)}
                             placeholder="Enter email address"
-                            className={inputClass("email", editErrors)}
+                            className={getInputClass("email", editErrors)}
                         />
                         {editErrors.email && (
                             <p className="mt-1.5 text-[11px] font-semibold text-[#C43D3D] flex items-center gap-1">
@@ -71,12 +95,12 @@ const UpdateProfileForm = ({
                 </div>
 
                 {/* Action buttons */}
-                <div className="mt-6 flex justify-end gap-3 border-t border-[#E3F0E8] pt-5">
+                <div className={`mt-6 flex justify-end gap-3 border-t ${t.borderLight} pt-5`}>
                     <button
                         type="button"
                         onClick={onCancel}
                         disabled={updatingProfile}
-                        className="h-10 rounded-xl border border-[#CBE3D6] bg-white px-5 text-[12px] font-bold text-[#557064] transition-all hover:bg-[#F5FAF7]"
+                        className={`h-10 rounded-xl border ${t.borderLight} bg-white px-5 text-[12px] font-bold text-[#557064] transition-all ${t.lightBg} ${t.textAccentHover}`}
                     >
                         Cancel
                     </button>
@@ -84,7 +108,7 @@ const UpdateProfileForm = ({
                     <button
                         type="submit"
                         disabled={updatingProfile}
-                        className="flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17734C] px-5 text-[12px] font-bold text-white shadow-sm transition-all hover:bg-[#125D3E] disabled:opacity-60"
+                        className={`flex h-10 items-center justify-center gap-2 rounded-xl ${t.bgAccent} ${t.bgHoverAccent} px-5 text-[12px] font-bold text-white shadow-sm transition-all disabled:opacity-60`}
                     >
                         {updatingProfile && <Loader2 size={14} className="animate-spin" />}
                         {updatingProfile ? "Saving Changes..." : "Save Changes"}

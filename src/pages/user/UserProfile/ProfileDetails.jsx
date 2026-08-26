@@ -11,7 +11,17 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
-const ProfileDetails = ({ profileData, joinedDate }) => {
+const ProfileDetails = ({ profileData, joinedDate, theme }) => {
+    // Default fallbacks for safety
+    const t = theme || {
+        isSystemAdmin: true,
+        textAccent: "text-[#17734C]",
+        bgAccent: "bg-[#17734C]",
+        lightBg: "bg-[#EEF8F2]",
+        borderLight: "border-[#CBE3D6]",
+        badgeBg: "bg-[#EEF8F2]",
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 15 }}
@@ -32,8 +42,8 @@ const ProfileDetails = ({ profileData, joinedDate }) => {
             {/* User Details Grid */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 {/* Name Detail Card */}
-                <div className="flex items-start gap-3.5 rounded-xl border border-[#E3F0E8] bg-[#FAFDFB] p-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF5EE] text-[#17734C]">
+                <div className={`flex items-start gap-3.5 rounded-xl border ${t.borderLight} bg-[#FAFDFB] p-4`}>
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.badgeBg} ${t.textAccent}`}>
                         <User size={16} />
                     </span>
                     <div>
@@ -47,8 +57,8 @@ const ProfileDetails = ({ profileData, joinedDate }) => {
                 </div>
 
                 {/* Person ID Detail Card */}
-                <div className="flex items-start gap-3.5 rounded-xl border border-[#E3F0E8] bg-[#FAFDFB] p-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF5EE] text-[#17734C]">
+                <div className={`flex items-start gap-3.5 rounded-xl border ${t.borderLight} bg-[#FAFDFB] p-4`}>
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.badgeBg} ${t.textAccent}`}>
                         <Hash size={16} />
                     </span>
                     <div>
@@ -62,8 +72,8 @@ const ProfileDetails = ({ profileData, joinedDate }) => {
                 </div>
 
                 {/* Username Detail Card */}
-                <div className="flex items-start gap-3.5 rounded-xl border border-[#E3F0E8] bg-[#FAFDFB] p-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF5EE] text-[#17734C]">
+                <div className={`flex items-start gap-3.5 rounded-xl border ${t.borderLight} bg-[#FAFDFB] p-4`}>
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.badgeBg} ${t.textAccent}`}>
                         <AtSign size={16} />
                     </span>
                     <div>
@@ -77,8 +87,8 @@ const ProfileDetails = ({ profileData, joinedDate }) => {
                 </div>
 
                 {/* Email Detail Card */}
-                <div className="flex items-start gap-3.5 rounded-xl border border-[#E3F0E8] bg-[#FAFDFB] p-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF5EE] text-[#17734C]">
+                <div className={`flex items-start gap-3.5 rounded-xl border ${t.borderLight} bg-[#FAFDFB] p-4`}>
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.badgeBg} ${t.textAccent}`}>
                         <Mail size={16} />
                     </span>
                     <div>
@@ -92,8 +102,8 @@ const ProfileDetails = ({ profileData, joinedDate }) => {
                 </div>
 
                 {/* Mobile Number Detail Card */}
-                <div className="flex items-start gap-3.5 rounded-xl border border-[#E3F0E8] bg-[#FAFDFB] p-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF5EE] text-[#17734C]">
+                <div className={`flex items-start gap-3.5 rounded-xl border ${t.borderLight} bg-[#FAFDFB] p-4`}>
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.badgeBg} ${t.textAccent}`}>
                         <Phone size={16} />
                     </span>
                     <div>
@@ -107,8 +117,8 @@ const ProfileDetails = ({ profileData, joinedDate }) => {
                 </div>
 
                 {/* Department Detail Card */}
-                <div className="flex items-start gap-3.5 rounded-xl border border-[#E3F0E8] bg-[#FAFDFB] p-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF5EE] text-[#17734C]">
+                <div className={`flex items-start gap-3.5 rounded-xl border ${t.borderLight} bg-[#FAFDFB] p-4`}>
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.badgeBg} ${t.textAccent}`}>
                         <Building2 size={16} />
                     </span>
                     <div>
@@ -122,8 +132,8 @@ const ProfileDetails = ({ profileData, joinedDate }) => {
                 </div>
 
                 {/* Joined Date Detail Card */}
-                <div className="flex items-start gap-3.5 rounded-xl border border-[#E3F0E8] bg-[#FAFDFB] p-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF5EE] text-[#17734C]">
+                <div className={`flex items-start gap-3.5 rounded-xl border ${t.borderLight} bg-[#FAFDFB] p-4`}>
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.badgeBg} ${t.textAccent}`}>
                         <Calendar size={16} />
                     </span>
                     <div>
@@ -137,16 +147,22 @@ const ProfileDetails = ({ profileData, joinedDate }) => {
                 </div>
 
                 {/* Status Detail Card */}
-                <div className="flex items-start gap-3.5 rounded-xl border border-[#E3F0E8] bg-[#FAFDFB] p-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF5EE] text-[#17734C]">
+                <div className={`flex items-start gap-3.5 rounded-xl border ${t.borderLight} bg-[#FAFDFB] p-4`}>
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.badgeBg} ${t.textAccent}`}>
                         <CheckCircle2 size={16} />
                     </span>
                     <div>
                         <p className="text-[11px] font-bold uppercase tracking-wider text-[#8FA79B]">
                             Account Status
                         </p>
-                        <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className={`mt-1.5 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${
+                            t.isSystemAdmin 
+                                ? "bg-emerald-50 border-emerald-200 text-emerald-600" 
+                                : "bg-blue-50 border-blue-200 text-blue-600"
+                        }`}>
+                            <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${
+                                t.isSystemAdmin ? "bg-emerald-500" : "bg-blue-500"
+                            }`} />
                             Active Session
                         </span>
                     </div>

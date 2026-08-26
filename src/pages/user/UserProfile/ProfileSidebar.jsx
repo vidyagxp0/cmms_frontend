@@ -2,14 +2,29 @@ import React from "react";
 import { UserPen, KeyRound, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 
-const ProfileSidebar = ({ profileData, activeTab, setActiveTab }) => {
+const ProfileSidebar = ({ profileData, activeTab, setActiveTab, theme }) => {
+    // Default fallbacks for safety
+    const t = theme || {
+        textAccent: "text-[#17734C]",
+        bgAccent: "bg-[#17734C]",
+        lightBg: "bg-[#EEF8F2]",
+        borderLight: "border-[#CBE3D6]",
+        borderBadge: "border-[#B8D9C8]",
+        rowHover: "hover:bg-[#F5FAF7]",
+        shadowAccent: "shadow-[0_4px_15px_rgba(23,115,76,0.12)]",
+        ringAccent: "ring-[#CBE3D6]",
+        textAccentHover: "hover:text-[#17734C]",
+        navActive: "bg-[#EEF8F2] text-[#17734C] border-[#B8D9C8]",
+        badgeBg: "bg-[#EEF8F2]",
+    };
+
     return (
-        <div className="flex flex-col rounded-2xl border border-[#CBE3D6] bg-white p-5 shadow-[0_8px_30px_rgba(21,44,32,0.06)] animate-fadeIn">
-            {/* Profile Photo Display Block (Non-editable custom circle avatar) */}
+        <div className={`flex flex-col rounded-2xl border ${t.borderLight} bg-white p-5 shadow-[0_8px_30px_rgba(21,44,32,0.06)] animate-fadeIn`}>
+            {/* Profile Photo Display Block (Non-editable custom visual circle avatar) */}
             <div className="flex flex-col items-center pb-6 text-center border-b border-[#E3F0E8]">
                 <div className="relative">
-                    <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#EEF8F2] shadow-[0_4px_15px_rgba(23,115,76,0.12)] ring-2 ring-[#CBE3D6]">
-                        <span className="text-[32px] font-extrabold text-[#17734C]">
+                    <div className={`relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white ${t.badgeBg} ${t.shadowAccent} ring-2 ${t.ringAccent}`}>
+                        <span className={`text-[32px] font-extrabold ${t.textAccent}`}>
                             {profileData?.name?.charAt(0)?.toUpperCase() || "U"}
                         </span>
                     </div>
@@ -26,9 +41,9 @@ const ProfileSidebar = ({ profileData, activeTab, setActiveTab }) => {
                     {profileData?.roles?.map((role) => (
                         <span
                             key={role.id || role}
-                            className="inline-flex items-center gap-1 rounded-full border border-[#B8DAC6] bg-[#EEF8F2] px-2.5 py-0.5 text-[10.5px] font-bold text-[#17734C]"
+                            className={`inline-flex items-center gap-1 rounded-full border ${t.borderBadge} ${t.badgeBg} px-2.5 py-0.5 text-[10.5px] font-bold ${t.textAccent}`}
                         >
-                            <ShieldCheck size={11} className="text-[#17734C]" />
+                            <ShieldCheck size={11} className={t.textAccent} />
                             {role.name || role}
                         </span>
                     ))}
@@ -40,17 +55,17 @@ const ProfileSidebar = ({ profileData, activeTab, setActiveTab }) => {
                 <button
                     type="button"
                     onClick={() => setActiveTab("update")}
-                    className={`group flex items-center justify-between rounded-xl px-4 py-3 text-left text-[13px] font-semibold transition-all duration-200 ${
+                    className={`group flex items-center justify-between rounded-xl px-4 py-3 text-left text-[13px] font-semibold transition-all duration-200 border ${
                         activeTab === "update"
-                            ? "bg-[#EEF8F2] text-[#17734C] border border-[#B8D9C8]"
-                            : "text-[#5C7A6C] hover:bg-[#F4FAF7] hover:text-[#17734C] border border-transparent"
+                            ? t.navActive
+                            : `text-[#5C7A6C] ${t.textAccentHover} ${t.rowHover} border-transparent`
                     }`}
                 >
                     <span className="flex items-center gap-3">
                         <UserPen
                             size={16}
                             className={`transition-colors duration-200 ${
-                                activeTab === "update" ? "text-[#17734C]" : "text-[#8FA79B]"
+                                activeTab === "update" ? t.textAccent : "text-[#8FA79B]"
                             }`}
                         />
                         Update Profile
@@ -58,7 +73,7 @@ const ProfileSidebar = ({ profileData, activeTab, setActiveTab }) => {
                     {activeTab === "update" && (
                         <motion.div
                             layoutId="tabGlow"
-                            className="h-1.5 w-1.5 rounded-full bg-[#17734C]"
+                            className={`h-1.5 w-1.5 rounded-full ${t.bgAccent}`}
                         />
                     )}
                 </button>
@@ -66,17 +81,17 @@ const ProfileSidebar = ({ profileData, activeTab, setActiveTab }) => {
                 <button
                     type="button"
                     onClick={() => setActiveTab("password")}
-                    className={`group flex items-center justify-between rounded-xl px-4 py-3 text-left text-[13px] font-semibold transition-all duration-200 ${
+                    className={`group flex items-center justify-between rounded-xl px-4 py-3 text-left text-[13px] font-semibold transition-all duration-200 border ${
                         activeTab === "password"
-                            ? "bg-[#EEF8F2] text-[#17734C] border border-[#B8D9C8]"
-                            : "text-[#5C7A6C] hover:bg-[#F4FAF7] hover:text-[#17734C] border border-transparent"
+                            ? t.navActive
+                            : `text-[#5C7A6C] ${t.textAccentHover} ${t.rowHover} border-transparent`
                     }`}
                 >
                     <span className="flex items-center gap-3">
                         <KeyRound
                             size={16}
                             className={`transition-colors duration-200 ${
-                                activeTab === "password" ? "text-[#17734C]" : "text-[#8FA79B]"
+                                activeTab === "password" ? t.textAccent : "text-[#8FA79B]"
                             }`}
                         />
                         Change Password
@@ -84,7 +99,7 @@ const ProfileSidebar = ({ profileData, activeTab, setActiveTab }) => {
                     {activeTab === "password" && (
                         <motion.div
                             layoutId="tabGlow"
-                            className="h-1.5 w-1.5 rounded-full bg-[#17734C]"
+                            className={`h-1.5 w-1.5 rounded-full ${t.bgAccent}`}
                         />
                     )}
                 </button>

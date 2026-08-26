@@ -4,7 +4,7 @@ import { AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../store/authStore";
-import { getProfile, updateProfile, changePasword } from "../../../services/authApi";
+import { getProfile, updateProfile, changePasword, logout } from "../../../services/authApi";
 
 // Import modular child components
 import ProfileSidebar from "./ProfileSidebar";
@@ -14,6 +14,7 @@ import ChangePasswordForm from "./ChangePasswordForm";
 const UserSetting = () => {
     const user = useAuthStore((state) => state.user);
     const setUser = useAuthStore((state) => state.setUser);
+    const clearAuth = useAuthStore((state) => state.clearAuth);
     const navigate = useNavigate();
 
     // Active Sidebar Tab State (Defaults to 'update' since details are on the Profile page)
@@ -191,27 +192,55 @@ const UserSetting = () => {
             setChangingPassword(true);
             const payload = {
                 current_password: passwordForm.currentPassword,
-                new_password: passwordForm.newPassword,
-                new_password_confirmation: passwordForm.confirmPassword,
+                password: passwordForm.newPassword,
+                password_confirmation: passwordForm.confirmPassword,
             };
 
             await changePasword(payload);
-            toast.success("Password changed successfully!");
-            setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+            toast.success("Password changed successfully! Logging you out...");
+
+            try {
+                await logout();
+            } catch (logoutErr) {
+                console.error("Logout request failed:", logoutErr);
+            } finally {
+                clearAuth();
+                navigate("/login", { replace: true });
+            }
         } catch (error) {
             console.error("Failed to change password:", error);
             const apiMsg = error?.response?.data?.message || "Failed to change password. Please check current password.";
             toast.error(apiMsg);
-        } finally {
             setChangingPassword(false);
         }
+    };
+
+    // Dynamic Theme Configuration
+    const authType = sessionStorage.getItem("auth_type");
+    const isSystemAdmin = authType === "Admin";
+
+    const theme = {
+        isSystemAdmin,
+        textAccent: isSystemAdmin ? "text-[#17734C]" : "text-[#2563EB]",
+        bgAccent: isSystemAdmin ? "bg-[#17734C]" : "bg-[#2563EB]",
+        bgHoverAccent: isSystemAdmin ? "hover:bg-[#125D3E]" : "hover:bg-[#1D4ED8]",
+        lightBg: isSystemAdmin ? "bg-[#EEF8F2]" : "bg-[#EFF6FF]",
+        borderLight: isSystemAdmin ? "border-[#CBE3D6]" : "border-[#BFDBFE]",
+        borderBadge: isSystemAdmin ? "border-[#B8D9C8]" : "border-[#93C5FD]",
+        rowHover: isSystemAdmin ? "hover:bg-[#F5FAF7]" : "hover:bg-[#F0F7FF]",
+        shadowAccent: isSystemAdmin ? "shadow-[0_4px_15px_rgba(23,115,76,0.12)]" : "shadow-[0_4px_15px_rgba(37,99,235,0.12)]",
+        ringAccent: isSystemAdmin ? "ring-[#CBE3D6]" : "ring-[#BFDBFE]",
+        textAccentHover: isSystemAdmin ? "hover:text-[#17734C]" : "hover:text-[#2563EB]",
+        borderHover: isSystemAdmin ? "hover:border-[#AFCFBE]" : "hover:border-[#93C5FD]",
+        navActive: isSystemAdmin ? "bg-[#EEF8F2] text-[#17734C] border-[#B8D9C8]" : "bg-[#EFF6FF] text-[#2563EB] border-[#93C5FD]",
+        badgeBg: isSystemAdmin ? "bg-[#EEF8F2]" : "bg-[#EFF6FF]",
     };
 
     if (loadingProfile) {
         return (
             <div className="flex min-h-[450px] items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
-                    <Loader2 size={36} className="animate-spin text-[#17734C]" />
+                    <Loader2 size={36} className={`animate-spin ${theme.textAccent}`} />
                     <span className="text-[13px] font-semibold text-[#5C7A6C]">Loading Settings Workspace...</span>
                 </div>
             </div>
@@ -223,8 +252,8 @@ const UserSetting = () => {
             {/* Page Header */}
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-[#B8D9C8] bg-[#EEF8F2] shadow-sm">
-                        <Settings size={20} strokeWidth={2} className="text-[#17734C]" />
+                    <span className={`flex h-10 w-10 items-center justify-center rounded-[12px] border ${theme.borderBadge} ${theme.badgeBg} shadow-sm`}>
+                        <Settings size={20} strokeWidth={2} className={theme.textAccent} />
                     </span>
                     <div>
                         <h1 className="text-[22px] font-bold tracking-tight text-[#152C20]">
@@ -239,7 +268,7 @@ const UserSetting = () => {
                 <button
                     type="button"
                     onClick={handleBackToDashboard}
-                    className="flex h-9 items-center justify-center gap-2 rounded-xl border border-[#CBE3D6] bg-white px-4 text-[12px] font-bold text-[#3E5A4D] shadow-sm transition-all duration-150 hover:bg-[#EEF8F2] hover:text-[#17734C]"
+                    className={`flex h-9 items-center justify-center gap-2 rounded-xl border ${theme.borderLight} bg-white px-4 text-[12px] font-bold text-[#3E5A4D] shadow-sm transition-all duration-150 ${theme.lightBg} ${theme.textAccentHover}`}
                 >
                     <ArrowLeft size={14} strokeWidth={2.2} />
                     Back to Dashboard
@@ -254,12 +283,13 @@ const UserSetting = () => {
                         profileData={profileData}
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}
+                        theme={theme}
                     />
                 </div>
 
                 {/* 2. Right Interactive Content Panel */}
                 <div className="lg:col-span-8 xl:col-span-9">
-                    <div className="relative min-h-[500px] overflow-hidden rounded-2xl border border-[#CBE3D6] bg-white p-6 shadow-[0_10px_30px_-18px_rgba(21,44,32,0.25)] sm:p-8">
+                    <div className={`relative min-h-[500px] overflow-hidden rounded-2xl border ${theme.borderLight} bg-white p-6 shadow-[0_10px_30px_-18px_rgba(21,44,32,0.25)] sm:p-8`}>
                         <AnimatePresence mode="wait">
                             {activeTab === "update" && (
                                 <UpdateProfileForm
@@ -268,6 +298,7 @@ const UserSetting = () => {
                                     updatingProfile={updatingProfile}
                                     handleEditFieldChange={handleEditFieldChange}
                                     handleEditFormSubmit={handleEditFormSubmit}
+                                    theme={theme}
                                     onCancel={() => {
                                         setEditForm({
                                             name: profileData?.name || "",
@@ -289,6 +320,7 @@ const UserSetting = () => {
                                     changingPassword={changingPassword}
                                     passwordStrength={passwordStrength}
                                     handlePasswordSubmit={handlePasswordSubmit}
+                                    theme={theme}
                                     onCancel={() => {
                                         setPasswordForm({
                                             currentPassword: "",

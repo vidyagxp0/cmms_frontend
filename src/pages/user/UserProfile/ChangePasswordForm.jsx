@@ -1,7 +1,6 @@
 import React from "react";
 import { LockKeyhole, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { inputClass } from "../../../components/ui/formStyles";
 
 const ChangePasswordForm = ({
     passwordForm,
@@ -14,7 +13,32 @@ const ChangePasswordForm = ({
     passwordStrength,
     handlePasswordSubmit,
     onCancel,
+    theme,
 }) => {
+    // Default fallbacks for safety
+    const t = theme || {
+        isSystemAdmin: true,
+        textAccent: "text-[#17734C]",
+        bgAccent: "bg-[#17734C]",
+        bgHoverAccent: "hover:bg-[#125D3E]",
+        lightBg: "bg-[#EEF8F2]",
+        borderLight: "border-[#CBE3D6]",
+        textAccentHover: "hover:text-[#17734C]",
+    };
+
+    // Dynamic focus ring inputs helper
+    const getInputClass = (field, errors = {}) => {
+        const base = "h-[46px] w-full rounded-[10px] border px-3.5 text-[12.5px] font-medium outline-none transition-all duration-200";
+        if (errors[field]) {
+            return `${base} bg-red-50/10 border-[#C43D3D] text-[#7A2A2A] focus:shadow-[0_0_0_3px_rgba(196,61,61,0.07)]`;
+        }
+        if (t.isSystemAdmin) {
+            return `${base} bg-[#F9FCFA] border-[#CBE3D6] text-[#1C382A] focus:border-[#79B89A] focus:bg-white focus:shadow-[0_0_0_3px_rgba(31,138,95,0.07)] placeholder:text-[#94A79E]`;
+        } else {
+            return `${base} bg-[#F8FAFC] border-[#D1D5DB] text-[#1E293B] focus:border-[#3B82F6] focus:bg-white focus:shadow-[0_0_0_3px_rgba(59,130,246,0.07)] placeholder:text-[#94A3B8]`;
+        }
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 15 }}
@@ -35,7 +59,7 @@ const ChangePasswordForm = ({
                 {/* Current Password */}
                 <div className="relative">
                     <label className="mb-2 flex items-center gap-1.5 text-[11.5px] font-semibold text-[#263F33]">
-                        <LockKeyhole size={13} strokeWidth={1.9} className="text-[#39785D]" />
+                        <LockKeyhole size={13} strokeWidth={1.9} className={t.textAccent} />
                         Current Password
                     </label>
                     <div className="relative">
@@ -47,12 +71,12 @@ const ChangePasswordForm = ({
                                 if (passwordErrors.currentPassword) setPasswordErrors((pe) => ({ ...pe, currentPassword: "" }));
                             }}
                             placeholder="Enter current password"
-                            className={`${inputClass("currentPassword", passwordErrors)} pr-10`}
+                            className={`${getInputClass("currentPassword", passwordErrors)} pr-10`}
                         />
                         <button
                             type="button"
                             onClick={() => setShowPasswords((p) => ({ ...p, current: !p.current }))}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A79E] hover:text-[#17734C]"
+                            className={`absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A79E] ${t.textAccentHover}`}
                         >
                             {showPasswords.current ? <EyeOff size={15} /> : <Eye size={15} />}
                         </button>
@@ -67,7 +91,7 @@ const ChangePasswordForm = ({
                 {/* New Password */}
                 <div>
                     <label className="mb-2 flex items-center gap-1.5 text-[11.5px] font-semibold text-[#263F33]">
-                        <LockKeyhole size={13} strokeWidth={1.9} className="text-[#39785D]" />
+                        <LockKeyhole size={13} strokeWidth={1.9} className={t.textAccent} />
                         New Password
                     </label>
                     <div className="relative">
@@ -79,12 +103,12 @@ const ChangePasswordForm = ({
                                 if (passwordErrors.newPassword) setPasswordErrors((pe) => ({ ...pe, newPassword: "" }));
                             }}
                             placeholder="Enter new password"
-                            className={`${inputClass("newPassword", passwordErrors)} pr-10`}
+                            className={`${getInputClass("newPassword", passwordErrors)} pr-10`}
                         />
                         <button
                             type="button"
                             onClick={() => setShowPasswords((p) => ({ ...p, new: !p.new }))}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A79E] hover:text-[#17734C]"
+                            className={`absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A79E] ${t.textAccentHover}`}
                         >
                             {showPasswords.new ? <EyeOff size={15} /> : <Eye size={15} />}
                         </button>
@@ -92,13 +116,13 @@ const ChangePasswordForm = ({
 
                     {/* Password Strength Indicator */}
                     {passwordForm.newPassword && (
-                        <div className="mt-2.5 space-y-1.5 rounded-lg border border-[#E3F0E8] bg-[#FAFDFB] p-2.5">
+                        <div className={`mt-2.5 space-y-1.5 rounded-lg border ${t.borderLight} bg-[#FAFDFB] p-2.5`}>
                             <div className="flex items-center justify-between text-[10.5px] font-bold">
                                 <span className="text-[#5C7A6C]">Security strength:</span>
                                 <span className={
                                     passwordStrength.score <= 25 ? "text-red-500" :
                                     passwordStrength.score <= 50 ? "text-orange-500" :
-                                    passwordStrength.score <= 75 ? "text-yellow-600" : "text-emerald-600"
+                                    passwordStrength.score <= 75 ? "text-yellow-600" : (t.isSystemAdmin ? "text-emerald-600" : "text-blue-600")
                                 }>
                                     {passwordStrength.label}
                                 </span>
@@ -128,7 +152,7 @@ const ChangePasswordForm = ({
                 {/* Confirm New Password */}
                 <div className="relative">
                     <label className="mb-2 flex items-center gap-1.5 text-[11.5px] font-semibold text-[#263F33]">
-                        <LockKeyhole size={13} strokeWidth={1.9} className="text-[#39785D]" />
+                        <LockKeyhole size={13} strokeWidth={1.9} className={t.textAccent} />
                         Confirm New Password
                     </label>
                     <div className="relative">
@@ -140,12 +164,12 @@ const ChangePasswordForm = ({
                                 if (passwordErrors.confirmPassword) setPasswordErrors((pe) => ({ ...pe, confirmPassword: "" }));
                             }}
                             placeholder="Re-enter new password"
-                            className={`${inputClass("confirmPassword", passwordErrors)} pr-10`}
+                            className={`${getInputClass("confirmPassword", passwordErrors)} pr-10`}
                         />
                         <button
                             type="button"
                             onClick={() => setShowPasswords((p) => ({ ...p, confirm: !p.confirm }))}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A79E] hover:text-[#17734C]"
+                            className={`absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A79E] ${t.textAccentHover}`}
                         >
                             {showPasswords.confirm ? <EyeOff size={15} /> : <Eye size={15} />}
                         </button>
@@ -158,12 +182,12 @@ const ChangePasswordForm = ({
                 </div>
 
                 {/* Action buttons */}
-                <div className="mt-6 flex justify-end gap-3 border-t border-[#E3F0E8] pt-5">
+                <div className={`mt-6 flex justify-end gap-3 border-t ${t.borderLight} pt-5`}>
                     <button
                         type="button"
                         onClick={onCancel}
                         disabled={changingPassword}
-                        className="h-10 rounded-xl border border-[#CBE3D6] bg-white px-5 text-[12px] font-bold text-[#557064] transition-all hover:bg-[#F5FAF7]"
+                        className={`h-10 rounded-xl border ${t.borderLight} bg-white px-5 text-[12px] font-bold text-[#557064] transition-all ${t.lightBg} ${t.textAccentHover}`}
                     >
                         Cancel
                     </button>
@@ -171,7 +195,7 @@ const ChangePasswordForm = ({
                     <button
                         type="submit"
                         disabled={changingPassword}
-                        className="flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17734C] px-5 text-[12px] font-bold text-white shadow-sm transition-all hover:bg-[#125D3E] disabled:opacity-60"
+                        className={`flex h-10 items-center justify-center gap-2 rounded-xl ${t.bgAccent} ${t.bgHoverAccent} px-5 text-[12px] font-bold text-white shadow-sm transition-all disabled:opacity-60`}
                     >
                         {changingPassword && <Loader2 size={14} className="animate-spin" />}
                         {changingPassword ? "Updating Password..." : "Update Password"}

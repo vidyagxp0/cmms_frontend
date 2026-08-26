@@ -63,11 +63,32 @@ const UserProfile = () => {
         ? formatDate(profileData.created_at) 
         : formatDate(new Date().setDate(new Date().getDate() - 30)); // 30 days ago fallback
 
+    // Dynamic Theme Configuration
+    const authType = sessionStorage.getItem("auth_type");
+    const isSystemAdmin = authType === "Admin";
+
+    const theme = {
+        isSystemAdmin,
+        textAccent: isSystemAdmin ? "text-[#17734C]" : "text-[#2563EB]",
+        bgAccent: isSystemAdmin ? "bg-[#17734C]" : "bg-[#2563EB]",
+        bgHoverAccent: isSystemAdmin ? "hover:bg-[#125D3E]" : "hover:bg-[#1D4ED8]",
+        lightBg: isSystemAdmin ? "bg-[#EEF8F2]" : "bg-[#EFF6FF]",
+        borderLight: isSystemAdmin ? "border-[#CBE3D6]" : "border-[#BFDBFE]",
+        borderBadge: isSystemAdmin ? "border-[#B8D9C8]" : "border-[#93C5FD]",
+        rowHover: isSystemAdmin ? "hover:bg-[#F5FAF7]" : "hover:bg-[#F0F7FF]",
+        shadowAccent: isSystemAdmin ? "shadow-[0_4px_15px_rgba(23,115,76,0.12)]" : "shadow-[0_4px_15px_rgba(37,99,235,0.12)]",
+        ringAccent: isSystemAdmin ? "ring-[#CBE3D6]" : "ring-[#BFDBFE]",
+        textAccentHover: isSystemAdmin ? "hover:text-[#17734C]" : "hover:text-[#2563EB]",
+        borderHover: isSystemAdmin ? "hover:border-[#AFCFBE]" : "hover:border-[#93C5FD]",
+        navActive: isSystemAdmin ? "bg-[#EEF8F2] text-[#17734C] border-[#B8D9C8]" : "bg-[#EFF6FF] text-[#2563EB] border-[#93C5FD]",
+        badgeBg: isSystemAdmin ? "bg-[#EEF8F2]" : "bg-[#EFF6FF]",
+    };
+
     if (loadingProfile) {
         return (
             <div className="flex min-h-[450px] items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
-                    <Loader2 size={36} className="animate-spin text-[#17734C]" />
+                    <Loader2 size={36} className={`animate-spin ${theme.textAccent}`} />
                     <span className="text-[13px] font-semibold text-[#5C7A6C]">Loading Profile Workspace...</span>
                 </div>
             </div>
@@ -79,8 +100,8 @@ const UserProfile = () => {
             {/* Page Header */}
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-[#B8D9C8] bg-[#EEF8F2] shadow-sm">
-                        <User size={20} strokeWidth={2} className="text-[#17734C]" />
+                    <span className={`flex h-10 w-10 items-center justify-center rounded-[12px] border ${theme.borderBadge} ${theme.badgeBg} shadow-sm`}>
+                        <User size={20} strokeWidth={2} className={theme.textAccent} />
                     </span>
                     <div>
                         <h1 className="text-[22px] font-bold tracking-tight text-[#152C20]">
@@ -95,7 +116,7 @@ const UserProfile = () => {
                 <button
                     type="button"
                     onClick={handleBackToDashboard}
-                    className="flex h-9 items-center justify-center gap-2 rounded-xl border border-[#CBE3D6] bg-white px-4 text-[12px] font-bold text-[#3E5A4D] shadow-sm transition-all duration-150 hover:bg-[#EEF8F2] hover:text-[#17734C]"
+                    className={`flex h-9 items-center justify-center gap-2 rounded-xl border ${theme.borderLight} bg-white px-4 text-[12px] font-bold text-[#3E5A4D] shadow-sm transition-all duration-150 ${theme.lightBg} ${theme.textAccentHover}`}
                 >
                     <ArrowLeft size={14} strokeWidth={2.2} />
                     Back to Dashboard
@@ -106,11 +127,11 @@ const UserProfile = () => {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
                 {/* 1. Left Static Info Card (No Tabs) */}
                 <div className="lg:col-span-4 xl:col-span-3">
-                    <div className="flex flex-col rounded-2xl border border-[#CBE3D6] bg-white p-5 shadow-[0_8px_30px_rgba(21,44,32,0.06)]">
+                    <div className={`flex flex-col rounded-2xl border ${theme.borderLight} bg-white p-5 shadow-[0_8px_30px_rgba(21,44,32,0.06)]`}>
                         <div className="flex flex-col items-center text-center">
                             <div className="relative">
-                                <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#EEF8F2] shadow-[0_4px_15px_rgba(23,115,76,0.12)] ring-2 ring-[#CBE3D6]">
-                                    <span className="text-[32px] font-extrabold text-[#17734C]">
+                                <div className={`relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white ${theme.badgeBg} ${theme.shadowAccent} ring-2 ${theme.ringAccent}`}>
+                                    <span className={`text-[32px] font-extrabold ${theme.textAccent}`}>
                                         {profileData?.name?.charAt(0)?.toUpperCase() || "U"}
                                     </span>
                                 </div>
@@ -127,9 +148,9 @@ const UserProfile = () => {
                                 {profileData?.roles?.map((role) => (
                                     <span
                                         key={role.id || role}
-                                        className="inline-flex items-center gap-1 rounded-full border border-[#B8DAC6] bg-[#EEF8F2] px-2.5 py-0.5 text-[10.5px] font-bold text-[#17734C]"
+                                        className={`inline-flex items-center gap-1 rounded-full border ${theme.borderBadge} ${theme.badgeBg} px-2.5 py-0.5 text-[10.5px] font-bold ${theme.textAccent}`}
                                     >
-                                        <ShieldCheck size={11} className="text-[#17734C]" />
+                                        <ShieldCheck size={11} className={theme.textAccent} />
                                         {role.name || role}
                                     </span>
                                 ))}
@@ -140,10 +161,11 @@ const UserProfile = () => {
 
                 {/* 2. Right Interactive Content Panel */}
                 <div className="lg:col-span-8 xl:col-span-9">
-                    <div className="relative min-h-[400px] overflow-hidden rounded-2xl border border-[#CBE3D6] bg-white p-6 shadow-[0_10px_30px_-18px_rgba(21,44,32,0.25)] sm:p-8">
+                    <div className={`relative min-h-[400px] overflow-hidden rounded-2xl border ${theme.borderLight} bg-white p-6 shadow-[0_10px_30px_-18px_rgba(21,44,32,0.25)] sm:p-8`}>
                         <ProfileDetails
                             profileData={profileData}
                             joinedDate={joinedDate}
+                            theme={theme}
                         />
                     </div>
                 </div>

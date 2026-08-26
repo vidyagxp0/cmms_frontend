@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../store/authStore";
 import { getProfile } from "../../../services/authApi";
 import ProfileDetails from "./ProfileDetails";
+import  Skeleton  from "../../../components/common/Skeleton/Skeleton";
 
 const UserProfile = () => {
     const navigate = useNavigate();
@@ -86,14 +87,7 @@ const UserProfile = () => {
     };
 
     if (loadingProfile) {
-        return (
-            <div className="flex min-h-[450px] items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
-                    <Loader2 size={36} className={`animate-spin ${theme.textAccent}`} />
-                    <span className="text-[13px] font-semibold text-[#5C7A6C]">Loading Profile Workspace...</span>
-                </div>
-            </div>
-        );
+                return <Skeleton variant="accountSettings" />; 
     }
 
     return (

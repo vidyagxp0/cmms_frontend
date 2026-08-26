@@ -19,6 +19,7 @@ import calibrationColumns from "./calibrationColumn";
 import { getProfile } from "../../../services/authApi";
 import { addCalibration } from "../../../services/usersApi/calibrationApi";
 import { formatDate, formatDateTime } from "../../../utils/date";
+import  Skeleton  from "../../../components/common/Skeleton/Skeleton";
 
 const TABS = [
     { id: "general", label: "General Information" },
@@ -34,6 +35,7 @@ const REQUIRED_FIELDS = [
     { name: "qaReviewer", label: "QA Reviewer" },
     { name: "qaApproval", label: "QA Approval" },
 ];
+
 
 const normalizeGridRows = (rows = []) =>
     rows.map((row, index) => {
@@ -99,6 +101,8 @@ const buildProcessData = (values, systemFields) => [
 ];
 
 const validateCalibrationForm = (form) => {
+    
+
     const values = form.getFieldsValue();
 
     return REQUIRED_FIELDS.filter((field) => {
@@ -111,6 +115,7 @@ const validateCalibrationForm = (form) => {
 };
 
 const CreateCalibration = () => {
+    const [isLoading,setIsLoading]=useState(true)
     const [activeTab, setActiveTab] = useState("general");
     const [isSaving, setIsSaving] = useState(false);
     const [calibrationRows, setCalibrationRows] = useState([]);
@@ -131,6 +136,7 @@ const CreateCalibration = () => {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
+                setIsLoading(true)
                 const response = await getProfile();
                 console.log("Profile Response:", response);
 
@@ -156,6 +162,10 @@ const CreateCalibration = () => {
             } catch (error) {
                 console.error("Failed to fetch profile:", error);
             }
+            finally{
+                setIsLoading(false)
+            }
+            
         };
 
         fetchProfile();
@@ -316,39 +326,42 @@ const handleSave = async () => {
                     <section>
                         <SectionHeader title="GENERAL INFORMATION" />
 
-                        <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-                            {systemFields.map((field) => (
-                                <Form.Item
-                                    key={field.name}
-                                    name={field.name}
-                                    label={field.label}
-                                    className="!mb-4"
-                                >
-                                    <FormDisabledInput />
-                                </Form.Item>
-                            ))}
+                      {isLoading ? 
+              <Skeleton variant="formskeleton" />
+: (
+    <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+        {systemFields.map((field) => (
+            <Form.Item
+                key={field.name}
+                name={field.name}
+                label={field.label}
+                className="!mb-4"
+            >
+                <FormDisabledInput />
+            </Form.Item>
+        ))}
 
-                            {/* Short Description */}
-                            <Form.Item
-                                name="shortDescription"
-                                label={
-                                    <span>
-                                        Short Description{" "}
-                                        <span className="text-red-500">*</span>
-                                    </span>
-                                }
-                                rules={[
-                                    {
-                                        required: true,
-                                        whitespace: true,
-                                        message: "Please enter Short Description",
-                                    },
-                                ]}
-                                className="!mb-4"
-                            >
-                                <FormInput placeholder="Enter short description" />
-                            </Form.Item>
-                        </div>
+        <Form.Item
+            name="shortDescription"
+            label={
+                <span>
+                    Short Description{" "}
+                    <span className="text-red-500">*</span>
+                </span>
+            }
+            rules={[
+                {
+                    required: true,
+                    whitespace: true,
+                    message: "Please enter Short Description",
+                },
+            ]}
+            className="!mb-4"
+        >
+            <FormInput placeholder="Enter short description" />
+        </Form.Item>
+    </div>
+)}
 
                         {/* Calibration Planner */}
                         <div className="mt-5">

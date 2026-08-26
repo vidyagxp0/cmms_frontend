@@ -354,6 +354,104 @@ const ProfileSkeleton = () => (
     </div>
 );
 
+
+const AccountSettingsSkeleton = () => (
+    <div className="mx-auto w-full max-w-7xl">
+        {/* Page Header */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+                {/* Settings Icon */}
+                <SkeletonBox className="h-10 w-10 rounded-[12px]" />
+
+                <div>
+                    {/* Title */}
+                    <SkeletonBox className="h-6 w-48" />
+
+                    {/* Description */}
+                    <SkeletonBox className="mt-2 h-3.5 w-80 max-w-full" />
+                </div>
+            </div>
+
+            {/* Back Button */}
+            <SkeletonBox className="h-9 w-40 rounded-xl" />
+        </div>
+
+        {/* Split Layout */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+
+            {/* Left Profile Sidebar */}
+            <div className="lg:col-span-4 xl:col-span-3">
+                <div className="rounded-2xl border border-[#DDEAE2] bg-white p-6 shadow-[0_8px_25px_-20px_rgba(21,61,45,0.35)]">
+
+                    {/* Profile Details */}
+                    <div className="flex flex-col items-center">
+                        <SkeletonBox className="h-20 w-20 rounded-full" />
+
+                        <SkeletonBox className="mt-4 h-5 w-32" />
+                        <SkeletonBox className="mt-2 h-3.5 w-40" />
+                    </div>
+
+                    {/* Divider */}
+                    <div className="my-6 h-px bg-[#EDF3EF]" />
+
+                    {/* Navigation Tabs */}
+                    <div className="space-y-3">
+                        <SkeletonBox className="h-11 w-full rounded-xl" />
+                        <SkeletonBox className="h-11 w-full rounded-xl" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Right Content Panel */}
+            <div className="lg:col-span-8 xl:col-span-9">
+                <div className="min-h-[500px] rounded-2xl border border-[#DDEAE2] bg-white p-6 shadow-[0_10px_30px_-18px_rgba(21,44,32,0.25)] sm:p-8">
+
+                    {/* Form Heading */}
+                    <SkeletonBox className="h-6 w-56" />
+                    <SkeletonBox className="mt-3 h-3.5 w-full max-w-xl" />
+
+                    {/* Form Fields */}
+                    <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
+                        <div>
+                            <SkeletonBox className="h-3.5 w-24" />
+                            <SkeletonBox className="mt-2 h-10 w-full rounded-xl" />
+                        </div>
+
+                        <div>
+                            <SkeletonBox className="h-3.5 w-28" />
+                            <SkeletonBox className="mt-2 h-10 w-full rounded-xl" />
+                        </div>
+                    </div>
+
+                    {/* Bottom Divider */}
+                    <div className="mt-8 h-px bg-[#EDF3EF]" />
+
+                    {/* Action Buttons */}
+                    <div className="mt-5 flex justify-end gap-3">
+                        <SkeletonBox className="h-10 w-24 rounded-xl" />
+                        <SkeletonBox className="h-10 w-32 rounded-xl" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
+const FormFieldsSkeleton = ({ count = 8 }) => {
+    return (
+        <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            {Array.from({ length: count }).map((_, index) => (
+                <div key={index} className="mb-4">
+                    {/* Label Skeleton */}
+                    <div className="mb-2 h-4 w-32 animate-pulse rounded bg-gray-200" />
+
+                    {/* Input Skeleton */}
+                    <div className="h-10 w-full animate-pulse rounded-lg bg-gray-200" />
+                </div>
+            ))}
+        </div>
+    );
+};
 /* -------------------------------------------------------------------------- */
 /* MAIN COMPONENT                                                             */
 /* -------------------------------------------------------------------------- */
@@ -389,6 +487,8 @@ const Skeleton = ({
         form: <FormSkeleton fields={fields} />,
         profile: <ProfileSkeleton />,
         dashboard: <DashboardSkeleton />,
+        accountSettings: <AccountSettingsSkeleton />,
+        formskeleton:<FormFieldsSkeleton />
     };
 
     return (

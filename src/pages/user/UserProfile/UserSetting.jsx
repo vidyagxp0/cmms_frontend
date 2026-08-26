@@ -10,6 +10,7 @@ import { getProfile, updateProfile, changePasword, logout } from "../../../servi
 import ProfileSidebar from "./ProfileSidebar";
 import UpdateProfileForm from "./UpdateProfileForm";
 import ChangePasswordForm from "./ChangePasswordForm";
+import  Skeleton  from "../../../components/common/Skeleton/Skeleton";
 
 const UserSetting = () => {
     const user = useAuthStore((state) => state.user);
@@ -240,14 +241,9 @@ const UserSetting = () => {
     };
 
     if (loadingProfile) {
-        return (
-            <div className="flex min-h-[450px] items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
-                    <Loader2 size={36} className={`animate-spin ${theme.textAccent}`} />
-                    <span className="text-[13px] font-semibold text-[#5C7A6C]">Loading Settings Workspace...</span>
-                </div>
-            </div>
-        );
+      
+           return <Skeleton variant="accountSettings" />;    
+       
     }
 
     return (

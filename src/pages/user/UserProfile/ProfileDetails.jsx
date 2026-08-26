@@ -8,6 +8,7 @@ import {
     Building2,
     Calendar,
     CheckCircle2,
+    ShieldCheck
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -72,16 +73,18 @@ const ProfileDetails = ({ profileData, joinedDate, theme }) => {
                 </div>
 
                 {/* Username Detail Card */}
-                <div className={`flex items-start gap-3.5 rounded-xl border ${t.borderLight} bg-[#FAFDFB] p-4`}>
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.badgeBg} ${t.textAccent}`}>
-                        <AtSign size={16} />
+                <div className="flex items-start gap-3.5 rounded-xl border border-[#E3F0E8] bg-[#FAFDFB] p-4">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF5EE] text-[#17734C]">
+                        <ShieldCheck size={16} />
                     </span>
                     <div>
                         <p className="text-[11px] font-bold uppercase tracking-wider text-[#8FA79B]">
-                            Username
+                            Roles
                         </p>
                         <p className="mt-1 text-[13px] font-semibold text-[#152C20]">
-                            {profileData?.username}
+                            {profileData.roles.map((val)=>{
+                                return val
+                            })}
                         </p>
                     </div>
                 </div>

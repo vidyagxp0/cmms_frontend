@@ -1,12 +1,14 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import UserLayout from "../components/layout/UserLayout/UserLayout";
-import UserDashboard from "../pages/user/UserDashboard/userDashboard";
+import UserDashboard from "../pages/user/UserDashboard/UserDashboard";
 import ProcessPage from "../pages/user/ProcessPage/ProcessPage";
 import EquipDashboard from "../pages/user/Equipment/EquipDashboard";
 import EquipmentPanel from "../pages/user/Equipment/EquipmentPanel";
 import EngineeringDashboard from "../pages/user/Engineering/EngineeringDashboard";
 import UserProfile from "../pages/user/UserProfile/UserProfile";
+import CreateCalibration from "../pages/user/CalibrationPlanner/CreateCalibration";
+import CalibrationPanel from "../pages/user/CalibrationPlanner/CalibrationPanel";
 
 function UserRoutes() {
   return (
@@ -18,11 +20,15 @@ function UserRoutes() {
         <Route path="cmms-dashboard" element={<UserDashboard />} />
         <Route path="create-record" element={<ProcessPage />} />
 
-
+        {/* Equipment Routes*/}
         <Route path="equipment-dashboard" element={<EquipDashboard />} />
         <Route path="equipment-panel/:id" element={<EquipmentPanel/>} />
 
+        {/* Engineering and Calibration Routes*/}
         <Route path="engineering-dashboard" element={<EngineeringDashboard />} />
+        <Route path="calibration-planner-create/:processId" element={<CreateCalibration />} />
+        <Route path="calibration-planner-panel/:id" element={<CalibrationPanel/>} />
+
         {/* <Route path="equipment-panel/:id" element={<EquipmentPanel/>} /> */}
       </Route>
     </Routes>

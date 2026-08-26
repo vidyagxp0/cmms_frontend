@@ -9,6 +9,7 @@ import { Eye } from "lucide-react";
 const EquipDashboard = () => {
     const navigate = useNavigate();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    console.log(isCreateModalOpen,"isCreateModalOpen<<<")
     const [equipment, setEquipment] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -302,6 +303,7 @@ const EquipDashboard = () => {
                 <DashboardActionBar
                     title="Equipment Dashboard"
                     onCreate={() => setIsCreateModalOpen(true)}
+                    createLabel="Create Equipment Record"
                 />
             </div>
 
@@ -311,7 +313,6 @@ const EquipDashboard = () => {
                     min-h-0
                     flex-1
                     overflow-hidden
-                    px-4
                     pb-4
                     pt-3
                 "

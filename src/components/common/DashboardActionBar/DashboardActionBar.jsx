@@ -9,37 +9,50 @@ import { useNavigate } from "react-router-dom";
 
 const DashboardActionBar = ({
     title = "Dashboard",
+    buttonName = "Create Record",
+    navigationRoute,
+    sourceRoute,
+    sourceType,
     onCreate,
 }) => {
     const navigate = useNavigate();
+
+    const handleCreate = () => {
+        if (onCreate) {
+            onCreate();
+            return;
+        }
+
+        if (navigationRoute) {
+            navigate(navigationRoute, {
+                state: {
+                    sourceRoute,
+                    sourceType,
+                },
+            });
+        }
+    };
 
     return (
         <div
             className="
                 fixed left-0 right-0 top-[138px] z-30
-                h-[54px]
-                border-b border-[#D9DEDB]
-                bg-[#1a5161]
-                px-4
-                sm:px-6
-                lg:px-8
+                h-[54px] border-b border-[#D9DEDB]
+                bg-[#1a5161] px-4 sm:px-6 lg:px-8
             "
         >
             <div className="flex h-full items-center justify-between">
-
                 {/* LEFT — BREADCRUMB */}
                 <div className="flex items-center">
                     <button
                         type="button"
-                        onClick={() => navigate("/user/dashboard")}
+                        onClick={() => navigate("/user/cmms-dashboard")}
                         aria-label="Home"
                         className="
                             group flex h-8 w-8 items-center justify-center
-                            rounded-[8px]
-                            text-[#dee4e1]
+                            rounded-[8px] text-[#dee4e1]
                             transition-all duration-200
-                            hover:bg-white
-                            hover:text-[#303A35]
+                            hover:bg-white hover:text-[#303A35]
                             hover:shadow-[0_2px_8px_-5px_rgba(30,40,35,0.35)]
                             active:scale-[0.96]
                         "
@@ -47,10 +60,7 @@ const DashboardActionBar = ({
                         <Home
                             size={15}
                             strokeWidth={1.7}
-                            className="
-                                transition-transform duration-200
-                                group-hover:scale-[1.04]
-                            "
+                            className="transition-transform duration-200 group-hover:scale-[1.04]"
                         />
                     </button>
 
@@ -62,11 +72,8 @@ const DashboardActionBar = ({
 
                     <span
                         className="
-                            rounded-md
-                            px-1
-                            text-[13px]
-                            font-semibold
-                            tracking-[-0.01em]
+                            rounded-md px-1 text-[13px]
+                            font-semibold tracking-[-0.01em]
                             text-[#dee9e8]
                         "
                     >
@@ -74,39 +81,28 @@ const DashboardActionBar = ({
                     </span>
                 </div>
 
-                {/* RIGHT — CREATE RECORD */}
+                {/* RIGHT — DYNAMIC ACTION */}
                 <button
                     type="button"
-                    onClick={onCreate}
+                    onClick={handleCreate}
                     className="
-                        group relative
-                        flex h-[36px] items-center gap-2.5
-                        rounded-[9px]
-                        border border-[#BFC7C2]
-                        bg-white
-                        px-3
-                        text-[12px]
-                        font-semibold
-                        tracking-[-0.01em]
-                        text-[#303A35]
+                        group relative flex h-[36px] items-center gap-2.5
+                        rounded-[9px] border border-[#BFC7C2]
+                        bg-white px-3 text-[12px] font-semibold
+                        tracking-[-0.01em] text-[#303A35]
                         shadow-[0_2px_8px_-5px_rgba(31,42,36,0.35)]
-                        transition-all duration-200
-                        ease-out
+                        transition-all duration-200 ease-out
                         hover:-translate-y-[1px]
                         hover:border-[#929D97]
                         hover:bg-[#FCFDFC]
                         hover:shadow-[0_6px_14px_-8px_rgba(31,42,36,0.42)]
-                        active:translate-y-0
-                        active:scale-[0.98]
+                        active:translate-y-0 active:scale-[0.98]
                     "
                 >
                     <span
                         className="
-                            flex h-[22px] w-[22px]
-                            items-center justify-center
-                            rounded-[6px]
-                            bg-[#EEF1EF]
-                            text-[#46534C]
+                            flex h-[22px] w-[22px] items-center justify-center
+                            rounded-[6px] bg-[#EEF1EF] text-[#46534C]
                             transition-all duration-200
                             group-hover:bg-[#E5E9E6]
                             group-hover:text-[#27322D]
@@ -115,15 +111,12 @@ const DashboardActionBar = ({
                         <Plus
                             size={13}
                             strokeWidth={2.2}
-                            className="
-                                transition-transform duration-200
-                                group-hover:rotate-90
-                            "
+                            className="transition-transform duration-200 group-hover:rotate-90"
                         />
                     </span>
 
                     <span className="whitespace-nowrap">
-                        Create Record
+                        {buttonName}
                     </span>
 
                     <ArrowUpRight

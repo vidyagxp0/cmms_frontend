@@ -30,7 +30,7 @@ const UserHeader = ({
 
     return (
         <header
-            className="fixed top-0 right-0 z-50 h-[74px] w-full border-b border-[#CBE3D6] bg-[#c0dfea]"
+            className="fixed top-0 right-0 z-50 h-[74px] w-full border-b border-[#CBE3D6] bg-[#c7e4ff]"
             style={{
                 boxShadow: "0 6px 20px -14px rgba(21,44,32,0.28)",
             }}
@@ -43,24 +43,23 @@ const UserHeader = ({
                         <img
                             src="/shilpaimage.png"
                             alt="Shilpa Logo"
-                            className="h-[44px] w-auto max-w-[220px] object-contain"
+                            className="h-[44px] w-auto max-w-[220px] object-contain cursor-pointer"
+                            onClick={() => navigate("/user/cmms-dashboard")}
                         />
                     </div>
 
                     <div className="hidden h-8 w-px bg-[#A8CDB9] lg:block" />
-                    {/* Vidya gxp LOGO */}
-                    <div className="flex shrink-0 items-center mr-5">
+
+                    {/* Vidya GxP LOGO */}
+                    <div className="mr-5 flex shrink-0 items-center">
                         <img
                             src="/vidyagxp_logo.png"
                             alt="VidyaGxP"
-                            className="h-[44px] w-auto max-w-[220px] object-contain"
+                            className="h-[44px] w-auto max-w-[220px] object-contain cursor-pointer"
+                            onClick={() => navigate("/user/cmms-dashboard")}
                         />
                     </div>
-
-                    {/* VERTICAL DIVIDER */}
-                    {/* <div className="hidden h-8 w-px bg-[#A8CDB9] lg:block" /> */}
                 </div>
-               
 
                 {/* RIGHT SECTION */}
                 <div className="flex shrink-0 items-center gap-2">

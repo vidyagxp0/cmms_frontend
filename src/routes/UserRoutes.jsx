@@ -9,6 +9,7 @@ import EngineeringDashboard from "../pages/user/Engineering/EngineeringDashboard
 import UserProfile from "../pages/user/UserProfile/UserProfile";
 import CreateCalibration from "../pages/user/CalibrationPlanner/CreateCalibration";
 import CalibrationPanel from "../pages/user/CalibrationPlanner/CalibrationPanel";
+import Audit from "../pages/user/Audit/Audit";
 
 function UserRoutes() {
   return (
@@ -19,6 +20,7 @@ function UserRoutes() {
 
         <Route path="cmms-dashboard" element={<UserDashboard />} />
         <Route path="create-record" element={<ProcessPage />} />
+        <Route path="new-audit" element={<Audit />} />
 
         {/* Equipment Routes*/}
         <Route path="equipment-dashboard" element={<EquipDashboard />} />

@@ -4,8 +4,11 @@ import { Eye } from "lucide-react";
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
 import DataTable from "../../../components/common/DataTable/DataTable";
 import { getAllRecords } from "../../../services/usersApi/calibrationApi";
+import { useNavigate } from "react-router-dom";
 
 const EngineeringDashboard = () => {
+    const navigate = useNavigate();
+
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -77,9 +80,16 @@ const EngineeringDashboard = () => {
             {
                 accessorKey: "id",
                 header: "ID",
-                cell: ({ getValue }) => (
+                cell: ({row, getValue }) => (
                     <button
                         type="button"
+                        onClick={() => {
+                        if (!row.original?.id) return;
+
+                        navigate(
+                            `/user/calibration-planner-panel/${row.original.id}`
+                        );
+                    }}
                         className="
                             inline-flex cursor-pointer rounded-md border
                             border-indigo-100 bg-indigo-50/70 px-2 py-1.5

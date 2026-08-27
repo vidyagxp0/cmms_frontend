@@ -2,25 +2,29 @@ import React, { useEffect, useState } from "react";
 import { Activity, ChevronDown, ChevronUp } from "lucide-react";
 import { getCalibrationAuditRecord } from "../../../services/usersApi/calibrationApi";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
+import { useParams } from "react-router-dom";
 
-const Audit = ({ id }) => {
+const Audit = () => {
     const [audits, setAudits] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [expanded, setExpanded] = useState({});
+    const { recordId } = useParams();
+    console.log(recordId,"idddd")
+
 
     useEffect(() => {
-        if (id) {
+        if (recordId) {
             fetchAudits();
         }
-    }, [id]);
+    }, [recordId]);
 
     const fetchAudits = async () => {
         try {
             setLoading(true);
             setError("");
 
-            const response = await getCalibrationAuditRecord(id);
+            const response = await getCalibrationAuditRecord(recordId);
 
             const data = response?.data?.data || [];
 
@@ -34,10 +38,10 @@ const Audit = ({ id }) => {
         }
     };
 
-    const toggleAudit = (id) => {
+    const toggleAudit = (recordId) => {
         setExpanded((prev) => ({
             ...prev,
-            [id]: !prev[id],
+            [recordId]: !prev[recordId],
         }));
     };
 

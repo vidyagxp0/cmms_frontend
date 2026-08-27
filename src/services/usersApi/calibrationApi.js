@@ -9,10 +9,13 @@ export const getAllRecords = (params = {}) => {
 export const getCalibrationDetail = (id) =>
     api.get(`/user/show-calibration-planner-record/${id}`);
 
+export const executeCalibrationActivity = (id, payload) =>
+    api.post(`/user/calibrationPlanner-record-stage/${id}`, payload);
+
 export const addCalibration = (payload) =>
     api.post("/user/store-calibration-planner-record", payload);
 
-export const updateEquipment = (id, payload) =>
+export const updateCalibration = (id, payload) =>
     api.put(`/user/update-calibration-planner-record/${id}`, payload);
 
 export const getCalibrationAuditRecord = (id) => {

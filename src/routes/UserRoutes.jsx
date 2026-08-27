@@ -20,7 +20,7 @@ function UserRoutes() {
 
         <Route path="cmms-dashboard" element={<UserDashboard />} />
         <Route path="create-record" element={<ProcessPage />} />
-        <Route path="new-audit" element={<Audit />} />
+        <Route path="new-audit/:recordId" element={<Audit />} />
 
         {/* Equipment Routes*/}
         <Route path="equipment-dashboard" element={<EquipDashboard />} />
@@ -29,7 +29,7 @@ function UserRoutes() {
         {/* Engineering and Calibration Routes*/}
         <Route path="engineering-dashboard" element={<EngineeringDashboard />} />
         <Route path="calibration-planner-create/:processId" element={<CreateCalibration />} />
-        <Route path="calibration-planner-panel/:id" element={<CalibrationPanel/>} />
+        <Route path="calibration-planner-panel/:recordId" element={<CalibrationPanel/>} />
 
         {/* <Route path="equipment-panel/:id" element={<EquipmentPanel/>} /> */}
       </Route>

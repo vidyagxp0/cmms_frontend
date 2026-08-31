@@ -148,9 +148,7 @@ const UserManagementList = () => {
             setDeleteError(
                 err?.response?.data?.message || "Failed to delete user."
             );
-            toast.success("User deleted successfully", {
-              description: `${selectedUser.name} has been removed.`,
-          });
+            toast.error(err?.response?.data?.message || "Failed to delete user.");
         } finally {
             setDeleting(false);
         }
@@ -218,8 +216,9 @@ const UserManagementList = () => {
                 </div>
             </div>
                     <div className="w-full overflow-hidden rounded-2xl border border-[#CBE3D6] bg-white shadow-[0_10px_30px_-18px_rgba(21,44,32,0.35)]">
-                         <div className="custom-scrollbar max-h-[calc(100vh-250px)] overflow-y-auto overflow-x-auto">                       <table className="w-full border-collapse text-left">
-                                <thead className="sticky top-0 z-10">
+                         <div className="custom-scrollbar max-h-[calc(100vh-330px)] overflow-y-auto overflow-x-auto">
+                              <table className="w-full border-collapse text-left">
+                                <thead className="sticky top-0 z-10 bg-[#F3F9F5]">
                                     <tr className="bg-[#F3F9F5]">
                                     <th className="w-[80px] border-b border-[#E3F0E8] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5C7A6C]">
                                         S.No

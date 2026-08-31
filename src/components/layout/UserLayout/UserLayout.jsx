@@ -12,13 +12,13 @@ function UserLayout() {
         location.pathname === "/user/engineering-dashboard"; 
 
     return (
-        <div className="min-h-screen bg-[#F7F9F8]">
+        <div className={showNav ? "h-screen overflow-hidden bg-[#F7F9F8]" : "min-h-screen bg-[#F7F9F8]"}>
             <UserHeader />
 
             {showNav && <UserNav />}
 
-            <main className={showNav ? "pt-[138px]" : "pt-[74px]"}>
-                <div className="p-6">
+            <main className={showNav ? "h-screen pt-[138px]" : "pt-[74px]"}>
+                <div className={showNav ? "h-full p-6" : "p-6"}>
                     <Outlet />
                 </div>
             </main>

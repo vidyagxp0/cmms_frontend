@@ -45,20 +45,32 @@ const handleLogout = async () => {
 };
     const initial = userName?.charAt(0)?.toUpperCase() || "A";
 
+    const authType = sessionStorage.getItem("auth_type");
+    const isSystemAdmin = authType === "Admin";
+
+    const hoverBgClass = isSystemAdmin ? "hover:bg-[#EAF5EE]" : "hover:bg-[#EFF6FF]";
+    const hoverTextClass = isSystemAdmin ? "hover:text-[#17734C]" : "hover:text-[#2563EB]";
+    const userBlockBg = isSystemAdmin ? "bg-[#F3F9F5]" : "bg-[#EFF6FF]";
+    const borderLight = isSystemAdmin ? "border-[#CBE3D6]" : "border-[#BFDBFE]";
+    const borderHeader = isSystemAdmin ? "border-[#E3F0E8]" : "border-[#DBEAFE]";
+    const shadowColor = isSystemAdmin ? "shadow-[0_18px_45px_rgba(21,44,32,0.16)]" : "shadow-[0_18px_45px_rgba(37,99,235,0.16)]";
+    const avatarBorder = isSystemAdmin ? "rgba(31,138,95,0.35)" : "rgba(37,99,235,0.35)";
+    const textAccentMuted = isSystemAdmin ? "text-[#5C7A6C]" : "text-[#5B7898]";
+
     return (
         <>
             <div>
                 {isOpen && (
                     <div
-                        className="absolute right-0 top-[54px] z-[100] w-[230px] overflow-hidden rounded-2xl border border-[#CBE3D6] bg-white shadow-[0_18px_45px_rgba(21,44,32,0.16)]"
+                        className={`absolute right-0 top-[54px] z-[100] w-[230px] overflow-hidden rounded-2xl border ${borderLight} bg-white ${shadowColor}`}
                     >
                         {/* USER BLOCK */}
-                        <div className="flex items-center gap-3 border-b border-[#E3F0E8] bg-[#F3F9F5] px-4 py-4">
+                        <div className={`flex items-center gap-3 border-b ${borderHeader} ${userBlockBg} px-4 py-4`}>
                             <div
                                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border text-[12.5px] font-semibold text-[#152C20]"
                                 style={{
                                     background: "#FFFFFF",
-                                    borderColor: "rgba(31,138,95,0.35)",
+                                    borderColor: avatarBorder,
                                 }}
                             >
                                 {initial}
@@ -67,7 +79,7 @@ const handleLogout = async () => {
                                 <p className="truncate text-[12.5px] font-semibold text-[#152C20]">
                                     {userName}
                                 </p>
-                                <p className="mt-0.5 truncate text-[10.5px] text-[#5C7A6C]">
+                                <p className={`mt-0.5 truncate text-[10.5px] ${textAccentMuted}`}>
                                     {userRole}
                                 </p>
                             </div>
@@ -77,7 +89,7 @@ const handleLogout = async () => {
                             <button
                                 type="button"
                                 onClick={onProfile}
-                                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[12px] font-medium text-[#3E5A4D] transition-colors duration-150 hover:bg-[#EAF5EE] hover:text-[#17734C]"
+                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[12px] font-medium text-[#3E5A4D] transition-colors duration-150 ${hoverBgClass} ${hoverTextClass}`}
                             >
                                 <User size={15} strokeWidth={1.9} />
                                 Profile
@@ -86,13 +98,13 @@ const handleLogout = async () => {
                             <button
                                 type="button"
                                 onClick={onSettings}
-                                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[12px] font-medium text-[#3E5A4D] transition-colors duration-150 hover:bg-[#EAF5EE] hover:text-[#17734C]"
+                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[12px] font-medium text-[#3E5A4D] transition-colors duration-150 ${hoverBgClass} ${hoverTextClass}`}
                             >
                                 <Settings size={15} strokeWidth={1.9} />
                                 Settings
                             </button>
 
-                            <div className="my-1.5 border-t border-[#E3F0E8]" />
+                            <div className={`my-1.5 border-t ${borderHeader}`} />
 
                             <button
                                 type="button"

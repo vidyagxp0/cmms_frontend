@@ -64,20 +64,21 @@ button:disabled {
     
 }
 .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-    background: #f1f7f3;
-    border-radius: 10px;
+    background: #F0F6F3;
+    border-radius: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #082D48;
-    border-radius: 10px;
+    background: #C2DFD4;
+    border-radius: 8px;
+    transition: background 0.2s ease;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #082D48;
+    background: #9DC4B5;
 }

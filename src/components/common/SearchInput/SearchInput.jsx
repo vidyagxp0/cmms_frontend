@@ -7,7 +7,7 @@ const SearchInput = ({
     onChange,
     suggestions = [],
     placeholder = "Search...",
-    className = "",
+    className = "mb-4",
     maxWidth = "320px",
 }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -36,7 +36,7 @@ const SearchInput = ({
     }, []);
 
     return (
-        <div ref={containerRef} className={`relative w-full mb-4 ${className}`} style={{ maxWidth }}>
+        <div ref={containerRef} className={`relative w-full ${className}`} style={{ maxWidth }}>
             <div className="relative">
                 <Search
                     size={14}
@@ -52,7 +52,7 @@ const SearchInput = ({
                     }}
                     onFocus={() => setIsOpen(true)}
                     placeholder={placeholder}
-                    className="h-[42px] w-full rounded-[10px] border border-[#CBE3D6] bg-[#F9FCFA] pl-9 pr-9 text-[12px] text-[#152C20] outline-none transition-all placeholder:text-[#94A79E] focus:border-[#79B89A] focus:bg-white focus:ring-2 focus:ring-[#1F8A5F]/[0.07]"
+                    className="h-[46px] w-full rounded-[10px] border border-[#CBE3D6] bg-[#F9FCFA] pl-9 pr-9 text-[12px] text-[#152C20] outline-none transition-all placeholder:text-[#94A79E] focus:border-[#79B89A] focus:bg-white focus:ring-2 focus:ring-[#1F8A5F]/[0.07]"
                 />
 
                 {value && (

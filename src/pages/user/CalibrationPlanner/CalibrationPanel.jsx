@@ -23,8 +23,7 @@ import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGri
 import calibrationColumns from "./calibrationColumn";
 
 import { getProfile } from "../../../services/authApi";
-import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration } from "../../../services/usersApi/calibrationApi";
-import { getAllActivites, getAllActivityLogs, getAllStages } from "../../../services/usersApi/workflowApi";
+import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration, getAllActivites, getAllActivityLogs, getAllStages } from "../../../services/usersApi/calibrationApi";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const TABS = [

@@ -6,6 +6,10 @@ export const getAllRecords = (params = {}) => {
     });
 };
 
+export const getCalibrationUser = () => {
+    return api.get("/role-based-users");
+};
+
 export const getCalibrationDetail = (id) =>
     api.get(`/user/show-calibration-planner-record/${id}`);
 

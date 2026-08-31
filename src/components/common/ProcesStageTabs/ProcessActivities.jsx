@@ -153,7 +153,7 @@ const ProcessActivities = ({
                 {/* =========================
                     ACTIVITY LABEL
                 ========================== */}
-                <div className="mr-3 flex shrink-0 items-center gap-1.5 border-r border-[#DCE8E2] pr-3">
+                {/* <div className="mr-3 flex shrink-0 items-center gap-1.5 border-r border-[#DCE8E2] pr-3">
                     <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-[#20BF63] shadow-sm">
                         <Zap
                             size={12}
@@ -164,7 +164,7 @@ const ProcessActivities = ({
                     <span className="hidden text-[10px] font-semibold text-[#60736B] sm:block">
                         Activities
                     </span>
-                </div>
+                </div> */}
 
                 {/* =========================
                     ACTIVITIES

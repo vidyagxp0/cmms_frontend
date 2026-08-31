@@ -19,6 +19,7 @@ import calibrationColumns from "./calibrationColumn";
 import { getProfile } from "../../../services/authApi";
 import { addCalibration, getCalibrationUser } from "../../../services/usersApi/calibrationApi";
 import { formatDate, formatDateTime } from "../../../utils/date";
+import  Skeleton  from "../../../components/common/Skeleton/Skeleton";
 
 const TABS = [
   { id: "general", label: "General Information" },
@@ -34,6 +35,7 @@ const REQUIRED_FIELDS = [
   { name: "qaReviewer", label: "QA Reviewer" },
   { name: "qaApproval", label: "QA Approval" },
 ];
+
 
 const normalizeGridRows = (rows = []) =>
   rows.map((row, index) => {
@@ -64,12 +66,15 @@ const buildProcessData = (values, systemFields) => [
 ];
 
 const validateCalibrationForm = (form) => {
-  const values = form.getFieldsValue();
-  return REQUIRED_FIELDS.filter((field) => {
-    const value = values?.[field.name];
-    if (typeof value === "string") return !value.trim();
-    return value === undefined || value === null || value === "";
-  });
+    const values = form.getFieldsValue();
+
+    return REQUIRED_FIELDS.filter((field) => {
+        const value = values?.[field.name];
+
+        if (typeof value === "string") return !value.trim();
+
+        return value === undefined || value === null || value === "";
+    });
 };
 
 const CreateCalibration = () => {
@@ -92,33 +97,44 @@ const CreateCalibration = () => {
   const { processId } = useParams();
   const { processName, siteName } = location.state || {};
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await getProfile();
-        console.log("Profile Response:", response);
-        const profile = response?.data?.data;
-        if (!profile) return;
-        const userName = profile?.name || "";
-        const userId = profile?.id || "";
-        const profileDepartmentId = profile?.department?.id || "";
-        const departmentName = profile?.department?.name || "";
-        setInitiator(userName);
-        setInitiatorId(userId);
-        setDepartmentId(profileDepartmentId);
-        setInitiationDepartment(departmentName);
-        form.setFieldsValue({
-          initiator: userName,
-          initiationDepartment: departmentName,
-          dateOfInitiation,
-          siteLocationCode: "Unit IV",
-        });
-      } catch (error) {
-        console.error("Failed to fetch profile:", error);
-      }
-    };
-    fetchProfile();
-  }, [form, dateOfInitiation]);
+    // Fetch Profile
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                setIsLoading(true)
+                const response = await getProfile();
+                console.log("Profile Response:", response);
+
+                const profile = response?.data?.data;
+                if (!profile) return;
+
+                const userName = profile?.name || "";
+                const userId = profile?.id || "";
+                const profileDepartmentId = profile?.department?.id || "";
+                const departmentName = profile?.department?.name || "";
+
+                setInitiator(userName);
+                setInitiatorId(userId);
+                setDepartmentId(profileDepartmentId);
+                setInitiationDepartment(departmentName);
+
+                form.setFieldsValue({
+                    initiator: userName,
+                    initiationDepartment: departmentName,
+                    dateOfInitiation,
+                    siteLocationCode: "Unit IV",
+                });
+            } catch (error) {
+                console.error("Failed to fetch profile:", error);
+            }
+            finally{
+                setIsLoading(false)
+            }
+            
+        };
+
+        fetchProfile();
+    }, [form, dateOfInitiation]);
 
 
   useEffect(() => {
@@ -264,100 +280,181 @@ const qaApproverOptions = qaApprovers.map((user) => ({
         <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
-      <Form
-        form={form}
-        layout="vertical"
-        requiredMark={false}
-        onFinish={handleSubmit}
-        className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
-      >
-        {activeTab === "general" && (
-          <section>
-            <SectionHeader title="GENERAL INFORMATION" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              {systemFields.map((field) => (
-                <Form.Item key={field.name} name={field.name} label={field.label} className="!mb-4">
-                  <FormDisabledInput />
-                </Form.Item>
-              ))}
-              <Form.Item
-                name="shortDescription"
-                label={<span>Short Description <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
+            {/* Form */}
+            <Form
+                form={form}
+                layout="vertical"
+                requiredMark={false}
+                onFinish={handleSubmit}
+                className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
+            >
+                {/* General Information */}
+                {activeTab === "general" && (
+                    <section>
+                        <SectionHeader title="GENERAL INFORMATION" />
+
+                      {isLoading ? 
+              <Skeleton variant="formskeleton" />
+: (
+    <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+        {systemFields.map((field) => (
+            <Form.Item
+                key={field.name}
+                name={field.name}
+                label={field.label}
                 className="!mb-4"
-              >
-                <FormInput placeholder="Enter short description" />
-              </Form.Item>
-            </div>
-            <div className="mt-5">
-              <UserDynamicGrid name="Calibration Planner" columns={calibrationColumns} value={calibrationRows} onChange={setCalibrationRows} />
-            </div>
-            <div className="my-9 h-px w-full bg-slate-200" />
-            <SectionHeader title="CALIBRATION INFORMATION" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item
-                name="hod"
-                label={<span>HOD / Designee <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select HOD / Designee" }]}
-                className="!mb-4"
-              >
-<FormSelect
-    placeholder={
-        usersLoading
-            ? "Loading HOD / Designee..."
-            : "Select HOD / Designee"
-    }
-    options={hodOptions}
-    disabled={usersLoading}
-/>
-              </Form.Item>
-              <Form.Item
-                name="qaReviewer"
-                label={<span>QA Reviewer <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select QA Reviewer" }]}
-                className="!mb-4"
-              >
-              <FormSelect
-    placeholder={
-        usersLoading
-            ? "Loading QA Reviewer..."
-            : "Select QA Reviewer"
-    }
-    options={qaReviewerOptions}
-    disabled={usersLoading}
-/>
-              </Form.Item>
-              <Form.Item
-                name="qaApproval"
-                label={<span>QA Approval <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select QA Approver" }]}
-                className="!mb-4"
-              >
-              <FormSelect
-    placeholder={
-        usersLoading
-            ? "Loading QA Approver..."
-            : "Select QA Approver"
-    }
-    options={qaApproverOptions}
-    disabled={usersLoading}
-/>
-              </Form.Item>
-              <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." />
-              </Form.Item>
-              <Form.Item
-                name="attachment"
-                label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
-                className="!mb-4 md:col-span-2"
-              >
-                <FormAttachment />
-              </Form.Item>
-            </div>
-          </section>
-        )}
+            >
+                <FormDisabledInput />
+            </Form.Item>
+        ))}
+
+        <Form.Item
+            name="shortDescription"
+            label={
+                <span>
+                    Short Description{" "}
+                    <span className="text-red-500">*</span>
+                </span>
+            }
+            rules={[
+                {
+                    required: true,
+                    whitespace: true,
+                    message: "Please enter Short Description",
+                },
+            ]}
+            className="!mb-4"
+        >
+            <FormInput placeholder="Enter short description" />
+        </Form.Item>
+    </div>
+)}
+
+                        {/* Calibration Planner */}
+                        <div className="mt-5">
+                            <UserDynamicGrid
+                                name="Calibration Planner"
+                                columns={calibrationColumns}
+                                value={calibrationRows}
+                                onChange={setCalibrationRows}
+                            />
+                        </div>
+
+                        <div className="my-9 h-px w-full bg-slate-200" />
+
+                        {/* Calibration Information */}
+                        <SectionHeader title="CALIBRATION INFORMATION" />
+
+                        <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+                            {/* HOD / Designee */}
+                            <Form.Item
+                                name="hod"
+                                label={
+                                    <span>
+                                        HOD / Designee{" "}
+                                        <span className="text-red-500">*</span>
+                                    </span>
+                                }
+                                rules={[
+                                    {
+                                        required: true,
+                                        message: "Please select HOD / Designee",
+                                    },
+                                ]}
+                                className="!mb-4"
+                            >
+                                <FormSelect
+                                    placeholder="Select HOD / Designee"
+                                    options={[
+                                        { value: "quality-head", label: "Quality Head" },
+                                        { value: "production-head", label: "Production Head" },
+                                        { value: "engineering-head", label: "Engineering Head" },
+                                    ]}
+                                />
+                            </Form.Item>
+
+                            {/* QA Reviewer */}
+                            <Form.Item
+                                name="qaReviewer"
+                                label={
+                                    <span>
+                                        QA Reviewer{" "}
+                                        <span className="text-red-500">*</span>
+                                    </span>
+                                }
+                                rules={[
+                                    {
+                                        required: true,
+                                        message: "Please select QA Reviewer",
+                                    },
+                                ]}
+                                className="!mb-4"
+                            >
+                                <FormSelect
+                                    placeholder="Select QA Reviewer"
+                                    options={[
+                                        { value: "qa-reviewer-1", label: "QA Reviewer 1" },
+                                        { value: "qa-reviewer-2", label: "QA Reviewer 2" },
+                                        { value: "qa-reviewer-3", label: "QA Reviewer 3" },
+                                    ]}
+                                />
+                            </Form.Item>
+
+                            {/* QA Approval */}
+                            <Form.Item
+                                name="qaApproval"
+                                label={
+                                    <span>
+                                        QA Approval{" "}
+                                        <span className="text-red-500">*</span>
+                                    </span>
+                                }
+                                rules={[
+                                    {
+                                        required: true,
+                                        message: "Please select QA Approver",
+                                    },
+                                ]}
+                                className="!mb-4"
+                            >
+                                <FormSelect
+                                    placeholder="Select QA Approver"
+                                    options={[
+                                        { value: "qa-manager", label: "QA Manager" },
+                                        { value: "qa-head", label: "QA Head" },
+                                    ]}
+                                />
+                            </Form.Item>
+
+                            {/* Comments */}
+                            <Form.Item
+                                name="comments"
+                                label="Comments"
+                                className="!mb-4 md:col-span-2"
+                            >
+                                <FormTextArea
+                                    rows={5}
+                                    placeholder="Enter comments..."
+                                />
+                            </Form.Item>
+
+                            {/* Attachment */}
+                            <Form.Item
+                                name="attachment"
+                                label="Attachment"
+                                valuePropName="fileList"
+                                getValueFromEvent={(event) =>
+                                    Array.isArray(event)
+                                        ? event
+                                        : event?.fileList
+                                }
+                                className="!mb-4 md:col-span-2"
+                            >
+                                <FormAttachment />
+                            </Form.Item>
+                        </div>
+                    </section>
+                )}
 
         {activeTab === "hod" && (
           <section>

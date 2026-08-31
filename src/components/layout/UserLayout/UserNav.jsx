@@ -47,9 +47,9 @@ const UserNav = () => {
                                     tracking-[-0.01em]
                                     transition-all duration-200 ease-out
                                     ${
-                                        isActive
-                                            ? "text-[#17734C]"
-                                            : "text-[#637C70] hover:text-[#17734C]"
+                                      isActive
+                                         ? "text-[#2563EB]"
+                                       : "text-[#64748B] hover:text-[#2563EB]"
                                     }
                                 `}
                             >
@@ -63,8 +63,8 @@ const UserNav = () => {
                                                 transition-all duration-200
                                                 ${
                                                     isActive
-                                                        ? "bg-[#E2F2E9] text-[#1F8A5F]"
-                                                        : "bg-transparent text-[#789487] group-hover:bg-[#EAF5EF] group-hover:text-[#1F8A5F]"
+                                                      ? "bg-[#E0F2FE] text-[#0284C7]"
+                                                       : "bg-transparent text-[#64748B] group-hover:bg-[#F0F9FF] group-hover:text-[#0284C7]"
                                                 }
                                             `}
                                         >
@@ -85,7 +85,7 @@ const UserNav = () => {
                                                 absolute bottom-0 left-1/2
                                                 h-[3px] -translate-x-1/2
                                                 rounded-t-full
-                                                bg-[#1F8A5F]
+                                                bg-[#0EA5E9]
                                                 transition-all duration-200
                                                 ${
                                                     isActive

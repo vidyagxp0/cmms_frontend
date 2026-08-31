@@ -25,6 +25,7 @@ export const useAuthStore = create((set) => ({
         sessionStorage.removeItem("admin_token");
         sessionStorage.removeItem("user_token");
         sessionStorage.removeItem("auth_type");
+        sessionStorage.removeItem("session_start_time");
 
         set({
             user: null,

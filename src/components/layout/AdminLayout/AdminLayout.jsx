@@ -12,7 +12,7 @@ function AdminLayout() {
 
             <div
                 className={`min-h-screen min-w-0 overflow-x-hidden transition-[margin] duration-300 ease-out ${
-                    collapsed ? "ml-[76px]" : "ml-[264px]"
+                    collapsed ? "ml-[65px]" : "ml-[230px]"
                 }`}
             >
                 <AdminHeader />

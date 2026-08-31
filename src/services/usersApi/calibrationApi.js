@@ -38,3 +38,7 @@ export const getAllActivityLogs = (recordId) => {
     return api.get(`/user/user-activity-history/${recordId}`);
 };
 
+export const getAllPermissions = (recordId) => {
+    return api.get(`/user/user-record-permission/${recordId}`);
+};
+

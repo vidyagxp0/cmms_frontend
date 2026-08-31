@@ -312,74 +312,74 @@ const ProcessPage = () => {
                                     ) : (
                                         <div className="space-y-2">
                                            {processes.map((process) => {
-    const Icon = getProcessIcon(process.name);
+                                            const Icon = getProcessIcon(process.name);
 
-    return (
-        <button
-            key={process.id}
-            type="button"
-            onClick={() => handleProcessSelect(process)}
-            className="
-                group flex w-full
-                items-center gap-3
-                rounded-[10px]
-                border border-[#E5E9E7]
-                px-3 py-2.5
-                text-left
-                transition-all
-                duration-300
-                ease-[cubic-bezier(.22,1,.36,1)]
-                hover:-translate-y-[1px]
-                hover:border-[#D5DDD8]
-                hover:bg-[#FBFCFB]
-                hover:shadow-[0_7px_18px_-15px_rgba(30,45,37,0.4)]
-                active:translate-y-0
-                active:scale-[0.99]
-            "
-        >
-            <span
-                className="
-                    flex h-8 w-8
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-[8px]
-                    bg-[#F1F3F2]
-                    text-[#66736C]
-                    transition-all
-                    duration-300
-                    group-hover:bg-[#E9EEEB]
-                    group-hover:text-[#465A50]
-                "
-            >
-                <Icon
-                    size={15}
-                    strokeWidth={1.7}
-                />
-            </span>
+                                            return (
+                                                <button
+                                                    key={process.id}
+                                                    type="button"
+                                                    onClick={() => handleProcessSelect(process)}
+                                                    className="
+                                                        group flex w-full
+                                                        items-center gap-3
+                                                        rounded-[10px]
+                                                        border border-[#E5E9E7]
+                                                        px-3 py-2.5
+                                                        text-left
+                                                        transition-all
+                                                        duration-300
+                                                        ease-[cubic-bezier(.22,1,.36,1)]
+                                                        hover:-translate-y-[1px]
+                                                        hover:border-[#D5DDD8]
+                                                        hover:bg-[#FBFCFB]
+                                                        hover:shadow-[0_7px_18px_-15px_rgba(30,45,37,0.4)]
+                                                        active:translate-y-0
+                                                        active:scale-[0.99]
+                                                    "
+                                                >
+                                                    <span
+                                                        className="
+                                                            flex h-8 w-8
+                                                            shrink-0
+                                                            items-center
+                                                            justify-center
+                                                            rounded-[8px]
+                                                            bg-[#F1F3F2]
+                                                            text-[#66736C]
+                                                            transition-all
+                                                            duration-300
+                                                            group-hover:bg-[#E9EEEB]
+                                                            group-hover:text-[#465A50]
+                                                        "
+                                                    >
+                                                        <Icon
+                                                            size={15}
+                                                            strokeWidth={1.7}
+                                                        />
+                                                    </span>
 
-            <span className="min-w-0 flex-1">
-                <span className="block text-[12px] font-semibold text-[#2B3731]">
-                    {process.name}
-                </span>
-            </span>
+                                                    <span className="min-w-0 flex-1">
+                                                        <span className="block text-[12px] font-semibold text-[#2B3731]">
+                                                            {process.name}
+                                                        </span>
+                                                    </span>
 
-            <span className="flex h-6 w-6 items-center justify-center rounded-full transition-all duration-300 group-hover:bg-[#F0F3F1]">
-                <ChevronRight
-                    size={14}
-                    strokeWidth={1.7}
-                    className="
-                        text-[#B0B8B4]
-                        transition-all
-                        duration-300
-                        group-hover:translate-x-0.5
-                        group-hover:text-[#65736C]
-                    "
-                />
-            </span>
-        </button>
-    );
-})}
+                                                    <span className="flex h-6 w-6 items-center justify-center rounded-full transition-all duration-300 group-hover:bg-[#F0F3F1]">
+                                                        <ChevronRight
+                                                            size={14}
+                                                            strokeWidth={1.7}
+                                                            className="
+                                                                text-[#B0B8B4]
+                                                                transition-all
+                                                                duration-300
+                                                                group-hover:translate-x-0.5
+                                                                group-hover:text-[#65736C]
+                                                            "
+                                                        />
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
                                         </div>
                                     )}
                                 </div>

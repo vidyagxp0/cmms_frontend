@@ -293,24 +293,21 @@ const CreateCalibrationPanel = () => {
   }, [activeStageId]);
 
 
-  const fetchActivityLogs = useCallback(async () => {
+const fetchActivityLogs = useCallback(async () => {
   if (!recordId) {
     setActivityLogs([]);
     return;
   }
-
   try {
     setActivityLogsLoading(true);
-
     const response = await getAllActivityLogs(recordId);
-
     setActivityLogs(response?.data?.data || []);
   } catch (error) {
-    console.error(
-      "Failed to fetch activity history:",
-      error
+    console.error("Failed to fetch activity history:", error);
+    toast.error(
+      error?.response?.data?.message ||
+        "Failed to load activity history."
     );
-
     setActivityLogs([]);
   } finally {
     setActivityLogsLoading(false);
@@ -318,26 +315,8 @@ const CreateCalibrationPanel = () => {
 }, [recordId]);
 
 useEffect(() => {
-  if (!recordId) return;
-
-  const fetchActivityLogs = async () => {
-    try {
-      setActivityLogsLoading(true);
-      const response = await getAllActivityLogs(recordId);
-      setActivityLogs(response?.data?.data || []);
-    } catch (error) {
-      console.error("Failed to fetch activity history:", error);
-      toast.error(
-        error?.response?.data?.message ||
-          "Failed to load activity history."
-      );
-      setActivityLogs([]);
-    } finally {
-      setActivityLogsLoading(false);
-    }
-  };
   fetchActivityLogs();
-}, [recordId]);
+}, [fetchActivityLogs]);
 
   const handleActivitySuccess = async () => {
     await fetchCalibrationDetail();

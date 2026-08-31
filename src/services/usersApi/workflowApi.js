@@ -7,3 +7,8 @@ export const getAllStages = (processId) => {
 export const getAllActivites = (stageId) => {
     return api.get(`/user/activities-list/${stageId}`);
 };
+
+export const getAllActivityLogs = (recordId) => {
+    return api.get(`/user/user-activity-history/${recordId}`);
+};
+

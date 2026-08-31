@@ -8,6 +8,7 @@ const ProcessActivities = ({
   activities = [],
   loading = false,
   recordId,
+  userId,
   activityApi,
   onActivitySuccess,
   onExit,
@@ -37,7 +38,7 @@ const ProcessActivities = ({
     }
     try {
       setIsSubmitting(true);
-      const payload = { email, password, comment, activity_id: selectedActivity.id };
+      const payload = { user_id: userId, email, password, comment, activity_id: selectedActivity.id };
       const response = await activityApi(recordId, payload);
       if (response?.data?.success === false) {
         throw new Error(response?.data?.message || "Activity execution failed.");

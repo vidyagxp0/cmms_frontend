@@ -24,7 +24,7 @@ import calibrationColumns from "./calibrationColumn";
 
 import { getProfile } from "../../../services/authApi";
 import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration } from "../../../services/usersApi/calibrationApi";
-import { getAllActivites, getAllStages } from "../../../services/usersApi/workflowApi";
+import { getAllActivites, getAllActivityLogs, getAllStages } from "../../../services/usersApi/workflowApi";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const TABS = [
@@ -105,6 +105,8 @@ const CreateCalibrationPanel = () => {
   const [activeStageId, setActiveStageId] = useState(null);
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [activityLogsLoading, setActivityLogsLoading] = useState(false);
 
   const [calibrationRows, setCalibrationRows] = useState([]);
 
@@ -291,8 +293,56 @@ const CreateCalibrationPanel = () => {
     fetchActivities();
   }, [activeStageId]);
 
+
+  const fetchActivityLogs = useCallback(async () => {
+  if (!recordId) {
+    setActivityLogs([]);
+    return;
+  }
+
+  try {
+    setActivityLogsLoading(true);
+
+    const response = await getAllActivityLogs(recordId);
+
+    setActivityLogs(response?.data?.data || []);
+  } catch (error) {
+    console.error(
+      "Failed to fetch activity history:",
+      error
+    );
+
+    setActivityLogs([]);
+  } finally {
+    setActivityLogsLoading(false);
+  }
+}, [recordId]);
+
+useEffect(() => {
+  if (!recordId) return;
+
+  const fetchActivityLogs = async () => {
+    try {
+      setActivityLogsLoading(true);
+      const response = await getAllActivityLogs(recordId);
+      setActivityLogs(response?.data?.data || []);
+    } catch (error) {
+      console.error("Failed to fetch activity history:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to load activity history."
+      );
+      setActivityLogs([]);
+    } finally {
+      setActivityLogsLoading(false);
+    }
+  };
+  fetchActivityLogs();
+}, [recordId]);
+
   const handleActivitySuccess = async () => {
     await fetchCalibrationDetail();
+    await fetchActivityLogs();
   };
 
   const systemFields = [
@@ -388,6 +438,7 @@ const CreateCalibrationPanel = () => {
               activities={activities}
               loading={activitiesLoading}
               recordId={recordId}
+              userId={initiatorId}
               activityApi={executeCalibrationActivity}
               onActivitySuccess={handleActivitySuccess}
               onExit={() => navigate("/user/engineering-dashboard")}
@@ -531,9 +582,87 @@ const CreateCalibrationPanel = () => {
           </section>
         )}
 
-        {activeTab === "activity" && (
-          <EmptyTab title="Activity Log" description="Record activities and workflow history will be displayed here." />
-        )}
+{activeTab === "activity" && (
+  <section>
+    <SectionHeader title="ACTIVITY LOG" />
+
+    <div className="mt-5 space-y-4">
+      {activityLogsLoading ? (
+        <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
+          Loading activity history...
+        </div>
+      ) : activityLogs.length === 0 ? (
+        <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
+          No activity history found.
+        </div>
+      ) : (
+        activityLogs.map((log) => (
+          <div
+            key={log.id}
+            className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
+          >
+            {/* Activity Name */}
+            <div className="mb-5">
+              <p className="text-[13px] font-semibold text-[#3E4A5C]">
+                Activity Name
+              </p>
+
+              <p className="mt-1 text-[14px] font-semibold text-[#182234]">
+                {log.activity_name || "—"}
+              </p>
+            </div>
+
+            {/* Activity Details */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+
+              {/* Performed By */}
+              <div>
+                <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
+                  Performed By
+                </p>
+
+                <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                  <span className="text-[14px] text-[#526071]">
+                    {log.performed_by
+                      ? `(${log.performed_by})`
+                      : "—"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Date Performed */}
+              <div>
+                <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
+                  Date Performed
+                </p>
+
+                <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                  <span className="text-[14px] text-[#526071]">
+                    {log.performed_at || "—"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Comments */}
+              <div>
+                <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
+                  Comments
+                </p>
+
+                <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
+                  <p className="break-words text-[14px] leading-5 text-[#526071]">
+                    {log.comment || "—"}
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  </section>
+)}
       </Form>
 
       <FloatingActionButtons

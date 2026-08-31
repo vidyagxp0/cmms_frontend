@@ -25,7 +25,7 @@ const TABS = [
   { id: "hod", label: "HOD / Designee Review" },
   { id: "qa-review", label: "QA Review" },
   { id: "qa-approval", label: "QA Approval" },
-  { id: "activity", label: "Activity Log" },
+  // { id: "activity", label: "Activity Log" },
 ];
 
 const REQUIRED_FIELDS = [
@@ -388,9 +388,9 @@ const CreateCalibration = () => {
           </section>
         )}
 
-        {activeTab === "activity" && (
+        {/* {activeTab === "activity" && (
           <EmptyTab title="Activity Log" description="Record activities and workflow history will be displayed here." />
-        )}
+        )} */}
       </Form>
 
       <FloatingActionButtons onSave={handleSave} onCancel={handleCancel} isSaving={isSaving} saveLabel="Save" cancelLabel="Cancel" />

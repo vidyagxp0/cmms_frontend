@@ -588,9 +588,7 @@ useEffect(() => {
 
     <div className="mt-5 space-y-4">
       {activityLogsLoading ? (
-        <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
-          Loading activity history...
-        </div>
+     <Skeleton variant="activityLog" />
       ) : activityLogs.length === 0 ? (
         <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
           No activity history found.
@@ -624,7 +622,7 @@ useEffect(() => {
                 <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
                   <span className="text-[14px] text-[#526071]">
                     {log.performed_by
-                      ? `(${log.performed_by})`
+                      ? `${log.performed_by}`
                       : "—"}
                   </span>
                 </div>

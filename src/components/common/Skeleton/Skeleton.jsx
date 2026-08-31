@@ -269,6 +269,45 @@ const ProfileSkeleton = () => (
   </div>
 );
 
+
+const ActivityLogSkeleton = ({ count = 3 }) => (
+  <div className="space-y-4">
+    {Array.from({ length: count }).map((_, index) => (
+      <div
+        key={index}
+        className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
+      >
+        {/* Activity Name */}
+        <div className="mb-5">
+          <SkeletonBox className="h-3 w-24" />
+          <SkeletonBox className="mt-2 h-4 w-40" />
+        </div>
+
+        {/* Details */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {/* Performed By */}
+          <div>
+            <SkeletonBox className="h-3 w-24" />
+            <SkeletonBox className="mt-2 h-11 w-full rounded-md" />
+          </div>
+
+          {/* Date */}
+          <div>
+            <SkeletonBox className="h-3 w-24" />
+            <SkeletonBox className="mt-2 h-11 w-full rounded-md" />
+          </div>
+
+          {/* Comment */}
+          <div>
+            <SkeletonBox className="h-3 w-20" />
+            <SkeletonBox className="mt-2 h-11 w-full rounded-md" />
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 /* -------------------------------------------------------------------------- */
 /* MAIN COMPONENT                                                             */
 /* -------------------------------------------------------------------------- */
@@ -297,6 +336,7 @@ const Skeleton = ({
     form: <FormSkeleton fields={fields} />,
     profile: <ProfileSkeleton />,
     dashboard: <DashboardSkeleton />,
+    activityLog: <ActivityLogSkeleton count={3} />,
   };
 
   return <div className={className}>{skeletons[variant] || skeletons.text}</div>;

@@ -18,6 +18,6 @@ export const addCalibration = (payload) =>
 export const updateCalibration = (id, payload) =>
     api.put(`/user/update-calibration-planner-record/${id}`, payload);
 
-export const getCalibrationAuditRecord = (id) => {
-    return api.get(`/user/calibration-audit-listing/${id}`);
+export const getCalibrationAuditRecord = (id, params = {}) => {
+    return api.get(`/user/calibration-audit-listing/${id}`, {params});
 };

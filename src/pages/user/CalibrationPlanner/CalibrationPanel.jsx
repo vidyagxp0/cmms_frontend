@@ -2,6 +2,10 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Form } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+
+dayjs.extend(customParseFormat);
 
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import ProcessStage from "../../../components/common/ProcesStageTabs/ProcessStage";
@@ -19,7 +23,7 @@ import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGri
 import calibrationColumns from "./calibrationColumn";
 
 import { getProfile } from "../../../services/authApi";
-import { executeCalibrationActivity, getCalibrationDetail, updateCalibration } from "../../../services/usersApi/calibrationApi";
+import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration } from "../../../services/usersApi/calibrationApi";
 import { getAllActivites, getAllStages } from "../../../services/usersApi/workflowApi";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
@@ -46,15 +50,30 @@ const getProcessValue = (processData = [], key) => {
 const normalizeGridRows = (rows = []) =>
   rows.map((row, index) => {
     const { _rowId, row_id, ...cleanRow } = row || {};
-    return { ...cleanRow, row_id: index + 1 };
+
+    return {
+      ...cleanRow,
+      previousCalibrationDate: cleanRow?.previousCalibrationDate
+        ? dayjs(cleanRow.previousCalibrationDate, "DD/MM/YYYY")
+        : null,
+      nextCalibrationDate: cleanRow?.nextCalibrationDate
+        ? dayjs(cleanRow.nextCalibrationDate, "DD/MM/YYYY")
+        : null,
+      row_id: index + 1,
+    };
   });
 
-const buildProcessData = (values, systemFields) => [
+const getUserPair = (userId, users = []) => {
+  const user = users.find((item) => String(item?.id) === String(userId));
+  return { id: user?.id || userId || "", name: user?.name || "" };
+};
+
+const buildProcessData = (values, systemFields, hodUsers, qaReviewers, qaApprovers) => [
   ...systemFields.map((field) => ({ key: field.name, label: field.label, value: values?.[field.name] || "" })),
   { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
-  { key: "hod", label: "HOD / Designee", value: values?.hod || "" },
-  { key: "qa_reviewer", label: "QA Reviewer", value: values?.qaReviewer || "" },
-  { key: "qa_approval", label: "QA Approval", value: values?.qaApproval || "" },
+  { key: "hod", label: "HOD / Designee", value: getUserPair(values?.hod, hodUsers) },
+  { key: "qa_reviewer", label: "QA Reviewer", value: getUserPair(values?.qaReviewer, qaReviewers) },
+  { key: "qa_approval", label: "QA Approval", value: getUserPair(values?.qaApproval, qaApprovers) },
   { key: "comment", label: "Comments", value: values?.comments || "" },
   { key: "attachment", label: "Attachment", value: values?.attachment || [] },
   { key: "hod_review_comments", label: "HOD / Designee Review Comments", value: values?.hodReviewComments || "" },
@@ -78,13 +97,17 @@ const CreateCalibrationPanel = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(true);
   const [workflowLoading, setWorkflowLoading] = useState(true);
+
   const [workflowStages, setWorkflowStages] = useState([]);
   const [processId, setProcessId] = useState(null);
   const [activeStageId, setActiveStageId] = useState(null);
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
+
   const [calibrationRows, setCalibrationRows] = useState([]);
+
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
@@ -92,6 +115,10 @@ const CreateCalibrationPanel = () => {
   const [dateOfInitiation, setDateOfInitiation] = useState("");
   const [siteLocationCode, setSiteLocationCode] = useState("");
   const [processName, setProcessName] = useState("");
+
+  const [hodUsers, setHodUsers] = useState([]);
+  const [qaReviewers, setQaReviewers] = useState([]);
+  const [qaApprovers, setQaApprovers] = useState([]);
 
   const [form] = Form.useForm();
   const navigate = useNavigate();
@@ -113,6 +140,32 @@ const CreateCalibrationPanel = () => {
     };
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    const fetchCalibrationUsers = async () => {
+      try {
+        setUsersLoading(true);
+        const response = await getCalibrationUser();
+        const data = response?.data?.data || {};
+        setHodUsers(data?.hod || []);
+        setQaReviewers(data?.qa_reviewer || []);
+        setQaApprovers(data?.qa_approver || []);
+      } catch (error) {
+        console.error("Failed to fetch calibration users:", error);
+        toast.error(error?.response?.data?.message || "Failed to load workflow users.");
+        setHodUsers([]);
+        setQaReviewers([]);
+        setQaApprovers([]);
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+    fetchCalibrationUsers();
+  }, []);
+
+  const hodOptions = hodUsers.map((user) => ({ value: user?.id, label: user?.name }));
+  const qaReviewerOptions = qaReviewers.map((user) => ({ value: user?.id, label: user?.name }));
+  const qaApproverOptions = qaApprovers.map((user) => ({ value: user?.id, label: user?.name }));
 
   const fetchCalibrationDetail = useCallback(async () => {
     if (!recordId) {
@@ -160,15 +213,15 @@ const CreateCalibrationPanel = () => {
 
       form.setFieldsValue({
         recordNumber,
-        siteLocationCode: locationCode,
+        siteLocationCode: locationCode || "",
         initiator: responseData?.initiator?.name || processInitiator || "",
         dateOfInitiation: processDateOfInitiation || responseData?.initiation_date || "",
         dueDate,
         initiationDepartment: responseData?.department?.name || processDepartment || "",
         shortDescription,
-        hod,
-        qaReviewer,
-        qaApproval,
+        hod: hod && typeof hod === "object" ? hod?.id : hod || "",
+        qaReviewer: qaReviewer && typeof qaReviewer === "object" ? qaReviewer?.id : qaReviewer || "",
+        qaApproval: qaApproval && typeof qaApproval === "object" ? qaApproval?.id : qaApproval || "",
         comments,
         attachment: attachment || [],
         hodReviewComments,
@@ -179,7 +232,11 @@ const CreateCalibrationPanel = () => {
         qaApprovalAttachment: qaApprovalAttachment || [],
       });
 
-      setCalibrationRows(normalizeGridRows(responseData?.gridData || responseData?.grid_data || []));
+      const gridRows = (responseData?.grid_records || []).flatMap(
+        (record) => record?.grid_data || []
+      );
+
+      setCalibrationRows(normalizeGridRows(gridRows));
     } catch (error) {
       console.error("Failed to fetch calibration detail:", error);
       toast.error(error?.response?.data?.message || "Failed to load Calibration record.");
@@ -243,12 +300,12 @@ const CreateCalibrationPanel = () => {
     { name: "siteLocationCode", label: "Site / Location Code", value: form.getFieldValue("siteLocationCode") || "" },
     { name: "initiator", label: "Initiator", value: initiator },
     { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
-    { name: "dueDate", label: "Due Date", value: form.getFieldValue("dueDate") || "" },
+    // { name: "dueDate", label: "Due Date", value: form.getFieldValue("dueDate") || "" },
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
 
   const handleSave = async () => {
-    if (isSaving || isLoading) return;
+    if (isSaving || isLoading || usersLoading) return;
     const missingFields = validateCalibrationForm(form);
     if (missingFields.length > 0) {
       const missingFieldNames = missingFields.map((field) => field.label).join(", ");
@@ -264,8 +321,17 @@ const CreateCalibrationPanel = () => {
     if (isSaving || !recordId) return;
     try {
       setIsSaving(true);
-      const processData = buildProcessData(values, systemFields);
-      const gridData = normalizeGridRows(calibrationRows);
+      const processData = buildProcessData(values, systemFields, hodUsers, qaReviewers, qaApprovers);
+      const gridData = calibrationRows.map((row, index) => ({
+        ...row,
+        previousCalibrationDate: row.previousCalibrationDate
+          ? dayjs(row.previousCalibrationDate).format("DD/MM/YYYY")
+          : "",
+        nextCalibrationDate: row.nextCalibrationDate
+          ? dayjs(row.nextCalibrationDate).format("DD/MM/YYYY")
+          : "",
+        row_id: index + 1,
+      }));
       const payload = {
         process_id: Number(processId),
         stage_id: Number(activeStageId),
@@ -277,9 +343,7 @@ const CreateCalibrationPanel = () => {
         gridData,
         checklistData: [],
       };
-      console.log("Calibration Update Payload:", payload);
       const response = await updateCalibration(recordId, payload);
-      console.log("Calibration Update Response:", response);
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Calibration updated successfully.");
         return;
@@ -373,14 +437,7 @@ const CreateCalibrationPanel = () => {
                 rules={[{ required: true, message: "Please select HOD / Designee" }]}
                 className="!mb-4"
               >
-                <FormSelect
-                  placeholder="Select HOD / Designee"
-                  options={[
-                    { value: "quality-head", label: "Quality Head" },
-                    { value: "production-head", label: "Production Head" },
-                    { value: "engineering-head", label: "Engineering Head" },
-                  ]}
-                />
+                <FormSelect placeholder={usersLoading ? "Loading HOD / Designee..." : "Select HOD / Designee"} options={hodOptions} disabled={usersLoading} />
               </Form.Item>
               <Form.Item
                 name="qaReviewer"
@@ -388,14 +445,7 @@ const CreateCalibrationPanel = () => {
                 rules={[{ required: true, message: "Please select QA Reviewer" }]}
                 className="!mb-4"
               >
-                <FormSelect
-                  placeholder="Select QA Reviewer"
-                  options={[
-                    { value: "qa-reviewer-1", label: "QA Reviewer 1" },
-                    { value: "qa-reviewer-2", label: "QA Reviewer 2" },
-                    { value: "qa-reviewer-3", label: "QA Reviewer 3" },
-                  ]}
-                />
+                <FormSelect placeholder={usersLoading ? "Loading QA Reviewer..." : "Select QA Reviewer"} options={qaReviewerOptions} disabled={usersLoading} />
               </Form.Item>
               <Form.Item
                 name="qaApproval"
@@ -403,13 +453,7 @@ const CreateCalibrationPanel = () => {
                 rules={[{ required: true, message: "Please select QA Approver" }]}
                 className="!mb-4"
               >
-                <FormSelect
-                  placeholder="Select QA Approver"
-                  options={[
-                    { value: "qa-manager", label: "QA Manager" },
-                    { value: "qa-head", label: "QA Head" },
-                  ]}
-                />
+                <FormSelect placeholder={usersLoading ? "Loading QA Approver..." : "Select QA Approver"} options={qaApproverOptions} disabled={usersLoading} />
               </Form.Item>
               <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
                 <FormTextArea rows={5} placeholder="Enter comments..." />
@@ -495,7 +539,7 @@ const CreateCalibrationPanel = () => {
       <FloatingActionButtons
         onSave={handleSave}
         onCancel={handleCancel}
-        isSaving={isSaving || isLoading}
+        isSaving={isSaving || isLoading || usersLoading}
         saveLabel="Update"
         cancelLabel="Cancel"
       />

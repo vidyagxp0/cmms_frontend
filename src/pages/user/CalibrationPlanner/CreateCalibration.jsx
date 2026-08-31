@@ -47,12 +47,17 @@ const normalizeGridRows = (rows = []) =>
     };
   });
 
-const buildProcessData = (values, systemFields) => [
+const getUserPair = (userId, users = []) => {
+  const user = users.find((item) => item?.id === userId);
+  return { id: user?.id || userId || "", name: user?.name || "" };
+};
+
+const buildProcessData = (values, systemFields, hodUsers, qaReviewers, qaApprovers) => [
   ...systemFields.map((field) => ({ key: field.name, label: field.label, value: values?.[field.name] || "" })),
   { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
-  { key: "hod", label: "HOD / Designee", value: values?.hod || "" },
-  { key: "qa_reviewer", label: "QA Reviewer", value: values?.qaReviewer || "" },
-  { key: "qa_approval", label: "QA Approval", value: values?.qaApproval || "" },
+  { key: "hod", label: "HOD / Designee", value: getUserPair(values?.hod, hodUsers) },
+  { key: "qa_reviewer", label: "QA Reviewer", value: getUserPair(values?.qaReviewer, qaReviewers) },
+  { key: "qa_approval", label: "QA Approval", value: getUserPair(values?.qaApproval, qaApprovers) },
   { key: "comment", label: "Comments", value: values?.comments || "" },
   { key: "attachment", label: "Attachment", value: values?.attachment || [] },
   { key: "hod_review_comments", label: "HOD / Designee Review Comments", value: values?.hodReviewComments || "" },
@@ -81,10 +86,12 @@ const CreateCalibration = () => {
   const [departmentId, setDepartmentId] = useState("");
   const [initiationDepartment, setInitiationDepartment] = useState("");
   const [dateOfInitiation] = useState(() => formatDateTime(new Date()));
-    const [hodUsers, setHodUsers] = useState([]);
-    const [qaReviewers, setQaReviewers] = useState([]);
-    const [qaApprovers, setQaApprovers] = useState([]);
-    const [usersLoading, setUsersLoading] = useState(false);
+
+  const [hodUsers, setHodUsers] = useState([]);
+  const [qaReviewers, setQaReviewers] = useState([]);
+  const [qaApprovers, setQaApprovers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+
   const [form] = Form.useForm();
 
   const location = useLocation();
@@ -120,64 +127,38 @@ const CreateCalibration = () => {
     fetchProfile();
   }, [form, dateOfInitiation]);
 
-
   useEffect(() => {
     const fetchCalibrationUsers = async () => {
-        try {
-            setUsersLoading(true);
-
-            const response = await getCalibrationUser();
-
-            const data = response?.data?.data || {};
-
-            setHodUsers(data?.hod || []);
-            setQaReviewers(data?.qa_reviewer || []);
-            setQaApprovers(data?.qa_approver || []);
-        } catch (error) {
-            console.error(
-                "Failed to fetch calibration users:",
-                error
-            );
-
-            toast.error(
-                error?.response?.data?.message ||
-                    "Failed to load workflow users."
-            );
-
-            setHodUsers([]);
-            setQaReviewers([]);
-            setQaApprovers([]);
-        } finally {
-            setUsersLoading(false);
-        }
+      try {
+        setUsersLoading(true);
+        const response = await getCalibrationUser();
+        const data = response?.data?.data || {};
+        setHodUsers(data?.hod || []);
+        setQaReviewers(data?.qa_reviewer || []);
+        setQaApprovers(data?.qa_approver || []);
+      } catch (error) {
+        console.error("Failed to fetch calibration users:", error);
+        toast.error(error?.response?.data?.message || "Failed to load workflow users.");
+        setHodUsers([]);
+        setQaReviewers([]);
+        setQaApprovers([]);
+      } finally {
+        setUsersLoading(false);
+      }
     };
-
     fetchCalibrationUsers();
-}, []);
+  }, []);
 
-
-const hodOptions = hodUsers.map((user) => ({
-    value: user.id,
-    label: user.name,
-}));
-
-const qaReviewerOptions = qaReviewers.map((user) => ({
-    value: user.id,
-    label: user.name,
-}));
-
-const qaApproverOptions = qaApprovers.map((user) => ({
-    value: user.id,
-    label: user.name,
-}));
-
+  const hodOptions = hodUsers.map((user) => ({ value: user.id, label: user.name }));
+  const qaReviewerOptions = qaReviewers.map((user) => ({ value: user.id, label: user.name }));
+  const qaApproverOptions = qaApprovers.map((user) => ({ value: user.id, label: user.name }));
 
   const systemFields = [
     { name: "recordNumber", label: "Record Number", value: "CAL-2026-000124" },
     { name: "siteLocationCode", label: "Site / Location Code", value: "Unit IV" },
     { name: "initiator", label: "Initiator", value: initiator },
     { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
-    { name: "dueDate", label: "Due Date", value: "01-Sep-2026" },
+    // { name: "dueDate", label: "Due Date", value: "01-Sep-2026" },
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
 
@@ -198,7 +179,7 @@ const qaApproverOptions = qaApprovers.map((user) => ({
     if (isSaving) return;
     try {
       setIsSaving(true);
-      const processData = buildProcessData(values, systemFields);
+      const processData = buildProcessData(values, systemFields, hodUsers, qaReviewers, qaApprovers);
       const gridData = normalizeGridRows(calibrationRows);
       const payload = {
         process_id: Number(processId),
@@ -301,15 +282,11 @@ const qaApproverOptions = qaApprovers.map((user) => ({
                 rules={[{ required: true, message: "Please select HOD / Designee" }]}
                 className="!mb-4"
               >
-<FormSelect
-    placeholder={
-        usersLoading
-            ? "Loading HOD / Designee..."
-            : "Select HOD / Designee"
-    }
-    options={hodOptions}
-    disabled={usersLoading}
-/>
+                <FormSelect
+                  placeholder={usersLoading ? "Loading HOD / Designee..." : "Select HOD / Designee"}
+                  options={hodOptions}
+                  disabled={usersLoading}
+                />
               </Form.Item>
               <Form.Item
                 name="qaReviewer"
@@ -317,15 +294,11 @@ const qaApproverOptions = qaApprovers.map((user) => ({
                 rules={[{ required: true, message: "Please select QA Reviewer" }]}
                 className="!mb-4"
               >
-              <FormSelect
-    placeholder={
-        usersLoading
-            ? "Loading QA Reviewer..."
-            : "Select QA Reviewer"
-    }
-    options={qaReviewerOptions}
-    disabled={usersLoading}
-/>
+                <FormSelect
+                  placeholder={usersLoading ? "Loading QA Reviewer..." : "Select QA Reviewer"}
+                  options={qaReviewerOptions}
+                  disabled={usersLoading}
+                />
               </Form.Item>
               <Form.Item
                 name="qaApproval"
@@ -333,15 +306,11 @@ const qaApproverOptions = qaApprovers.map((user) => ({
                 rules={[{ required: true, message: "Please select QA Approver" }]}
                 className="!mb-4"
               >
-              <FormSelect
-    placeholder={
-        usersLoading
-            ? "Loading QA Approver..."
-            : "Select QA Approver"
-    }
-    options={qaApproverOptions}
-    disabled={usersLoading}
-/>
+                <FormSelect
+                  placeholder={usersLoading ? "Loading QA Approver..." : "Select QA Approver"}
+                  options={qaApproverOptions}
+                  disabled={usersLoading}
+                />
               </Form.Item>
               <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
                 <FormTextArea rows={5} placeholder="Enter comments..." />

@@ -1,11 +1,12 @@
 const calibrationColumns = [
-    {
+     {
         key: "equipmentInstrumentName",
         title: "Equipment / Instrument Name",
-        type: "text",
-        placeholder: "Enter equipment / instrument name",
+        type: "select",
+        placeholder: "Select equipment",
         required: true,
         minWidth: 220,
+        // options injected by parent
     },
     {
         key: "equipmentInstrumentId",
@@ -14,6 +15,7 @@ const calibrationColumns = [
         placeholder: "Enter equipment / instrument ID",
         required: true,
         minWidth: 200,
+        disabled: true,
     },
     {
         key: "department",
@@ -35,6 +37,7 @@ const calibrationColumns = [
         type: "text",
         placeholder: "Enter make & model",
         minWidth: 200,
+        disabled: true,
     },
     {
         key: "range",

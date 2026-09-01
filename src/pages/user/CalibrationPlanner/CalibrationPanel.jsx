@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
 import { Form } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -16,19 +16,28 @@ import FormSelect from "../../../components/common/Form/FormSelect";
 import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
 import FormAttachment from "../../../components/common/Form/FormAttachment";
-import EmptyTab from "../../../components/common/Form/EmptyTab";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGrid";
 
-import calibrationColumns from "./calibrationColumn";
+import calibrationColumns from "./calibrationColumn"; // ensure this file has disabled: true for ID & Make/Model
 
 import { getProfile } from "../../../services/authApi";
-import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration, getAllActivites, getAllActivityLogs, getAllStages, getAllPermissions } from "../../../services/usersApi/calibrationApi";
+import {
+  executeCalibrationActivity,
+  getCalibrationDetail,
+  getCalibrationUser,
+  updateCalibration,
+  getAllActivites,
+  getAllActivityLogs,
+  getAllStages,
+  getAllPermissions,
+  getAllEquipmentData, // <-- new import
+} from "../../../services/usersApi/calibrationApi";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const TABS = [
   { id: "general", label: "General Information", stageId: 1 },
-  { id: "hod", label: "HOD / Designee Review", stageId: 2},
+  { id: "hod", label: "HOD / Designee Review", stageId: 2 },
   { id: "qa-review", label: "QA Review", stageId: 3 },
   { id: "qa-approval", label: "QA Approval", stageId: 4 },
   { id: "activity", label: "Activity Log", stageId: 5 },
@@ -41,43 +50,78 @@ const REQUIRED_FIELDS = [
   { name: "qaApproval", label: "QA Approval" },
 ];
 
+// Helper to get a value from process_data (array or object)
 const getProcessValue = (processData = [], key) => {
   if (Array.isArray(processData)) {
-    const field = processData.find(
-      (item) => item?.key === key
-    );
+    const field = processData.find((item) => item?.key === key);
     return field?.value ?? "";
   }
-  if (
-    processData &&
-    typeof processData === "object"
-  ) {
-    if (processData[key] !== undefined) {
-      return processData[key] ?? "";
-    }
-    const field = Object.values(processData).find(
-      (item) => item?.key === key
-    );
+  if (processData && typeof processData === "object") {
+    if (processData[key] !== undefined) return processData[key] ?? "";
+    const field = Object.values(processData).find((item) => item?.key === key);
     return field?.value ?? "";
   }
   return "";
 };
 
-const normalizeGridRows = (rows = []) =>
+// ----- NEW normalizeGridRows: accepts columns and equipmentMap -----
+const normalizeGridRows = (rows = [], columns = [], equipmentMap = {}) =>
   rows.map((row, index) => {
     const { _rowId, row_id, ...cleanRow } = row || {};
+    const formattedRow = {};
 
-    return {
-      ...cleanRow,
-      previousCalibrationDate: cleanRow?.previousCalibrationDate
-        ? dayjs(cleanRow.previousCalibrationDate, "DD/MM/YYYY")
-        : null,
-      nextCalibrationDate: cleanRow?.nextCalibrationDate
-        ? dayjs(cleanRow.nextCalibrationDate, "DD/MM/YYYY")
-        : null,
-      row_id: index + 1,
-    };
+    columns.forEach((col) => {
+      const key = col.key;
+      let value = cleanRow[key] !== undefined && cleanRow[key] !== null ? cleanRow[key] : "";
+
+      // For date columns, convert to dayjs object for the grid (editing)
+      if (key === "previousCalibrationDate" && value) {
+        value = dayjs(value, "DD/MM/YYYY");
+      } else if (key === "nextCalibrationDate" && value) {
+        value = dayjs(value, "DD/MM/YYYY");
+      } else if (key === "calibrationDate" && value) {
+        value = dayjs(value, "DD/MM/YYYY");
+      }
+      formattedRow[key] = value;
+    });
+
+    // row_id is added as a plain number
+    formattedRow.row_id = index + 1;
+    return formattedRow;
   });
+
+// ---------- Helper to build the nested grid payload ----------
+const buildGridPayload = (rows = [], columns = [], equipmentMap = {}) => {
+  return rows.map((row, index) => {
+    const rowData = { row_id: index + 1 };
+
+    columns.forEach((col) => {
+      const key = col.key;
+      let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
+
+      // For date columns, format to DD/MM/YYYY string
+      if (key === "previousCalibrationDate" && value) {
+        value = dayjs(value).format("DD/MM/YYYY");
+      } else if (key === "nextCalibrationDate" && value) {
+        value = dayjs(value).format("DD/MM/YYYY");
+      } else if (key === "calibrationDate" && value) {
+        value = dayjs(value).format("DD/MM/YYYY");
+      }
+
+      if (key === "equipmentInstrumentName" && value && equipmentMap[value]) {
+        value = equipmentMap[value]?.name || value;
+      }
+
+      rowData[key] = {
+        key,
+        label: col.title,
+        value,
+      };
+    });
+
+    return rowData;
+  });
+};
 
 const getUserPair = (userId, users = []) => {
   const user = users.find((item) => String(item?.id) === String(userId));
@@ -127,6 +171,11 @@ const CreateCalibrationPanel = () => {
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [calibrationRows, setCalibrationRows] = useState([]);
 
+  // ----- Equipment states -----
+  const [equipmentOptions, setEquipmentOptions] = useState([]);
+  const [equipmentMap, setEquipmentMap] = useState({}); // keyed by id
+  const [equipmentLoading, setEquipmentLoading] = useState(false);
+
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
   const [loginUserId, setLoginUserId] = useState("");
@@ -144,6 +193,7 @@ const CreateCalibrationPanel = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
 
+  // ---------- 1. Fetch profile ----------
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -162,16 +212,34 @@ const CreateCalibrationPanel = () => {
     fetchProfile();
   }, []);
 
+  // ---------- 2. Fetch equipment master ----------
   useEffect(() => {
-  if (!activeStageId) return;
-  const matchingTab = TABS.find(
-    (tab) => Number(tab.stageId) === Number(activeStageId)
-  );
-  if (matchingTab) {
-    setActiveTab(matchingTab.id);
-  }
-}, [activeStageId]);
+    const fetchEquipment = async () => {
+      try {
+        setEquipmentLoading(true);
+        const response = await getAllEquipmentData();
+        const data = response?.data?.data || [];
+        const options = data.map((item) => ({
+          value: item.id,
+          label: item.name,
+        }));
+        const map = {};
+        data.forEach((item) => {
+          map[item.id] = item;
+        });
+        setEquipmentOptions(options);
+        setEquipmentMap(map);
+      } catch (error) {
+        console.error("Failed to fetch equipment:", error);
+        toast.error("Could not load equipment list.");
+      } finally {
+        setEquipmentLoading(false);
+      }
+    };
+    fetchEquipment();
+  }, []);
 
+  // ---------- 3. Fetch users for dropdowns ----------
   useEffect(() => {
     const fetchCalibrationUsers = async () => {
       try {
@@ -198,6 +266,7 @@ const CreateCalibrationPanel = () => {
   const qaReviewerOptions = qaReviewers.map((user) => ({ value: user?.id, label: user?.name }));
   const qaApproverOptions = qaApprovers.map((user) => ({ value: user?.id, label: user?.name }));
 
+  // ---------- 4. Fetch calibration detail ----------
   const fetchCalibrationDetail = useCallback(async () => {
     if (!recordId) {
       toast.error("Calibration record ID is missing.");
@@ -263,23 +332,61 @@ const CreateCalibrationPanel = () => {
         qaApprovalAttachment: qaApprovalAttachment || [],
       });
 
+      // Build grid rows from API response
       const gridRows = (responseData?.grid_records || []).flatMap(
         (record) => record?.grid_data || []
       );
 
-      setCalibrationRows(normalizeGridRows(gridRows));
+      // Convert to internal format: we need to extract the raw values from nested objects
+      const rawRows = gridRows.map((item) => {
+        const row = {};
+        Object.keys(item).forEach((key) => {
+          if (key === "row_id") {
+            row.row_id = item.row_id;
+          } else if (item[key] && typeof item[key] === "object") {
+            row[key] = item[key].value; // value may be id or name
+          } else {
+            row[key] = item[key];
+          }
+        });
+        return row;
+      });
+
+      const normalizedRows = rawRows.map((row) => {
+        const newRow = { ...row };
+        // If equipmentInstrumentName is a string (name), try to find its id
+        if (newRow.equipmentInstrumentName && typeof newRow.equipmentInstrumentName === "string") {
+          const found = Object.values(equipmentMap).find(
+            (eq) => eq.name === newRow.equipmentInstrumentName
+          );
+          if (found) {
+            newRow.equipmentInstrumentName = found.id;
+          }
+        }
+        // Ensure dates are parsed for the grid
+        if (newRow.previousCalibrationDate) {
+          newRow.previousCalibrationDate = dayjs(newRow.previousCalibrationDate, "DD/MM/YYYY");
+        }
+        if (newRow.nextCalibrationDate) {
+          newRow.nextCalibrationDate = dayjs(newRow.nextCalibrationDate, "DD/MM/YYYY");
+        }
+        return newRow;
+      });
+
+      setCalibrationRows(normalizedRows);
     } catch (error) {
       console.error("Failed to fetch calibration detail:", error);
       toast.error(error?.response?.data?.message || "Failed to load Calibration record.");
     } finally {
       setIsLoading(false);
     }
-  }, [recordId, form]);
+  }, [recordId, form, equipmentMap]);
 
   useEffect(() => {
     fetchCalibrationDetail();
   }, [fetchCalibrationDetail]);
 
+  // ---------- 5. Fetch stages, activities, permissions, logs ----------
   useEffect(() => {
     if (!processId) return;
     const fetchStages = async () => {
@@ -322,88 +429,102 @@ const CreateCalibrationPanel = () => {
     fetchActivities();
   }, [activeStageId]);
 
-const fetchPermissions = useCallback(async () => {
-  if (!recordId) {
-    setCanPerformActivity(false);
-    setPermissionsLoading(false);
-    return;
-  }
+  const fetchPermissions = useCallback(async () => {
+    if (!recordId) {
+      setCanPerformActivity(false);
+      setPermissionsLoading(false);
+      return;
+    }
+    try {
+      setPermissionsLoading(true);
+      const response = await getAllPermissions(recordId);
+      const canPerform = response?.data?.data?.permission?.can_perform_action === true;
+      setCanPerformActivity(canPerform);
+    } catch (error) {
+      console.error("Failed to fetch record permissions:", error);
+      setCanPerformActivity(false);
+      toast.error(error?.response?.data?.message || "Failed to check activity permissions.");
+    } finally {
+      setPermissionsLoading(false);
+    }
+  }, [recordId]);
 
-  try {
-    setPermissionsLoading(true);
+  const fetchActivityLogs = useCallback(async () => {
+    if (!recordId) {
+      setActivityLogs([]);
+      return;
+    }
+    try {
+      setActivityLogsLoading(true);
+      const response = await getAllActivityLogs(recordId);
+      setActivityLogs(response?.data?.data || []);
+    } catch (error) {
+      console.error("Failed to fetch activity history:", error);
+      toast.error(error?.response?.data?.message || "Failed to load activity history.");
+      setActivityLogs([]);
+    } finally {
+      setActivityLogsLoading(false);
+    }
+  }, [recordId]);
 
-    const response = await getAllPermissions(recordId);
+  useEffect(() => {
+    fetchActivityLogs();
+  }, [fetchActivityLogs]);
 
-    const canPerform =
-      response?.data?.data?.permission?.can_perform_action === true;
+  useEffect(() => {
+    fetchPermissions();
+  }, [fetchPermissions]);
 
-    setCanPerformActivity(canPerform);
-  } catch (error) {
-    console.error("Failed to fetch record permissions:", error);
+  // ---------- 6. Build dynamic columns for grid ----------
+  const dynamicColumns = useMemo(() => {
+    return calibrationColumns.map((col) => {
+      if (col.key === "equipmentInstrumentName") {
+        return {
+          ...col,
+          options: equipmentOptions,
+          placeholder: equipmentLoading ? "Loading equipment..." : "Select equipment",
+        };
+      }
+      return col;
+    });
+  }, [equipmentOptions, equipmentLoading]);
 
-    setCanPerformActivity(false);
+  // ---------- 7. Grid change handler: auto-fill ID & Make/Model ----------
+  const handleGridChange = (newRows) => {
+    const updatedRows = newRows.map((row) => {
+      const equipmentId = row.equipmentInstrumentName;
+      if (equipmentId && equipmentMap[equipmentId]) {
+        const eq = equipmentMap[equipmentId];
+        return {
+          ...row,
+          equipmentInstrumentId: eq.equipment_id || "",
+          makeModel: `${eq.make || ""} ${eq.model || ""}`.trim(),
+        };
+      }
+      return {
+        ...row,
+        equipmentInstrumentId: "",
+        makeModel: "",
+      };
+    });
+    setCalibrationRows(updatedRows);
+  };
 
-    toast.error(
-      error?.response?.data?.message ||
-        "Failed to check activity permissions."
-    );
-  } finally {
-    setPermissionsLoading(false);
-  }
-}, [recordId]);
+  // ---------- 8. Sync active tab with stage ----------
+  useEffect(() => {
+    if (!activeStageId) return;
+    const matchingTab = TABS.find((tab) => Number(tab.stageId) === Number(activeStageId));
+    if (matchingTab) {
+      setActiveTab(matchingTab.id);
+    }
+  }, [activeStageId]);
 
-const fetchActivityLogs = useCallback(async () => {
-  if (!recordId) {
-    setActivityLogs([]);
-    return;
-  }
-  try {
-    setActivityLogsLoading(true);
-    const response = await getAllActivityLogs(recordId);
-    setActivityLogs(response?.data?.data || []);
-  } catch (error) {
-    console.error("Failed to fetch activity history:", error);
-    toast.error(
-      error?.response?.data?.message ||
-        "Failed to load activity history."
-    );
-    setActivityLogs([]);
-  } finally {
-    setActivityLogsLoading(false);
-  }
-}, [recordId]);
-
-useEffect(() => {
-  fetchActivityLogs();
-}, [fetchActivityLogs]);
-
-useEffect(() => {
-  fetchPermissions();
-}, [fetchPermissions]);
-
-  // const handleActivitySuccess = async () => {
-  //   await fetchCalibrationDetail();
-  //   await fetchActivityLogs();
-  // };
-
-  const handleActivitySuccess = async () => {
-  try {
-    const values = form.getFieldsValue(true);
-    await handleSubmit(values);
-    await fetchCalibrationDetail();
-    await fetchPermissions();
-    await fetchActivityLogs();
-  } catch (error) {
-    console.error("Failed to save calibration after activity:", error);
-  }
-};
-
+  // ---------- 9. Handle save / update ----------
   const systemFields = [
     { name: "recordNumber", label: "Record Number", value: form.getFieldValue("recordNumber") || "" },
     { name: "siteLocationCode", label: "Site / Location Code", value: form.getFieldValue("siteLocationCode") || "" },
     { name: "initiator", label: "Initiator", value: initiator },
     { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
-    // { name: "dueDate", label: "Due Date", value: form.getFieldValue("dueDate") || "" },
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
 
@@ -425,16 +546,10 @@ useEffect(() => {
     try {
       setIsSaving(true);
       const processData = buildProcessData(values, systemFields, hodUsers, qaReviewers, qaApprovers);
-      const gridData = calibrationRows.map((row, index) => ({
-        ...row,
-        previousCalibrationDate: row.previousCalibrationDate
-          ? dayjs(row.previousCalibrationDate).format("DD/MM/YYYY")
-          : "",
-        nextCalibrationDate: row.nextCalibrationDate
-          ? dayjs(row.nextCalibrationDate).format("DD/MM/YYYY")
-          : "",
-        row_id: index + 1,
-      }));
+
+      // Build grid payload with nested objects, converting equipment name from id
+      const gridData = buildGridPayload(calibrationRows, calibrationColumns, equipmentMap);
+
       const payload = {
         process_id: Number(processId),
         stage_id: Number(activeStageId),
@@ -446,6 +561,7 @@ useEffect(() => {
         gridData,
         checklistData: [],
       };
+
       const response = await updateCalibration(recordId, payload);
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Calibration updated successfully.");
@@ -460,11 +576,25 @@ useEffect(() => {
     }
   };
 
+  // ---------- 10. Activity success handler ----------
+  const handleActivitySuccess = async () => {
+    try {
+      const values = form.getFieldsValue(true);
+      await handleSubmit(values);
+      await fetchCalibrationDetail();
+      await fetchPermissions();
+      await fetchActivityLogs();
+    } catch (error) {
+      console.error("Failed to save calibration after activity:", error);
+    }
+  };
+
   const handleCancel = () => {
     if (isSaving) return;
     navigate("/user/engineering-dashboard");
   };
 
+  // ---------- Render ----------
   if (isLoading) {
     return (
       <div className="w-full space-y-6">
@@ -531,9 +661,16 @@ useEffect(() => {
                 <FormInput placeholder="Enter short description" />
               </Form.Item>
             </div>
+
             <div className="mt-5">
-              <UserDynamicGrid name="Calibration Planner" columns={calibrationColumns} value={calibrationRows} onChange={setCalibrationRows} />
+              <UserDynamicGrid
+                name="Calibration Planner"
+                columns={dynamicColumns}
+                value={calibrationRows}
+                onChange={handleGridChange}
+              />
             </div>
+
             <div className="my-9 h-px w-full bg-slate-200" />
             <SectionHeader title="CALIBRATION INFORMATION" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -543,7 +680,11 @@ useEffect(() => {
                 rules={[{ required: true, message: "Please select HOD / Designee" }]}
                 className="!mb-4"
               >
-                <FormSelect placeholder={usersLoading ? "Loading HOD / Designee..." : "Select HOD / Designee"} options={hodOptions} disabled={usersLoading} />
+                <FormSelect
+                  placeholder={usersLoading ? "Loading HOD / Designee..." : "Select HOD / Designee"}
+                  options={hodOptions}
+                  disabled={usersLoading}
+                />
               </Form.Item>
               <Form.Item
                 name="qaReviewer"
@@ -551,7 +692,11 @@ useEffect(() => {
                 rules={[{ required: true, message: "Please select QA Reviewer" }]}
                 className="!mb-4"
               >
-                <FormSelect placeholder={usersLoading ? "Loading QA Reviewer..." : "Select QA Reviewer"} options={qaReviewerOptions} disabled={usersLoading} />
+                <FormSelect
+                  placeholder={usersLoading ? "Loading QA Reviewer..." : "Select QA Reviewer"}
+                  options={qaReviewerOptions}
+                  disabled={usersLoading}
+                />
               </Form.Item>
               <Form.Item
                 name="qaApproval"
@@ -559,7 +704,11 @@ useEffect(() => {
                 rules={[{ required: true, message: "Please select QA Approver" }]}
                 className="!mb-4"
               >
-                <FormSelect placeholder={usersLoading ? "Loading QA Approver..." : "Select QA Approver"} options={qaApproverOptions} disabled={usersLoading} />
+                <FormSelect
+                  placeholder={usersLoading ? "Loading QA Approver..." : "Select QA Approver"}
+                  options={qaApproverOptions}
+                  disabled={usersLoading}
+                />
               </Form.Item>
               <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
                 <FormTextArea rows={5} placeholder="Enter comments..." />
@@ -637,85 +786,52 @@ useEffect(() => {
           </section>
         )}
 
-{activeTab === "activity" && (
-  <section>
-    <SectionHeader title="ACTIVITY LOG" />
-
-    <div className="mt-5 space-y-4">
-      {activityLogsLoading ? (
-     <Skeleton variant="activityLog" />
-      ) : activityLogs.length === 0 ? (
-        <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
-          No activity history found.
-        </div>
-      ) : (
-        activityLogs.map((log) => (
-          <div
-            key={log.id}
-            className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
-          >
-            {/* Activity Name */}
-            <div className="mb-5">
-              <p className="text-[13px] font-semibold text-[#3E4A5C]">
-                Activity Name
-              </p>
-
-              <p className="mt-1 text-[14px] font-semibold text-[#182234]">
-                {log.activity_name || "—"}
-              </p>
+        {activeTab === "activity" && (
+          <section>
+            <SectionHeader title="ACTIVITY LOG" />
+            <div className="mt-5 space-y-4">
+              {activityLogsLoading ? (
+                <Skeleton variant="activityLog" />
+              ) : activityLogs.length === 0 ? (
+                <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
+                  No activity history found.
+                </div>
+              ) : (
+                activityLogs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
+                  >
+                    <div className="mb-5">
+                      <p className="text-[13px] font-semibold text-[#3E4A5C]">Activity Name</p>
+                      <p className="mt-1 text-[14px] font-semibold text-[#182234]">{log.activity_name || "—"}</p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                      <div>
+                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Performed By</p>
+                        <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                          <span className="text-[14px] text-[#526071]">{log.performed_by || "—"}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Date Performed</p>
+                        <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                          <span className="text-[14px] text-[#526071]">{log.performed_at || "—"}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Comments</p>
+                        <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
+                          <p className="break-words text-[14px] leading-5 text-[#526071]">{log.comment || "—"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-
-            {/* Activity Details */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-
-              {/* Performed By */}
-              <div>
-                <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
-                  Performed By
-                </p>
-
-                <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                  <span className="text-[14px] text-[#526071]">
-                    {log.performed_by
-                      ? `${log.performed_by}`
-                      : "—"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Date Performed */}
-              <div>
-                <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
-                  Date Performed
-                </p>
-
-                <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                  <span className="text-[14px] text-[#526071]">
-                    {log.performed_at || "—"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Comments */}
-              <div>
-                <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
-                  Comments
-                </p>
-
-                <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
-                  <p className="break-words text-[14px] leading-5 text-[#526071]">
-                    {log.comment || "—"}
-                  </p>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  </section>
-)}
+          </section>
+        )}
       </Form>
 
       <FloatingActionButtons

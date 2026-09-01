@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Activity } from "lucide-react";
 import { Form } from "antd";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -17,7 +17,7 @@ import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGri
 
 import calibrationColumns from "./calibrationColumn";
 import { getProfile } from "../../../services/authApi";
-import { addCalibration, getCalibrationUser, getRecordNumber } from "../../../services/usersApi/calibrationApi";
+import { addCalibration, getAllEquipmentData, getCalibrationUser, getRecordNumber } from "../../../services/usersApi/calibrationApi";
 import { formatDate, formatDateTime } from "../../../utils/date";
 
 const TABS = [
@@ -35,16 +35,47 @@ const REQUIRED_FIELDS = [
   { name: "qaApproval", label: "QA Approval" },
 ];
 
-const normalizeGridRows = (rows = []) =>
+// const normalizeGridRows = (rows = []) =>
+//   rows.map((row, index) => {
+//     const { _rowId, ...cleanRow } = row || {};
+//     return {
+//       ...cleanRow,
+//       row_id: index + 1,
+//       ...(row?.calibrationDate ? { calibrationDate: formatDate(row.calibrationDate) } : {}),
+//       ...(row?.previousCalibrationDate ? { previousCalibrationDate: formatDate(row.previousCalibrationDate) } : {}),
+//       ...(row?.nextCalibrationDate ? { nextCalibrationDate: formatDate(row.nextCalibrationDate) } : {}),
+//     };
+//   });
+
+const normalizeGridRows = (rows = [], columns = [], equipmentMap = {}) =>
   rows.map((row, index) => {
-    const { _rowId, ...cleanRow } = row || {};
-    return {
-      ...cleanRow,
-      row_id: index + 1,
-      ...(row?.calibrationDate ? { calibrationDate: formatDate(row.calibrationDate) } : {}),
-      ...(row?.previousCalibrationDate ? { previousCalibrationDate: formatDate(row.previousCalibrationDate) } : {}),
-      ...(row?.nextCalibrationDate ? { nextCalibrationDate: formatDate(row.nextCalibrationDate) } : {}),
-    };
+    const rowData = { row_id: index + 1 };
+    columns.forEach((col) => {
+      const key = col.key;
+      let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
+      if (key === "equipmentInstrumentName") {
+        const id = value;
+        if (id && equipmentMap[id]) {
+          value = equipmentMap[id].name; // use the name
+        } else {
+          value = ""; // fallback
+        }
+      } else {
+        if (key === "previousCalibrationDate" && value) {
+          value = formatDate(value);
+        } else if (key === "nextCalibrationDate" && value) {
+          value = formatDate(value);
+        } else if (key === "calibrationDate" && value) {
+          value = formatDate(value);
+        }
+      }
+      rowData[key] = {
+        key,
+        label: col.title,
+        value,
+      };
+    });
+    return rowData;
   });
 
 const getUserPair = (userId, users = []) => {
@@ -81,6 +112,9 @@ const CreateCalibration = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
   const [calibrationRows, setCalibrationRows] = useState([]);
+  const [equipmentOptions, setEquipmentOptions] = useState([]);
+  const [equipmentMap, setEquipmentMap] = useState({});
+  const [equipmentLoading, setEquipmentLoading] = useState(false);
   
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
@@ -128,6 +162,30 @@ const CreateCalibration = () => {
     };
     fetchProfile();
   }, [form, dateOfInitiation]);
+
+  useEffect(() => {
+    const fetchEquipment = async () => {
+        try {
+            setEquipmentLoading(true);
+            const response = await getAllEquipmentData();
+            const data = response?.data?.data || [];
+            const options = data.map(item => ({
+                value: item.id,
+                label: item.name,
+            }));
+            const map = {};
+            data.forEach(item => { map[item.id] = item; });
+            setEquipmentOptions(options);
+            setEquipmentMap(map);
+        } catch (error) {
+            console.error("Failed to fetch equipment:", error);
+            toast.error("Could not load equipment list.");
+        } finally {
+            setEquipmentLoading(false);
+        }
+    };
+    fetchEquipment();
+}, []);
 
   useEffect(() => {
   if (!processId) return;
@@ -205,7 +263,7 @@ const CreateCalibration = () => {
     try {
       setIsSaving(true);
       const processData = buildProcessData(values, systemFields, hodUsers, qaReviewers, qaApprovers);
-      const gridData = normalizeGridRows(calibrationRows);
+      const gridData = normalizeGridRows(calibrationRows, calibrationColumns, equipmentMap);
       const payload = {
         process_id: Number(processId),
         stage_id: 1,
@@ -234,6 +292,39 @@ const CreateCalibration = () => {
       setIsSaving(false);
     }
   };
+
+  const dynamicColumns = useMemo(() => {
+    return calibrationColumns.map(col => {
+        if (col.key === "equipmentInstrumentName") {
+            return {
+                ...col,
+                options: equipmentOptions,
+                placeholder: equipmentLoading ? "Loading equipment..." : "Select equipment",
+            };
+        }
+        return col;
+    });
+}, [equipmentOptions, equipmentLoading]);
+
+    const handleGridChange = (newRows) => {
+    const updatedRows = newRows.map(row => {
+        const equipmentId = row.equipmentInstrumentName;
+        if (equipmentId && equipmentMap[equipmentId]) {
+            const eq = equipmentMap[equipmentId];
+            return {
+                ...row,
+                equipmentInstrumentId: eq.equipment_id || "",
+                makeModel: `${eq.make || ""} ${eq.model || ""}`.trim(),
+            };
+        }
+        return {
+            ...row,
+            equipmentInstrumentId: "",
+            makeModel: "",
+        };
+    });
+    setCalibrationRows(updatedRows);
+};
 
   const handleCancel = () => {
     if (isSaving) return;
@@ -296,7 +387,13 @@ const CreateCalibration = () => {
               </Form.Item>
             </div>
             <div className="mt-5">
-              <UserDynamicGrid name="Calibration Planner" columns={calibrationColumns} value={calibrationRows} onChange={setCalibrationRows} />
+              {/* <UserDynamicGrid name="Calibration Planner" columns={calibrationColumns} value={calibrationRows} onChange={setCalibrationRows} /> */}
+              <UserDynamicGrid
+              name="Calibration Planner"
+              columns={dynamicColumns}
+              value={calibrationRows}
+              onChange={handleGridChange}
+          />
             </div>
             <div className="my-9 h-px w-full bg-slate-200" />
             <SectionHeader title="CALIBRATION INFORMATION" />

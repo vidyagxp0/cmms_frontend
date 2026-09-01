@@ -111,6 +111,7 @@ const CreateCalibrationPanel = () => {
 
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
+  const [loginUserId, setLoginUserId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [initiationDepartment, setInitiationDepartment] = useState("");
   const [dateOfInitiation, setDateOfInitiation] = useState("");
@@ -133,6 +134,7 @@ const CreateCalibrationPanel = () => {
         if (!profile) return;
         setInitiator(profile?.name || "");
         setInitiatorId(profile?.id || "");
+        setLoginUserId(profile?.id || "");
         setDepartmentId(profile?.department?.id || "");
         setInitiationDepartment(profile?.department?.name || "");
       } catch (error) {
@@ -318,10 +320,21 @@ useEffect(() => {
   fetchActivityLogs();
 }, [fetchActivityLogs]);
 
+  // const handleActivitySuccess = async () => {
+  //   await fetchCalibrationDetail();
+  //   await fetchActivityLogs();
+  // };
+
   const handleActivitySuccess = async () => {
+  try {
+    const values = form.getFieldsValue(true);
+    await handleSubmit(values);
     await fetchCalibrationDetail();
     await fetchActivityLogs();
-  };
+  } catch (error) {
+    console.error("Failed to save calibration after activity:", error);
+  }
+};
 
   const systemFields = [
     { name: "recordNumber", label: "Record Number", value: form.getFieldValue("recordNumber") || "" },
@@ -416,7 +429,7 @@ useEffect(() => {
               activities={activities}
               loading={activitiesLoading}
               recordId={recordId}
-              userId={initiatorId}
+              userId={loginUserId}
               activityApi={executeCalibrationActivity}
               onActivitySuccess={handleActivitySuccess}
               onExit={() => navigate("/user/engineering-dashboard")}

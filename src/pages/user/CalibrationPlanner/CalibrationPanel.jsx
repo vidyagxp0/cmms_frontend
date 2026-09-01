@@ -182,6 +182,19 @@ const CreateCalibrationPanel = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
 
+  const isStageEditable = (stageId) => {
+  return (
+    Number(activeStageId) === Number(stageId) &&
+    canPerformActivity === true &&
+    permissionsLoading === false
+  );
+};
+
+const isGeneralEditable = isStageEditable(1);
+const isHodEditable = isStageEditable(2);
+const isQaReviewEditable = isStageEditable(3);
+const isQaApprovalEditable = isStageEditable(4);
+
   // ---------- 1. Fetch profile ----------
   useEffect(() => {
     const fetchProfile = async () => {
@@ -604,7 +617,9 @@ const CreateCalibrationPanel = () => {
                 rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
                 className="!mb-4"
               >
-                <FormInput placeholder="Enter short description" />
+                <FormInput placeholder="Enter short description"
+                  disabled={!isGeneralEditable}
+                 />
               </Form.Item>
             </div>
 
@@ -631,7 +646,7 @@ const CreateCalibrationPanel = () => {
                 <FormSelect
                   placeholder={usersLoading ? "Loading HOD / Designee..." : "Select HOD / Designee"}
                   options={hodOptions}
-                  disabled={usersLoading}
+                  disabled={usersLoading || !isGeneralEditable}
                 />
               </Form.Item>
               <Form.Item
@@ -643,7 +658,7 @@ const CreateCalibrationPanel = () => {
                 <FormSelect
                   placeholder={usersLoading ? "Loading QA Reviewer..." : "Select QA Reviewer"}
                   options={qaReviewerOptions}
-                  disabled={usersLoading}
+                  disabled={usersLoading || !isGeneralEditable}
                 />
               </Form.Item>
               <Form.Item
@@ -655,11 +670,11 @@ const CreateCalibrationPanel = () => {
                 <FormSelect
                   placeholder={usersLoading ? "Loading QA Approver..." : "Select QA Approver"}
                   options={qaApproverOptions}
-                  disabled={usersLoading}
+                  disabled={usersLoading || !isGeneralEditable}
                 />
               </Form.Item>
               <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." />
+                <FormTextArea rows={5} placeholder="Enter comments..." disabled = {!isGeneralEditable}/>
               </Form.Item>
               <Form.Item
                 name="attachment"
@@ -668,7 +683,7 @@ const CreateCalibrationPanel = () => {
                 getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment />
+                <FormAttachment disabled = {!isGeneralEditable}/>
               </Form.Item>
             </div>
           </section>
@@ -679,7 +694,7 @@ const CreateCalibrationPanel = () => {
             <SectionHeader title="HOD / DESIGNEE REVIEW" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item name="hodReviewComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." />
+                <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isHodEditable}/>
               </Form.Item>
               <Form.Item
                 name="hodReviewAttachment"
@@ -688,7 +703,7 @@ const CreateCalibrationPanel = () => {
                 getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment />
+                <FormAttachment disabled={!isHodEditable} />
               </Form.Item>
             </div>
           </section>
@@ -699,7 +714,7 @@ const CreateCalibrationPanel = () => {
             <SectionHeader title="QA REVIEW" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." />
+                <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isQaReviewEditable} />
               </Form.Item>
               <Form.Item
                 name="qaReviewAttachment"
@@ -708,7 +723,7 @@ const CreateCalibrationPanel = () => {
                 getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment />
+                <FormAttachment disabled={!isQaReviewEditable} />
               </Form.Item>
             </div>
           </section>
@@ -719,7 +734,7 @@ const CreateCalibrationPanel = () => {
             <SectionHeader title="QA APPROVAL" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item name="qaApprovalComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." />
+                <FormTextArea rows={5} placeholder="Enter comments..."  disabled={!isQaApprovalEditable}/>
               </Form.Item>
               <Form.Item
                 name="qaApprovalAttachment"
@@ -728,7 +743,7 @@ const CreateCalibrationPanel = () => {
                 getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment />
+                <FormAttachment disabled={!isQaApprovalEditable} />
               </Form.Item>
             </div>
           </section>

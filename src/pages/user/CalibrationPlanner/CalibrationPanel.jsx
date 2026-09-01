@@ -23,7 +23,7 @@ import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGri
 import calibrationColumns from "./calibrationColumn";
 
 import { getProfile } from "../../../services/authApi";
-import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration, getAllActivites, getAllActivityLogs, getAllStages } from "../../../services/usersApi/calibrationApi";
+import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration, getAllActivites, getAllActivityLogs, getAllStages, getAllPermissions } from "../../../services/usersApi/calibrationApi";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const TABS = [
@@ -106,7 +106,8 @@ const CreateCalibrationPanel = () => {
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [activityLogs, setActivityLogs] = useState([]);
   const [activityLogsLoading, setActivityLogsLoading] = useState(false);
-
+  const [canPerformActivity, setCanPerformActivity] = useState(false);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [calibrationRows, setCalibrationRows] = useState([]);
 
   const [initiator, setInitiator] = useState("");
@@ -294,6 +295,40 @@ const CreateCalibrationPanel = () => {
     fetchActivities();
   }, [activeStageId]);
 
+  useEffect(() => {
+  if (!recordId) {
+    setCanPerformActivity(false);
+    setPermissionsLoading(false);
+    return;
+  }
+
+  const fetchPermissions = async () => {
+    try {
+      setPermissionsLoading(true);
+
+      const response = await getAllPermissions(recordId);
+
+      const canPerform =
+        response?.data?.data?.permission?.can_perform_action === true;
+
+      setCanPerformActivity(canPerform);
+    } catch (error) {
+      console.error("Failed to fetch record permissions:", error);
+
+      setCanPerformActivity(false);
+
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to check activity permissions."
+      );
+    } finally {
+      setPermissionsLoading(false);
+    }
+  };
+
+  fetchPermissions();
+}, [recordId]);
+
 
 const fetchActivityLogs = useCallback(async () => {
   if (!recordId) {
@@ -432,6 +467,7 @@ useEffect(() => {
               userId={loginUserId}
               activityApi={executeCalibrationActivity}
               onActivitySuccess={handleActivitySuccess}
+              canPerformActivity={canPerformActivity}
               onExit={() => navigate("/user/engineering-dashboard")}
             />
           </div>

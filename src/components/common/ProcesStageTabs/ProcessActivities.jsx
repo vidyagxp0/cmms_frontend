@@ -13,6 +13,7 @@ const ProcessActivities = ({
   onActivitySuccess,
   onExit,
   auditRoute = "/user/new-audit",
+  canPerformActivity=false
 }) => {
   const navigate = useNavigate();
   const [selectedActivity, setSelectedActivity] = useState(null);
@@ -90,27 +91,36 @@ const ProcessActivities = ({
         </div> */}
 
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-0.5">
-          {loading ? (
-            <>
-              <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
-              <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
-            </>
-          ) : activities.length > 0 ? (
-            activities.map((activity) => (
-              <button
-                key={activity.id}
-                type="button"
-                onClick={() => handleActivityClick(activity)}
-                disabled={isSubmitting}
-                className="group flex h-7 shrink-0 items-center gap-1.5 rounded-lg border border-[#CFE0D7] bg-gray-900 px-3 text-[10px] font-semibold text-[#D7D7D7] shadow-[0_1px_4px_rgba(21,44,32,0.04)] transition-all duration-200 hover:-translate-y-px hover:border-[#98A3BA] hover:bg-[#142853] hover:text-white hover:shadow-[0_4px_10px_rgba(32,191,99,0.16)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span>{activity.name}</span>
-                <ArrowRight size={11} strokeWidth={2} className="transition-transform duration-200 group-hover:translate-x-0.5" />
-              </button>
-            ))
-          ) : (
-            <span className="text-[10px] text-[#8A9992]">No actions available for this stage</span>
-          )}
+         {canPerformActivity ? (
+  loading ? (
+    <>
+      <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
+      <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
+    </>
+  ) : activities.length > 0 ? (
+    activities.map((activity) => (
+      <button
+        key={activity.id}
+        type="button"
+        onClick={() => handleActivityClick(activity)}
+        disabled={isSubmitting}
+        className="group flex h-7 shrink-0 items-center gap-1.5 rounded-lg border border-[#CFE0D7] bg-gray-900 px-3 text-[10px] font-semibold text-[#D7D7D7] shadow-[0_1px_4px_rgba(21,44,32,0.04)] transition-all duration-200 hover:-translate-y-px hover:border-[#98A3BA] hover:bg-[#142853] hover:text-white hover:shadow-[0_4px_10px_rgba(32,191,99,0.16)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <span>{activity.name}</span>
+
+        <ArrowRight
+          size={11}
+          strokeWidth={2}
+          className="transition-transform duration-200 group-hover:translate-x-0.5"
+        />
+      </button>
+    ))
+  ) : (
+    <span className="text-[10px] text-[#8A9992]">
+      No actions available for this stage
+    </span>
+  )
+) : null}
         </div>
 
         <div className="ml-3 flex shrink-0 items-center gap-2 border-l border-[#DCE8E2] pl-3">

@@ -42,6 +42,7 @@ function useGoogleFonts() {
 }
 
 const Login = () => {
+  const [loginErrors,setLoginErrors]=useState(true)
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [focusField, setFocusField] = useState(null);
@@ -83,6 +84,7 @@ const handleLogin = async (event) => {
     if (isAdmin) {
         sessionStorage.setItem("admin_token", token);
         sessionStorage.removeItem("user_token");
+        setLoginErrors(false)
     } else {
         sessionStorage.setItem("user_token", token);
         sessionStorage.removeItem("admin_token");
@@ -100,6 +102,7 @@ const handleLogin = async (event) => {
             : "/user/equipment-dashboard",
         { replace: true }
     );
+    
 } catch (error) {
     toast.error(
         error.response?.data?.message ||
@@ -253,7 +256,6 @@ const handleLogin = async (event) => {
                     Forgot password?
                   </button>
                 </div>
-
                 <div
                   className={`group flex h-[54px] items-center rounded-2xl border bg-[#f8fafc] transition-all duration-300 ${
                     focusField === "password"
@@ -293,7 +295,10 @@ const handleLogin = async (event) => {
                   </motion.button>
                 </div>
               </div>
-
+                  {loginErrors && (
+                <p className="mt-1.5 text-[11px] font-medium text-red-500">
+                User or Password Incorrect
+                </p>)}
               {/* OPTIONS */}
 
               <div className="flex items-center justify-between pt-1">

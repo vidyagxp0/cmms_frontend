@@ -27,11 +27,11 @@ import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, u
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const TABS = [
-  { id: "general", label: "General Information" },
-  { id: "hod", label: "HOD / Designee Review" },
-  { id: "qa-review", label: "QA Review" },
-  { id: "qa-approval", label: "QA Approval" },
-  { id: "activity", label: "Activity Log" },
+  { id: "general", label: "General Information", stageId: 1 },
+  { id: "hod", label: "HOD / Designee Review", stageId: 2},
+  { id: "qa-review", label: "QA Review", stageId: 3 },
+  { id: "qa-approval", label: "QA Approval", stageId: 4 },
+  { id: "activity", label: "Activity Log", stageId: 5 },
 ];
 
 const REQUIRED_FIELDS = [
@@ -144,6 +144,16 @@ const CreateCalibrationPanel = () => {
     };
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+  if (!activeStageId) return;
+  const matchingTab = TABS.find(
+    (tab) => Number(tab.stageId) === Number(activeStageId)
+  );
+  if (matchingTab) {
+    setActiveTab(matchingTab.id);
+  }
+}, [activeStageId]);
 
   useEffect(() => {
     const fetchCalibrationUsers = async () => {

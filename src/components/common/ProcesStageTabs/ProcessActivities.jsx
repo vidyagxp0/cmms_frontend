@@ -13,7 +13,8 @@ const ProcessActivities = ({
   onActivitySuccess,
   onExit,
   auditRoute = "/user/new-audit",
-  canPerformActivity=false
+  canPerformActivity=false,
+  permissionsLoading=true
 }) => {
   const navigate = useNavigate();
   const [selectedActivity, setSelectedActivity] = useState(null);
@@ -91,7 +92,7 @@ const ProcessActivities = ({
         </div> */}
 
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-0.5">
-         {canPerformActivity ? (
+         {permissionsLoading ? null : canPerformActivity ? (
   loading ? (
     <>
       <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />

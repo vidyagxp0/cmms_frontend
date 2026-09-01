@@ -295,40 +295,35 @@ const CreateCalibrationPanel = () => {
     fetchActivities();
   }, [activeStageId]);
 
-  useEffect(() => {
+const fetchPermissions = useCallback(async () => {
   if (!recordId) {
     setCanPerformActivity(false);
     setPermissionsLoading(false);
     return;
   }
 
-  const fetchPermissions = async () => {
-    try {
-      setPermissionsLoading(true);
+  try {
+    setPermissionsLoading(true);
 
-      const response = await getAllPermissions(recordId);
+    const response = await getAllPermissions(recordId);
 
-      const canPerform =
-        response?.data?.data?.permission?.can_perform_action === true;
+    const canPerform =
+      response?.data?.data?.permission?.can_perform_action === true;
 
-      setCanPerformActivity(canPerform);
-    } catch (error) {
-      console.error("Failed to fetch record permissions:", error);
+    setCanPerformActivity(canPerform);
+  } catch (error) {
+    console.error("Failed to fetch record permissions:", error);
 
-      setCanPerformActivity(false);
+    setCanPerformActivity(false);
 
-      toast.error(
-        error?.response?.data?.message ||
-          "Failed to check activity permissions."
-      );
-    } finally {
-      setPermissionsLoading(false);
-    }
-  };
-
-  fetchPermissions();
+    toast.error(
+      error?.response?.data?.message ||
+        "Failed to check activity permissions."
+    );
+  } finally {
+    setPermissionsLoading(false);
+  }
 }, [recordId]);
-
 
 const fetchActivityLogs = useCallback(async () => {
   if (!recordId) {
@@ -355,6 +350,10 @@ useEffect(() => {
   fetchActivityLogs();
 }, [fetchActivityLogs]);
 
+useEffect(() => {
+  fetchPermissions();
+}, [fetchPermissions]);
+
   // const handleActivitySuccess = async () => {
   //   await fetchCalibrationDetail();
   //   await fetchActivityLogs();
@@ -365,6 +364,7 @@ useEffect(() => {
     const values = form.getFieldsValue(true);
     await handleSubmit(values);
     await fetchCalibrationDetail();
+    await fetchPermissions();
     await fetchActivityLogs();
   } catch (error) {
     console.error("Failed to save calibration after activity:", error);
@@ -468,6 +468,7 @@ useEffect(() => {
               activityApi={executeCalibrationActivity}
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
+              permissionsLoading={permissionsLoading}
               onExit={() => navigate("/user/engineering-dashboard")}
             />
           </div>

@@ -19,6 +19,7 @@ import calibrationColumns from "./calibrationColumn";
 import { getProfile } from "../../../services/authApi";
 import { addCalibration, getCalibrationUser } from "../../../services/usersApi/calibrationApi";
 import { formatDate, formatDateTime } from "../../../utils/date";
+import  Skeleton  from "../../../components/common/Skeleton/Skeleton";
 
 const TABS = [
   { id: "general", label: "General Information" },
@@ -78,6 +79,7 @@ const validateCalibrationForm = (form) => {
 };
 
 const CreateCalibration = () => {
+  const [isLoading,setIsLoading]=useState(true)
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
   const [calibrationRows, setCalibrationRows] = useState([]);
@@ -102,6 +104,7 @@ const CreateCalibration = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
+        setIsLoading(true)
         const response = await getProfile();
         console.log("Profile Response:", response);
         const profile = response?.data?.data;
@@ -123,6 +126,9 @@ const CreateCalibration = () => {
       } catch (error) {
         console.error("Failed to fetch profile:", error);
       }
+       finally{
+                setIsLoading(false)
+            }
     };
     fetchProfile();
   }, [form, dateOfInitiation]);
@@ -255,21 +261,43 @@ const CreateCalibration = () => {
         {activeTab === "general" && (
           <section>
             <SectionHeader title="GENERAL INFORMATION" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              {systemFields.map((field) => (
-                <Form.Item key={field.name} name={field.name} label={field.label} className="!mb-4">
-                  <FormDisabledInput />
-                </Form.Item>
-              ))}
-              <Form.Item
-                name="shortDescription"
-                label={<span>Short Description <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
+           {isLoading ? 
+              <Skeleton variant="formskeleton" />
+: (
+    <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+        {systemFields.map((field) => (
+            <Form.Item
+                key={field.name}
+                name={field.name}
+                label={field.label}
                 className="!mb-4"
-              >
-                <FormInput placeholder="Enter short description" />
-              </Form.Item>
-            </div>
+            >
+                <FormDisabledInput />
+            </Form.Item>
+        ))}
+
+        <Form.Item
+            name="shortDescription"
+            label={
+                <span>
+                    Short Description{" "}
+                    <span className="text-red-500">*</span>
+                </span>
+            }
+            rules={[
+                {
+                    required: true,
+                    whitespace: true,
+                    message: "Please enter Short Description",
+                },
+            ]}
+            className="!mb-4"
+        >
+            <FormInput placeholder="Enter short description" />
+        </Form.Item>
+    </div>
+)}
+
             <div className="mt-5">
               <UserDynamicGrid name="Calibration Planner" columns={calibrationColumns} value={calibrationRows} onChange={setCalibrationRows} />
             </div>

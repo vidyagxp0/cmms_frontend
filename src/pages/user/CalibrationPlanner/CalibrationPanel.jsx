@@ -19,6 +19,7 @@ import FormAttachment from "../../../components/common/Form/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import CalibrationGrid from "./CalibrationGrid"; // hardcoded grid
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
+import "../../../components/common/ProcesStageTabs/Scrollerbar.css"; 
 
 // Keep this for payload building (labels)
 import calibrationColumns from "./calibrationColumn";

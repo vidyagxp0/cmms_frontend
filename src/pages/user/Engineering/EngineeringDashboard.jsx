@@ -67,14 +67,25 @@ const EngineeringDashboard = () => {
         fetchRecords(1, 10);
     }, []);
 
-    const getProcessValue = (record, key) => {
-        const field = record?.process_data?.find(
+const getProcessValue = (record, key) => {
+    const processData = record?.process_data;
+    if (Array.isArray(processData)) {
+        const field = processData.find(
             (item) => item?.key === key
         );
-
         return field?.value ?? "-";
-    };
-
+    }
+    if (processData && typeof processData === "object") {
+        if (processData[key] !== undefined) {
+            return processData[key] ?? "-";
+        }
+        const field = Object.values(processData).find(
+            (item) => item?.key === key
+        );
+        return field?.value ?? "-";
+    }
+    return "-";
+};
     const columns = useMemo(
         () => [
             {
@@ -107,18 +118,19 @@ const EngineeringDashboard = () => {
                 ),
             },
 
-            {
+                {
                 id: "recordNumber",
                 header: "Record Number",
                 accessorFn: (row) =>
+                    row?.record_number ||
                     getProcessValue(row, "recordNumber"),
+
                 cell: ({ getValue }) => (
                     <span className="text-sm font-semibold text-slate-700">
                         {getValue() || "-"}
                     </span>
                 ),
             },
-
             {
                 id: "process",
                 header: "Process",

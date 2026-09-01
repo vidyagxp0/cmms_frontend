@@ -42,8 +42,25 @@ const REQUIRED_FIELDS = [
 ];
 
 const getProcessValue = (processData = [], key) => {
-  const field = processData.find((item) => item?.key === key);
-  return field?.value ?? "";
+  if (Array.isArray(processData)) {
+    const field = processData.find(
+      (item) => item?.key === key
+    );
+    return field?.value ?? "";
+  }
+  if (
+    processData &&
+    typeof processData === "object"
+  ) {
+    if (processData[key] !== undefined) {
+      return processData[key] ?? "";
+    }
+    const field = Object.values(processData).find(
+      (item) => item?.key === key
+    );
+    return field?.value ?? "";
+  }
+  return "";
 };
 
 const normalizeGridRows = (rows = []) =>

@@ -17,7 +17,7 @@ import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGri
 
 import calibrationColumns from "./calibrationColumn";
 import { getProfile } from "../../../services/authApi";
-import { addCalibration, getCalibrationUser } from "../../../services/usersApi/calibrationApi";
+import { addCalibration, getCalibrationUser, getRecordNumber } from "../../../services/usersApi/calibrationApi";
 import { formatDate, formatDateTime } from "../../../utils/date";
 
 const TABS = [
@@ -81,10 +81,12 @@ const CreateCalibration = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
   const [calibrationRows, setCalibrationRows] = useState([]);
+  
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [initiationDepartment, setInitiationDepartment] = useState("");
+  const [recordNumber, setRecordNumber] = useState("");
   const [dateOfInitiation] = useState(() => formatDateTime(new Date()));
 
   const [hodUsers, setHodUsers] = useState([]);
@@ -128,6 +130,29 @@ const CreateCalibration = () => {
   }, [form, dateOfInitiation]);
 
   useEffect(() => {
+  if (!processId) return;
+  const fetchRecordNumber = async () => {
+    try {
+      const response = await getRecordNumber(processId);
+      const generatedRecordNumber =
+        response?.data?.data?.record_number || "";
+      setRecordNumber(generatedRecordNumber);
+      form.setFieldsValue({
+        recordNumber: generatedRecordNumber,
+      });
+    } catch (error) {
+      console.error("Failed to generate record number:", error);
+
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to generate record number."
+      );
+    }
+  };
+  fetchRecordNumber();
+}, [processId, form]);
+
+  useEffect(() => {
     const fetchCalibrationUsers = async () => {
       try {
         setUsersLoading(true);
@@ -154,7 +179,7 @@ const CreateCalibration = () => {
   const qaApproverOptions = qaApprovers.map((user) => ({ value: user.id, label: user.name }));
 
   const systemFields = [
-    { name: "recordNumber", label: "Record Number", value: "CAL-2026-000124" },
+    { name: "recordNumber", label: "Record Number", value: recordNumber },
     { name: "siteLocationCode", label: "Site / Location Code", value: "Unit IV" },
     { name: "initiator", label: "Initiator", value: initiator },
     { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },

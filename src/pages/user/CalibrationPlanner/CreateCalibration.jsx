@@ -71,8 +71,6 @@ const normalizeGridRows = (rows = [], columns = [], equipmentMap = {}) =>
     return rowData;
   });
 
-// ... (other helper functions remain unchanged: getUserPair, buildProcessData, validateCalibrationForm)
-
 const getUserPair = (userId, users = []) => {
   const user = users.find((item) => item?.id === userId);
   return { id: user?.id || userId || "", name: user?.name || "" };
@@ -244,6 +242,15 @@ const CreateCalibration = () => {
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
 
+  // ----- Restrict tab switching to only "general" during creation -----
+  const handleTabChange = (tabId) => {
+    if (tabId !== "general") {
+      toast.warning("Please fill all mandatory fields in General Information and save before accessing other tabs.");
+      return;
+    }
+    setActiveTab(tabId);
+  };
+
   const handleSave = async () => {
     if (isSaving) return;
     const missingFields = validateCalibrationForm(form);
@@ -327,7 +334,7 @@ const CreateCalibration = () => {
       </div>
 
       <div className="mb-8">
-        <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+        <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
 
       <Form
@@ -366,12 +373,12 @@ const CreateCalibration = () => {
 
             <div className="mt-5">
               <CalibrationGrid
-              value={calibrationRows}
-              onChange={setCalibrationRows}
-              equipmentOptions={equipmentOptions}
-              equipmentMap={equipmentMap}
-              equipmentLoading={equipmentLoading}
-            />
+                value={calibrationRows}
+                onChange={setCalibrationRows}
+                equipmentOptions={equipmentOptions}
+                equipmentMap={equipmentMap}
+                equipmentLoading={equipmentLoading}
+              />
             </div>
 
             <div className="my-9 h-px w-full bg-slate-200" />
@@ -429,7 +436,7 @@ const CreateCalibration = () => {
           </section>
         )}
 
-        {/* Other tabs (hod, qa-review, qa-approval) remain unchanged */}
+     {/* Other tabs (hod, qa-review, qa-approval) remain unchanged */}
         {activeTab === "hod" && (
           <section>
             <SectionHeader title="HOD / DESIGNEE REVIEW" />
@@ -489,6 +496,7 @@ const CreateCalibration = () => {
             </div>
           </section>
         )}
+        {/* Other tabs are hidden because we never switch to them */}
       </Form>
 
       <FloatingActionButtons

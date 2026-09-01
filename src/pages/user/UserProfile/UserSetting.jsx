@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../store/authStore";
 import { getProfile, updateProfile, changePasword, logout } from "../../../services/authApi";
+import  Skeleton  from "../../../components/common/Skeleton/Skeleton";
 
 // Import modular child components
 import ProfileSidebar from "./ProfileSidebar";
@@ -240,14 +241,7 @@ const UserSetting = () => {
     };
 
     if (loadingProfile) {
-        return (
-            <div className="flex min-h-[450px] items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
-                    <Loader2 size={36} className={`animate-spin ${theme.textAccent}`} />
-                    <span className="text-[13px] font-semibold text-[#5C7A6C]">Loading Settings Workspace...</span>
-                </div>
-            </div>
-        );
+        return <Skeleton variant="accountSettings" />;  
     }
 
     return (

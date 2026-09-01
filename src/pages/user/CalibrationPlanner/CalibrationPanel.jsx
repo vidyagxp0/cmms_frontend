@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useMemo } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Form } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -17,9 +17,11 @@ import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
 import FormAttachment from "../../../components/common/Form/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
-import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGrid";
+import CalibrationGrid from "./CalibrationGrid"; // hardcoded grid
+import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
-import calibrationColumns from "./calibrationColumn"; // ensure this file has disabled: true for ID & Make/Model
+// Keep this for payload building (labels)
+import calibrationColumns from "./calibrationColumn";
 
 import { getProfile } from "../../../services/authApi";
 import {
@@ -31,9 +33,8 @@ import {
   getAllActivityLogs,
   getAllStages,
   getAllPermissions,
-  getAllEquipmentData, // <-- new import
+  getAllEquipmentData,
 } from "../../../services/usersApi/calibrationApi";
-import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const TABS = [
   { id: "general", label: "General Information", stageId: 1 },
@@ -50,7 +51,7 @@ const REQUIRED_FIELDS = [
   { name: "qaApproval", label: "QA Approval" },
 ];
 
-// Helper to get a value from process_data (array or object)
+// ---------- Helper functions (unchanged) ----------
 const getProcessValue = (processData = [], key) => {
   if (Array.isArray(processData)) {
     const field = processData.find((item) => item?.key === key);
@@ -64,17 +65,13 @@ const getProcessValue = (processData = [], key) => {
   return "";
 };
 
-// ----- NEW normalizeGridRows: accepts columns and equipmentMap -----
 const normalizeGridRows = (rows = [], columns = [], equipmentMap = {}) =>
   rows.map((row, index) => {
     const { _rowId, row_id, ...cleanRow } = row || {};
     const formattedRow = {};
-
     columns.forEach((col) => {
       const key = col.key;
       let value = cleanRow[key] !== undefined && cleanRow[key] !== null ? cleanRow[key] : "";
-
-      // For date columns, convert to dayjs object for the grid (editing)
       if (key === "previousCalibrationDate" && value) {
         value = dayjs(value, "DD/MM/YYYY");
       } else if (key === "nextCalibrationDate" && value) {
@@ -84,22 +81,16 @@ const normalizeGridRows = (rows = [], columns = [], equipmentMap = {}) =>
       }
       formattedRow[key] = value;
     });
-
-    // row_id is added as a plain number
     formattedRow.row_id = index + 1;
     return formattedRow;
   });
 
-// ---------- Helper to build the nested grid payload ----------
 const buildGridPayload = (rows = [], columns = [], equipmentMap = {}) => {
   return rows.map((row, index) => {
     const rowData = { row_id: index + 1 };
-
     columns.forEach((col) => {
       const key = col.key;
       let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
-
-      // For date columns, format to DD/MM/YYYY string
       if (key === "previousCalibrationDate" && value) {
         value = dayjs(value).format("DD/MM/YYYY");
       } else if (key === "nextCalibrationDate" && value) {
@@ -107,18 +98,15 @@ const buildGridPayload = (rows = [], columns = [], equipmentMap = {}) => {
       } else if (key === "calibrationDate" && value) {
         value = dayjs(value).format("DD/MM/YYYY");
       }
-
       if (key === "equipmentInstrumentName" && value && equipmentMap[value]) {
         value = equipmentMap[value]?.name || value;
       }
-
       rowData[key] = {
         key,
         label: col.title,
         value,
       };
     });
-
     return rowData;
   });
 };
@@ -153,6 +141,7 @@ const validateCalibrationForm = (form) => {
   });
 };
 
+// ---------- Main Component ----------
 const CreateCalibrationPanel = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
@@ -171,9 +160,9 @@ const CreateCalibrationPanel = () => {
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [calibrationRows, setCalibrationRows] = useState([]);
 
-  // ----- Equipment states -----
+  // Equipment states
   const [equipmentOptions, setEquipmentOptions] = useState([]);
-  const [equipmentMap, setEquipmentMap] = useState({}); // keyed by id
+  const [equipmentMap, setEquipmentMap] = useState({});
   const [equipmentLoading, setEquipmentLoading] = useState(false);
 
   const [initiator, setInitiator] = useState("");
@@ -239,7 +228,7 @@ const CreateCalibrationPanel = () => {
     fetchEquipment();
   }, []);
 
-  // ---------- 3. Fetch users for dropdowns ----------
+  // ---------- 3. Fetch users ----------
   useEffect(() => {
     const fetchCalibrationUsers = async () => {
       try {
@@ -266,7 +255,7 @@ const CreateCalibrationPanel = () => {
   const qaReviewerOptions = qaReviewers.map((user) => ({ value: user?.id, label: user?.name }));
   const qaApproverOptions = qaApprovers.map((user) => ({ value: user?.id, label: user?.name }));
 
-  // ---------- 4. Fetch calibration detail ----------
+  // ---------- 4. Fetch detail ----------
   const fetchCalibrationDetail = useCallback(async () => {
     if (!recordId) {
       toast.error("Calibration record ID is missing.");
@@ -332,19 +321,16 @@ const CreateCalibrationPanel = () => {
         qaApprovalAttachment: qaApprovalAttachment || [],
       });
 
-      // Build grid rows from API response
       const gridRows = (responseData?.grid_records || []).flatMap(
         (record) => record?.grid_data || []
       );
-
-      // Convert to internal format: we need to extract the raw values from nested objects
       const rawRows = gridRows.map((item) => {
         const row = {};
         Object.keys(item).forEach((key) => {
           if (key === "row_id") {
             row.row_id = item.row_id;
           } else if (item[key] && typeof item[key] === "object") {
-            row[key] = item[key].value; // value may be id or name
+            row[key] = item[key].value;
           } else {
             row[key] = item[key];
           }
@@ -354,7 +340,6 @@ const CreateCalibrationPanel = () => {
 
       const normalizedRows = rawRows.map((row) => {
         const newRow = { ...row };
-        // If equipmentInstrumentName is a string (name), try to find its id
         if (newRow.equipmentInstrumentName && typeof newRow.equipmentInstrumentName === "string") {
           const found = Object.values(equipmentMap).find(
             (eq) => eq.name === newRow.equipmentInstrumentName
@@ -363,7 +348,6 @@ const CreateCalibrationPanel = () => {
             newRow.equipmentInstrumentName = found.id;
           }
         }
-        // Ensure dates are parsed for the grid
         if (newRow.previousCalibrationDate) {
           newRow.previousCalibrationDate = dayjs(newRow.previousCalibrationDate, "DD/MM/YYYY");
         }
@@ -386,7 +370,7 @@ const CreateCalibrationPanel = () => {
     fetchCalibrationDetail();
   }, [fetchCalibrationDetail]);
 
-  // ---------- 5. Fetch stages, activities, permissions, logs ----------
+  // ---------- 5. Stages, activities, permissions, logs ----------
   useEffect(() => {
     if (!processId) return;
     const fetchStages = async () => {
@@ -475,42 +459,7 @@ const CreateCalibrationPanel = () => {
     fetchPermissions();
   }, [fetchPermissions]);
 
-  // ---------- 6. Build dynamic columns for grid ----------
-  const dynamicColumns = useMemo(() => {
-    return calibrationColumns.map((col) => {
-      if (col.key === "equipmentInstrumentName") {
-        return {
-          ...col,
-          options: equipmentOptions,
-          placeholder: equipmentLoading ? "Loading equipment..." : "Select equipment",
-        };
-      }
-      return col;
-    });
-  }, [equipmentOptions, equipmentLoading]);
-
-  // ---------- 7. Grid change handler: auto-fill ID & Make/Model ----------
-  const handleGridChange = (newRows) => {
-    const updatedRows = newRows.map((row) => {
-      const equipmentId = row.equipmentInstrumentName;
-      if (equipmentId && equipmentMap[equipmentId]) {
-        const eq = equipmentMap[equipmentId];
-        return {
-          ...row,
-          equipmentInstrumentId: eq.equipment_id || "",
-          makeModel: `${eq.make || ""} ${eq.model || ""}`.trim(),
-        };
-      }
-      return {
-        ...row,
-        equipmentInstrumentId: "",
-        makeModel: "",
-      };
-    });
-    setCalibrationRows(updatedRows);
-  };
-
-  // ---------- 8. Sync active tab with stage ----------
+  // ---------- 6. Sync active tab with stage ----------
   useEffect(() => {
     if (!activeStageId) return;
     const matchingTab = TABS.find((tab) => Number(tab.stageId) === Number(activeStageId));
@@ -519,7 +468,7 @@ const CreateCalibrationPanel = () => {
     }
   }, [activeStageId]);
 
-  // ---------- 9. Handle save / update ----------
+  // ---------- 7. Handle save / update ----------
   const systemFields = [
     { name: "recordNumber", label: "Record Number", value: form.getFieldValue("recordNumber") || "" },
     { name: "siteLocationCode", label: "Site / Location Code", value: form.getFieldValue("siteLocationCode") || "" },
@@ -546,8 +495,6 @@ const CreateCalibrationPanel = () => {
     try {
       setIsSaving(true);
       const processData = buildProcessData(values, systemFields, hodUsers, qaReviewers, qaApprovers);
-
-      // Build grid payload with nested objects, converting equipment name from id
       const gridData = buildGridPayload(calibrationRows, calibrationColumns, equipmentMap);
 
       const payload = {
@@ -576,7 +523,6 @@ const CreateCalibrationPanel = () => {
     }
   };
 
-  // ---------- 10. Activity success handler ----------
   const handleActivitySuccess = async () => {
     try {
       const values = form.getFieldsValue(true);
@@ -663,11 +609,13 @@ const CreateCalibrationPanel = () => {
             </div>
 
             <div className="mt-5">
-              <UserDynamicGrid
-                name="Calibration Planner"
-                columns={dynamicColumns}
+              {/* Use the hardcoded CalibrationGrid */}
+              <CalibrationGrid
                 value={calibrationRows}
-                onChange={handleGridChange}
+                onChange={setCalibrationRows}
+                equipmentOptions={equipmentOptions}
+                equipmentMap={equipmentMap}
+                equipmentLoading={equipmentLoading}
               />
             </div>
 

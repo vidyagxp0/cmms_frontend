@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Activity } from "lucide-react";
 import { Form } from "antd";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
+import CalibrationGrid from "./CalibrationGrid";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import FormInput from "../../../components/common/Form/FormInput";
@@ -11,22 +12,24 @@ import FormSelect from "../../../components/common/Form/FormSelect";
 import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
 import FormAttachment from "../../../components/common/Form/FormAttachment";
-import EmptyTab from "../../../components/common/Form/EmptyTab";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
-import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGrid";
+import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 import calibrationColumns from "./calibrationColumn";
 import { getProfile } from "../../../services/authApi";
-import { addCalibration, getAllEquipmentData, getCalibrationUser, getRecordNumber } from "../../../services/usersApi/calibrationApi";
+import {
+  addCalibration,
+  getAllEquipmentData,
+  getCalibrationUser,
+  getRecordNumber,
+} from "../../../services/usersApi/calibrationApi";
 import { formatDate, formatDateTime } from "../../../utils/date";
-import  Skeleton  from "../../../components/common/Skeleton/Skeleton";
 
 const TABS = [
   { id: "general", label: "General Information" },
   { id: "hod", label: "HOD / Designee Review" },
   { id: "qa-review", label: "QA Review" },
   { id: "qa-approval", label: "QA Approval" },
-  // { id: "activity", label: "Activity Log" },
 ];
 
 const REQUIRED_FIELDS = [
@@ -36,18 +39,7 @@ const REQUIRED_FIELDS = [
   { name: "qaApproval", label: "QA Approval" },
 ];
 
-// const normalizeGridRows = (rows = []) =>
-//   rows.map((row, index) => {
-//     const { _rowId, ...cleanRow } = row || {};
-//     return {
-//       ...cleanRow,
-//       row_id: index + 1,
-//       ...(row?.calibrationDate ? { calibrationDate: formatDate(row.calibrationDate) } : {}),
-//       ...(row?.previousCalibrationDate ? { previousCalibrationDate: formatDate(row.previousCalibrationDate) } : {}),
-//       ...(row?.nextCalibrationDate ? { nextCalibrationDate: formatDate(row.nextCalibrationDate) } : {}),
-//     };
-//   });
-
+// ----- Payload builder (converts ID to name for equipment) -----
 const normalizeGridRows = (rows = [], columns = [], equipmentMap = {}) =>
   rows.map((row, index) => {
     const rowData = { row_id: index + 1 };
@@ -57,9 +49,9 @@ const normalizeGridRows = (rows = [], columns = [], equipmentMap = {}) =>
       if (key === "equipmentInstrumentName") {
         const id = value;
         if (id && equipmentMap[id]) {
-          value = equipmentMap[id].name; // use the name
+          value = equipmentMap[id].name;
         } else {
-          value = ""; // fallback
+          value = "";
         }
       } else {
         if (key === "previousCalibrationDate" && value) {
@@ -78,6 +70,8 @@ const normalizeGridRows = (rows = [], columns = [], equipmentMap = {}) =>
     });
     return rowData;
   });
+
+// ... (other helper functions remain unchanged: getUserPair, buildProcessData, validateCalibrationForm)
 
 const getUserPair = (userId, users = []) => {
   const user = users.find((item) => item?.id === userId);
@@ -109,15 +103,16 @@ const validateCalibrationForm = (form) => {
   });
 };
 
+// ----- Main Component -----
 const CreateCalibration = () => {
-  const [isLoading,setIsLoading]=useState(true)
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
   const [calibrationRows, setCalibrationRows] = useState([]);
   const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [equipmentMap, setEquipmentMap] = useState({});
   const [equipmentLoading, setEquipmentLoading] = useState(false);
-  
+
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
@@ -137,12 +132,12 @@ const CreateCalibration = () => {
   const { processId } = useParams();
   const { processName, siteName } = location.state || {};
 
+  // Fetch profile
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        setIsLoading(true)
+        setIsLoading(true);
         const response = await getProfile();
-        console.log("Profile Response:", response);
         const profile = response?.data?.data;
         if (!profile) return;
         const userName = profile?.name || "";
@@ -161,61 +156,60 @@ const CreateCalibration = () => {
         });
       } catch (error) {
         console.error("Failed to fetch profile:", error);
+      } finally {
+        setIsLoading(false);
       }
-       finally{
-                setIsLoading(false)
-            }
     };
     fetchProfile();
   }, [form, dateOfInitiation]);
 
+  // Fetch equipment list
   useEffect(() => {
     const fetchEquipment = async () => {
-        try {
-            setEquipmentLoading(true);
-            const response = await getAllEquipmentData();
-            const data = response?.data?.data || [];
-            const options = data.map(item => ({
-                value: item.id,
-                label: item.name,
-            }));
-            const map = {};
-            data.forEach(item => { map[item.id] = item; });
-            setEquipmentOptions(options);
-            setEquipmentMap(map);
-        } catch (error) {
-            console.error("Failed to fetch equipment:", error);
-            toast.error("Could not load equipment list.");
-        } finally {
-            setEquipmentLoading(false);
-        }
+      try {
+        setEquipmentLoading(true);
+        const response = await getAllEquipmentData();
+        const data = response?.data?.data || [];
+        const options = data.map((item) => ({
+          value: item.id,
+          label: item.name,
+        }));
+        const map = {};
+        data.forEach((item) => {
+          map[item.id] = item;
+        });
+        setEquipmentOptions(options);
+        setEquipmentMap(map);
+      } catch (error) {
+        console.error("Failed to fetch equipment:", error);
+        toast.error("Could not load equipment list.");
+      } finally {
+        setEquipmentLoading(false);
+      }
     };
     fetchEquipment();
-}, []);
+  }, []);
 
+  // Fetch record number
   useEffect(() => {
-  if (!processId) return;
-  const fetchRecordNumber = async () => {
-    try {
-      const response = await getRecordNumber(processId);
-      const generatedRecordNumber =
-        response?.data?.data?.record_number || "";
-      setRecordNumber(generatedRecordNumber);
-      form.setFieldsValue({
-        recordNumber: generatedRecordNumber,
-      });
-    } catch (error) {
-      console.error("Failed to generate record number:", error);
+    if (!processId) return;
+    const fetchRecordNumber = async () => {
+      try {
+        const response = await getRecordNumber(processId);
+        const generatedRecordNumber = response?.data?.data?.record_number || "";
+        setRecordNumber(generatedRecordNumber);
+        form.setFieldsValue({
+          recordNumber: generatedRecordNumber,
+        });
+      } catch (error) {
+        console.error("Failed to generate record number:", error);
+        toast.error(error?.response?.data?.message || "Failed to generate record number.");
+      }
+    };
+    fetchRecordNumber();
+  }, [processId, form]);
 
-      toast.error(
-        error?.response?.data?.message ||
-          "Failed to generate record number."
-      );
-    }
-  };
-  fetchRecordNumber();
-}, [processId, form]);
-
+  // Fetch workflow users
   useEffect(() => {
     const fetchCalibrationUsers = async () => {
       try {
@@ -247,7 +241,6 @@ const CreateCalibration = () => {
     { name: "siteLocationCode", label: "Site / Location Code", value: "Unit IV" },
     { name: "initiator", label: "Initiator", value: initiator },
     { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
-    // { name: "dueDate", label: "Due Date", value: "01-Sep-2026" },
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
 
@@ -257,7 +250,9 @@ const CreateCalibration = () => {
     if (missingFields.length > 0) {
       const missingFieldNames = missingFields.map((field) => field.label).join(", ");
       toast.error(`Required fields missing: ${missingFieldNames}`);
-      form.setFields(missingFields.map((field) => ({ name: field.name, errors: [`${field.label} is required`] })));
+      form.setFields(
+        missingFields.map((field) => ({ name: field.name, errors: [`${field.label} is required`] }))
+      );
       setActiveTab("general");
       return;
     }
@@ -299,39 +294,6 @@ const CreateCalibration = () => {
     }
   };
 
-  const dynamicColumns = useMemo(() => {
-    return calibrationColumns.map(col => {
-        if (col.key === "equipmentInstrumentName") {
-            return {
-                ...col,
-                options: equipmentOptions,
-                placeholder: equipmentLoading ? "Loading equipment..." : "Select equipment",
-            };
-        }
-        return col;
-    });
-}, [equipmentOptions, equipmentLoading]);
-
-    const handleGridChange = (newRows) => {
-    const updatedRows = newRows.map(row => {
-        const equipmentId = row.equipmentInstrumentName;
-        if (equipmentId && equipmentMap[equipmentId]) {
-            const eq = equipmentMap[equipmentId];
-            return {
-                ...row,
-                equipmentInstrumentId: eq.equipment_id || "",
-                makeModel: `${eq.make || ""} ${eq.model || ""}`.trim(),
-            };
-        }
-        return {
-            ...row,
-            equipmentInstrumentId: "",
-            makeModel: "",
-        };
-    });
-    setCalibrationRows(updatedRows);
-};
-
   const handleCancel = () => {
     if (isSaving) return;
     form.resetFields();
@@ -341,6 +303,7 @@ const CreateCalibration = () => {
 
   return (
     <div className="w-full">
+      {/* Header and tabs remain the same */}
       <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-3">
@@ -377,52 +340,40 @@ const CreateCalibration = () => {
         {activeTab === "general" && (
           <section>
             <SectionHeader title="GENERAL INFORMATION" />
-           {isLoading ? 
+            {isLoading ? (
               <Skeleton variant="formskeleton" />
-: (
-    <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-        {systemFields.map((field) => (
-            <Form.Item
-                key={field.name}
-                name={field.name}
-                label={field.label}
-                className="!mb-4"
-            >
-                <FormDisabledInput />
-            </Form.Item>
-        ))}
-
-        <Form.Item
-            name="shortDescription"
-            label={
-                <span>
-                    Short Description{" "}
-                    <span className="text-red-500">*</span>
-                </span>
-            }
-            rules={[
-                {
-                    required: true,
-                    whitespace: true,
-                    message: "Please enter Short Description",
-                },
-            ]}
-            className="!mb-4"
-        >
-            <FormInput placeholder="Enter short description" />
-        </Form.Item>
-    </div>
-)}
+            ) : (
+              <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+                {systemFields.map((field) => (
+                  <Form.Item key={field.name} name={field.name} label={field.label} className="!mb-4">
+                    <FormDisabledInput />
+                  </Form.Item>
+                ))}
+                <Form.Item
+                  name="shortDescription"
+                  label={
+                    <span>
+                      Short Description <span className="text-red-500">*</span>
+                    </span>
+                  }
+                  rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
+                  className="!mb-4"
+                >
+                  <FormInput placeholder="Enter short description" />
+                </Form.Item>
+              </div>
+            )}
 
             <div className="mt-5">
-              {/* <UserDynamicGrid name="Calibration Planner" columns={calibrationColumns} value={calibrationRows} onChange={setCalibrationRows} /> */}
-              <UserDynamicGrid
-              name="Calibration Planner"
-              columns={dynamicColumns}
+              <CalibrationGrid
               value={calibrationRows}
-              onChange={handleGridChange}
-          />
+              onChange={setCalibrationRows}
+              equipmentOptions={equipmentOptions}
+              equipmentMap={equipmentMap}
+              equipmentLoading={equipmentLoading}
+            />
             </div>
+
             <div className="my-9 h-px w-full bg-slate-200" />
             <SectionHeader title="CALIBRATION INFORMATION" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -478,6 +429,7 @@ const CreateCalibration = () => {
           </section>
         )}
 
+        {/* Other tabs (hod, qa-review, qa-approval) remain unchanged */}
         {activeTab === "hod" && (
           <section>
             <SectionHeader title="HOD / DESIGNEE REVIEW" />
@@ -537,13 +489,15 @@ const CreateCalibration = () => {
             </div>
           </section>
         )}
-
-        {/* {activeTab === "activity" && (
-          <EmptyTab title="Activity Log" description="Record activities and workflow history will be displayed here." />
-        )} */}
       </Form>
 
-      <FloatingActionButtons onSave={handleSave} onCancel={handleCancel} isSaving={isSaving} saveLabel="Save" cancelLabel="Cancel" />
+      <FloatingActionButtons
+        onSave={handleSave}
+        onCancel={handleCancel}
+        isSaving={isSaving}
+        saveLabel="Save"
+        cancelLabel="Cancel"
+      />
     </div>
   );
 };

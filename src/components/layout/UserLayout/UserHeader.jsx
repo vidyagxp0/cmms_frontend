@@ -68,13 +68,13 @@ const UserHeader = ({
                     <SessionTimer />
 
                     {/* HELP */}
-                    <button
+                    {/* <button
                         type="button"
                         aria-label="Help and support"
                         className="flex h-[38px] w-[38px] items-center justify-center rounded-[10px] border border-[#CBE3D6] bg-white text-[#5C7A6C] transition-colors duration-150 hover:border-[#1F8A5F]/35 hover:text-[#17734C]"
                     >
                         <CircleHelp size={18} strokeWidth={1.75} />
-                    </button>
+                    </button> */}
 
                     {/* NOTIFICATIONS */}
                     <button

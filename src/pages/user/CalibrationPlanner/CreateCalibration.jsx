@@ -42,18 +42,30 @@ const REQUIRED_FIELDS = [
 // ----- Payload builder (converts ID to name for equipment) -----
 const normalizeGridRows = (rows = [], columns = [], equipmentMap = {}) =>
   rows.map((row, index) => {
+
     const rowData = { row_id: index + 1 };
+
     columns.forEach((col) => {
+
       const key = col.key;
-      let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
+
+      let value =
+        row[key] !== undefined && row[key] !== null
+          ? row[key]
+          : "";
+
       if (key === "equipmentInstrumentName") {
+
         const id = value;
+
         if (id && equipmentMap[id]) {
           value = equipmentMap[id].name;
         } else {
           value = "";
         }
+
       } else {
+
         if (key === "previousCalibrationDate" && value) {
           value = formatDate(value);
         } else if (key === "nextCalibrationDate" && value) {
@@ -61,13 +73,22 @@ const normalizeGridRows = (rows = [], columns = [], equipmentMap = {}) =>
         } else if (key === "calibrationDate" && value) {
           value = formatDate(value);
         }
+
       }
+
       rowData[key] = {
         key,
         label: col.title,
         value,
       };
     });
+
+    // ONLY ADD THESE
+    rowData.monthlyCalibration = row.monthlyCalibration || {};
+
+    rowData.calibrationFrequencyStartDate =
+      row.calibrationFrequencyStartDate || "";
+
     return rowData;
   });
 

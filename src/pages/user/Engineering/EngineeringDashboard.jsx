@@ -3,7 +3,7 @@ import { Eye } from "lucide-react";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
 import DataTable from "../../../components/common/DataTable/DataTable";
-import { getAllRecords } from "../../../services/usersApi/calibrationApi";
+import { getAllRecords, getCalibrationSingleReport } from "../../../services/usersApi/calibrationApi";
 import { useNavigate } from "react-router-dom";
 
 const EngineeringDashboard = () => {
@@ -66,6 +66,195 @@ const EngineeringDashboard = () => {
     useEffect(() => {
         fetchRecords(1, 10);
     }, []);
+
+
+    const handleViewReport = async (recordId) => {
+        const reportWindow = window.open("", "_blank");
+
+        try {
+            if (!reportWindow) {
+                alert("Please allow pop-ups to view the report.");
+                return;
+            }
+
+            reportWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Loading Report...</title>
+
+                    <style>
+                        * {
+                            box-sizing: border-box;
+                        }
+
+                        html,
+                        body {
+                            margin: 0;
+                            padding: 0;
+                            width: 100%;
+                            height: 100%;
+                        }
+
+                        body {
+                            overflow: hidden;
+                            font-family: Arial, sans-serif;
+                        }
+
+                        .loader {
+                            position: fixed;
+                            inset: 0;
+                            z-index: 9999;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            background: white;
+                        }
+
+                        .loader-content {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                        }
+
+                        .logo {
+                            margin-bottom: 24px;
+                            height: 56px;
+                            width: auto;
+                            object-fit: contain;
+                        }
+
+                        .spinner {
+                            width: 32px;
+                            height: 32px;
+                            border: 2px solid #e2e8f0;
+                            border-top-color: #F28C00;
+                            border-radius: 50%;
+                            animation: spin 0.8s linear infinite;
+                        }
+
+                        .text {
+                            margin-top: 16px;
+                            font-size: 12px;
+                            font-weight: 500;
+                            color: #94a3b8;
+                        }
+
+                        @keyframes spin {
+                            from {
+                                transform: rotate(0deg);
+                            }
+
+                            to {
+                                transform: rotate(360deg);
+                            }
+                        }
+                    </style>
+                </head>
+
+                <body>
+                    <div class="loader">
+                        <div class="loader-content">
+
+                            <img
+                                src="/vidyagxp_logo.png"
+                                alt="VidyaGxP"
+                                class="logo"
+                            />
+
+                            <div class="spinner"></div>
+
+                            <p class="text">
+                                Loading your workspace...
+                            </p>
+
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `);
+
+            reportWindow.document.close();
+
+            const response = await getCalibrationSingleReport(recordId);
+
+            const blob = new Blob(
+                [response.data],
+                {
+                    type: "application/pdf",
+                }
+            );
+
+            const pdfUrl = window.URL.createObjectURL(blob);
+
+            reportWindow.location.href = pdfUrl;
+
+            setTimeout(() => {
+                window.URL.revokeObjectURL(pdfUrl);
+            }, 10000);
+
+        } catch (error) {
+            console.error(
+                "Failed to open calibration report:",
+                error
+            );
+
+            if (reportWindow && !reportWindow.closed) {
+                reportWindow.document.open();
+
+                reportWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Report Error</title>
+
+                        <style>
+                            body {
+                                margin: 0;
+                                height: 100vh;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-family: Arial, sans-serif;
+                                background: white;
+                            }
+
+                            .error {
+                                text-align: center;
+                            }
+
+                            .error-title {
+                                font-size: 16px;
+                                font-weight: 600;
+                                color: #b91c1c;
+                            }
+
+                            .error-message {
+                                margin-top: 8px;
+                                font-size: 12px;
+                                color: #94a3b8;
+                            }
+                        </style>
+                    </head>
+
+                    <body>
+                        <div class="error">
+                            <div class="error-title">
+                                Failed to generate report
+                            </div>
+
+                            <div class="error-message">
+                                Please close this tab and try again.
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                `);
+
+                reportWindow.document.close();
+            }
+        }
+    };
 
 const getProcessValue = (record, key) => {
     const processData = record?.process_data;
@@ -265,13 +454,7 @@ const getProcessValue = (record, key) => {
                 cell: ({ row }) => (
                     <button
                         type="button"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            console.log(
-                                "View Engineering Record:",
-                                row.original
-                            );
-                        }}
+                        onClick={() => handleViewReport(row.original?.id)}
                         className="
                             inline-flex items-center gap-2 rounded-lg
                             border border-[#B8DCD7] bg-[#E7F4F2]

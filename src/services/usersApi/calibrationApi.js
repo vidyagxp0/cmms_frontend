@@ -49,3 +49,9 @@ export const getRecordNumber = (processId) => {
 export const getAllEquipmentData = () => {
     return api.get("/user/all-equipment-masters");
 };
+
+export const getCalibrationSingleReport = (id) => {
+    return api.get(`/user/calibration-planner-singleReport/${id}`, {
+        responseType: "blob",
+    });
+};

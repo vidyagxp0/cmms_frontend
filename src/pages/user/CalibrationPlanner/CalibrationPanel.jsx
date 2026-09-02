@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import { Form } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -17,11 +17,10 @@ import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
 import FormAttachment from "../../../components/common/Form/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
-import CalibrationGrid from "./CalibrationGrid"; // hardcoded grid
+import CalibrationGrid from "./CalibrationGrid";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css"; 
 
-// Keep this for payload building (labels)
 import calibrationColumns from "./calibrationColumn";
 
 import { getProfile } from "../../../services/authApi";
@@ -52,7 +51,7 @@ const REQUIRED_FIELDS = [
   { name: "qaApproval", label: "QA Approval" },
 ];
 
-// ---------- Helper functions (unchanged) ----------
+// ---------- Helper functions ----------
 const getProcessValue = (processData = [], key) => {
   if (Array.isArray(processData)) {
     const field = processData.find((item) => item?.key === key);
@@ -133,10 +132,14 @@ const buildProcessData = (values, systemFields, hodUsers, qaReviewers, qaApprove
   { key: "qa_approval_attachment", label: "QA Approval Attachment", value: values?.qaApprovalAttachment || [] },
 ];
 
-const validateCalibrationForm = (form) => {
+// Validation with fallback to stored values
+const validateCalibrationForm = (form, storedRequired) => {
   const values = form.getFieldsValue();
   return REQUIRED_FIELDS.filter((field) => {
-    const value = values?.[field.name];
+    let value = values?.[field.name];
+    if (value === undefined || value === null || value === "") {
+      value = storedRequired[field.name];
+    }
     if (typeof value === "string") return !value.trim();
     return value === undefined || value === null || value === "";
   });
@@ -164,6 +167,7 @@ const CreateCalibrationPanel = () => {
   // Equipment states
   const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [equipmentMap, setEquipmentMap] = useState({});
+  const equipmentMapRef = useRef(equipmentMap); // keep ref for use in fetch
   const [equipmentLoading, setEquipmentLoading] = useState(false);
 
   const [initiator, setInitiator] = useState("");
@@ -183,18 +187,34 @@ const CreateCalibrationPanel = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
 
-  const isStageEditable = (stageId) => {
-  return (
-    Number(activeStageId) === Number(stageId) &&
-    canPerformActivity === true &&
-    permissionsLoading === false
-  );
-};
+  // Ref to prevent double fetch
+  const isFetchingRef = useRef(false);
+  // Ref to store required field values (fallback for validation)
+  const requiredValuesRef = useRef({
+    shortDescription: "",
+    hod: "",
+    qaReviewer: "",
+    qaApproval: "",
+  });
 
-const isGeneralEditable = isStageEditable(1);
-const isHodEditable = isStageEditable(2);
-const isQaReviewEditable = isStageEditable(3);
-const isQaApprovalEditable = isStageEditable(4);
+  // Update ref when equipmentMap changes
+  useEffect(() => {
+    equipmentMapRef.current = equipmentMap;
+  }, [equipmentMap]);
+
+  // ---------- Editable checks ----------
+  const isStageEditable = (stageId) => {
+    return (
+      Number(activeStageId) === Number(stageId) &&
+      canPerformActivity === true &&
+      permissionsLoading === false
+    );
+  };
+
+  const isGeneralEditable = isStageEditable(1);
+  const isHodEditable = isStageEditable(2);
+  const isQaReviewEditable = isStageEditable(3);
+  const isQaApprovalEditable = isStageEditable(4);
 
   // ---------- 1. Fetch profile ----------
   useEffect(() => {
@@ -269,12 +289,16 @@ const isQaApprovalEditable = isStageEditable(4);
   const qaReviewerOptions = qaReviewers.map((user) => ({ value: user?.id, label: user?.name }));
   const qaApproverOptions = qaApprovers.map((user) => ({ value: user?.id, label: user?.name }));
 
-  // ---------- 4. Fetch detail ----------
+  // ---------- 4. Fetch detail (with ref to equipmentMap to avoid re-creation) ----------
   const fetchCalibrationDetail = useCallback(async () => {
     if (!recordId) {
       toast.error("Calibration record ID is missing.");
       return;
     }
+    // Prevent multiple simultaneous fetches
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
     try {
       setIsLoading(true);
       const response = await getCalibrationDetail(recordId);
@@ -314,6 +338,18 @@ const isQaApprovalEditable = isStageEditable(4);
       setInitiationDepartment(responseData?.department?.name || processDepartment || "");
       setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
 
+      // Store required values in ref for validation fallback
+      const hodValue = hod && typeof hod === "object" ? hod?.id : hod || "";
+      const qaReviewerValue = qaReviewer && typeof qaReviewer === "object" ? qaReviewer?.id : qaReviewer || "";
+      const qaApprovalValue = qaApproval && typeof qaApproval === "object" ? qaApproval?.id : qaApproval || "";
+      requiredValuesRef.current = {
+        shortDescription: shortDescription || "",
+        hod: hodValue,
+        qaReviewer: qaReviewerValue,
+        qaApproval: qaApprovalValue,
+      };
+
+      // Set form fields
       form.setFieldsValue({
         recordNumber,
         siteLocationCode: locationCode || "",
@@ -322,9 +358,9 @@ const isQaApprovalEditable = isStageEditable(4);
         dueDate,
         initiationDepartment: responseData?.department?.name || processDepartment || "",
         shortDescription,
-        hod: hod && typeof hod === "object" ? hod?.id : hod || "",
-        qaReviewer: qaReviewer && typeof qaReviewer === "object" ? qaReviewer?.id : qaReviewer || "",
-        qaApproval: qaApproval && typeof qaApproval === "object" ? qaApproval?.id : qaApproval || "",
+        hod: hodValue,
+        qaReviewer: qaReviewerValue,
+        qaApproval: qaApprovalValue,
         comments,
         attachment: attachment || [],
         hodReviewComments,
@@ -334,6 +370,9 @@ const isQaApprovalEditable = isStageEditable(4);
         qaApprovalComments,
         qaApprovalAttachment: qaApprovalAttachment || [],
       });
+
+      // Use the ref for equipmentMap to avoid dependency
+      const currentEquipmentMap = equipmentMapRef.current;
 
       const gridRows = (responseData?.grid_records || []).flatMap(
         (record) => record?.grid_data || []
@@ -355,7 +394,7 @@ const isQaApprovalEditable = isStageEditable(4);
       const normalizedRows = rawRows.map((row) => {
         const newRow = { ...row };
         if (newRow.equipmentInstrumentName && typeof newRow.equipmentInstrumentName === "string") {
-          const found = Object.values(equipmentMap).find(
+          const found = Object.values(currentEquipmentMap).find(
             (eq) => eq.name === newRow.equipmentInstrumentName
           );
           if (found) {
@@ -377,9 +416,11 @@ const isQaApprovalEditable = isStageEditable(4);
       toast.error(error?.response?.data?.message || "Failed to load Calibration record.");
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
-  }, [recordId, form, equipmentMap]);
+  }, [recordId, form]); // removed equipmentMap dependency
 
+  // Run once on mount / when recordId changes
   useEffect(() => {
     fetchCalibrationDetail();
   }, [fetchCalibrationDetail]);
@@ -473,7 +514,7 @@ const isQaApprovalEditable = isStageEditable(4);
     fetchPermissions();
   }, [fetchPermissions]);
 
-  // ---------- 6. Sync active tab with stage ----------
+  // Sync active tab with stage
   useEffect(() => {
     if (!activeStageId) return;
     const matchingTab = TABS.find((tab) => Number(tab.stageId) === Number(activeStageId));
@@ -493,7 +534,8 @@ const isQaApprovalEditable = isStageEditable(4);
 
   const handleSave = async () => {
     if (isSaving || isLoading || usersLoading) return;
-    const missingFields = validateCalibrationForm(form);
+
+    const missingFields = validateCalibrationForm(form, requiredValuesRef.current);
     if (missingFields.length > 0) {
       const missingFieldNames = missingFields.map((field) => field.label).join(", ");
       toast.error(`Required fields missing: ${missingFieldNames}`);
@@ -508,7 +550,16 @@ const isQaApprovalEditable = isStageEditable(4);
     if (isSaving || !recordId) return;
     try {
       setIsSaving(true);
-      const processData = buildProcessData(values, systemFields, hodUsers, qaReviewers, qaApprovers);
+
+      // Merge any missing required fields from stored values (safety net)
+      const mergedValues = { ...values };
+      REQUIRED_FIELDS.forEach(({ name }) => {
+        if (!mergedValues[name] && requiredValuesRef.current[name]) {
+          mergedValues[name] = requiredValuesRef.current[name];
+        }
+      });
+
+      const processData = buildProcessData(mergedValues, systemFields, hodUsers, qaReviewers, qaApprovers);
       const gridData = buildGridPayload(calibrationRows, calibrationColumns, equipmentMap);
 
       const payload = {
@@ -516,8 +567,8 @@ const isQaApprovalEditable = isStageEditable(4);
         stage_id: Number(activeStageId),
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
-        short_description: values?.shortDescription || "",
-        initiation_date: values?.dateOfInitiation || dateOfInitiation || "",
+        short_description: mergedValues?.shortDescription || "",
+        initiation_date: mergedValues?.dateOfInitiation || dateOfInitiation || "",
         process_data: processData,
         gridData,
         checklistData: [],
@@ -618,14 +669,11 @@ const isQaApprovalEditable = isStageEditable(4);
                 rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
                 className="!mb-4"
               >
-                <FormInput placeholder="Enter short description"
-                  disabled={!isGeneralEditable}
-                 />
+                <FormInput placeholder="Enter short description" disabled={!isGeneralEditable} />
               </Form.Item>
             </div>
 
             <div className="mt-5">
-              {/* Use the hardcoded CalibrationGrid */}
               <CalibrationGrid
                 value={calibrationRows}
                 onChange={setCalibrationRows}
@@ -675,7 +723,7 @@ const isQaApprovalEditable = isStageEditable(4);
                 />
               </Form.Item>
               <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." disabled = {!isGeneralEditable}/>
+                <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isGeneralEditable} />
               </Form.Item>
               <Form.Item
                 name="attachment"
@@ -684,7 +732,7 @@ const isQaApprovalEditable = isStageEditable(4);
                 getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment disabled = {!isGeneralEditable}/>
+                <FormAttachment disabled={!isGeneralEditable} />
               </Form.Item>
             </div>
           </section>
@@ -695,7 +743,7 @@ const isQaApprovalEditable = isStageEditable(4);
             <SectionHeader title="HOD / DESIGNEE REVIEW" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item name="hodReviewComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isHodEditable}/>
+                <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isHodEditable} />
               </Form.Item>
               <Form.Item
                 name="hodReviewAttachment"
@@ -735,7 +783,7 @@ const isQaApprovalEditable = isStageEditable(4);
             <SectionHeader title="QA APPROVAL" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item name="qaApprovalComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..."  disabled={!isQaApprovalEditable}/>
+                <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isQaApprovalEditable} />
               </Form.Item>
               <Form.Item
                 name="qaApprovalAttachment"

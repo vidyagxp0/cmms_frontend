@@ -42,7 +42,7 @@ function useGoogleFonts() {
 }
 
 const Login = () => {
-  const [loginErrors,setLoginErrors]=useState(true)
+  const [loginErrors,setLoginErrors]=useState(false)
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [focusField, setFocusField] = useState(null);
@@ -52,7 +52,6 @@ const Login = () => {
   useGoogleFonts();
 
   const navigate = useNavigate();
-
 const handleLogin = async (event) => {
     event.preventDefault();
 
@@ -63,54 +62,68 @@ const handleLogin = async (event) => {
         password: formData.get("password"),
     };
 
+    setLoginErrors(false);
     setLoading(true);
 
- try {
-    const response = await login(payload);
+    try {
+        const response = await login(payload);
 
-    const { user: apiUser, token } = response.data.data;
+        console.log("STATUS:", response.status);
+        console.log("DATA:", response.data);
 
-    const user = {
-        id: apiUser.id,
-        name: apiUser.name,
-        email: apiUser.email,
-        roleType: apiUser.role_type,
-        roles: apiUser.roles || [],
-        permissions: apiUser.permissions || [],
-    };
+        // STOP HERE if backend did not authenticate
+        if (response.status !== 200 || !response.data?.data?.token) {
+            setLoginErrors(true);
+            setLoading(false);
+            return;
+        }
 
-    const isAdmin = apiUser.role_type === "Admin";
+        const { user: apiUser, token } = response.data.data;
 
-    if (isAdmin) {
-        sessionStorage.setItem("admin_token", token);
-        sessionStorage.removeItem("user_token");
-        setLoginErrors(false)
-    } else {
-        sessionStorage.setItem("user_token", token);
-        sessionStorage.removeItem("admin_token");
+        const user = {
+            id: apiUser.id,
+            name: apiUser.name,
+            email: apiUser.email,
+            roleType: apiUser.role_type,
+            roles: apiUser.roles || [],
+            permissions: apiUser.permissions || [],
+        };
+
+        const isAdmin = apiUser.role_type === "Admin";
+
+        if (isAdmin) {
+            sessionStorage.setItem("admin_token", token);
+            sessionStorage.removeItem("user_token");
+        } else {
+            sessionStorage.setItem("user_token", token);
+            sessionStorage.removeItem("admin_token");
+        }
+
+        sessionStorage.setItem("auth_type", apiUser.role_type);
+
+        setUser(user);
+
+        toast.success("Login successful");
+
+        navigate(
+            isAdmin
+                ? "/admin/dashboard"
+                : "/user/equipment-dashboard",
+            { replace: true }
+        );
+
+    } catch (error) {
+        console.log("LOGIN ERROR:", error);
+
+        setLoginErrors(true);
+
+        toast.error(
+            error.response?.data?.message ||
+            "User or Password Incorrect"
+        );
+    } finally {
+        setLoading(false);
     }
-
-    sessionStorage.setItem("auth_type", apiUser.role_type);
-
-    setUser(user);
-
-    toast.success("Login successful");
-
-    navigate(
-        isAdmin
-            ? "/admin/dashboard"
-            : "/user/equipment-dashboard",
-        { replace: true }
-    );
-    
-} catch (error) {
-    toast.error(
-        error.response?.data?.message ||
-        "Login failed. Please try again."
-    );
-} finally {
-    setLoading(false);
-}
 };
 
   return (

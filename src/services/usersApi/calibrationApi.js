@@ -14,6 +14,7 @@ export const getCalibrationDetail = (id) =>
     api.get(`/user/show-calibration-planner-record/${id}`);
 
 export const executeCalibrationActivity = (id, payload) =>
+
     api.post(`/user/calibrationPlanner-record-stage/${id}`, payload);
 
 export const addCalibration = (payload) =>
@@ -55,3 +56,17 @@ export const getCalibrationSingleReport = (id) => {
         responseType: "blob",
     });
 };
+
+// Calibration Child API
+
+export const getCalibrationChildDetail = (id) =>
+    api.get(`/user/show-calibration-management-record/${id}`);
+
+export const addCalibrationChild = (payload) =>
+    api.post("/user/store-calibration-management-record", payload);
+
+export const updateCalibrationChild = (id, payload) =>
+    api.put(`/user/update-calibration-management-record/${id}`, payload);
+
+export const executeCalibrationActivityChild = (id, payload) =>
+    api.post(`/user/calibrationManagement-record-stage/${id}`, payload);

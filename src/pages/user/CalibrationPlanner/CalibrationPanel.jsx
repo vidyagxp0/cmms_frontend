@@ -21,8 +21,6 @@ import CalibrationGrid from "./CalibrationGrid";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css"; 
 
-import calibrationColumns from "./calibrationColumn";
-
 import { getProfile } from "../../../services/authApi";
 import {
   executeCalibrationActivity,
@@ -51,7 +49,7 @@ const REQUIRED_FIELDS = [
   { name: "qaApproval", label: "QA Approval" },
 ];
 
-// ---------- Helper functions ----------
+// ===== Helper: Get process value =====
 const getProcessValue = (processData = [], key) => {
   if (Array.isArray(processData)) {
     const field = processData.find((item) => item?.key === key);
@@ -65,32 +63,21 @@ const getProcessValue = (processData = [], key) => {
   return "";
 };
 
-const normalizeGridRows = (rows = [], columns = [], equipmentMap = {}) =>
-  rows.map((row, index) => {
-    const { _rowId, row_id, ...cleanRow } = row || {};
-    const formattedRow = {};
-    columns.forEach((col) => {
-      const key = col.key;
-      let value = cleanRow[key] !== undefined && cleanRow[key] !== null ? cleanRow[key] : "";
-      if (key === "previousCalibrationDate" && value) {
-        value = dayjs(value, "DD/MM/YYYY");
-      } else if (key === "nextCalibrationDate" && value) {
-        value = dayjs(value, "DD/MM/YYYY");
-      } else if (key === "calibrationDate" && value) {
-        value = dayjs(value, "DD/MM/YYYY");
-      }
-      formattedRow[key] = value;
-    });
-    formattedRow.row_id = index + 1;
-    return formattedRow;
-  });
-
-const buildGridPayload = (rows = [], columns = [], equipmentMap = {}) => {
+// ===== Helper: Build Grid Payload (for UPDATE) =====
+const buildGridPayload = (rows = [], equipmentMap = {}) => {
   return rows.map((row, index) => {
     const rowData = { row_id: index + 1 };
-    columns.forEach((col) => {
-      const key = col.key;
+
+    Object.keys(row).forEach((key) => {
+      // Preserve internal grid properties
+      if (key === "monthlyCalibration" || key === "calibrationFrequencyStartDate") {
+        rowData[key] = row[key];
+        return;
+      }
+
       let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
+
+      // Date formatting
       if (key === "previousCalibrationDate" && value) {
         value = dayjs(value).format("DD/MM/YYYY");
       } else if (key === "nextCalibrationDate" && value) {
@@ -98,41 +85,91 @@ const buildGridPayload = (rows = [], columns = [], equipmentMap = {}) => {
       } else if (key === "calibrationDate" && value) {
         value = dayjs(value).format("DD/MM/YYYY");
       }
+
+      // Equipment ID → Name conversion
       if (key === "equipmentInstrumentName" && value && equipmentMap[value]) {
         value = equipmentMap[value]?.name || value;
       }
+
       rowData[key] = {
         key,
-        label: col.title,
+        label: key,
         value,
       };
     });
+
     return rowData;
   });
 };
 
+// ===== Helper: Get user pair =====
 const getUserPair = (userId, users = []) => {
   const user = users.find((item) => String(item?.id) === String(userId));
   return { id: user?.id || userId || "", name: user?.name || "" };
 };
 
+// ===== Helper: Build process data =====
 const buildProcessData = (values, systemFields, hodUsers, qaReviewers, qaApprovers) => [
-  ...systemFields.map((field) => ({ key: field.name, label: field.label, value: values?.[field.name] || "" })),
-  { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
-  { key: "hod", label: "HOD / Designee", value: getUserPair(values?.hod, hodUsers) },
-  { key: "qa_reviewer", label: "QA Reviewer", value: getUserPair(values?.qaReviewer, qaReviewers) },
-  { key: "qa_approval", label: "QA Approval", value: getUserPair(values?.qaApproval, qaApprovers) },
+  ...systemFields.map((field) => ({
+    key: field.name,
+    label: field.label,
+    value: values?.[field.name] || "",
+  })),
+  {
+    key: "short_description",
+    label: "Short Description",
+    value: values?.shortDescription || "",
+  },
+  {
+    key: "hod",
+    label: "HOD / Designee",
+    value: getUserPair(values?.hod, hodUsers),
+  },
+  {
+    key: "qa_reviewer",
+    label: "QA Reviewer",
+    value: getUserPair(values?.qaReviewer, qaReviewers),
+  },
+  {
+    key: "qa_approval",
+    label: "QA Approval",
+    value: getUserPair(values?.qaApproval, qaApprovers),
+  },
   { key: "comment", label: "Comments", value: values?.comments || "" },
   { key: "attachment", label: "Attachment", value: values?.attachment || [] },
-  { key: "hod_review_comments", label: "HOD / Designee Review Comments", value: values?.hodReviewComments || "" },
-  { key: "hod_review_attachment", label: "HOD / Designee Review Attachment", value: values?.hodReviewAttachment || [] },
-  { key: "qa_review_comments", label: "QA Review Comments", value: values?.qaReviewComments || "" },
-  { key: "qa_review_attachment", label: "QA Review Attachment", value: values?.qaReviewAttachment || [] },
-  { key: "qa_approval_comments", label: "QA Approval Comments", value: values?.qaApprovalComments || "" },
-  { key: "qa_approval_attachment", label: "QA Approval Attachment", value: values?.qaApprovalAttachment || [] },
+  {
+    key: "hod_review_comments",
+    label: "HOD / Designee Review Comments",
+    value: values?.hodReviewComments || "",
+  },
+  {
+    key: "hod_review_attachment",
+    label: "HOD / Designee Review Attachment",
+    value: values?.hodReviewAttachment || [],
+  },
+  {
+    key: "qa_review_comments",
+    label: "QA Review Comments",
+    value: values?.qaReviewComments || "",
+  },
+  {
+    key: "qa_review_attachment",
+    label: "QA Review Attachment",
+    value: values?.qaReviewAttachment || [],
+  },
+  {
+    key: "qa_approval_comments",
+    label: "QA Approval Comments",
+    value: values?.qaApprovalComments || "",
+  },
+  {
+    key: "qa_approval_attachment",
+    label: "QA Approval Attachment",
+    value: values?.qaApprovalAttachment || [],
+  },
 ];
 
-// Validation with fallback to stored values
+// ===== Validation =====
 const validateCalibrationForm = (form, storedRequired) => {
   const values = form.getFieldsValue();
   return REQUIRED_FIELDS.filter((field) => {
@@ -145,7 +182,7 @@ const validateCalibrationForm = (form, storedRequired) => {
   });
 };
 
-// ---------- Main Component ----------
+// ===== Main Component =====
 const CreateCalibrationPanel = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
@@ -167,7 +204,7 @@ const CreateCalibrationPanel = () => {
   // Equipment states
   const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [equipmentMap, setEquipmentMap] = useState({});
-  const equipmentMapRef = useRef(equipmentMap); // keep ref for use in fetch
+  const equipmentMapRef = useRef(equipmentMap);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
 
   const [initiator, setInitiator] = useState("");
@@ -187,9 +224,7 @@ const CreateCalibrationPanel = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
 
-  // Ref to prevent double fetch
   const isFetchingRef = useRef(false);
-  // Ref to store required field values (fallback for validation)
   const requiredValuesRef = useRef({
     shortDescription: "",
     hod: "",
@@ -202,7 +237,7 @@ const CreateCalibrationPanel = () => {
     equipmentMapRef.current = equipmentMap;
   }, [equipmentMap]);
 
-  // ---------- Editable checks ----------
+  // ---- Editable checks ----
   const isStageEditable = (stageId) => {
     return (
       Number(activeStageId) === Number(stageId) &&
@@ -210,13 +245,12 @@ const CreateCalibrationPanel = () => {
       permissionsLoading === false
     );
   };
-
   const isGeneralEditable = isStageEditable(1);
   const isHodEditable = isStageEditable(2);
   const isQaReviewEditable = isStageEditable(3);
   const isQaApprovalEditable = isStageEditable(4);
 
-  // ---------- 1. Fetch profile ----------
+  // ---- 1. Fetch profile ----
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -235,7 +269,7 @@ const CreateCalibrationPanel = () => {
     fetchProfile();
   }, []);
 
-  // ---------- 2. Fetch equipment master ----------
+  // ---- 2. Fetch equipment ----
   useEffect(() => {
     const fetchEquipment = async () => {
       try {
@@ -262,7 +296,7 @@ const CreateCalibrationPanel = () => {
     fetchEquipment();
   }, []);
 
-  // ---------- 3. Fetch users ----------
+  // ---- 3. Fetch users ----
   useEffect(() => {
     const fetchCalibrationUsers = async () => {
       try {
@@ -289,13 +323,12 @@ const CreateCalibrationPanel = () => {
   const qaReviewerOptions = qaReviewers.map((user) => ({ value: user?.id, label: user?.name }));
   const qaApproverOptions = qaApprovers.map((user) => ({ value: user?.id, label: user?.name }));
 
-  // ---------- 4. Fetch detail (with ref to equipmentMap to avoid re-creation) ----------
+  // ---- 4. Fetch detail ----
   const fetchCalibrationDetail = useCallback(async () => {
     if (!recordId) {
       toast.error("Calibration record ID is missing.");
       return;
     }
-    // Prevent multiple simultaneous fetches
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
 
@@ -338,10 +371,12 @@ const CreateCalibrationPanel = () => {
       setInitiationDepartment(responseData?.department?.name || processDepartment || "");
       setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
 
-      // Store required values in ref for validation fallback
+      // Store required values for fallback
       const hodValue = hod && typeof hod === "object" ? hod?.id : hod || "";
-      const qaReviewerValue = qaReviewer && typeof qaReviewer === "object" ? qaReviewer?.id : qaReviewer || "";
-      const qaApprovalValue = qaApproval && typeof qaApproval === "object" ? qaApproval?.id : qaApproval || "";
+      const qaReviewerValue =
+        qaReviewer && typeof qaReviewer === "object" ? qaReviewer?.id : qaReviewer || "";
+      const qaApprovalValue =
+        qaApproval && typeof qaApproval === "object" ? qaApproval?.id : qaApproval || "";
       requiredValuesRef.current = {
         shortDescription: shortDescription || "",
         hod: hodValue,
@@ -349,7 +384,6 @@ const CreateCalibrationPanel = () => {
         qaApproval: qaApprovalValue,
       };
 
-      // Set form fields
       form.setFieldsValue({
         recordNumber,
         siteLocationCode: locationCode || "",
@@ -371,18 +405,26 @@ const CreateCalibrationPanel = () => {
         qaApprovalAttachment: qaApprovalAttachment || [],
       });
 
-      // Use the ref for equipmentMap to avoid dependency
+      // ---- Transform API grid data to internal grid rows ----
       const currentEquipmentMap = equipmentMapRef.current;
-
       const gridRows = (responseData?.grid_records || []).flatMap(
         (record) => record?.grid_data || []
       );
+
       const rawRows = gridRows.map((item) => {
         const row = {};
         Object.keys(item).forEach((key) => {
           if (key === "row_id") {
             row.row_id = item.row_id;
-          } else if (item[key] && typeof item[key] === "object") {
+          } else if (key === "monthlyCalibration") {
+            row.monthlyCalibration = item[key] || {};
+          } else if (key === "calibrationFrequencyStartDate") {
+            row.calibrationFrequencyStartDate = item[key] || "";
+          } else if (
+            item[key] &&
+            typeof item[key] === "object" &&
+            Object.prototype.hasOwnProperty.call(item[key], "value")
+          ) {
             row[key] = item[key].value;
           } else {
             row[key] = item[key];
@@ -393,7 +435,17 @@ const CreateCalibrationPanel = () => {
 
       const normalizedRows = rawRows.map((row) => {
         const newRow = { ...row };
-        if (newRow.equipmentInstrumentName && typeof newRow.equipmentInstrumentName === "string") {
+        newRow.monthlyCalibration =
+          row.monthlyCalibration && typeof row.monthlyCalibration === "object"
+            ? row.monthlyCalibration
+            : {};
+        newRow.calibrationFrequencyStartDate = row.calibrationFrequencyStartDate || "";
+
+        // Convert equipment name back to ID (for dropdown)
+        if (
+          newRow.equipmentInstrumentName &&
+          typeof newRow.equipmentInstrumentName === "string"
+        ) {
           const found = Object.values(currentEquipmentMap).find(
             (eq) => eq.name === newRow.equipmentInstrumentName
           );
@@ -401,12 +453,15 @@ const CreateCalibrationPanel = () => {
             newRow.equipmentInstrumentName = found.id;
           }
         }
+
+        // Parse dates for DatePicker
         if (newRow.previousCalibrationDate) {
           newRow.previousCalibrationDate = dayjs(newRow.previousCalibrationDate, "DD/MM/YYYY");
         }
         if (newRow.nextCalibrationDate) {
           newRow.nextCalibrationDate = dayjs(newRow.nextCalibrationDate, "DD/MM/YYYY");
         }
+
         return newRow;
       });
 
@@ -418,14 +473,13 @@ const CreateCalibrationPanel = () => {
       setIsLoading(false);
       isFetchingRef.current = false;
     }
-  }, [recordId, form]); // removed equipmentMap dependency
+  }, [recordId, form]);
 
-  // Run once on mount / when recordId changes
   useEffect(() => {
     fetchCalibrationDetail();
   }, [fetchCalibrationDetail]);
 
-  // ---------- 5. Stages, activities, permissions, logs ----------
+  // ---- 5. Stages, activities, permissions, logs ----
   useEffect(() => {
     if (!processId) return;
     const fetchStages = async () => {
@@ -523,15 +577,35 @@ const CreateCalibrationPanel = () => {
     }
   }, [activeStageId]);
 
-  // ---------- 7. Handle save / update ----------
+  // ---- 6. Save / Update ----
   const systemFields = [
-    { name: "recordNumber", label: "Record Number", value: form.getFieldValue("recordNumber") || "" },
-    { name: "siteLocationCode", label: "Site / Location Code", value: form.getFieldValue("siteLocationCode") || "" },
+    {
+      name: "recordNumber",
+      label: "Record Number",
+      value: form.getFieldValue("recordNumber") || "",
+    },
+    {
+      name: "siteLocationCode",
+      label: "Site / Location Code",
+      value: form.getFieldValue("siteLocationCode") || "",
+    },
     { name: "initiator", label: "Initiator", value: initiator },
     { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
 
+  const handleViewChild = (rowIndex, rowData) => {
+  const shortDesc = form.getFieldValue("shortDescription") || "";
+  const parentId = recordId; // from URL params
+  navigate(`/user/calibration-management-create/${5}/${recordId}`, {
+    state: {
+      rowData,
+      shortDescription: shortDesc,
+      processId: 5,
+      parentId: parentId,
+    },
+  });
+};
   const handleSave = async () => {
     if (isSaving || isLoading || usersLoading) return;
 
@@ -539,7 +613,12 @@ const CreateCalibrationPanel = () => {
     if (missingFields.length > 0) {
       const missingFieldNames = missingFields.map((field) => field.label).join(", ");
       toast.error(`Required fields missing: ${missingFieldNames}`);
-      form.setFields(missingFields.map((field) => ({ name: field.name, errors: [`${field.label} is required`] })));
+      form.setFields(
+        missingFields.map((field) => ({
+          name: field.name,
+          errors: [`${field.label} is required`],
+        }))
+      );
       setActiveTab("general");
       return;
     }
@@ -551,7 +630,7 @@ const CreateCalibrationPanel = () => {
     try {
       setIsSaving(true);
 
-      // Merge any missing required fields from stored values (safety net)
+      // Merge missing required fields from stored values
       const mergedValues = { ...values };
       REQUIRED_FIELDS.forEach(({ name }) => {
         if (!mergedValues[name] && requiredValuesRef.current[name]) {
@@ -559,8 +638,14 @@ const CreateCalibrationPanel = () => {
         }
       });
 
-      const processData = buildProcessData(mergedValues, systemFields, hodUsers, qaReviewers, qaApprovers);
-      const gridData = buildGridPayload(calibrationRows, calibrationColumns, equipmentMap);
+      const processData = buildProcessData(
+        mergedValues,
+        systemFields,
+        hodUsers,
+        qaReviewers,
+        qaApprovers
+      );
+      const gridData = buildGridPayload(calibrationRows, equipmentMap);
 
       const payload = {
         process_id: Number(processId),
@@ -605,7 +690,7 @@ const CreateCalibrationPanel = () => {
     navigate("/user/engineering-dashboard");
   };
 
-  // ---------- Render ----------
+  // ---- Render ----
   if (isLoading) {
     return (
       <div className="w-full space-y-6">
@@ -618,13 +703,21 @@ const CreateCalibrationPanel = () => {
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
-        <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} />
+        <ProcessStage
+          stages={workflowStages}
+          activeStageId={activeStageId}
+          loading={workflowLoading}
+        />
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
           <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
             <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />
             <div className="min-w-0 flex-1">
-              <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">Process</p>
-              <p className="truncate text-[11px] font-semibold text-[#344A43]">{processName || "—"}</p>
+              <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">
+                Process
+              </p>
+              <p className="truncate text-[11px] font-semibold text-[#344A43]">
+                {processName || "—"}
+              </p>
             </div>
           </div>
           <div className="min-w-0 flex-1">
@@ -665,7 +758,11 @@ const CreateCalibrationPanel = () => {
               ))}
               <Form.Item
                 name="shortDescription"
-                label={<span>Short Description <span className="text-red-500">*</span></span>}
+                label={
+                  <span>
+                    Short Description <span className="text-red-500">*</span>
+                  </span>
+                }
                 rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
                 className="!mb-4"
               >
@@ -680,6 +777,7 @@ const CreateCalibrationPanel = () => {
                 equipmentOptions={equipmentOptions}
                 equipmentMap={equipmentMap}
                 equipmentLoading={equipmentLoading}
+                onViewChild={handleViewChild}
               />
             </div>
 
@@ -816,7 +914,9 @@ const CreateCalibrationPanel = () => {
                   >
                     <div className="mb-5">
                       <p className="text-[13px] font-semibold text-[#3E4A5C]">Activity Name</p>
-                      <p className="mt-1 text-[14px] font-semibold text-[#182234]">{log.activity_name || "—"}</p>
+                      <p className="mt-1 text-[14px] font-semibold text-[#182234]">
+                        {log.activity_name || "—"}
+                      </p>
                     </div>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                       <div>
@@ -834,7 +934,9 @@ const CreateCalibrationPanel = () => {
                       <div>
                         <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Comments</p>
                         <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
-                          <p className="break-words text-[14px] leading-5 text-[#526071]">{log.comment || "—"}</p>
+                          <p className="break-words text-[14px] leading-5 text-[#526071]">
+                            {log.comment || "—"}
+                          </p>
                         </div>
                       </div>
                     </div>

@@ -4,6 +4,7 @@ import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import UserModal from "../../../components/common/UserModal/UserModal";
+import { updateCalibration } from "../../../services/usersApi/calibrationApi";
 
 dayjs.extend(customParseFormat);
 const { TextArea } = Input;
@@ -54,6 +55,7 @@ const CalibrationGrid = ({
   maxRows,
   onViewChild, // <-- NEW: callback for "Child" button
   viewChildLabel = "Child", // optional label
+  recordId
 }) => {
   const columns = [
     { key: "equipmentInstrumentName", title: "Equipment / Instrument Name", type: "select", placeholder: "Select equipment", required: true, minWidth: 220 },
@@ -75,6 +77,7 @@ const CalibrationGrid = ({
   const rows = Array.isArray(value) ? value : [];
   const [deleteRowIndex, setDeleteRowIndex] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
 
   const showMonthlyCalendar = rows.some((row) => !!row?.calibrationFrequency);
 
@@ -102,13 +105,21 @@ const CalibrationGrid = ({
 
   const handleDeleteRow = (rowIndex) => {
     if (rows.length <= minRows) return;
+    console.log(rowIndex)
+    setSelectedId(recordId);
     setDeleteRowIndex(rowIndex);
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async() => {
     if (deleteRowIndex === null || rows.length <= minRows) return;
+   
     const updatedRows = rows.filter((_, index) => index !== deleteRowIndex);
+    const payload = {
+    gridData: updatedRows
+};
+
+    await updateCalibration(selectedId,payload);
     onChange(updatedRows);
     setDeleteRowIndex(null);
     setIsDeleteModalOpen(false);

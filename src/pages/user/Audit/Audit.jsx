@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Activity, ArrowUpDown, Search, X } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { useParams,useNavigate } from "react-router-dom";
 
 import { getCalibrationAuditRecord } from "../../../services/usersApi/calibrationApi";
 
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
 const Audit = () => {
+  const navigate = useNavigate();
   const { recordId } = useParams();
 
   const [audits, setAudits] = useState([]);
@@ -301,8 +302,14 @@ const Audit = () => {
 
           <p className="pl-[46px] text-[12.5px] text-[#66707C]">
             View and track all changes made to this record.
-          </p>
+          </p> 
         </div>
+         {/* Exit Button */}
+           <button
+           onClick={() => navigate(-1)} 
+           type="button" className="inline-flex h-9 items-center justify-center rounded-lg border border-[#D0D5DD] bg-white px-4 text-[12px] font-semibold text-[#475467] shadow-sm transition-all duration-200 hover:border-[#2F6FB0] hover:bg-[#F5F9FD] hover:text-[#2F6FB0] active:scale-95" > 
+            Exit
+             </button>
       </div>
 
       <div className="w-full">

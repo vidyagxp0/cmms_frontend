@@ -13,6 +13,7 @@ const UserDynamicGrid = ({
     onChange,
     allowAdd = true,
     allowDelete = true,
+    deleteRow,
     addButtonLabel = "Add Row",
     minRows = 0,
     maxRows,
@@ -48,14 +49,20 @@ const UserDynamicGrid = ({
         setIsDeleteModalOpen(true);
     };
 
-    const handleConfirmDelete = () => {
-        if (deleteRowIndex === null || rows.length <= minRows) return;
+  const handleConfirmDelete = async () => {
+    if (deleteRowIndex === null || rows.length <= minRows) return;
 
-        const updatedRows = rows.filter((_, index) => index !== deleteRowIndex);
-        onChange?.(updatedRows);
-        setDeleteRowIndex(null);
-        setIsDeleteModalOpen(false);
-    };
+    const updatedRows = rows.filter(
+        (_, index) => index !== deleteRowIndex
+    );
+
+    await deleteRow?.(updatedRows);
+
+    onChange?.(updatedRows);
+
+    setDeleteRowIndex(null);
+    setIsDeleteModalOpen(false);
+};
 
     const handleCancelDelete = () => {
         setDeleteRowIndex(null);

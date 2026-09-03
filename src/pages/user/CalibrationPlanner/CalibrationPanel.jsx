@@ -778,6 +778,7 @@ const CreateCalibrationPanel = () => {
                 equipmentMap={equipmentMap}
                 equipmentLoading={equipmentLoading}
                 onViewChild={handleViewChild}
+                recordId={recordId}
               />
             </div>
 

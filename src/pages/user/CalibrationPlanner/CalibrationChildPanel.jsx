@@ -926,7 +926,9 @@ const CalibrationChildPanel = () => {
                 addButtonLabel="Add Parameter"
                 minRows={0}
                 rowKey="_rowId"
-              />
+                deleteRow={(updatedRows) => 
+                    updateCalibrationChild(recordId, { gridData: updatedRows })
+                }              />
             </div>
 
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2 mt-6">

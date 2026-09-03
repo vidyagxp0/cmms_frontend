@@ -155,15 +155,50 @@ const CalibrationGrid = ({
     onChange(updated);
   };
 
+  // const updateMonthlyDate = (rowIndex, monthKey, dateType, newValue) => {
+  //   const updated = [...rows];
+  //   const row = { ...updated[rowIndex] };
+  //   const monthlyCalibration = normalizeMonthlyData(row.monthlyCalibration);
+  //   monthlyCalibration[monthKey] = { ...monthlyCalibration[monthKey], [dateType]: newValue };
+  //   row.monthlyCalibration = monthlyCalibration;
+  //   updated[rowIndex] = row;
+  //   onChange(updated);
+  // };
+
   const updateMonthlyDate = (rowIndex, monthKey, dateType, newValue) => {
-    const updated = [...rows];
-    const row = { ...updated[rowIndex] };
-    const monthlyCalibration = normalizeMonthlyData(row.monthlyCalibration);
-    monthlyCalibration[monthKey] = { ...monthlyCalibration[monthKey], [dateType]: newValue };
-    row.monthlyCalibration = monthlyCalibration;
-    updated[rowIndex] = row;
-    onChange(updated);
+  const updated = [...rows];
+  const row = { ...updated[rowIndex] };
+  const monthlyCalibration = normalizeMonthlyData(row.monthlyCalibration);
+
+  // Update the current month's field
+  monthlyCalibration[monthKey] = {
+    ...monthlyCalibration[monthKey],
+    [dateType]: newValue,
   };
+
+  // If we are setting a Scheduler Date and it's not empty, auto‑fill subsequent months
+  if (dateType === "schedulerDate" && newValue) {
+    const currentMonthIndex = MONTHS.findIndex((m) => m.key === monthKey);
+    if (currentMonthIndex !== -1) {
+      const baseDate = dayjs(newValue);
+      if (baseDate.isValid()) {
+        for (let i = currentMonthIndex + 1; i < MONTHS.length; i++) {
+          const nextMonthKey = MONTHS[i].key;
+          const diffMonths = i - currentMonthIndex;
+          const nextDate = baseDate.add(diffMonths, "month").format("YYYY-MM-DD");
+          monthlyCalibration[nextMonthKey] = {
+            ...monthlyCalibration[nextMonthKey],
+            schedulerDate: nextDate,
+          };
+        }
+      }
+    }
+  }
+
+  row.monthlyCalibration = monthlyCalibration;
+  updated[rowIndex] = row;
+  onChange(updated);
+};
 
   const renderField = (column, row, rowIndex) => {
     const { key, type, placeholder, options: colOptions, disabled } = column;

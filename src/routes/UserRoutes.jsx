@@ -13,6 +13,7 @@ import CalibrationPanel from "../pages/user/CalibrationPlanner/CalibrationPanel"
 import Audit from "../pages/user/Audit/Audit";
 import CalibrationChild from "../pages/user/CalibrationPlanner/CalibrationChild";
 import CalibrationChildPanel from "../pages/user/CalibrationPlanner/CalibrationChildPanel";
+import CreateEquipment from "../pages/user/Equipment/CreateEquipment";
 
 function UserRoutes() {
   return (
@@ -28,6 +29,7 @@ function UserRoutes() {
 
         {/* Equipment Routes*/}
         <Route path="equipment-dashboard" element={<EquipDashboard />} />
+        <Route path="create-equipment" element={<CreateEquipment />} />
         <Route path="equipment-panel/:id" element={<EquipmentPanel/>} />
 
         {/* Engineering and Calibration Routes*/}

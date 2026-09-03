@@ -452,7 +452,7 @@ const CalibrationChild = () => {
       const response = await addCalibrationChild(payload);
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Child calibration record created successfully.");
-        navigate(-1);
+        navigate("/user/engineering-dashboard");
       } else {
         toast.error(response?.data?.message || "Failed to create child calibration.");
       }
@@ -466,7 +466,7 @@ const CalibrationChild = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
-    navigate(-1);
+    navigate("/user/engineering-dashboard");
   };
 
   if (isLoading) {

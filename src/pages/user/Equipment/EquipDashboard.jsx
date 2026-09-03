@@ -299,14 +299,15 @@ const EquipDashboard = () => {
                 bg-[#F7F9F8]
             "
         >
-            <div className="shrink-0">
+           <div className="shrink-0">
                 <DashboardActionBar
                     title="Equipment Dashboard"
-                    onCreate={() => setIsCreateModalOpen(true)}
-                    createLabel="Create Equipment Record"
+                    buttonName="Create Record"
+                    navigationRoute="/user/create-equipment"
+                    sourceRoute="/user/equipment-dashboard"
+                    sourceType="equipment"
                 />
             </div>
-
             <main
                 className="
                     mt-8

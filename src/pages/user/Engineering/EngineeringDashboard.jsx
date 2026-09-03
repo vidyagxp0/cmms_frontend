@@ -67,7 +67,6 @@ const EngineeringDashboard = () => {
         fetchRecords(1, 10);
     }, []);
 
-
     const handleViewReport = async (recordId) => {
         const reportWindow = window.open("", "_blank");
 
@@ -82,12 +81,10 @@ const EngineeringDashboard = () => {
                 <html>
                 <head>
                     <title>Loading Report...</title>
-
                     <style>
                         * {
                             box-sizing: border-box;
                         }
-
                         html,
                         body {
                             margin: 0;
@@ -95,12 +92,10 @@ const EngineeringDashboard = () => {
                             width: 100%;
                             height: 100%;
                         }
-
                         body {
                             overflow: hidden;
                             font-family: Arial, sans-serif;
                         }
-
                         .loader {
                             position: fixed;
                             inset: 0;
@@ -110,20 +105,17 @@ const EngineeringDashboard = () => {
                             justify-content: center;
                             background: white;
                         }
-
                         .loader-content {
                             display: flex;
                             flex-direction: column;
                             align-items: center;
                         }
-
                         .logo {
                             margin-bottom: 24px;
                             height: 56px;
                             width: auto;
                             object-fit: contain;
                         }
-
                         .spinner {
                             width: 32px;
                             height: 32px;
@@ -132,42 +124,30 @@ const EngineeringDashboard = () => {
                             border-radius: 50%;
                             animation: spin 0.8s linear infinite;
                         }
-
                         .text {
                             margin-top: 16px;
                             font-size: 12px;
                             font-weight: 500;
                             color: #94a3b8;
                         }
-
                         @keyframes spin {
-                            from {
-                                transform: rotate(0deg);
-                            }
-
-                            to {
-                                transform: rotate(360deg);
-                            }
+                            from { transform: rotate(0deg); }
+                            to { transform: rotate(360deg); }
                         }
                     </style>
                 </head>
-
                 <body>
                     <div class="loader">
                         <div class="loader-content">
-
                             <img
                                 src="/vidyagxp_logo.png"
                                 alt="VidyaGxP"
                                 class="logo"
                             />
-
                             <div class="spinner"></div>
-
                             <p class="text">
                                 Loading your workspace...
                             </p>
-
                         </div>
                     </div>
                 </body>
@@ -207,7 +187,6 @@ const EngineeringDashboard = () => {
                     <html>
                     <head>
                         <title>Report Error</title>
-
                         <style>
                             body {
                                 margin: 0;
@@ -218,17 +197,14 @@ const EngineeringDashboard = () => {
                                 font-family: Arial, sans-serif;
                                 background: white;
                             }
-
                             .error {
                                 text-align: center;
                             }
-
                             .error-title {
                                 font-size: 16px;
                                 font-weight: 600;
                                 color: #b91c1c;
                             }
-
                             .error-message {
                                 margin-top: 8px;
                                 font-size: 12px;
@@ -236,13 +212,11 @@ const EngineeringDashboard = () => {
                             }
                         </style>
                     </head>
-
                     <body>
                         <div class="error">
                             <div class="error-title">
                                 Failed to generate report
                             </div>
-
                             <div class="error-message">
                                 Please close this tab and try again.
                             </div>
@@ -256,58 +230,66 @@ const EngineeringDashboard = () => {
         }
     };
 
-const getProcessValue = (record, key) => {
-    const processData = record?.process_data;
-    if (Array.isArray(processData)) {
-        const field = processData.find(
-            (item) => item?.key === key
-        );
-        return field?.value ?? "-";
-    }
-    if (processData && typeof processData === "object") {
-        if (processData[key] !== undefined) {
-            return processData[key] ?? "-";
+    const getProcessValue = (record, key) => {
+        const processData = record?.process_data;
+        if (Array.isArray(processData)) {
+            const field = processData.find(
+                (item) => item?.key === key
+            );
+            return field?.value ?? "-";
         }
-        const field = Object.values(processData).find(
-            (item) => item?.key === key
-        );
-        return field?.value ?? "-";
-    }
-    return "-";
-};
+        if (processData && typeof processData === "object") {
+            if (processData[key] !== undefined) {
+                return processData[key] ?? "-";
+            }
+            const field = Object.values(processData).find(
+                (item) => item?.key === key
+            );
+            return field?.value ?? "-";
+        }
+        return "-";
+    };
+
     const columns = useMemo(
         () => [
             {
                 accessorKey: "id",
                 header: "ID",
-                cell: ({row, getValue }) => (
-                    <button
-                        type="button"
-                        onClick={() => {
-                        if (!row.original?.id) return;
-
-                        navigate(
-                            `/user/calibration-planner-panel/${row.original.id}`
-                        );
-                    }}
-                        className="
-                            inline-flex cursor-pointer rounded-md border
-                            border-indigo-100 bg-indigo-50/70 px-2 py-1.5
-                            font-mono text-[11px] font-semibold tracking-wide
-                            text-gray-500 shadow-sm transition-all duration-200
-                            hover:border-indigo-200 hover:bg-indigo-100
-                            hover:text-indigo-800 hover:shadow
-                            focus:outline-none focus:ring-2
-                            focus:ring-indigo-500/20
-                        "
-                        title="View record details"
-                    >
-                        #{getValue() || "-"}
-                    </button>
-                ),
+                cell: ({ row, getValue }) => {
+                    const record = row.original;
+                    const handleClick = () => {
+                        if (!record?.id) return;
+                        if (record.is_child === 1) {
+                            // Child record → navigate to child panel with process_id and record id
+                            navigate(`/user/calibration-management-panel/${5}/${record.id}`);
+                        } else {
+                            // Parent/standard record → existing behaviour
+                            navigate(`/user/calibration-planner-panel/${record.id}`);
+                        }
+                    };
+                    return (
+                        <button
+                            type="button"
+                            onClick={handleClick}
+                            className="
+                                inline-flex cursor-pointer rounded-md border
+                                border-indigo-100 bg-indigo-50/70 px-2 py-1.5
+                                font-mono text-[11px] font-semibold tracking-wide
+                                text-gray-500 shadow-sm transition-all duration-200
+                                hover:border-indigo-200 hover:bg-indigo-100
+                                hover:text-indigo-800 hover:shadow
+                                focus:outline-none focus:ring-2
+                                focus:ring-indigo-500/20
+                            "
+                            title="View record details"
+                        >
+                            #{getValue() || "-"}
+                        </button>
+                    );
+                },
             },
 
-                {
+            {
                 id: "recordNumber",
                 header: "Record Number",
                 accessorFn: (row) =>
@@ -349,21 +331,6 @@ const getProcessValue = (record, key) => {
                     </div>
                 ),
             },
-
-            // {
-            //     id: "siteLocation",
-            //     header: "Site / Location",
-            //     accessorFn: (row) =>
-            //         getProcessValue(
-            //             row,
-            //             "siteLocationCode"
-            //         ),
-            //     cell: ({ getValue }) => (
-            //         <span className="text-sm font-medium text-slate-600">
-            //             {getValue() || "-"}
-            //         </span>
-            //     ),
-            // },
 
             {
                 id: "initiator",
@@ -435,18 +402,6 @@ const getProcessValue = (record, key) => {
                 ),
             },
 
-            // {
-            //     id: "dueDate",
-            //     header: "Due Date",
-            //     accessorFn: (row) =>
-            //         getProcessValue(row, "dueDate"),
-            //     cell: ({ getValue }) => (
-            //         <span className="whitespace-nowrap text-xs font-medium text-slate-600">
-            //             {getValue() || "-"}
-            //         </span>
-            //     ),
-            // },
-
             {
                 id: "actions",
                 header: "Action",
@@ -476,7 +431,7 @@ const getProcessValue = (record, key) => {
                 ),
             },
         ],
-        []
+        [navigate] // include navigate in dependencies so the cell uses the latest navigate
     );
 
     return (

@@ -15,7 +15,6 @@ import FormAttachment from "../../../components/common/Form/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 
-import calibrationColumns from "./calibrationColumn";
 import { getProfile } from "../../../services/authApi";
 import {
   addCalibration,
@@ -25,6 +24,7 @@ import {
 } from "../../../services/usersApi/calibrationApi";
 import { formatDate, formatDateTime } from "../../../utils/date";
 
+// Tabs definition (stageId not needed here)
 const TABS = [
   { id: "general", label: "General Information" },
   { id: "hod", label: "HOD / Designee Review" },
@@ -39,33 +39,33 @@ const REQUIRED_FIELDS = [
   { name: "qaApproval", label: "QA Approval" },
 ];
 
-// ----- Payload builder (converts ID to name for equipment) -----
-const normalizeGridRows = (rows = [], columns = [], equipmentMap = {}) =>
-  rows.map((row, index) => {
-
+// ===== Helper: Build Grid Payload =====
+// Iterates over each row's own keys; no separate column list needed.
+// Converts equipment ID to name and formats dates.
+const normalizeGridRows = (rows = [], equipmentMap = {}) => {
+  return rows.map((row, index) => {
     const rowData = { row_id: index + 1 };
 
-    columns.forEach((col) => {
+    // Loop over every key in the row object
+    Object.keys(row).forEach((key) => {
+      // Preserve internal grid properties as-is
+      if (key === "monthlyCalibration" || key === "calibrationFrequencyStartDate") {
+        rowData[key] = row[key];
+        return;
+      }
 
-      const key = col.key;
+      let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
 
-      let value =
-        row[key] !== undefined && row[key] !== null
-          ? row[key]
-          : "";
-
+      // Special handling for equipment name: convert ID → Name
       if (key === "equipmentInstrumentName") {
-
         const id = value;
-
         if (id && equipmentMap[id]) {
           value = equipmentMap[id].name;
         } else {
           value = "";
         }
-
       } else {
-
+        // Date formatting for date fields
         if (key === "previousCalibrationDate" && value) {
           value = formatDate(value);
         } else if (key === "nextCalibrationDate" && value) {
@@ -73,46 +73,86 @@ const normalizeGridRows = (rows = [], columns = [], equipmentMap = {}) =>
         } else if (key === "calibrationDate" && value) {
           value = formatDate(value);
         }
-
       }
 
       rowData[key] = {
         key,
-        label: col.title,
+        label: key, // Label not critical for API; can leave as key or derive from grid
         value,
       };
     });
 
-    // ONLY ADD THESE
-    rowData.monthlyCalibration = row.monthlyCalibration || {};
-
-    rowData.calibrationFrequencyStartDate =
-      row.calibrationFrequencyStartDate || "";
-
     return rowData;
   });
+};
 
+// ===== Helper: Build Process Data =====
 const getUserPair = (userId, users = []) => {
   const user = users.find((item) => item?.id === userId);
   return { id: user?.id || userId || "", name: user?.name || "" };
 };
 
 const buildProcessData = (values, systemFields, hodUsers, qaReviewers, qaApprovers) => [
-  ...systemFields.map((field) => ({ key: field.name, label: field.label, value: values?.[field.name] || "" })),
-  { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
-  { key: "hod", label: "HOD / Designee", value: getUserPair(values?.hod, hodUsers) },
-  { key: "qa_reviewer", label: "QA Reviewer", value: getUserPair(values?.qaReviewer, qaReviewers) },
-  { key: "qa_approval", label: "QA Approval", value: getUserPair(values?.qaApproval, qaApprovers) },
+  ...systemFields.map((field) => ({
+    key: field.name,
+    label: field.label,
+    value: values?.[field.name] || "",
+  })),
+  {
+    key: "short_description",
+    label: "Short Description",
+    value: values?.shortDescription || "",
+  },
+  {
+    key: "hod",
+    label: "HOD / Designee",
+    value: getUserPair(values?.hod, hodUsers),
+  },
+  {
+    key: "qa_reviewer",
+    label: "QA Reviewer",
+    value: getUserPair(values?.qaReviewer, qaReviewers),
+  },
+  {
+    key: "qa_approval",
+    label: "QA Approval",
+    value: getUserPair(values?.qaApproval, qaApprovers),
+  },
   { key: "comment", label: "Comments", value: values?.comments || "" },
   { key: "attachment", label: "Attachment", value: values?.attachment || [] },
-  { key: "hod_review_comments", label: "HOD / Designee Review Comments", value: values?.hodReviewComments || "" },
-  { key: "hod_review_attachment", label: "HOD / Designee Review Attachment", value: values?.hodReviewAttachment || [] },
-  { key: "qa_review_comments", label: "QA Review Comments", value: values?.qaReviewComments || "" },
-  { key: "qa_review_attachment", label: "QA Review Attachment", value: values?.qaReviewAttachment || [] },
-  { key: "qa_approval_comments", label: "QA Approval Comments", value: values?.qaApprovalComments || "" },
-  { key: "qa_approval_attachment", label: "QA Approval Attachment", value: values?.qaApprovalAttachment || [] },
+  {
+    key: "hod_review_comments",
+    label: "HOD / Designee Review Comments",
+    value: values?.hodReviewComments || "",
+  },
+  {
+    key: "hod_review_attachment",
+    label: "HOD / Designee Review Attachment",
+    value: values?.hodReviewAttachment || [],
+  },
+  {
+    key: "qa_review_comments",
+    label: "QA Review Comments",
+    value: values?.qaReviewComments || "",
+  },
+  {
+    key: "qa_review_attachment",
+    label: "QA Review Attachment",
+    value: values?.qaReviewAttachment || [],
+  },
+  {
+    key: "qa_approval_comments",
+    label: "QA Approval Comments",
+    value: values?.qaApprovalComments || "",
+  },
+  {
+    key: "qa_approval_attachment",
+    label: "QA Approval Attachment",
+    value: values?.qaApprovalAttachment || [],
+  },
 ];
 
+// ===== Validation =====
 const validateCalibrationForm = (form) => {
   const values = form.getFieldsValue();
   return REQUIRED_FIELDS.filter((field) => {
@@ -122,7 +162,7 @@ const validateCalibrationForm = (form) => {
   });
 };
 
-// ----- Main Component -----
+// ===== Main Component =====
 const CreateCalibration = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("general");
@@ -145,13 +185,12 @@ const CreateCalibration = () => {
   const [usersLoading, setUsersLoading] = useState(false);
 
   const [form] = Form.useForm();
-
   const location = useLocation();
   const navigate = useNavigate();
   const { processId } = useParams();
   const { processName, siteName } = location.state || {};
 
-  // Fetch profile
+  // ---- Fetch profile ----
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -182,7 +221,7 @@ const CreateCalibration = () => {
     fetchProfile();
   }, [form, dateOfInitiation]);
 
-  // Fetch equipment list
+  // ---- Fetch equipment ----
   useEffect(() => {
     const fetchEquipment = async () => {
       try {
@@ -209,7 +248,7 @@ const CreateCalibration = () => {
     fetchEquipment();
   }, []);
 
-  // Fetch record number
+  // ---- Fetch record number ----
   useEffect(() => {
     if (!processId) return;
     const fetchRecordNumber = async () => {
@@ -217,9 +256,7 @@ const CreateCalibration = () => {
         const response = await getRecordNumber(processId);
         const generatedRecordNumber = response?.data?.data?.record_number || "";
         setRecordNumber(generatedRecordNumber);
-        form.setFieldsValue({
-          recordNumber: generatedRecordNumber,
-        });
+        form.setFieldsValue({ recordNumber: generatedRecordNumber });
       } catch (error) {
         console.error("Failed to generate record number:", error);
         toast.error(error?.response?.data?.message || "Failed to generate record number.");
@@ -228,7 +265,7 @@ const CreateCalibration = () => {
     fetchRecordNumber();
   }, [processId, form]);
 
-  // Fetch workflow users
+  // ---- Fetch workflow users ----
   useEffect(() => {
     const fetchCalibrationUsers = async () => {
       try {
@@ -263,15 +300,18 @@ const CreateCalibration = () => {
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
 
-  // ----- Restrict tab switching to only "general" during creation -----
+  // ---- Tab switching (only general is allowed during creation) ----
   const handleTabChange = (tabId) => {
     if (tabId !== "general") {
-      toast.warning("Please fill all mandatory fields in General Information and save before accessing other tabs.");
+      toast.warning(
+        "Please fill all mandatory fields in General Information and save before accessing other tabs."
+      );
       return;
     }
     setActiveTab(tabId);
   };
 
+  // ---- Save handler ----
   const handleSave = async () => {
     if (isSaving) return;
     const missingFields = validateCalibrationForm(form);
@@ -279,7 +319,10 @@ const CreateCalibration = () => {
       const missingFieldNames = missingFields.map((field) => field.label).join(", ");
       toast.error(`Required fields missing: ${missingFieldNames}`);
       form.setFields(
-        missingFields.map((field) => ({ name: field.name, errors: [`${field.label} is required`] }))
+        missingFields.map((field) => ({
+          name: field.name,
+          errors: [`${field.label} is required`],
+        }))
       );
       setActiveTab("general");
       return;
@@ -287,12 +330,20 @@ const CreateCalibration = () => {
     form.submit();
   };
 
+  // ---- Submit ----
   const handleSubmit = async (values) => {
     if (isSaving) return;
     try {
       setIsSaving(true);
-      const processData = buildProcessData(values, systemFields, hodUsers, qaReviewers, qaApprovers);
-      const gridData = normalizeGridRows(calibrationRows, calibrationColumns, equipmentMap);
+      const processData = buildProcessData(
+        values,
+        systemFields,
+        hodUsers,
+        qaReviewers,
+        qaApprovers
+      );
+      const gridData = normalizeGridRows(calibrationRows, equipmentMap);
+
       const payload = {
         process_id: Number(processId),
         stage_id: 1,
@@ -304,7 +355,7 @@ const CreateCalibration = () => {
         gridData,
         checklistData: [],
       };
-      console.log("Calibration Payload:", payload);
+
       const response = await addCalibration(payload);
       if (response?.data?.success) {
         toast.success("Calibration created successfully.");
@@ -329,35 +380,46 @@ const CreateCalibration = () => {
     navigate("/user/engineering-dashboard");
   };
 
+  // ---- Render ----
   return (
     <div className="w-full">
-      {/* Header and tabs remain the same */}
+      {/* Header */}
       <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Activity size={20} />
             </div>
-            <h1 className="text-[22px] font-semibold tracking-tight text-[#263B35]">Create Calibration</h1>
+            <h1 className="text-[22px] font-semibold tracking-tight text-[#263B35]">
+              Create Calibration
+            </h1>
           </div>
         </div>
         <div className="flex items-center gap-8 border-l border-slate-200 pl-6">
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">Site</p>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">
+              Site
+            </p>
             <p className="text-sm font-semibold text-[#344A43]">{siteName || "Unit IV"}</p>
           </div>
           <div className="h-9 w-px bg-slate-200" />
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">Process</p>
-            <p className="text-sm font-semibold text-[#344A43]">{processName || "Calibration Management"}</p>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">
+              Process
+            </p>
+            <p className="text-sm font-semibold text-[#344A43]">
+              {processName || "Calibration Management"}
+            </p>
           </div>
         </div>
       </div>
 
+      {/* Tabs */}
       <div className="mb-8">
         <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
 
+      {/* Form */}
       <Form
         form={form}
         layout="vertical"
@@ -392,6 +454,7 @@ const CreateCalibration = () => {
               </div>
             )}
 
+            {/* Calibration Grid */}
             <div className="mt-5">
               <CalibrationGrid
                 value={calibrationRows}
@@ -404,6 +467,7 @@ const CreateCalibration = () => {
 
             <div className="my-9 h-px w-full bg-slate-200" />
             <SectionHeader title="CALIBRATION INFORMATION" />
+
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item
                 name="hod"
@@ -457,7 +521,7 @@ const CreateCalibration = () => {
           </section>
         )}
 
-     {/* Other tabs (hod, qa-review, qa-approval) remain unchanged */}
+        {/* Other tabs (visible but not accessible; just for UI completeness) */}
         {activeTab === "hod" && (
           <section>
             <SectionHeader title="HOD / DESIGNEE REVIEW" />
@@ -517,7 +581,6 @@ const CreateCalibration = () => {
             </div>
           </section>
         )}
-        {/* Other tabs are hidden because we never switch to them */}
       </Form>
 
       <FloatingActionButtons

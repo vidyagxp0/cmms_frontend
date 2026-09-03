@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Trash2, Table2, CalendarDays } from "lucide-react";
+import { Plus, Trash2, Table2, CalendarDays, ExternalLink } from "lucide-react";
 import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -22,8 +22,6 @@ const MONTHS = [
   { key: "Nov", label: "Nov" },
   { key: "Dec", label: "Dec" },
 ];
-
-const FREQUENCY_INTERVALS = { monthly: 1, quarterly: 3, "half-yearly": 6, yearly: 12 };
 
 const createEmptyMonthlyData = () => {
   const monthlyData = {};
@@ -54,6 +52,8 @@ const CalibrationGrid = ({
   addButtonLabel = "Add Row",
   minRows = 0,
   maxRows,
+  onViewChild, // <-- NEW: callback for "Child" button
+  viewChildLabel = "Child", // optional label
 }) => {
   const columns = [
     { key: "equipmentInstrumentName", title: "Equipment / Instrument Name", type: "select", placeholder: "Select equipment", required: true, minWidth: 220 },
@@ -78,54 +78,16 @@ const CalibrationGrid = ({
 
   const showMonthlyCalendar = rows.some((row) => !!row?.calibrationFrequency);
 
-  /*
-   * MONTH ENABLEMENT
-   * -----------------
-   * Once a frequency is selected, capture the current month.
-   *
-   * Rules:
-   * - Months before the captured/current month are disabled.
-   * - Current month is enabled.
-   * - Every month after the current month is enabled.
-   *
-   * Example: frequency selected in September:
-   * Jan-Aug = disabled
-   * Sep-Dec = enabled
-   *
-   * Frequency is still stored on the row and can be used by
-   * scheduling/business logic, but it does not prevent the user
-   * from selecting any future month.
-   */
   const isMonthEnabled = (frequency, monthKey, frequencyStartDate) => {
     if (!frequency) return false;
-
-    const startDate = frequencyStartDate
-      ? dayjs(frequencyStartDate)
-      : dayjs();
-
+    const startDate = frequencyStartDate ? dayjs(frequencyStartDate) : dayjs();
     if (!startDate.isValid()) return false;
-
-    const monthIndex = MONTHS.findIndex(
-      ({ key }) => key === monthKey
-    );
-
+    const monthIndex = MONTHS.findIndex(({ key }) => key === monthKey);
     if (monthIndex < 0) return false;
-
     const startYear = startDate.year();
     const currentYear = dayjs().year();
-
-    // If the stored start date belongs to a previous year,
-    // all months in the current displayed year are available.
-    if (startYear < currentYear) {
-      return true;
-    }
-
-    // If it is somehow a future year, nothing is enabled yet.
-    if (startYear > currentYear) {
-      return false;
-    }
-
-    // Same year: current month + all future months are enabled.
+    if (startYear < currentYear) return true;
+    if (startYear > currentYear) return false;
     return monthIndex >= startDate.month();
   };
 
@@ -288,6 +250,9 @@ const CalibrationGrid = ({
   const columnsBeforeMonths = visibleColumns.filter((_, index) => index <= frequencyIndex);
   const columnsAfterMonths = visibleColumns.filter((_, index) => index > frequencyIndex);
 
+  // Determine if we should show the "Child" column
+  const showChildColumn = typeof onViewChild === "function";
+
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
       <div className="flex min-h-[68px] items-center justify-between gap-5 border-b border-[#D7E0DC] bg-[#F7F9F8] px-5">
@@ -340,6 +305,14 @@ const CalibrationGrid = ({
                   <div className="flex items-center gap-1">{column.title}{column.required && <span className="text-red-500">*</span>}</div>
                 </th>
               ))}
+
+              {/* Child column (conditional) */}
+              {showChildColumn && (
+                <th className="w-[70px] border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-2 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]">
+                  {viewChildLabel}
+                </th>
+              )}
+
               <th className="w-[62px] border-b border-[#D5DFDB] bg-[#EEF3F1] px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]">Action</th>
             </tr>
           </thead>
@@ -367,6 +340,23 @@ const CalibrationGrid = ({
                   {columnsAfterMonths.map((column) => (
                     <td key={column.key} className="border-b border-r border-[#E0E7E4] px-3 py-2.5 align-top">{renderField(column, row, rowIndex)}</td>
                   ))}
+
+                  {/* Child button column */}
+                  {showChildColumn && (
+<td className="border-b border-r border-[#E0E7E4] px-2 py-2.5 text-center align-top">
+  <button
+    type="button"
+    onClick={() => onViewChild(rowIndex, row)}
+    className="inline-flex h-8 items-center justify-center rounded-md bg-[#3d606d] px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-[#2B5577] hover:shadow-md active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1"
+    aria-label="Create child calibration"
+    title="Create child calibration"
+  >
+    Child
+  </button>
+</td>
+
+                  )}
+
                   <td className="border-b border-[#E0E7E4] px-2 py-2.5 text-center align-top">
                     <button
                       type="button"
@@ -382,7 +372,17 @@ const CalibrationGrid = ({
               ))
             ) : (
               <tr>
-                <td colSpan={1 + columnsBeforeMonths.length + (showMonthlyCalendar ? MONTHS.length : 0) + columnsAfterMonths.length + 1} className="h-[80px] border-b border-[#E0E7E4] px-5 text-center text-[11px] font-medium text-[#899690]">
+                <td
+                  colSpan={
+                    1 +
+                    columnsBeforeMonths.length +
+                    (showMonthlyCalendar ? MONTHS.length : 0) +
+                    columnsAfterMonths.length +
+                    (showChildColumn ? 1 : 0) +
+                    1 // Action column
+                  }
+                  className="h-[80px] border-b border-[#E0E7E4] px-5 text-center text-[11px] font-medium text-[#899690]"
+                >
                   No calibration rows added yet.
                 </td>
               </tr>

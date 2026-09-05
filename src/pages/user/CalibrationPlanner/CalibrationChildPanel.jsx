@@ -812,7 +812,7 @@ const CalibrationChildPanel = () => {
 
             <SectionHeader title="INSTRUMENT / EQUIPMENT DETAILS" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="instrumentName" label="Instrument / Equipment Name" className="!mb-4">
+              {/* <Form.Item name="instrumentName" label="Instrument / Equipment Name" className="!mb-4">
                 <FormSelect
                   placeholder={equipmentLoading ? "Loading..." : "Select Instrument"}
                   options={equipmentOptions}
@@ -908,6 +908,60 @@ const CalibrationChildPanel = () => {
               </Form.Item>
               <Form.Item name="certificateNumber" label="Calibration Certificate number" className="!mb-4">
                 <FormInput placeholder="Cert #" disabled={!isManagementEditable} />
+              </Form.Item> */}
+               <Form.Item name="name" label="Name" className="!mb-4">
+                <FormInput placeholder="Enter name" disabled={!isManagementEditable} />
+              </Form.Item>
+             <Form.Item name="location" label="Location" className="!mb-4">
+                <FormInput placeholder="Lab A, Room 101" disabled={!isManagementEditable} />
+              </Form.Item>
+              <Form.Item name="makeModel" label="Make" className="!mb-4">
+                <FormInput placeholder="e.g. Fluke 87V" disabled={!isManagementEditable} />
+              </Form.Item>
+              <Form.Item name="range" label="Sr.No/Model No" className="!mb-4">
+                <FormInput placeholder="e.g. 0-1000 V" disabled={!isManagementEditable} />
+              </Form.Item>
+                <Form.Item name="range" label="Operating Range" className="!mb-4">
+                <FormInput placeholder="e.g. 0-1000 V" disabled={!isManagementEditable} />
+              </Form.Item>
+               
+               <Form.Item name="leastCount" label="Least Count" className="!mb-4">
+                <FormInput placeholder="e.g. 0.01" disabled={!isManagementEditable} />
+              </Form.Item>
+              
+              <Form.Item name="range" label="Accuracy" className="!mb-4">
+                <FormInput placeholder="e.g. 0-1000 V" disabled={!isManagementEditable} />
+              </Form.Item>
+
+            
+              <Form.Item name="nextCalibrationDate" label="Next Calibration Date" className="!mb-4">
+                <DatePicker
+                  className="w-full"
+                  format="DD/MM/YYYY"
+                  placeholder="Select date"
+                  disabled={!isManagementEditable}
+                />
+              </Form.Item>
+               <Form.Item name="previousCalibrationDate" label="Previous Calibration Date" className="!mb-4">
+                <DatePicker
+                  className="w-full"
+                  format="DD/MM/YYYY"
+                  placeholder="Select date"
+                  disabled={!isManagementEditable}
+                />
+              </Form.Item>
+
+              <Form.Item name="standardReference" label="Calibration test points" className="!mb-4">
+                <FormInput placeholder="e.g. ISO 17025" disabled={!isManagementEditable} />
+              </Form.Item>
+              <Form.Item name="dueReminder" label="Location" className="!mb-4">
+                <FormInput placeholder="Days before due" disabled={!isManagementEditable} />
+              </Form.Item>
+              <Form.Item name="procedureReference" label="Environmental condition Temp" className="!mb-4">
+                <FormInput placeholder="Doc #" disabled={!isManagementEditable} />
+              </Form.Item>
+              <Form.Item name="procedureReference" label="Environmental condition Humidity" className="!mb-4">
+                <FormInput placeholder="Doc #" disabled={!isManagementEditable} />
               </Form.Item>
             </div>
 

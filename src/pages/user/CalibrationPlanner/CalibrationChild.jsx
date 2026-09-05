@@ -16,6 +16,9 @@ import FloatingActionButtons from "../../../components/ui/FloatingActionButtons"
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGrid";
 import CALIBRATED_BY_COLUMNS from "./calibrationColumn";
+import CALIBRATION_RESULT_GRID from "./calibrationResultGrid";
+
+
 
 import { getProfile } from "../../../services/authApi";
 import {
@@ -177,6 +180,7 @@ const CalibrationChild = () => {
   const [equipmentMap, setEquipmentMap] = useState({});
   const [equipmentLoading, setEquipmentLoading] = useState(false);
   const [calibrationResultRows, setCalibrationResultRows] = useState([]);
+  const [calibrationResultTest,setCalibrationResultTest]=useState([])
 
   // Profile / system data
   const [initiator, setInitiator] = useState("");
@@ -546,8 +550,8 @@ const CalibrationChild = () => {
 
             {/* INSTRUMENT / EQUIPMENT DETAILS */}
             <SectionHeader title="INSTRUMENT / EQUIPMENT DETAILS" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="instrumentName" label="Instrument / Equipment Name" className="!mb-4">
+             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+               {/* <Form.Item name="instrumentName" label="Instrument / Equipment Name" className="!mb-4">
                 <FormSelect
                   placeholder={equipmentLoading ? "Loading..." : "Select Instrument"}
                   options={equipmentOptions}
@@ -609,7 +613,67 @@ const CalibrationChild = () => {
               </Form.Item>
               <Form.Item name="certificateNumber" label="Calibration Certificate number" className="!mb-4">
                 <FormInput placeholder="Cert #" />
+              </Form.Item> */}
+             
+              <Form.Item name="name" label="Name" className="!mb-4">
+                <FormInput placeholder="e.g. EQ-001" />
               </Form.Item>
+              <Form.Item name="location" label="Make" className="!mb-4">
+                <FormInput placeholder="Lab A, Room 101" />
+              </Form.Item>
+              <Form.Item name="makeModel" label="Sr.No/Model" className="!mb-4">
+                <FormInput placeholder="e.g. Fluke 87V" />
+              </Form.Item>
+              <Form.Item name="range" label="Calibration test points" className="!mb-4">
+                <FormInput placeholder="e.g. 0-1000 V" />
+              </Form.Item>
+              <Form.Item name="leastCount" label="ID No." className="!mb-4">
+                <FormInput placeholder="e.g. 0.01" />
+              </Form.Item>
+              <Form.Item name="criticality" label="Instrument Range" className="!mb-4">
+                <FormSelect placeholder="Select" options={criticalityOptions} />
+              </Form.Item>
+              <Form.Item name="calibrationFrequency" label="Operating Range" className="!mb-4">
+                <FormSelect placeholder="Select" options={frequencyOptions} />
+              </Form.Item>
+
+              <Form.Item name="previousCalibrationDate" label="Accuracy" className="!mb-4">
+                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" />
+              </Form.Item>
+              <Form.Item name="previousCalibrationDate" label="Least Count" className="!mb-4">
+                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" />
+              </Form.Item>
+              <Form.Item name="nextCalibrationDate" label="Next Calibration Date" className="!mb-4">
+                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" />
+              </Form.Item>
+
+              <Form.Item name="standardReference" label="Calibration Standard Reference" className="!mb-4">
+                <FormInput placeholder="e.g. ISO 17025" />
+              </Form.Item>
+              <Form.Item name="dueReminder" label="Calibration Due Reminder" className="!mb-4">
+                <FormInput placeholder="Days before due" />
+              </Form.Item>
+              <Form.Item name="procedureReference" label="Calibration Procedures Reference Document" className="!mb-4">
+                <FormInput placeholder="Doc #" />
+              </Form.Item>
+              <Form.Item name="standardUsed" label="Calibration Standard used" className="!mb-4">
+                <FormInput placeholder="Standard name" />
+              </Form.Item>
+              <Form.Item name="parameters" label="Calibration Parameters" className="!mb-4">
+                <FormInput placeholder="e.g. Voltage, Current" />
+              </Form.Item>
+              <Form.Item name="unscheduledReason" label="Reason for Unscheduled or Event Based Calibration" className="!mb-4">
+                <FormInput placeholder="Explain reason" />
+              </Form.Item>
+              <Form.Item name="eventReference" label="Event Reference No." className="!mb-4">
+                <FormInput placeholder="e.g. EVT-123" />
+              </Form.Item>
+              <Form.Item name="calibrationResults" label="Calibration Results" className="!mb-4">
+                <FormSelect placeholder="Select" options={resultOptions} />
+              </Form.Item>
+              <Form.Item name="certificateNumber" label="Calibration Certificate number" className="!mb-4">
+                <FormInput placeholder="Cert #" />
+              </Form.Item> 
             </div>
 
             <div className="my-9 h-px w-full bg-slate-200" />
@@ -623,6 +687,20 @@ const CalibrationChild = () => {
                 columns={CALIBRATED_BY_COLUMNS}
                 value={calibrationResultRows}
                 onChange={setCalibrationResultRows}
+                allowAdd={true}
+                allowDelete={true}
+                addButtonLabel="Add Parameter"
+                minRows={0}
+                rowKey="_rowId"
+              />
+            </div>
+             <div className="mt-4">
+              <UserDynamicGrid
+                name="Calibration Results"
+                description="Add parameter-wise calibration results"
+                columns={CALIBRATION_RESULT_GRID}
+                value={calibrationResultTest}
+                onChange={setCalibrationResultTest}
                 allowAdd={true}
                 allowDelete={true}
                 addButtonLabel="Add Parameter"

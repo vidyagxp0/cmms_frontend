@@ -5,7 +5,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-
 dayjs.extend(customParseFormat);
 
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
@@ -36,23 +35,15 @@ import {
   executeCalibrationActivity,
 } from "../../../services/usersApi/calibrationApi";
 
-// Tabs for child – with stageId for each tab (matches child workflow)
 const TABS = [
-  { id: "management", label: "Calibration Management", stageId: 19 },
-  { id: "implementor", label: "Implementor Review", stageId: 20 },
-  { id: "qa-review", label: "QA Review", stageId: 21 },
-  { id: "qa-approval", label: "QA Approval", stageId: 22 },
+  { id: "management", label: "General Information", stageId: 19 },
+  { id: "implementor", label: "HOD / Designee Review", stageId: 20 },
+  { id: "qa-review", label: "QA Review & Approval", stageId: 21 },
   { id: "activity", label: "Activity Log", stageId: 23 },
 ];
 
-// Only these three are required
-const REQUIRED_FIELDS = [
-  { name: "hod", label: "HOD / Designee" },
-  { name: "qaReviewer", label: "QA Reviewer" },
-  { name: "qaApproval", label: "QA Approval" },
-];
+const REQUIRED_FIELDS = [];
 
-// ===== Helpers (same as creation) =====
 const getProcessValue = (processData = [], key) => {
   if (Array.isArray(processData)) {
     const field = processData.find((item) => item?.key === key);
@@ -72,9 +63,7 @@ const buildGridPayload = (rows = []) => {
     Object.keys(row).forEach((key) => {
       if (key.startsWith("_")) return;
       let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
-      if (dayjs.isDayjs(value)) {
-        value = value.format("DD/MM/YYYY");
-      }
+      if (dayjs.isDayjs(value)) value = value.format("DD/MM/YYYY");
       rowData[key] = { key, label: key, value };
     });
     return rowData;
@@ -94,80 +83,40 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
     { key: "dateOfInitiation", label: "Date of Initiation" },
     { key: "initiationDepartment", label: "Initiation Department" },
   ];
-  const baseData = systemFields.map((field) => ({
-    key: field.key,
-    label: field.label,
-    value: systemValues[field.key] || "",
-  }));
-
+  const baseData = systemFields.map((field) => ({ key: field.key, label: field.label, value: systemValues[field.key] || "" }));
   const otherFields = [
-    "shortDescription",
-    "instrumentName",
-    "instrumentId",
-    "location",
-    "make",
-    "model",
-    "instrumentRange",
-    "leastCount",
-    "accuracy",
-    "calibrationTestPoints",
-    "operatingRange",
-    "envTemperature",
-    "envHumidity",
-    "previousCalibrationDate",
-    "nextCalibrationDate",
-    "comments",
-    "attachment",
+    "shortDescription", "instrumentName", "instrumentId", "location", "make", "model",
+    "instrumentRange", "leastCount", "accuracy", "calibrationTestPoints", "operatingRange",
+    "envTemperature", "envHumidity", "previousCalibrationDate", "nextCalibrationDate",
+    "comments", "attachment"
   ];
-
+  const labelMap = {
+    shortDescription: "Short Description",
+    instrumentName: "Instrument Name",
+    instrumentId: "Instrument ID No.",
+    location: "Location",
+    make: "Make",
+    model: "Model",
+    instrumentRange: "Instrument Range",
+    leastCount: "Least Count",
+    accuracy: "Accuracy",
+    calibrationTestPoints: "Calibration test points",
+    operatingRange: "Operating Range",
+    envTemperature: "Environmental Condition Temperature",
+    envHumidity: "Environmental Condition Relative Humidity",
+    previousCalibrationDate: "Previous Calibration Date",
+    nextCalibrationDate: "Next Calibration Date",
+    comments: "Comments",
+    attachment: "Attachment",
+  };
   otherFields.forEach((key) => {
     let value = values[key] !== undefined && values[key] !== null ? values[key] : "";
-    if (dayjs.isDayjs(value)) {
-      value = value.format("DD/MM/YYYY");
-    }
-    const labelMap = {
-      shortDescription: "Short Description",
-      instrumentName: "Instrument Name",
-      instrumentId: "Instrument ID No.",
-      location: "Location",
-      make: "Make",
-      model: "Model",
-      instrumentRange: "Instrument Range",
-      leastCount: "Least Count",
-      accuracy: "Accuracy",
-      calibrationTestPoints: "Calibration test points",
-      operatingRange: "Operating Range",
-      envTemperature: "Environmental Condition Temperature",
-      envHumidity: "Environmental Condition Relative Humidity",
-      previousCalibrationDate: "Previous Calibration Date",
-      nextCalibrationDate: "Next Calibration Date",
-      comments: "Comments",
-      attachment: "Attachment",
-    };
+    if (dayjs.isDayjs(value)) value = value.format("DD/MM/YYYY");
     baseData.push({ key, label: labelMap[key] || key, value });
   });
-
-  // Assignments (as objects)
-  // baseData.push({
-  //   key: "hod",
-  //   label: "HOD / Designee",
-  //   value: getUserPair(values.hod, hodUsers),
-  // });
-  // baseData.push({
-  //   key: "qa_reviewer",
-  //   label: "QA Reviewer",
-  //   value: getUserPair(values.qaReviewer, qaReviewers),
-  // });
-  // baseData.push({
-  //   key: "qa_approval",
-  //   label: "QA Approval",
-  //   value: getUserPair(values.qaApproval, qaApprovers),
-  // });
-
   return baseData;
 };
 
-// ===== Main Component =====
 const CalibrationChildPanel = () => {
   const [activeTab, setActiveTab] = useState("management");
   const [isSaving, setIsSaving] = useState(false);
@@ -176,11 +125,9 @@ const CalibrationChildPanel = () => {
   const [workflowLoading, setWorkflowLoading] = useState(true);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [form] = Form.useForm();
-
   const navigate = useNavigate();
   const { recordId } = useParams();
 
-  // ---- Workflow states ----
   const [workflowStages, setWorkflowStages] = useState([]);
   const [processId, setProcessId] = useState(null);
   const [activeStageId, setActiveStageId] = useState(null);
@@ -190,18 +137,15 @@ const CalibrationChildPanel = () => {
   const [activityLogsLoading, setActivityLogsLoading] = useState(false);
   const [canPerformActivity, setCanPerformActivity] = useState(false);
 
-  // ---- Equipment ----
   const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [equipmentMap, setEquipmentMap] = useState({});
   const equipmentMapRef = useRef(equipmentMap);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
 
-  // ---- Users ----
   const [hodUsers, setHodUsers] = useState([]);
   const [qaReviewers, setQaReviewers] = useState([]);
   const [qaApprovers, setQaApprovers] = useState([]);
 
-  // ---- Profile data ----
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
   const [loginUserId, setLoginUserId] = useState("");
@@ -212,47 +156,23 @@ const CalibrationChildPanel = () => {
   const [processName, setProcessName] = useState("");
   const [recordNumber, setRecordNumber] = useState("");
 
-  // ---- Child record specific ----
   const [shortDescription, setShortDescription] = useState("");
   const [calibrationResultRows, setCalibrationResultRows] = useState([]);
-  const [calibrationResultTest,setCalibrationResultTest]=useState([]);
+  const [calibrationResultTest, setCalibrationResultTest] = useState([]);
   const [parentId, setParentId] = useState(null);
 
-  // Refs
   const isFetchingRef = useRef(false);
-  const requiredValuesRef = useRef({
-    hod: "",
-    qaReviewer: "",
-    qaApproval: "",
-  });
 
-  useEffect(() => {
-    equipmentMapRef.current = equipmentMap;
-  }, [equipmentMap]);
+  useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
 
-  // ---- Editable checks using the correct stage IDs for child ----
-  const STAGE_IDS = {
-    management: 19,
-    implementor: 20,
-    qaReview: 21,
-    qaApproval: 22,
-    // activity is not editable
-  };
+  const STAGE_IDS = { management: 19, implementor: 20, qaReview: 21, qaApproval: 22 };
 
-  const isStageEditable = (stageId) => {
-    return (
-      Number(activeStageId) === Number(stageId) &&
-      canPerformActivity === true &&
-      permissionsLoading === false
-    );
-  };
-
+  const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
   const isManagementEditable = isStageEditable(STAGE_IDS.management);
   const isImplementorEditable = isStageEditable(STAGE_IDS.implementor);
   const isQaReviewEditable = isStageEditable(STAGE_IDS.qaReview);
   const isQaApprovalEditable = isStageEditable(STAGE_IDS.qaApproval);
 
-  // ---- Fetch profile ----
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -264,41 +184,27 @@ const CalibrationChildPanel = () => {
         setLoginUserId(profile?.id || "");
         setDepartmentId(profile?.department?.id || "");
         setInitiationDepartment(profile?.department?.name || "");
-      } catch (error) {
-        console.error("Failed to fetch profile:", error);
-      }
+      } catch (error) { console.error("Failed to fetch profile:", error); }
     };
     fetchProfile();
   }, []);
 
-  // ---- Fetch equipment ----
   useEffect(() => {
     const fetchEquipment = async () => {
       try {
         setEquipmentLoading(true);
         const response = await getAllEquipmentData();
         const data = response?.data?.data || [];
-        const options = data.map((item) => ({
-          value: item.id,
-          label: item.name,
-        }));
+        const options = data.map((item) => ({ value: item.id, label: item.name }));
         const map = {};
-        data.forEach((item) => {
-          map[item.id] = item;
-        });
+        data.forEach((item) => { map[item.id] = item; });
         setEquipmentOptions(options);
         setEquipmentMap(map);
-      } catch (error) {
-        console.error("Failed to fetch equipment:", error);
-        toast.error("Could not load equipment list.");
-      } finally {
-        setEquipmentLoading(false);
-      }
+      } catch (error) { console.error("Failed to fetch equipment:", error); toast.error("Could not load equipment list."); } finally { setEquipmentLoading(false); }
     };
     fetchEquipment();
   }, []);
 
-  // ---- Fetch users ----
   useEffect(() => {
     const fetchCalibrationUsers = async () => {
       try {
@@ -314,9 +220,7 @@ const CalibrationChildPanel = () => {
         setHodUsers([]);
         setQaReviewers([]);
         setQaApprovers([]);
-      } finally {
-        setUsersLoading(false);
-      }
+      } finally { setUsersLoading(false); }
     };
     fetchCalibrationUsers();
   }, []);
@@ -325,31 +229,21 @@ const CalibrationChildPanel = () => {
   const qaReviewerOptions = qaReviewers.map((user) => ({ value: user?.id, label: user?.name }));
   const qaApproverOptions = qaApprovers.map((user) => ({ value: user?.id, label: user?.name }));
 
-  // ---- Fetch child detail ----
   const fetchChildDetail = useCallback(async () => {
-    if (!recordId) {
-      toast.error("Child record ID is missing.");
-      return;
-    }
+    if (!recordId) { toast.error("Child record ID is missing."); return; }
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
-
     try {
       setIsLoading(true);
       const response = await getCalibrationChildDetail(recordId);
       const data = response?.data?.data;
-      if (!data) {
-        toast.error("Child calibration record not found.");
-        return;
-      }
-
+      if (!data) { toast.error("Child calibration record not found."); return; }
       setProcessId(data?.process_id || null);
       setActiveStageId(data?.stage?.id || data?.stage_id || null);
       setProcessName(data?.process?.name || "");
       setParentId(data?.parent_id || null);
 
       const processData = data?.process_data || [];
-
       const recNum = getProcessValue(processData, "recordNumber");
       const locCode = getProcessValue(processData, "siteLocationCode");
       const initiatorName = getProcessValue(processData, "initiator");
@@ -373,14 +267,6 @@ const CalibrationChildPanel = () => {
       const comments = getProcessValue(processData, "comments");
       const attachment = getProcessValue(processData, "attachment");
 
-      // const hod = getProcessValue(processData, "hod");
-      // const qaReviewer = getProcessValue(processData, "qa_reviewer");
-      // const qaApproval = getProcessValue(processData, "qa_approval");
-
-      const hodId = hod && typeof hod === "object" ? hod?.id : hod || "";
-      const qaReviewerId = qaReviewer && typeof qaReviewer === "object" ? qaReviewer?.id : qaReviewer || "";
-      const qaApprovalId = qaApproval && typeof qaApproval === "object" ? qaApproval?.id : qaApproval || "";
-
       setRecordNumber(recNum || "");
       setSiteLocationCode(locCode || "");
       setInitiator(initiatorName || data?.initiator?.name || "");
@@ -389,12 +275,6 @@ const CalibrationChildPanel = () => {
       setInitiationDepartment(dept || data?.department?.name || "");
       setDateOfInitiation(initDate || data?.initiation_date || "");
       setShortDescription(shortDesc || "");
-
-      requiredValuesRef.current = {
-        hod: hodId,
-        qaReviewer: qaReviewerId,
-        qaApproval: qaApprovalId,
-      };
 
       const parseDate = (val) => {
         if (!val) return null;
@@ -423,9 +303,9 @@ const CalibrationChildPanel = () => {
         envHumidity: envHumidity || "",
         previousCalibrationDate: parseDate(prevCalDate),
         nextCalibrationDate: parseDate(nextCalDate),
-        hod: hodId,
-        qaReviewer: qaReviewerId,
-        qaApproval: qaApprovalId,
+        hod: "",
+        qaReviewer: "",
+        qaApproval: "",
         comments: comments || "",
         attachment: attachment || [],
       });
@@ -435,36 +315,21 @@ const CalibrationChildPanel = () => {
       const normalizedRows = rawRows.map((item) => {
         const row = {};
         Object.keys(item).forEach((key) => {
-          if (key === "row_id") {
-            row.row_id = item.row_id;
-          } else if (
-            item[key] &&
-            typeof item[key] === "object" &&
-            Object.prototype.hasOwnProperty.call(item[key], "value")
-          ) {
-            row[key] = item[key].value;
-          } else {
-            row[key] = item[key];
-          }
+          if (key === "row_id") row.row_id = item.row_id;
+          else if (item[key] && typeof item[key] === "object" && Object.prototype.hasOwnProperty.call(item[key], "value")) row[key] = item[key].value;
+          else row[key] = item[key];
         });
         return row;
       });
       setCalibrationResultRows(normalizedRows);
-
     } catch (error) {
       console.error("Failed to fetch child detail:", error);
       toast.error(error?.response?.data?.message || "Failed to load child calibration record.");
-    } finally {
-      setIsLoading(false);
-      isFetchingRef.current = false;
-    }
+    } finally { setIsLoading(false); isFetchingRef.current = false; }
   }, [recordId, form]);
 
-  useEffect(() => {
-    fetchChildDetail();
-  }, [fetchChildDetail]);
+  useEffect(() => { fetchChildDetail(); }, [fetchChildDetail]);
 
-  // ---- Workflow stages, activities, permissions, logs ----
   useEffect(() => {
     if (!processId) return;
     const fetchStages = async () => {
@@ -477,19 +342,13 @@ const CalibrationChildPanel = () => {
         console.error("Failed to fetch workflow stages:", error);
         toast.error(error?.response?.data?.message || "Failed to load workflow stages.");
         setWorkflowStages([]);
-      } finally {
-        setWorkflowLoading(false);
-      }
+      } finally { setWorkflowLoading(false); }
     };
     fetchStages();
   }, [processId]);
 
   useEffect(() => {
-    if (!activeStageId) {
-      setActivities([]);
-      setActivitiesLoading(false);
-      return;
-    }
+    if (!activeStageId) { setActivities([]); setActivitiesLoading(false); return; }
     const fetchActivities = async () => {
       try {
         setActivitiesLoading(true);
@@ -500,19 +359,13 @@ const CalibrationChildPanel = () => {
         console.error("Failed to fetch activities:", error);
         toast.error(error?.response?.data?.message || "Failed to load activities.");
         setActivities([]);
-      } finally {
-        setActivitiesLoading(false);
-      }
+      } finally { setActivitiesLoading(false); }
     };
     fetchActivities();
   }, [activeStageId]);
 
   const fetchPermissions = useCallback(async () => {
-    if (!recordId) {
-      setCanPerformActivity(false);
-      setPermissionsLoading(false);
-      return;
-    }
+    if (!recordId) { setCanPerformActivity(false); setPermissionsLoading(false); return; }
     try {
       setPermissionsLoading(true);
       const response = await getAllPermissions(recordId);
@@ -522,16 +375,11 @@ const CalibrationChildPanel = () => {
       console.error("Failed to fetch permissions:", error);
       setCanPerformActivity(false);
       toast.error(error?.response?.data?.message || "Failed to check activity permissions.");
-    } finally {
-      setPermissionsLoading(false);
-    }
+    } finally { setPermissionsLoading(false); }
   }, [recordId]);
 
   const fetchActivityLogs = useCallback(async () => {
-    if (!recordId) {
-      setActivityLogs([]);
-      return;
-    }
+    if (!recordId) { setActivityLogs([]); return; }
     try {
       setActivityLogsLoading(true);
       const response = await getAllActivityLogs(recordId);
@@ -540,29 +388,27 @@ const CalibrationChildPanel = () => {
       console.error("Failed to fetch activity history:", error);
       toast.error(error?.response?.data?.message || "Failed to load activity history.");
       setActivityLogs([]);
-    } finally {
-      setActivityLogsLoading(false);
-    }
+    } finally { setActivityLogsLoading(false); }
   }, [recordId]);
 
-  useEffect(() => {
-    fetchActivityLogs();
-  }, [fetchActivityLogs]);
+  useEffect(() => { fetchActivityLogs(); }, [fetchActivityLogs]);
+  useEffect(() => { fetchPermissions(); }, [fetchPermissions]);
 
-  useEffect(() => {
-    fetchPermissions();
-  }, [fetchPermissions]);
-
-  // Sync active tab with stage – same as reference panel
   useEffect(() => {
     if (!activeStageId) return;
     const matchingTab = TABS.find((tab) => Number(tab.stageId) === Number(activeStageId));
-    if (matchingTab) {
-      setActiveTab(matchingTab.id);
-    }
+    if (matchingTab) setActiveTab(matchingTab.id);
   }, [activeStageId]);
 
-  // ---- Save / Update ----
+  const handleTabChange = (tabId) => {
+    if (tabId === "activity") { setActiveTab(tabId); return; }
+    if (tabId !== "management" && !canPerformActivity) {
+      toast.warning("Please fill all mandatory fields and save the record before accessing other tabs.");
+      return;
+    }
+    setActiveTab(tabId);
+  };
+
   const systemValues = {
     recordNumber: form.getFieldValue("recordNumber") || recordNumber,
     siteLocationCode: form.getFieldValue("siteLocationCode") || siteLocationCode,
@@ -573,7 +419,6 @@ const CalibrationChildPanel = () => {
 
   const handleSave = async () => {
     if (isSaving || isLoading || usersLoading) return;
-
     const values = form.getFieldsValue();
     const missing = REQUIRED_FIELDS.filter((field) => {
       const val = values[field.name];
@@ -583,12 +428,7 @@ const CalibrationChildPanel = () => {
     if (missing.length > 0) {
       const names = missing.map((f) => f.label).join(", ");
       toast.error(`Required fields missing: ${names}`);
-      form.setFields(
-        missing.map((f) => ({
-          name: f.name,
-          errors: [`${f.label} is required`],
-        }))
-      );
+      form.setFields(missing.map((f) => ({ name: f.name, errors: [`${f.label} is required`] })));
       setActiveTab("management");
       return;
     }
@@ -600,22 +440,9 @@ const CalibrationChildPanel = () => {
     try {
       setIsSaving(true);
       const mergedValues = { ...values };
-      REQUIRED_FIELDS.forEach(({ name }) => {
-        if (!mergedValues[name] && requiredValuesRef.current[name]) {
-          mergedValues[name] = requiredValuesRef.current[name];
-        }
-      });
-
-      const processData = buildProcessData(
-        mergedValues,
-        systemValues,
-        hodUsers,
-        qaReviewers,
-        qaApprovers
-      );
+      const processData = buildProcessData(mergedValues, systemValues, hodUsers, qaReviewers, qaApprovers);
       const gridData = buildGridPayload(calibrationResultRows);
       const testGridData = buildGridPayload(calibrationResultTest);
-
       const payload = {
         process_id: Number(processId),
         stage_id: Number(activeStageId),
@@ -628,7 +455,6 @@ const CalibrationChildPanel = () => {
         testGridData: testGridData,
         checklistData: [],
       };
-
       const response = await updateCalibrationChild(recordId, payload);
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Child calibration updated successfully.");
@@ -641,9 +467,7 @@ const CalibrationChildPanel = () => {
     } catch (error) {
       console.error("Update failed:", error);
       toast.error(error?.response?.data?.message || "Failed to update child calibration.");
-    } finally {
-      setIsSaving(false);
-    }
+    } finally { setIsSaving(false); }
   };
 
   const handleActivitySuccess = async () => {
@@ -653,9 +477,7 @@ const CalibrationChildPanel = () => {
       await fetchChildDetail();
       await fetchPermissions();
       await fetchActivityLogs();
-    } catch (error) {
-      console.error("Failed to save after activity:", error);
-    }
+    } catch (error) { console.error("Failed to save after activity:", error); }
   };
 
   const handleCancel = () => {
@@ -663,7 +485,6 @@ const CalibrationChildPanel = () => {
     navigate("/user/engineering-dashboard");
   };
 
-  // ---- Render ----
   if (isLoading) {
     return (
       <div className="w-full space-y-6">
@@ -675,56 +496,36 @@ const CalibrationChildPanel = () => {
 
   return (
     <div className="w-full">
-      {/* ===== HEADER ===== */}
       <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Activity size={20} />
             </div>
-            <h1 className="text-[22px] font-semibold tracking-tight text-[#263B35]">
-              Child Calibration
-            </h1>
+            <h1 className="text-[22px] font-semibold tracking-tight text-[#263B35]">Child Calibration</h1>
           </div>
         </div>
         <div className="flex items-center gap-8 border-l border-slate-200 pl-6">
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">
-              Site
-            </p>
-            <p className="text-sm font-semibold text-[#344A43]">
-              {siteLocationCode || "Unit IV"}
-            </p>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">Site</p>
+            <p className="text-sm font-semibold text-[#344A43]">{siteLocationCode || "Unit IV"}</p>
           </div>
           <div className="h-9 w-px bg-slate-200" />
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">
-              Process
-            </p>
-            <p className="text-sm font-semibold text-[#344A43]">
-              {processName || "Calibration Management"}
-            </p>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">Process</p>
+            <p className="text-sm font-semibold text-[#344A43]">{processName || "Calibration Management"}</p>
           </div>
         </div>
       </div>
 
-      {/* ===== Workflow Stage & Activities ===== */}
       <div className="mb-2 space-y-2">
-        <ProcessStage
-          stages={workflowStages}
-          activeStageId={activeStageId}
-          loading={workflowLoading}
-        />
+        <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} />
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
           <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
             <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />
             <div className="min-w-0 flex-1">
-              <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">
-                Process
-              </p>
-              <p className="truncate text-[11px] font-semibold text-[#344A43]">
-                {processName || "—"}
-              </p>
+              <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">Process</p>
+              <p className="truncate text-[11px] font-semibold text-[#344A43]">{processName || "—"}</p>
             </div>
           </div>
           <div className="min-w-0 flex-1">
@@ -743,12 +544,10 @@ const CalibrationChildPanel = () => {
         </div>
       </div>
 
-      {/* ===== Tabs ===== */}
       <div className="mb-6">
-        <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+        <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
 
-      {/* ===== Form ===== */}
       <Form
         form={form}
         layout="vertical"
@@ -760,40 +559,20 @@ const CalibrationChildPanel = () => {
           <section>
             <SectionHeader title="SYSTEM INFORMATION" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="recordNumber" label="Record Number" className="!mb-4">
-                <FormDisabledInput />
-              </Form.Item>
-              <Form.Item name="siteLocationCode" label="Site / Location Code" className="!mb-4">
-                <FormDisabledInput />
-              </Form.Item>
-              <Form.Item name="initiator" label="Initiator" className="!mb-4">
-                <FormDisabledInput />
-              </Form.Item>
-              <Form.Item name="dateOfInitiation" label="Date of Initiation" className="!mb-4">
-                <FormDisabledInput />
-              </Form.Item>
-              <Form.Item name="initiationDepartment" label="Initiation Department" className="!mb-4">
-                <FormDisabledInput />
-              </Form.Item>
-              <Form.Item
-                name="shortDescription"
-                label="Short Description"
-                className="!mb-4"
-              >
+              <Form.Item name="recordNumber" label="Record Number" className="!mb-4"><FormDisabledInput /></Form.Item>
+              <Form.Item name="siteLocationCode" label="Site / Location Code" className="!mb-4"><FormDisabledInput /></Form.Item>
+              <Form.Item name="initiator" label="Initiator" className="!mb-4"><FormDisabledInput /></Form.Item>
+              <Form.Item name="dateOfInitiation" label="Date of Initiation" className="!mb-4"><FormDisabledInput /></Form.Item>
+              <Form.Item name="initiationDepartment" label="Initiation Department" className="!mb-4"><FormDisabledInput /></Form.Item>
+              <Form.Item name="shortDescription" label="Short Description" className="!mb-4">
                 <FormInput placeholder="Enter short description" disabled={!isManagementEditable} />
               </Form.Item>
             </div>
-
             <div className="my-9 h-px w-full bg-slate-200" />
-
             <SectionHeader title="INSTRUMENT / EQUIPMENT DETAILS" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item name="instrumentName" label="Instrument Name" className="!mb-4">
-                <FormSelect
-                  placeholder={equipmentLoading ? "Loading..." : "Select Instrument"}
-                  options={equipmentOptions}
-                  disabled={equipmentLoading || !isManagementEditable}
-                />
+                <FormSelect placeholder={equipmentLoading ? "Loading..." : "Select Instrument"} options={equipmentOptions} disabled={equipmentLoading || !isManagementEditable} />
               </Form.Item>
               <Form.Item name="instrumentId" label="Instrument ID No." className="!mb-4">
                 <FormInput placeholder="e.g. EQ-001" disabled={!isManagementEditable} />
@@ -829,25 +608,13 @@ const CalibrationChildPanel = () => {
                 <FormInput placeholder="e.g. 45% RH ± 5%" disabled={!isManagementEditable} />
               </Form.Item>
               <Form.Item name="previousCalibrationDate" label="Previous Calibration Date" className="!mb-4">
-                <DatePicker
-                  className="w-full"
-                  format="DD/MM/YYYY"
-                  placeholder="Select date"
-                  disabled={!isManagementEditable}
-                />
+                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled={!isManagementEditable} />
               </Form.Item>
               <Form.Item name="nextCalibrationDate" label="Next Calibration Date" className="!mb-4">
-                <DatePicker
-                  className="w-full"
-                  format="DD/MM/YYYY"
-                  placeholder="Select date"
-                  disabled={!isManagementEditable}
-                />
+                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled={!isManagementEditable} />
               </Form.Item>
             </div>
-
             <div className="my-9 h-px w-full bg-slate-200" />
-
             <SectionHeader title="CALIBRATION RESULT" />
             <div className="mt-4">
               <UserDynamicGrid
@@ -861,9 +628,8 @@ const CalibrationChildPanel = () => {
                 addButtonLabel="Add Parameter"
                 minRows={0}
                 rowKey="_rowId"
-                deleteRow={(updatedRows) => 
-                    updateCalibrationChild(recordId, { gridData: updatedRows })
-                }              />
+                deleteRow={(updatedRows) => updateCalibrationChild(recordId, { gridData: updatedRows })}
+              />
             </div>
             <div className="mt-4">
               <UserDynamicGrid
@@ -877,19 +643,11 @@ const CalibrationChildPanel = () => {
                 addButtonLabel="Add Parameter"
                 minRows={0}
                 rowKey="_rowId"
-                deleteRow={(updatedRows) => 
-                    updateCalibrationChild(recordId, { gridData: updatedRows })
-                }              />
+                deleteRow={(updatedRows) => updateCalibrationChild(recordId, { gridData: updatedRows })}
+              />
             </div>
-
-
             <div className="my-9 h-px w-full bg-slate-200" />
-
-      
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              
-            
-             
               <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
                 <FormTextArea rows={4} placeholder="Additional comments..." disabled={!isManagementEditable} />
               </Form.Item>
@@ -908,10 +666,10 @@ const CalibrationChildPanel = () => {
 
         {activeTab === "implementor" && (
           <section>
-            <SectionHeader title="IMPLEMENTOR REVIEW" />
+            <SectionHeader title="HOD / DESIGNEE REVIEW" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item name="implementorComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter review comments..." disabled={!isImplementorEditable} />
+                <FormTextArea rows={5} placeholder="Enter HOD / Designee review comments..." disabled={!isImplementorEditable} />
               </Form.Item>
               <Form.Item
                 name="implementorAttachment"
@@ -928,10 +686,10 @@ const CalibrationChildPanel = () => {
 
         {activeTab === "qa-review" && (
           <section>
-            <SectionHeader title="QA REVIEW" />
+            <SectionHeader title="QA REVIEW & APPROVAL" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter QA review comments..." disabled={!isQaReviewEditable} />
+                <FormTextArea rows={5} placeholder="Enter QA review and approval comments..." disabled={!isQaReviewEditable && !isQaApprovalEditable} />
               </Form.Item>
               <Form.Item
                 name="qaReviewAttachment"
@@ -940,27 +698,7 @@ const CalibrationChildPanel = () => {
                 getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment disabled={!isQaReviewEditable} />
-              </Form.Item>
-            </div>
-          </section>
-        )}
-
-        {activeTab === "qa-approval" && (
-          <section>
-            <SectionHeader title="QA APPROVAL" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="qaApprovalComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter QA approval comments..." disabled={!isQaApprovalEditable} />
-              </Form.Item>
-              <Form.Item
-                name="qaApprovalAttachment"
-                label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
-                className="!mb-4 md:col-span-2"
-              >
-                <FormAttachment disabled={!isQaApprovalEditable} />
+                <FormAttachment disabled={!isQaReviewEditable && !isQaApprovalEditable} />
               </Form.Item>
             </div>
           </section>
@@ -973,20 +711,13 @@ const CalibrationChildPanel = () => {
               {activityLogsLoading ? (
                 <Skeleton variant="activityLog" />
               ) : activityLogs.length === 0 ? (
-                <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
-                  No activity history found.
-                </div>
+                <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">No activity history found.</div>
               ) : (
                 activityLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
-                  >
+                  <div key={log.id} className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]">
                     <div className="mb-5">
                       <p className="text-[13px] font-semibold text-[#3E4A5C]">Activity Name</p>
-                      <p className="mt-1 text-[14px] font-semibold text-[#182234]">
-                        {log.activity_name || "—"}
-                      </p>
+                      <p className="mt-1 text-[14px] font-semibold text-[#182234]">{log.activity_name || "—"}</p>
                     </div>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                       <div>
@@ -1004,9 +735,7 @@ const CalibrationChildPanel = () => {
                       <div>
                         <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Comments</p>
                         <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
-                          <p className="break-words text-[14px] leading-5 text-[#526071]">
-                            {log.comment || "—"}
-                          </p>
+                          <p className="break-words text-[14px] leading-5 text-[#526071]">{log.comment || "—"}</p>
                         </div>
                       </div>
                     </div>

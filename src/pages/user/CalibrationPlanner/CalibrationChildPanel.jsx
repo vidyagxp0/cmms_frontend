@@ -19,8 +19,7 @@ import FormAttachment from "../../../components/common/Form/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGrid";
-import CALIBRATED_BY_COLUMNS from "./calibrationColumn";
-import CALIBRATION_RESULT_GRID from "./calibrationResultGrid";
+import  { CALIBRATED_BY_COLUMNS, CALIBRATION_RESULT_GRID } from "./calibrationColumn";
 
 import { getProfile } from "../../../services/authApi";
 import {

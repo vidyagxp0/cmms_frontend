@@ -223,6 +223,7 @@ const CreateCalibrationPanel = () => {
       const qaReviewAttachment = getProcessValue(processData, "qa_review_attachment");
 
       setSiteLocationCode(locationCode || "");
+      // Set initiator from the API response (processData or responseData.initiator)
       setInitiator(responseData?.initiator?.name || processInitiator || "");
       setInitiatorId(responseData?.initiator?.id || responseData?.initiator_id || "");
       setDepartmentId(responseData?.department?.id || responseData?.department_id || "");
@@ -403,6 +404,7 @@ const CreateCalibrationPanel = () => {
         stage_id: Number(activeStageId),
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
+        initiator_name: initiator,               
         short_description: mergedValues?.shortDescription || "",
         initiation_date: mergedValues?.dateOfInitiation || dateOfInitiation || "",
         process_data: processData,

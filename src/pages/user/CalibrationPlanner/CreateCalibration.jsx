@@ -225,6 +225,7 @@ const CreateCalibration = () => {
         stage_id: 1,
         department_id: departmentId,
         initiator_id: initiatorId,
+        initiator_name: initiator,  
         short_description: values?.shortDescription || "",
         initiation_date: dateOfInitiation,
         process_data: processData,

@@ -21,6 +21,7 @@ import FloatingActionButtons from "../../../components/ui/FloatingActionButtons"
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGrid";
 import CALIBRATED_BY_COLUMNS from "./calibrationColumn";
+import CALIBRATION_RESULT_GRID from "./calibrationResultGrid";
 
 import { getProfile } from "../../../services/authApi";
 import {
@@ -228,6 +229,7 @@ const CalibrationChildPanel = () => {
   // ---- Child record specific ----
   const [shortDescription, setShortDescription] = useState("");
   const [calibrationResultRows, setCalibrationResultRows] = useState([]);
+  const [calibrationResultTest,setCalibrationResultTest]=useState([]);
   const [parentId, setParentId] = useState(null);
 
   // Refs
@@ -640,6 +642,7 @@ const CalibrationChildPanel = () => {
         qaApprovers
       );
       const gridData = buildGridPayload(calibrationResultRows);
+      const testGridData = buildGridPayload(calibrationResultTest);
 
       const payload = {
         process_id: Number(processId),
@@ -650,6 +653,7 @@ const CalibrationChildPanel = () => {
         initiation_date: dayjs(mergedValues.dateOfInitiation || dateOfInitiation).format("DD/MM/YYYY HH:mm"),
         process_data: processData,
         gridData: gridData,
+        testGridData: testGridData,
         checklistData: [],
       };
 
@@ -984,56 +988,31 @@ const CalibrationChildPanel = () => {
                     updateCalibrationChild(recordId, { gridData: updatedRows })
                 }              />
             </div>
-
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2 mt-6">
-              <Form.Item name="costOfCalibration" label="Cost of Calibration" className="!mb-4">
-                <FormInput placeholder="Enter cost" type="number" disabled={!isManagementEditable} />
-              </Form.Item>
-              <Form.Item name="calibrationComment" label="Calibration Comment / Observations" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={3} placeholder="Enter any comments or observations..." disabled={!isManagementEditable} />
-              </Form.Item>
+            <div className="mt-4">
+              <UserDynamicGrid
+                name="Calibration Results"
+                description="Parameter-wise calibration results"
+                columns={CALIBRATION_RESULT_GRID}
+                value={calibrationResultTest}
+                onChange={setCalibrationResultTest}
+                allowAdd={isManagementEditable}
+                allowDelete={isManagementEditable}
+                addButtonLabel="Add Parameter"
+                minRows={0}
+                rowKey="_rowId"
+                deleteRow={(updatedRows) => 
+                    updateCalibrationChild(recordId, { gridData: updatedRows })
+                }              />
             </div>
+
 
             <div className="my-9 h-px w-full bg-slate-200" />
 
-            <SectionHeader title="ASSIGNMENTS" />
+      
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item
-                name="hod"
-                label={<span>HOD / Designee <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select HOD" }]}
-                className="!mb-4"
-              >
-                <FormSelect
-                  placeholder={usersLoading ? "Loading..." : "Select HOD / Designee"}
-                  options={hodOptions}
-                  disabled={usersLoading || !isManagementEditable}
-                />
-              </Form.Item>
-              <Form.Item
-                name="qaReviewer"
-                label={<span>QA Reviewer <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select QA Reviewer" }]}
-                className="!mb-4"
-              >
-                <FormSelect
-                  placeholder={usersLoading ? "Loading..." : "Select QA Reviewer"}
-                  options={qaReviewerOptions}
-                  disabled={usersLoading || !isManagementEditable}
-                />
-              </Form.Item>
-              <Form.Item
-                name="qaApproval"
-                label={<span>QA Approval <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select QA Approver" }]}
-                className="!mb-4"
-              >
-                <FormSelect
-                  placeholder={usersLoading ? "Loading..." : "Select QA Approver"}
-                  options={qaApproverOptions}
-                  disabled={usersLoading || !isManagementEditable}
-                />
-              </Form.Item>
+              
+            
+             
               <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
                 <FormTextArea rows={4} placeholder="Additional comments..." disabled={!isManagementEditable} />
               </Form.Item>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Form } from "antd";
+import { Form,Input } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
@@ -19,7 +19,7 @@ import FormAttachment from "../../../components/common/Form/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import CalibrationGrid from "./CalibrationGrid";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
-import "../../../components/common/ProcesStageTabs/Scrollerbar.css"; 
+import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 
 import { getProfile } from "../../../services/authApi";
 import {
@@ -44,9 +44,9 @@ const TABS = [
 
 const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
-  { name: "hod", label: "HOD / Designee" },
-  { name: "qaReviewer", label: "QA Reviewer" },
-  { name: "qaApproval", label: "QA Approval" },
+  // { name: "hod", label: "HOD / Designee" },
+  // { name: "qaReviewer", label: "QA Reviewer" },
+  // { name: "qaApproval", label: "QA Approval" },
 ];
 
 // ===== Helper: Get process value =====
@@ -70,7 +70,10 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
 
     Object.keys(row).forEach((key) => {
       // Preserve internal grid properties
-      if (key === "monthlyCalibration" || key === "calibrationFrequencyStartDate") {
+      if (
+        key === "monthlyCalibration" ||
+        key === "calibrationFrequencyStartDate"
+      ) {
         rowData[key] = row[key];
         return;
       }
@@ -109,7 +112,13 @@ const getUserPair = (userId, users = []) => {
 };
 
 // ===== Helper: Build process data =====
-const buildProcessData = (values, systemFields, hodUsers, qaReviewers, qaApprovers) => [
+const buildProcessData = (
+  values,
+  systemFields,
+  hodUsers,
+  qaReviewers,
+  qaApprovers,
+) => [
   ...systemFields.map((field) => ({
     key: field.name,
     label: field.label,
@@ -121,19 +130,19 @@ const buildProcessData = (values, systemFields, hodUsers, qaReviewers, qaApprove
     value: values?.shortDescription || "",
   },
   {
-    key: "hod",
-    label: "HOD / Designee",
-    value: getUserPair(values?.hod, hodUsers),
+    key: "year",
+    label: "Year",
+    value: values?.year || "",
   },
   {
-    key: "qa_reviewer",
-    label: "QA Reviewer",
-    value: getUserPair(values?.qaReviewer, qaReviewers),
+    key: "block",
+    label: "Block",
+    value: values?.block || "",
   },
   {
-    key: "qa_approval",
-    label: "QA Approval",
-    value: getUserPair(values?.qaApproval, qaApprovers),
+    key: "area",
+    label: "Area",
+    value: values?.area || "",
   },
   { key: "comment", label: "Comments", value: values?.comments || "" },
   { key: "attachment", label: "Attachment", value: values?.attachment || [] },
@@ -308,7 +317,9 @@ const CreateCalibrationPanel = () => {
         setQaApprovers(data?.qa_approver || []);
       } catch (error) {
         console.error("Failed to fetch calibration users:", error);
-        toast.error(error?.response?.data?.message || "Failed to load workflow users.");
+        toast.error(
+          error?.response?.data?.message || "Failed to load workflow users.",
+        );
         setHodUsers([]);
         setQaReviewers([]);
         setQaApprovers([]);
@@ -319,9 +330,18 @@ const CreateCalibrationPanel = () => {
     fetchCalibrationUsers();
   }, []);
 
-  const hodOptions = hodUsers.map((user) => ({ value: user?.id, label: user?.name }));
-  const qaReviewerOptions = qaReviewers.map((user) => ({ value: user?.id, label: user?.name }));
-  const qaApproverOptions = qaApprovers.map((user) => ({ value: user?.id, label: user?.name }));
+  const hodOptions = hodUsers.map((user) => ({
+    value: user?.id,
+    label: user?.name,
+  }));
+  const qaReviewerOptions = qaReviewers.map((user) => ({
+    value: user?.id,
+    label: user?.name,
+  }));
+  const qaApproverOptions = qaApprovers.map((user) => ({
+    value: user?.id,
+    label: user?.name,
+  }));
 
   // ---- 4. Fetch detail ----
   const fetchCalibrationDetail = useCallback(async () => {
@@ -341,42 +361,83 @@ const CreateCalibrationPanel = () => {
         return;
       }
       setProcessId(responseData?.process_id || null);
-      setActiveStageId(responseData?.stage?.id || responseData?.stage_id || null);
+      setActiveStageId(
+        responseData?.stage?.id || responseData?.stage_id || null,
+      );
       setProcessName(responseData?.process?.name || "");
 
       const processData = responseData?.process_data || [];
       const recordNumber = getProcessValue(processData, "recordNumber");
       const locationCode = getProcessValue(processData, "siteLocationCode");
       const processInitiator = getProcessValue(processData, "initiator");
-      const processDateOfInitiation = getProcessValue(processData, "dateOfInitiation");
+      const processDateOfInitiation = getProcessValue(
+        processData,
+        "dateOfInitiation",
+      );
       const dueDate = getProcessValue(processData, "dueDate");
-      const processDepartment = getProcessValue(processData, "initiationDepartment");
-      const shortDescription = getProcessValue(processData, "short_description");
+      const processDepartment = getProcessValue(
+        processData,
+        "initiationDepartment",
+      );
+      const shortDescription = getProcessValue(
+        processData,
+        "short_description",
+      );
       const hod = getProcessValue(processData, "hod");
       const qaReviewer = getProcessValue(processData, "qa_reviewer");
       const qaApproval = getProcessValue(processData, "qa_approval");
       const comments = getProcessValue(processData, "comment");
       const attachment = getProcessValue(processData, "attachment");
-      const hodReviewComments = getProcessValue(processData, "hod_review_comments");
-      const hodReviewAttachment = getProcessValue(processData, "hod_review_attachment");
-      const qaReviewComments = getProcessValue(processData, "qa_review_comments");
-      const qaReviewAttachment = getProcessValue(processData, "qa_review_attachment");
-      const qaApprovalComments = getProcessValue(processData, "qa_approval_comments");
-      const qaApprovalAttachment = getProcessValue(processData, "qa_approval_attachment");
+      const hodReviewComments = getProcessValue(
+        processData,
+        "hod_review_comments",
+      );
+      const hodReviewAttachment = getProcessValue(
+        processData,
+        "hod_review_attachment",
+      );
+      const qaReviewComments = getProcessValue(
+        processData,
+        "qa_review_comments",
+      );
+      const qaReviewAttachment = getProcessValue(
+        processData,
+        "qa_review_attachment",
+      );
+      const qaApprovalComments = getProcessValue(
+        processData,
+        "qa_approval_comments",
+      );
+      const qaApprovalAttachment = getProcessValue(
+        processData,
+        "qa_approval_attachment",
+      );
 
       setSiteLocationCode(locationCode || "");
       setInitiator(responseData?.initiator?.name || processInitiator || "");
-      setInitiatorId(responseData?.initiator?.id || responseData?.initiator_id || "");
-      setDepartmentId(responseData?.department?.id || responseData?.department_id || "");
-      setInitiationDepartment(responseData?.department?.name || processDepartment || "");
-      setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
+      setInitiatorId(
+        responseData?.initiator?.id || responseData?.initiator_id || "",
+      );
+      setDepartmentId(
+        responseData?.department?.id || responseData?.department_id || "",
+      );
+      setInitiationDepartment(
+        responseData?.department?.name || processDepartment || "",
+      );
+      setDateOfInitiation(
+        processDateOfInitiation || responseData?.initiation_date || "",
+      );
 
       // Store required values for fallback
       const hodValue = hod && typeof hod === "object" ? hod?.id : hod || "";
       const qaReviewerValue =
-        qaReviewer && typeof qaReviewer === "object" ? qaReviewer?.id : qaReviewer || "";
+        qaReviewer && typeof qaReviewer === "object"
+          ? qaReviewer?.id
+          : qaReviewer || "";
       const qaApprovalValue =
-        qaApproval && typeof qaApproval === "object" ? qaApproval?.id : qaApproval || "";
+        qaApproval && typeof qaApproval === "object"
+          ? qaApproval?.id
+          : qaApproval || "";
       requiredValuesRef.current = {
         shortDescription: shortDescription || "",
         hod: hodValue,
@@ -388,9 +449,11 @@ const CreateCalibrationPanel = () => {
         recordNumber,
         siteLocationCode: locationCode || "",
         initiator: responseData?.initiator?.name || processInitiator || "",
-        dateOfInitiation: processDateOfInitiation || responseData?.initiation_date || "",
+        dateOfInitiation:
+          processDateOfInitiation || responseData?.initiation_date || "",
         dueDate,
-        initiationDepartment: responseData?.department?.name || processDepartment || "",
+        initiationDepartment:
+          responseData?.department?.name || processDepartment || "",
         shortDescription,
         hod: hodValue,
         qaReviewer: qaReviewerValue,
@@ -408,7 +471,7 @@ const CreateCalibrationPanel = () => {
       // ---- Transform API grid data to internal grid rows ----
       const currentEquipmentMap = equipmentMapRef.current;
       const gridRows = (responseData?.grid_records || []).flatMap(
-        (record) => record?.grid_data || []
+        (record) => record?.grid_data || [],
       );
 
       const rawRows = gridRows.map((item) => {
@@ -439,7 +502,8 @@ const CreateCalibrationPanel = () => {
           row.monthlyCalibration && typeof row.monthlyCalibration === "object"
             ? row.monthlyCalibration
             : {};
-        newRow.calibrationFrequencyStartDate = row.calibrationFrequencyStartDate || "";
+        newRow.calibrationFrequencyStartDate =
+          row.calibrationFrequencyStartDate || "";
 
         // Convert equipment name back to ID (for dropdown)
         if (
@@ -447,7 +511,7 @@ const CreateCalibrationPanel = () => {
           typeof newRow.equipmentInstrumentName === "string"
         ) {
           const found = Object.values(currentEquipmentMap).find(
-            (eq) => eq.name === newRow.equipmentInstrumentName
+            (eq) => eq.name === newRow.equipmentInstrumentName,
           );
           if (found) {
             newRow.equipmentInstrumentName = found.id;
@@ -456,10 +520,16 @@ const CreateCalibrationPanel = () => {
 
         // Parse dates for DatePicker
         if (newRow.previousCalibrationDate) {
-          newRow.previousCalibrationDate = dayjs(newRow.previousCalibrationDate, "DD/MM/YYYY");
+          newRow.previousCalibrationDate = dayjs(
+            newRow.previousCalibrationDate,
+            "DD/MM/YYYY",
+          );
         }
         if (newRow.nextCalibrationDate) {
-          newRow.nextCalibrationDate = dayjs(newRow.nextCalibrationDate, "DD/MM/YYYY");
+          newRow.nextCalibrationDate = dayjs(
+            newRow.nextCalibrationDate,
+            "DD/MM/YYYY",
+          );
         }
 
         return newRow;
@@ -468,7 +538,9 @@ const CreateCalibrationPanel = () => {
       setCalibrationRows(normalizedRows);
     } catch (error) {
       console.error("Failed to fetch calibration detail:", error);
-      toast.error(error?.response?.data?.message || "Failed to load Calibration record.");
+      toast.error(
+        error?.response?.data?.message || "Failed to load Calibration record.",
+      );
     } finally {
       setIsLoading(false);
       isFetchingRef.current = false;
@@ -490,7 +562,9 @@ const CreateCalibrationPanel = () => {
         setWorkflowStages(stages.filter((stage) => stage?.is_active !== false));
       } catch (error) {
         console.error("Failed to fetch workflow stages:", error);
-        toast.error(error?.response?.data?.message || "Failed to load workflow stages.");
+        toast.error(
+          error?.response?.data?.message || "Failed to load workflow stages.",
+        );
         setWorkflowStages([]);
       } finally {
         setWorkflowLoading(false);
@@ -510,10 +584,14 @@ const CreateCalibrationPanel = () => {
         setActivitiesLoading(true);
         const response = await getAllActivites(activeStageId);
         const activityList = response?.data?.data || [];
-        setActivities(activityList.filter((activity) => activity?.is_active !== false));
+        setActivities(
+          activityList.filter((activity) => activity?.is_active !== false),
+        );
       } catch (error) {
         console.error("Failed to fetch activities:", error);
-        toast.error(error?.response?.data?.message || "Failed to load activities.");
+        toast.error(
+          error?.response?.data?.message || "Failed to load activities.",
+        );
         setActivities([]);
       } finally {
         setActivitiesLoading(false);
@@ -531,12 +609,16 @@ const CreateCalibrationPanel = () => {
     try {
       setPermissionsLoading(true);
       const response = await getAllPermissions(recordId);
-      const canPerform = response?.data?.data?.permission?.can_perform_action === true;
+      const canPerform =
+        response?.data?.data?.permission?.can_perform_action === true;
       setCanPerformActivity(canPerform);
     } catch (error) {
       console.error("Failed to fetch record permissions:", error);
       setCanPerformActivity(false);
-      toast.error(error?.response?.data?.message || "Failed to check activity permissions.");
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to check activity permissions.",
+      );
     } finally {
       setPermissionsLoading(false);
     }
@@ -553,7 +635,9 @@ const CreateCalibrationPanel = () => {
       setActivityLogs(response?.data?.data || []);
     } catch (error) {
       console.error("Failed to fetch activity history:", error);
-      toast.error(error?.response?.data?.message || "Failed to load activity history.");
+      toast.error(
+        error?.response?.data?.message || "Failed to load activity history.",
+      );
       setActivityLogs([]);
     } finally {
       setActivityLogsLoading(false);
@@ -571,7 +655,9 @@ const CreateCalibrationPanel = () => {
   // Sync active tab with stage
   useEffect(() => {
     if (!activeStageId) return;
-    const matchingTab = TABS.find((tab) => Number(tab.stageId) === Number(activeStageId));
+    const matchingTab = TABS.find(
+      (tab) => Number(tab.stageId) === Number(activeStageId),
+    );
     if (matchingTab) {
       setActiveTab(matchingTab.id);
     }
@@ -590,34 +676,47 @@ const CreateCalibrationPanel = () => {
       value: form.getFieldValue("siteLocationCode") || "",
     },
     { name: "initiator", label: "Initiator", value: initiator },
-    { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
-    { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
+    {
+      name: "dateOfInitiation",
+      label: "Date of Initiation",
+      value: dateOfInitiation,
+    },
+    {
+      name: "initiationDepartment",
+      label: "Initiation Department",
+      value: initiationDepartment,
+    },
   ];
 
   const handleViewChild = (rowIndex, rowData) => {
-  const shortDesc = form.getFieldValue("shortDescription") || "";
-  const parentId = recordId; // from URL params
-  navigate(`/user/calibration-management-create/${5}/${recordId}`, {
-    state: {
-      rowData,
-      shortDescription: shortDesc,
-      processId: 5,
-      parentId: parentId,
-    },
-  });
-};
+    const shortDesc = form.getFieldValue("shortDescription") || "";
+    const parentId = recordId; // from URL params
+    navigate(`/user/calibration-management-create/${5}/${recordId}`, {
+      state: {
+        rowData,
+        shortDescription: shortDesc,
+        processId: 5,
+        parentId: parentId,
+      },
+    });
+  };
   const handleSave = async () => {
     if (isSaving || isLoading || usersLoading) return;
 
-    const missingFields = validateCalibrationForm(form, requiredValuesRef.current);
+    const missingFields = validateCalibrationForm(
+      form,
+      requiredValuesRef.current,
+    );
     if (missingFields.length > 0) {
-      const missingFieldNames = missingFields.map((field) => field.label).join(", ");
+      const missingFieldNames = missingFields
+        .map((field) => field.label)
+        .join(", ");
       toast.error(`Required fields missing: ${missingFieldNames}`);
       form.setFields(
         missingFields.map((field) => ({
           name: field.name,
           errors: [`${field.label} is required`],
-        }))
+        })),
       );
       setActiveTab("general");
       return;
@@ -643,7 +742,7 @@ const CreateCalibrationPanel = () => {
         systemFields,
         hodUsers,
         qaReviewers,
-        qaApprovers
+        qaApprovers,
       );
       const gridData = buildGridPayload(calibrationRows, equipmentMap);
 
@@ -653,7 +752,8 @@ const CreateCalibrationPanel = () => {
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
         short_description: mergedValues?.shortDescription || "",
-        initiation_date: mergedValues?.dateOfInitiation || dateOfInitiation || "",
+        initiation_date:
+          mergedValues?.dateOfInitiation || dateOfInitiation || "",
         process_data: processData,
         gridData,
         checklistData: [],
@@ -667,7 +767,10 @@ const CreateCalibrationPanel = () => {
       toast.error(response?.data?.message || "Failed to update Calibration.");
     } catch (error) {
       console.error("Calibration update failed:", error);
-      toast.error(error?.response?.data?.message || "Failed to update Calibration. Please try again.");
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to update Calibration. Please try again.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -737,7 +840,11 @@ const CreateCalibrationPanel = () => {
       </div>
 
       <div className="mb-6">
-        <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+        <ProcessTabs
+          tabs={TABS}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
       </div>
 
       <Form
@@ -752,7 +859,12 @@ const CreateCalibrationPanel = () => {
             <SectionHeader title="GENERAL INFORMATION" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               {systemFields.map((field) => (
-                <Form.Item key={field.name} name={field.name} label={field.label} className="!mb-4">
+                <Form.Item
+                  key={field.name}
+                  name={field.name}
+                  label={field.label}
+                  className="!mb-4"
+                >
                   <FormDisabledInput />
                 </Form.Item>
               ))}
@@ -763,11 +875,67 @@ const CreateCalibrationPanel = () => {
                     Short Description <span className="text-red-500">*</span>
                   </span>
                 }
-                rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
+                rules={[
+                  {
+                    required: true,
+                    whitespace: true,
+                    message: "Please enter Short Description",
+                  },
+                ]}
                 className="!mb-4"
               >
-                <FormInput placeholder="Enter short description" disabled={!isGeneralEditable} />
+                <FormInput
+                  placeholder="Enter short description"
+                  disabled={!isGeneralEditable}
+                />
               </Form.Item>
+            </div>
+
+            <div className="my-9 h-px w-full bg-slate-200" />
+            <SectionHeader title="CALIBRATION INFORMATION" />
+            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+               <Form.Item
+                  name="year"
+                  label={<span>Year</span>}
+                  rules={[
+                    {
+                      
+                      message: "Please enter Year",
+                    },
+                  ]}
+                  className="!mb-4"
+                >
+                  <Input placeholder="Enter Year" />
+                </Form.Item>
+
+                <Form.Item
+                  name="block"
+                  label={<span>Block</span>}
+                  rules={[
+                    {
+                    
+                      message: "Please enter Block",
+                    },
+                  ]}
+                  className="!mb-4"
+                >
+                  <Input placeholder="Enter Block" />
+                </Form.Item>
+
+                <Form.Item
+                  name="area"
+                  label={<span>Area</span>}
+                  rules={[
+                    {
+                  
+                      message: "Please enter Area",
+                    },
+                  ]}
+                  className="!mb-4"
+                >
+                  <Input placeholder="Enter Area" />
+                </Form.Item>
+             
             </div>
 
             <div className="mt-5">
@@ -782,93 +950,85 @@ const CreateCalibrationPanel = () => {
               />
             </div>
 
-            <div className="my-9 h-px w-full bg-slate-200" />
-            <SectionHeader title="CALIBRATION INFORMATION" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item
-                name="hod"
-                label={<span>HOD / Designee <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select HOD / Designee" }]}
-                className="!mb-4"
-              >
-                <FormSelect
-                  placeholder={usersLoading ? "Loading HOD / Designee..." : "Select HOD / Designee"}
-                  options={hodOptions}
-                  disabled={usersLoading || !isGeneralEditable}
-                />
-              </Form.Item>
-              <Form.Item
-                name="qaReviewer"
-                label={<span>QA Reviewer <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select QA Reviewer" }]}
-                className="!mb-4"
-              >
-                <FormSelect
-                  placeholder={usersLoading ? "Loading QA Reviewer..." : "Select QA Reviewer"}
-                  options={qaReviewerOptions}
-                  disabled={usersLoading || !isGeneralEditable}
-                />
-              </Form.Item>
-              <Form.Item
-                name="qaApproval"
-                label={<span>QA Approval <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select QA Approver" }]}
-                className="!mb-4"
-              >
-                <FormSelect
-                  placeholder={usersLoading ? "Loading QA Approver..." : "Select QA Approver"}
-                  options={qaApproverOptions}
-                  disabled={usersLoading || !isGeneralEditable}
-                />
-              </Form.Item>
-              <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isGeneralEditable} />
-              </Form.Item>
-              <Form.Item
-                name="attachment"
-                label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
-                className="!mb-4 md:col-span-2"
-              >
-                <FormAttachment disabled={!isGeneralEditable} />
-              </Form.Item>
-            </div>
+            <Form.Item
+              name="comments"
+              label="Comments"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormTextArea
+                rows={5}
+                placeholder="Enter comments..."
+                disabled={!isGeneralEditable}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="attachment"
+              label="Attachment"
+              valuePropName="fileList"
+              getValueFromEvent={(event) =>
+                Array.isArray(event) ? event : event?.fileList
+              }
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment disabled={!isGeneralEditable} />
+            </Form.Item>
           </section>
         )}
 
-        {activeTab === "hod" && (
-          <section>
-            <SectionHeader title="HOD / DESIGNEE REVIEW" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="hodReviewComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isHodEditable} />
-              </Form.Item>
-              <Form.Item
-                name="hodReviewAttachment"
-                label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
-                className="!mb-4 md:col-span-2"
-              >
-                <FormAttachment disabled={!isHodEditable} />
-              </Form.Item>
-            </div>
-          </section>
-        )}
+     {activeTab === "hod" && (
+  <section>
+    <SectionHeader title="HOD / DESIGNEE REVIEW" />
 
+    <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+      <Form.Item
+        name="hodReviewComments"
+        label="Comments"
+        className="!mb-4 md:col-span-2"
+      >
+        <FormTextArea
+          rows={5}
+          placeholder="Enter comments..."
+          disabled={!isHodEditable}
+        />
+      </Form.Item>
+
+      <Form.Item
+        name="hodReviewAttachment"
+        label="Attachment"
+        valuePropName="fileList"
+        getValueFromEvent={(event) =>
+          Array.isArray(event) ? event : event?.fileList
+        }
+        className="!mb-4 md:col-span-2"
+      >
+        <FormAttachment disabled={!isHodEditable} />
+      </Form.Item>
+    </div>
+  </section>
+)}
         {activeTab === "qa-review" && (
           <section>
             <SectionHeader title="QA REVIEW" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isQaReviewEditable} />
+              <Form.Item
+                name="qaReviewComments"
+                label="Comments"
+                className="!mb-4 md:col-span-2"
+              >
+                <FormTextArea
+                  rows={5}
+                  placeholder="Enter comments..."
+                  disabled={!isQaReviewEditable}
+                />
               </Form.Item>
               <Form.Item
                 name="qaReviewAttachment"
                 label="Attachment"
                 valuePropName="fileList"
-                getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
+                getValueFromEvent={(event) =>
+                  Array.isArray(event) ? event : event?.fileList
+                }
                 className="!mb-4 md:col-span-2"
               >
                 <FormAttachment disabled={!isQaReviewEditable} />
@@ -881,14 +1041,24 @@ const CreateCalibrationPanel = () => {
           <section>
             <SectionHeader title="QA APPROVAL" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="qaApprovalComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isQaApprovalEditable} />
+              <Form.Item
+                name="qaApprovalComments"
+                label="Comments"
+                className="!mb-4 md:col-span-2"
+              >
+                <FormTextArea
+                  rows={5}
+                  placeholder="Enter comments..."
+                  disabled={!isQaApprovalEditable}
+                />
               </Form.Item>
               <Form.Item
                 name="qaApprovalAttachment"
                 label="Attachment"
                 valuePropName="fileList"
-                getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
+                getValueFromEvent={(event) =>
+                  Array.isArray(event) ? event : event?.fileList
+                }
                 className="!mb-4 md:col-span-2"
               >
                 <FormAttachment disabled={!isQaApprovalEditable} />
@@ -914,26 +1084,38 @@ const CreateCalibrationPanel = () => {
                     className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
                   >
                     <div className="mb-5">
-                      <p className="text-[13px] font-semibold text-[#3E4A5C]">Activity Name</p>
+                      <p className="text-[13px] font-semibold text-[#3E4A5C]">
+                        Activity Name
+                      </p>
                       <p className="mt-1 text-[14px] font-semibold text-[#182234]">
                         {log.activity_name || "—"}
                       </p>
                     </div>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                       <div>
-                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Performed By</p>
+                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
+                          Performed By
+                        </p>
                         <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                          <span className="text-[14px] text-[#526071]">{log.performed_by || "—"}</span>
+                          <span className="text-[14px] text-[#526071]">
+                            {log.performed_by || "—"}
+                          </span>
                         </div>
                       </div>
                       <div>
-                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Date Performed</p>
+                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
+                          Date Performed
+                        </p>
                         <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                          <span className="text-[14px] text-[#526071]">{log.performed_at || "—"}</span>
+                          <span className="text-[14px] text-[#526071]">
+                            {log.performed_at || "—"}
+                          </span>
                         </div>
                       </div>
                       <div>
-                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Comments</p>
+                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
+                          Comments
+                        </p>
                         <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
                           <p className="break-words text-[14px] leading-5 text-[#526071]">
                             {log.comment || "—"}

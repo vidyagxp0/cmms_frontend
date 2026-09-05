@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Activity } from "lucide-react";
-import { Form } from "antd";
+import { Form, Input } from "antd";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -14,7 +14,7 @@ import FormDisabledInput from "../../../components/common/Form/FormDisabledInput
 import FormAttachment from "../../../components/common/Form/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
-import "../../../components/common/ProcesStageTabs/Scrollerbar.css"; 
+import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 
 import { getProfile } from "../../../services/authApi";
 import {
@@ -35,9 +35,9 @@ const TABS = [
 
 const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
-  { name: "hod", label: "HOD / Designee" },
-  { name: "qaReviewer", label: "QA Reviewer" },
-  { name: "qaApproval", label: "QA Approval" },
+  // { name: "hod", label: "HOD / Designee" },
+  // { name: "qaReviewer", label: "QA Reviewer" },
+  // { name: "qaApproval", label: "QA Approval" },
 ];
 
 // ===== Helper: Build Grid Payload =====
@@ -50,7 +50,10 @@ const normalizeGridRows = (rows = [], equipmentMap = {}) => {
     // Loop over every key in the row object
     Object.keys(row).forEach((key) => {
       // Preserve internal grid properties as-is
-      if (key === "monthlyCalibration" || key === "calibrationFrequencyStartDate") {
+      if (
+        key === "monthlyCalibration" ||
+        key === "calibrationFrequencyStartDate"
+      ) {
         rowData[key] = row[key];
         return;
       }
@@ -93,7 +96,13 @@ const getUserPair = (userId, users = []) => {
   return { id: user?.id || userId || "", name: user?.name || "" };
 };
 
-const buildProcessData = (values, systemFields, hodUsers, qaReviewers, qaApprovers) => [
+const buildProcessData = (
+  values,
+  systemFields,
+  hodUsers,
+  qaReviewers,
+  qaApprovers,
+) => [
   ...systemFields.map((field) => ({
     key: field.name,
     label: field.label,
@@ -104,23 +113,23 @@ const buildProcessData = (values, systemFields, hodUsers, qaReviewers, qaApprove
     label: "Short Description",
     value: values?.shortDescription || "",
   },
-  {
-    key: "hod",
-    label: "HOD / Designee",
-    value: getUserPair(values?.hod, hodUsers),
-  },
-  {
-    key: "qa_reviewer",
-    label: "QA Reviewer",
-    value: getUserPair(values?.qaReviewer, qaReviewers),
-  },
-  {
-    key: "qa_approval",
-    label: "QA Approval",
-    value: getUserPair(values?.qaApproval, qaApprovers),
-  },
   { key: "comment", label: "Comments", value: values?.comments || "" },
   { key: "attachment", label: "Attachment", value: values?.attachment || [] },
+  {
+  key: "year",
+  label: "Year",
+  value: values?.year || "",
+},
+{
+  key: "block",
+  label: "Block",
+  value: values?.block || "",
+},
+{
+  key: "area",
+  label: "Area",
+  value: values?.area || "",
+},
   {
     key: "hod_review_comments",
     label: "HOD / Designee Review Comments",
@@ -260,7 +269,9 @@ const CreateCalibration = () => {
         form.setFieldsValue({ recordNumber: generatedRecordNumber });
       } catch (error) {
         console.error("Failed to generate record number:", error);
-        toast.error(error?.response?.data?.message || "Failed to generate record number.");
+        toast.error(
+          error?.response?.data?.message || "Failed to generate record number.",
+        );
       }
     };
     fetchRecordNumber();
@@ -278,7 +289,9 @@ const CreateCalibration = () => {
         setQaApprovers(data?.qa_approver || []);
       } catch (error) {
         console.error("Failed to fetch calibration users:", error);
-        toast.error(error?.response?.data?.message || "Failed to load workflow users.");
+        toast.error(
+          error?.response?.data?.message || "Failed to load workflow users.",
+        );
         setHodUsers([]);
         setQaReviewers([]);
         setQaApprovers([]);
@@ -289,23 +302,44 @@ const CreateCalibration = () => {
     fetchCalibrationUsers();
   }, []);
 
-  const hodOptions = hodUsers.map((user) => ({ value: user.id, label: user.name }));
-  const qaReviewerOptions = qaReviewers.map((user) => ({ value: user.id, label: user.name }));
-  const qaApproverOptions = qaApprovers.map((user) => ({ value: user.id, label: user.name }));
+  const hodOptions = hodUsers.map((user) => ({
+    value: user.id,
+    label: user.name,
+  }));
+  const qaReviewerOptions = qaReviewers.map((user) => ({
+    value: user.id,
+    label: user.name,
+  }));
+  const qaApproverOptions = qaApprovers.map((user) => ({
+    value: user.id,
+    label: user.name,
+  }));
 
   const systemFields = [
     { name: "recordNumber", label: "Record Number", value: recordNumber },
-    { name: "siteLocationCode", label: "Site / Location Code", value: "Unit IV" },
+    {
+      name: "siteLocationCode",
+      label: "Site / Location Code",
+      value: "Unit IV",
+    },
     { name: "initiator", label: "Initiator", value: initiator },
-    { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
-    { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
+    {
+      name: "dateOfInitiation",
+      label: "Date of Initiation",
+      value: dateOfInitiation,
+    },
+    {
+      name: "initiationDepartment",
+      label: "Initiation Department",
+      value: initiationDepartment,
+    },
   ];
 
   // ---- Tab switching (only general is allowed during creation) ----
   const handleTabChange = (tabId) => {
     if (tabId !== "general") {
       toast.warning(
-        "Please fill all mandatory fields in General Information and save before accessing other tabs."
+        "Please fill all mandatory fields in General Information and save before accessing other tabs.",
       );
       return;
     }
@@ -317,13 +351,15 @@ const CreateCalibration = () => {
     if (isSaving) return;
     const missingFields = validateCalibrationForm(form);
     if (missingFields.length > 0) {
-      const missingFieldNames = missingFields.map((field) => field.label).join(", ");
+      const missingFieldNames = missingFields
+        .map((field) => field.label)
+        .join(", ");
       toast.error(`Required fields missing: ${missingFieldNames}`);
       form.setFields(
         missingFields.map((field) => ({
           name: field.name,
           errors: [`${field.label} is required`],
-        }))
+        })),
       );
       setActiveTab("general");
       return;
@@ -341,7 +377,7 @@ const CreateCalibration = () => {
         systemFields,
         hodUsers,
         qaReviewers,
-        qaApprovers
+        qaApprovers,
       );
       const gridData = normalizeGridRows(calibrationRows, equipmentMap);
 
@@ -368,7 +404,10 @@ const CreateCalibration = () => {
       toast.error(response?.data?.message || "Failed to create Calibration.");
     } catch (error) {
       console.error("Calibration submission failed:", error);
-      toast.error(error?.response?.data?.message || "Failed to create Calibration. Please try again.");
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to create Calibration. Please try again.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -401,7 +440,9 @@ const CreateCalibration = () => {
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">
               Site
             </p>
-            <p className="text-sm font-semibold text-[#344A43]">{siteName || "Unit IV"}</p>
+            <p className="text-sm font-semibold text-[#344A43]">
+              {siteName || "Unit IV"}
+            </p>
           </div>
           <div className="h-9 w-px bg-slate-200" />
           <div>
@@ -417,7 +458,11 @@ const CreateCalibration = () => {
 
       {/* Tabs */}
       <div className="mb-8">
-        <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
+        <ProcessTabs
+          tabs={TABS}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
       </div>
 
       {/* Form */}
@@ -436,7 +481,12 @@ const CreateCalibration = () => {
             ) : (
               <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
                 {systemFields.map((field) => (
-                  <Form.Item key={field.name} name={field.name} label={field.label} className="!mb-4">
+                  <Form.Item
+                    key={field.name}
+                    name={field.name}
+                    label={field.label}
+                    className="!mb-4"
+                  >
                     <FormDisabledInput />
                   </Form.Item>
                 ))}
@@ -447,7 +497,13 @@ const CreateCalibration = () => {
                       Short Description <span className="text-red-500">*</span>
                     </span>
                   }
-                  rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
+                  rules={[
+                    {
+                      required: true,
+                      whitespace: true,
+                      message: "Please enter Short Description",
+                    },
+                  ]}
                   className="!mb-4"
                 >
                   <FormInput placeholder="Enter short description" />
@@ -457,6 +513,51 @@ const CreateCalibration = () => {
 
             {/* Calibration Grid */}
             <div className="mt-5">
+              <SectionHeader title="CALIBRATION INFORMATION" />
+
+              <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+                <Form.Item
+                  name="year"
+                  label={<span>Year</span>}
+                  rules={[
+                    {
+                      
+                      message: "Please enter Year",
+                    },
+                  ]}
+                  className="!mb-4"
+                >
+                  <Input placeholder="Enter Year" />
+                </Form.Item>
+
+                <Form.Item
+                  name="block"
+                  label={<span>Block</span>}
+                  rules={[
+                    {
+                    
+                      message: "Please enter Block",
+                    },
+                  ]}
+                  className="!mb-4"
+                >
+                  <Input placeholder="Enter Block" />
+                </Form.Item>
+
+                <Form.Item
+                  name="area"
+                  label={<span>Area</span>}
+                  rules={[
+                    {
+                  
+                      message: "Please enter Area",
+                    },
+                  ]}
+                  className="!mb-4"
+                >
+                  <Input placeholder="Enter Area" />
+                </Form.Item>
+              </div>
               <CalibrationGrid
                 value={calibrationRows}
                 onChange={setCalibrationRows}
@@ -464,61 +565,27 @@ const CreateCalibration = () => {
                 equipmentMap={equipmentMap}
                 equipmentLoading={equipmentLoading}
               />
-            </div>
-
-            <div className="my-9 h-px w-full bg-slate-200" />
-            <SectionHeader title="CALIBRATION INFORMATION" />
-
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item
-                name="hod"
-                label={<span>HOD / Designee <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select HOD / Designee" }]}
-                className="!mb-4"
+                name="comments"
+                label="Comments"
+                className="!mb-4 md:col-span-2"
               >
-                <FormSelect
-                  placeholder={usersLoading ? "Loading HOD / Designee..." : "Select HOD / Designee"}
-                  options={hodOptions}
-                  disabled={usersLoading}
-                />
-              </Form.Item>
-              <Form.Item
-                name="qaReviewer"
-                label={<span>QA Reviewer <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select QA Reviewer" }]}
-                className="!mb-4"
-              >
-                <FormSelect
-                  placeholder={usersLoading ? "Loading QA Reviewer..." : "Select QA Reviewer"}
-                  options={qaReviewerOptions}
-                  disabled={usersLoading}
-                />
-              </Form.Item>
-              <Form.Item
-                name="qaApproval"
-                label={<span>QA Approval <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select QA Approver" }]}
-                className="!mb-4"
-              >
-                <FormSelect
-                  placeholder={usersLoading ? "Loading QA Approver..." : "Select QA Approver"}
-                  options={qaApproverOptions}
-                  disabled={usersLoading}
-                />
-              </Form.Item>
-              <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
                 <FormTextArea rows={5} placeholder="Enter comments..." />
               </Form.Item>
               <Form.Item
                 name="attachment"
                 label="Attachment"
                 valuePropName="fileList"
-                getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
+                getValueFromEvent={(event) =>
+                  Array.isArray(event) ? event : event?.fileList
+                }
                 className="!mb-4 md:col-span-2"
               >
                 <FormAttachment />
               </Form.Item>
             </div>
+
+            <div className="my-9 h-px w-full bg-slate-200" />
           </section>
         )}
 
@@ -527,14 +594,20 @@ const CreateCalibration = () => {
           <section>
             <SectionHeader title="HOD / DESIGNEE REVIEW" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="hodReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+              <Form.Item
+                name="hodReviewComments"
+                label="Comments"
+                className="!mb-4 md:col-span-2"
+              >
                 <FormTextArea rows={5} placeholder="Enter comments..." />
               </Form.Item>
               <Form.Item
                 name="hodReviewAttachment"
                 label="Attachment"
                 valuePropName="fileList"
-                getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
+                getValueFromEvent={(event) =>
+                  Array.isArray(event) ? event : event?.fileList
+                }
                 className="!mb-4 md:col-span-2"
               >
                 <FormAttachment />
@@ -547,14 +620,20 @@ const CreateCalibration = () => {
           <section>
             <SectionHeader title="QA REVIEW" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+              <Form.Item
+                name="qaReviewComments"
+                label="Comments"
+                className="!mb-4 md:col-span-2"
+              >
                 <FormTextArea rows={5} placeholder="Enter comments..." />
               </Form.Item>
               <Form.Item
                 name="qaReviewAttachment"
                 label="Attachment"
                 valuePropName="fileList"
-                getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
+                getValueFromEvent={(event) =>
+                  Array.isArray(event) ? event : event?.fileList
+                }
                 className="!mb-4 md:col-span-2"
               >
                 <FormAttachment />
@@ -567,14 +646,20 @@ const CreateCalibration = () => {
           <section>
             <SectionHeader title="QA APPROVAL" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="qaApprovalComments" label="Comments" className="!mb-4 md:col-span-2">
+              <Form.Item
+                name="qaApprovalComments"
+                label="Comments"
+                className="!mb-4 md:col-span-2"
+              >
                 <FormTextArea rows={5} placeholder="Enter comments..." />
               </Form.Item>
               <Form.Item
                 name="qaApprovalAttachment"
                 label="Attachment"
                 valuePropName="fileList"
-                getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
+                getValueFromEvent={(event) =>
+                  Array.isArray(event) ? event : event?.fileList
+                }
                 className="!mb-4 md:col-span-2"
               >
                 <FormAttachment />

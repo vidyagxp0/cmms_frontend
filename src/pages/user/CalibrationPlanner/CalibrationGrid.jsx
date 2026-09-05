@@ -58,19 +58,23 @@ const CalibrationGrid = ({
   recordId
 }) => {
   const columns = [
-    { key: "equipmentInstrumentName", title: "Equipment / Instrument Name", type: "select", placeholder: "Select equipment", required: true, minWidth: 220 },
-    { key: "equipmentInstrumentId", title: "Equipment / Instrument ID", type: "text", placeholder: "Enter equipment / instrument ID", required: true, minWidth: 200, disabled: true },
-    { key: "department", title: "Department", type: "text", placeholder: "Enter department", minWidth: 180 },
+    { key: "equipmentInstrumentName", title: "Instrument Name", type: "select", placeholder: "Select instrument Name", required: true, minWidth: 220 },
+    { key: "equipmentInstrumentId", title: "Instrument ID", type: "text", placeholder: "Enter instrument ID", required: true, minWidth: 200, disabled: true },
+    { key: "department", title: "Category", type: "select", placeholder: "select category", minWidth: 180,  options: [
+    { value: "category1", label: "Critical" },
+    { value: "category2", label: "Non Critical" },
+    { value: "category3", label: "Indicative" },
+  ] },
     { key: "location", title: "Location", type: "text", placeholder: "Enter location", minWidth: 180 },
-    { key: "makeModel", title: "Make & Model", type: "text", placeholder: "Enter make & model", minWidth: 200, disabled: true },
-    { key: "range", title: "Range", type: "text", placeholder: "Enter range", minWidth: 160 },
+    { key: "make", title: "Make", type: "text", placeholder: "Enter make", minWidth: 200, disabled: true },
+    { key: "model", title: "Model", type: "text", placeholder: "Enter model", minWidth: 200, disabled: true },
+    { key: "instrumentrange", title: "Intrument Range", type: "text", placeholder: "Enter range", minWidth: 160 },
+    { key: "operatingrange", title: "Operating Range", type: "text", placeholder: "Enter range", minWidth: 160 },
     { key: "leastCount", title: "Least Count", type: "text", placeholder: "Enter least count", minWidth: 160 },
     { key: "accuracy", title: "Accuracy", type: "text", placeholder: "Enter accuracy", minWidth: 160 },
-    { key: "cNc", title: "C / NC", type: "select", placeholder: "Select", minWidth: 130, options: [{ value: "C", label: "C" }, { value: "NC", label: "NC" }] },
     { key: "calibrationFrequency", title: "Calibration Frequency", type: "select", placeholder: "Select frequency", minWidth: 190, options: [{ value: "monthly", label: "Monthly" }, { value: "quarterly", label: "Quarterly" }, { value: "half-yearly", label: "Half Yearly" }, { value: "yearly", label: "Yearly" }] },
     { key: "previousCalibrationDate", title: "Previous / Calibration Date", type: "date", placeholder: "Select date", minWidth: 190 },
     { key: "nextCalibrationDate", title: "Next Calibration Date", type: "date", placeholder: "Select date", minWidth: 180 },
-    { key: "alert", title: "Alert", type: "select", placeholder: "Select alert", minWidth: 140, options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }] },
     { key: "remark", title: "Remark", type: "textarea", placeholder: "Enter remark", minWidth: 240 },
   ];
 
@@ -137,17 +141,21 @@ const CalibrationGrid = ({
     if (key === "calibrationFrequency") {
       row.calibrationFrequencyStartDate = newValue ? dayjs().format("YYYY-MM-DD") : "";
     }
-    if (key === "equipmentInstrumentName") {
-      const equipmentId = newValue;
-      if (equipmentId && equipmentMap[equipmentId]) {
-        const equipment = equipmentMap[equipmentId];
-        row.equipmentInstrumentId = equipment.equipment_id || "";
-        row.makeModel = `${equipment.make || ""} ${equipment.model || ""}`.trim();
-      } else {
-        row.equipmentInstrumentId = "";
-        row.makeModel = "";
-      }
-    }
+  if (key === "equipmentInstrumentName") {
+  const equipmentId = newValue;
+
+  if (equipmentId && equipmentMap[equipmentId]) {
+    const equipment = equipmentMap[equipmentId];
+
+    row.equipmentInstrumentId = equipment.equipment_id || "";
+    row.make = equipment.make || "";
+    row.model = equipment.model || "";
+  } else {
+    row.equipmentInstrumentId = "";
+    row.make = "";
+    row.model = "";
+  }
+}
     if (!row.monthlyCalibration || typeof row.monthlyCalibration !== "object") {
       row.monthlyCalibration = createEmptyMonthlyData();
     }
@@ -341,8 +349,8 @@ const CalibrationGrid = ({
                     </div>
                   </div>
                   <div className="grid grid-cols-2">
-                    <div className="border-r border-[#D5DFDB] px-2 py-2.5 text-center text-[9px] font-bold uppercase tracking-[0.03em] text-[#63736C]">Scheduler Date</div>
-                    <div className="px-2 py-2.5 text-center text-[9px] font-bold uppercase tracking-[0.03em] text-[#63736C]">Calibration Date</div>
+                    <div className="border-r border-[#D5DFDB] px-2 py-2.5 text-center text-[9px] font-bold uppercase tracking-[0.03em] text-[#63736C]">Plnned Date</div>
+                    <div className="px-2 py-2.5 text-center text-[9px] font-bold uppercase tracking-[0.03em] text-[#63736C]">Execute Date</div>
                   </div>
                 </th>
               ))}
@@ -377,7 +385,7 @@ const CalibrationGrid = ({
                     return (
                       <td key={month.key} style={{ minWidth: 300 }} className={`border-b border-r border-[#E0E7E4] p-2 align-top ${monthEnabled ? "bg-[#FCFDFC]" : "bg-[#F5F7F6]"}`}>
                         <div className="grid grid-cols-2 gap-2">
-                          <div className="min-w-0">{renderMonthlyDatePicker(row, rowIndex, month.key, "schedulerDate")}</div>
+                          <div className="min-w-0">{renderMonthlyDatePicker(row, rowIndex, month.key, "schedulerDaasllihnkjbkbje")}</div>
                           <div className="min-w-0">{renderMonthlyDatePicker(row, rowIndex, month.key, "calibrationDate")}</div>
                         </div>
                       </td>

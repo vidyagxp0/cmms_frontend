@@ -39,9 +39,9 @@ const TABS = [
 
 // Only these three fields are required
 const REQUIRED_FIELDS = [
-  { name: "hod", label: "HOD / Designee" },
-  { name: "qaReviewer", label: "QA Reviewer" },
-  { name: "qaApproval", label: "QA Approval" },
+  // { name: "hod", label: "HOD / Designee" },
+  // { name: "qaReviewer", label: "QA Reviewer" },
+  // { name: "qaApproval", label: "QA Approval" },
 ];
 
 // System fields for process_data
@@ -56,32 +56,25 @@ const SYSTEM_FIELDS = [
 // UI Label Mapping for other fields
 const FIELD_LABELS = {
   shortDescription: "Short Description",
-  instrumentName: "Instrument / Equipment Name",
-  instrumentId: "Instrument/Equipment ID",
+  instrumentName: "Instrument Name",
+  instrumentId: "Instrument ID No.",
   location: "Location",
-  makeModel: "Make & Model",
-  range: "Range",
+  make: "Make",
+  model: "Model",
+  instrumentRange: "Instrument Range",
   leastCount: "Least Count",
-  criticality: "Critical & Non Critical",
-  calibrationFrequency: "Calibration Frequency",
+  accuracy: "Accuracy",
+  calibrationTestPoints: "Calibration test points",
+  operatingRange: "Operating Range",
+  envTemperature: "Environmental Condition Temperature",
+  envHumidity: "Environmental Condition Relative Humidity",
   previousCalibrationDate: "Previous Calibration Date",
   nextCalibrationDate: "Next Calibration Date",
-  standardReference: "Calibration Standard Reference",
-  dueReminder: "Calibration Due Reminder",
-  procedureReference: "Calibration Procedures Reference Document",
-  standardUsed: "Calibration Standard used",
-  parameters: "Calibration Parameters",
-  unscheduledReason: "Reason for Unscheduled or Event Based Calibration",
-  eventReference: "Event Reference No.",
-  calibrationResults: "Calibration Results",
-  certificateNumber: "Calibration Certificate number",
-  costOfCalibration: "Cost of Calibration",
-  calibrationComment: "Calibration Comment / Observations",
   comments: "Comments",
   attachment: "Attachment",
-  hod: "HOD / Designee",
-  qa_reviewer: "QA Reviewer",
-  qa_approval: "QA Approval",
+  // hod: "HOD / Designee",
+  // qa_reviewer: "QA Reviewer",
+  // qa_approval: "QA Approval",
 };
 
 // ===== Helper: Build Grid Payload (exclude _rowId) =====
@@ -113,24 +106,17 @@ const buildChildProcessData = (values, systemValues) => {
     "instrumentName",
     "instrumentId",
     "location",
-    "makeModel",
-    "range",
+    "make",
+    "model",
+    "instrumentRange",
     "leastCount",
-    "criticality",
-    "calibrationFrequency",
+    "accuracy",
+    "calibrationTestPoints",
+    "operatingRange",
+    "envTemperature",
+    "envHumidity",
     "previousCalibrationDate",
     "nextCalibrationDate",
-    "standardReference",
-    "dueReminder",
-    "procedureReference",
-    "standardUsed",
-    "parameters",
-    "unscheduledReason",
-    "eventReference",
-    "calibrationResults",
-    "certificateNumber",
-    "costOfCalibration",
-    "calibrationComment",
     "comments",
     "attachment",
   ];
@@ -293,7 +279,7 @@ const CalibrationChild = () => {
       if (dayjs.isDayjs(val)) return val;
       return dayjs(val, "DD/MM/YYYY", true);
     };
-
+    
     const values = {
       recordNumber: recordNumber,
       siteLocationCode: rowData.siteLocationCode || "Unit IV",
@@ -302,26 +288,19 @@ const CalibrationChild = () => {
       initiationDepartment: rowData.initiationDepartment || initiationDepartment,
       shortDescription: rowData.shortDescription || parentShortDesc || "",
       instrumentName: rowData.equipmentInstrumentName || "",
-      instrumentId: rowData.instrumentId || "",
+      instrumentId: rowData.equipmentInstrumentId || "",
       location: rowData.location || "",
-      makeModel: rowData.makeModel || "",
-      range: rowData.range || "",
+      make: rowData.make || "",
+      model: rowData.model || "",
+      instrumentRange: rowData.instrumentrange || "",
       leastCount: rowData.leastCount || "",
-      criticality: rowData.criticality || "",
-      calibrationFrequency: rowData.calibrationFrequency || "",
+      accuracy: rowData.accuracy || "",
+      calibrationTestPoints: rowData.calibrationTestPoints || "",
+      operatingRange: rowData.operatingrange || "",
+      envTemperature: rowData.envTemperature || "",
+      envHumidity: rowData.envHumidity || "",
       previousCalibrationDate: parseDate(rowData.previousCalibrationDate),
       nextCalibrationDate: parseDate(rowData.nextCalibrationDate),
-      standardReference: rowData.standardReference || "",
-      dueReminder: rowData.dueReminder || "",
-      procedureReference: rowData.procedureReference || "",
-      standardUsed: rowData.standardUsed || "",
-      parameters: rowData.parameters || "",
-      unscheduledReason: rowData.unscheduledReason || "",
-      eventReference: rowData.eventReference || "",
-      calibrationResults: rowData.calibrationResults || "",
-      certificateNumber: rowData.certificateNumber || "",
-      costOfCalibration: rowData.costOfCalibration || "",
-      calibrationComment: rowData.calibrationComment || "",
       hod: rowData.hod || "",
       qaReviewer: rowData.qaReviewer || "",
       qaApproval: rowData.qaApproval || "",
@@ -338,22 +317,6 @@ const CalibrationChild = () => {
   const hodOptions = hodUsers.map((user) => ({ value: user.id, label: user.name }));
   const qaReviewerOptions = qaReviewers.map((user) => ({ value: user.id, label: user.name }));
   const qaApproverOptions = qaApprovers.map((user) => ({ value: user.id, label: user.name }));
-
-  const criticalityOptions = [
-    { value: "Critical", label: "Critical" },
-    { value: "Non-Critical", label: "Non-Critical" },
-  ];
-  const frequencyOptions = [
-    { value: "Monthly", label: "Monthly" },
-    { value: "Quarterly", label: "Quarterly" },
-    { value: "Half-Yearly", label: "Half-Yearly" },
-    { value: "Yearly", label: "Yearly" },
-  ];
-  const resultOptions = [
-    { value: "Pass", label: "Pass" },
-    { value: "Fail", label: "Fail" },
-    { value: "Out of Tolerance", label: "Out of Tolerance" },
-  ];
 
   // ===== Helper: Get user pair =====
   const getUserPair = (userId, users) => {
@@ -373,21 +336,21 @@ const CalibrationChild = () => {
 
     const baseData = buildChildProcessData(values, systemValues);
 
-    baseData.push({
-      key: "hod",
-      label: FIELD_LABELS.hod,
-      value: getUserPair(values.hod, hodUsers),
-    });
-    baseData.push({
-      key: "qa_reviewer",
-      label: FIELD_LABELS.qa_reviewer,
-      value: getUserPair(values.qaReviewer, qaReviewers),
-    });
-    baseData.push({
-      key: "qa_approval",
-      label: FIELD_LABELS.qa_approval,
-      value: getUserPair(values.qaApproval, qaApprovers),
-    });
+    // baseData.push({
+    //   key: "hod",
+    //   label: FIELD_LABELS.hod,
+    //   value: getUserPair(values.hod, hodUsers),
+    // });
+    // baseData.push({
+    //   key: "qa_reviewer",
+    //   label: FIELD_LABELS.qa_reviewer,
+    //   value: getUserPair(values.qaReviewer, qaReviewers),
+    // });
+    // baseData.push({
+    //   key: "qa_approval",
+    //   label: FIELD_LABELS.qa_approval,
+    //   value: getUserPair(values.qaApproval, qaApprovers),
+    // });
 
     return baseData;
   };
@@ -552,130 +515,53 @@ const CalibrationChild = () => {
 
             {/* INSTRUMENT / EQUIPMENT DETAILS */}
             <SectionHeader title="INSTRUMENT / EQUIPMENT DETAILS" />
-             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-               {/* <Form.Item name="instrumentName" label="Instrument / Equipment Name" className="!mb-4">
+            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+              <Form.Item name="instrumentName" label="Instrument Name" className="!mb-4">
                 <FormSelect
                   placeholder={equipmentLoading ? "Loading..." : "Select Instrument"}
                   options={equipmentOptions}
                   disabled={equipmentLoading}
                 />
               </Form.Item>
-              <Form.Item name="instrumentId" label="Instrument/Equipment ID" className="!mb-4">
+              <Form.Item name="instrumentId" label="Instrument ID No." className="!mb-4">
                 <FormInput placeholder="e.g. EQ-001" />
               </Form.Item>
               <Form.Item name="location" label="Location" className="!mb-4">
                 <FormInput placeholder="Lab A, Room 101" />
               </Form.Item>
-              <Form.Item name="makeModel" label="Make & Model" className="!mb-4">
-                <FormInput placeholder="e.g. Fluke 87V" />
+              <Form.Item name="make" label="Make" className="!mb-4">
+                <FormInput placeholder="e.g. Fluke" />
               </Form.Item>
-              <Form.Item name="range" label="Range" className="!mb-4">
+              <Form.Item name="model" label="Model" className="!mb-4">
+                <FormInput placeholder="e.g. 87V" />
+              </Form.Item>
+              <Form.Item name="instrumentRange" label="Instrument Range" className="!mb-4">
                 <FormInput placeholder="e.g. 0-1000 V" />
               </Form.Item>
               <Form.Item name="leastCount" label="Least Count" className="!mb-4">
                 <FormInput placeholder="e.g. 0.01" />
               </Form.Item>
-              <Form.Item name="criticality" label="Critical & Non Critical" className="!mb-4">
-                <FormSelect placeholder="Select" options={criticalityOptions} />
+              <Form.Item name="accuracy" label="Accuracy" className="!mb-4">
+                <FormInput placeholder="e.g. ±0.5%" />
               </Form.Item>
-              <Form.Item name="calibrationFrequency" label="Calibration Frequency" className="!mb-4">
-                <FormSelect placeholder="Select" options={frequencyOptions} />
+              <Form.Item name="calibrationTestPoints" label="Calibration test points" className="!mb-4">
+                <FormInput placeholder="e.g. 0, 50, 100" />
               </Form.Item>
-
+              <Form.Item name="operatingRange" label="Operating Range" className="!mb-4">
+                <FormInput placeholder="e.g. 0-500 V" />
+              </Form.Item>
+              <Form.Item name="envTemperature" label="Environmental Condition Temperature" className="!mb-4">
+                <FormInput placeholder="e.g. 25°C ± 2°C" />
+              </Form.Item>
+              <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
+                <FormInput placeholder="e.g. 45% RH ± 5%" />
+              </Form.Item>
               <Form.Item name="previousCalibrationDate" label="Previous Calibration Date" className="!mb-4">
                 <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" />
               </Form.Item>
               <Form.Item name="nextCalibrationDate" label="Next Calibration Date" className="!mb-4">
                 <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" />
               </Form.Item>
-
-              <Form.Item name="standardReference" label="Calibration Standard Reference" className="!mb-4">
-                <FormInput placeholder="e.g. ISO 17025" />
-              </Form.Item>
-              <Form.Item name="dueReminder" label="Calibration Due Reminder" className="!mb-4">
-                <FormInput placeholder="Days before due" />
-              </Form.Item>
-              <Form.Item name="procedureReference" label="Calibration Procedures Reference Document" className="!mb-4">
-                <FormInput placeholder="Doc #" />
-              </Form.Item>
-              <Form.Item name="standardUsed" label="Calibration Standard used" className="!mb-4">
-                <FormInput placeholder="Standard name" />
-              </Form.Item>
-              <Form.Item name="parameters" label="Calibration Parameters" className="!mb-4">
-                <FormInput placeholder="e.g. Voltage, Current" />
-              </Form.Item>
-              <Form.Item name="unscheduledReason" label="Reason for Unscheduled or Event Based Calibration" className="!mb-4">
-                <FormInput placeholder="Explain reason" />
-              </Form.Item>
-              <Form.Item name="eventReference" label="Event Reference No." className="!mb-4">
-                <FormInput placeholder="e.g. EVT-123" />
-              </Form.Item>
-              <Form.Item name="calibrationResults" label="Calibration Results" className="!mb-4">
-                <FormSelect placeholder="Select" options={resultOptions} />
-              </Form.Item>
-              <Form.Item name="certificateNumber" label="Calibration Certificate number" className="!mb-4">
-                <FormInput placeholder="Cert #" />
-              </Form.Item> */}
-             
-              <Form.Item name="name" label="Name" className="!mb-4">
-                <FormInput placeholder="e.g. EQ-001" />
-              </Form.Item>
-              <Form.Item name="location" label="Make" className="!mb-4">
-                <FormInput placeholder="Lab A, Room 101" />
-              </Form.Item>
-              <Form.Item name="makeModel" label="Sr.No/Model" className="!mb-4">
-                <FormInput placeholder="e.g. Fluke 87V" />
-              </Form.Item>
-              <Form.Item name="range" label="Calibration test points" className="!mb-4">
-                <FormInput placeholder="e.g. 0-1000 V" />
-              </Form.Item>
-              <Form.Item name="leastCount" label="ID No." className="!mb-4">
-                <FormInput placeholder="e.g. 0.01" />
-              </Form.Item>
-              <Form.Item name="criticality" label="Instrument Range" className="!mb-4">
-                <FormSelect placeholder="Select" options={criticalityOptions} />
-              </Form.Item>
-              <Form.Item name="calibrationFrequency" label="Operating Range" className="!mb-4">
-                <FormSelect placeholder="Select" options={frequencyOptions} />
-              </Form.Item>
-
-              <Form.Item name="previousCalibrationDate" label="Accuracy" className="!mb-4">
-                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" />
-              </Form.Item>
-              <Form.Item name="previousCalibrationDate" label="Least Count" className="!mb-4">
-                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" />
-              </Form.Item>
-              <Form.Item name="nextCalibrationDate" label="Next Calibration Date" className="!mb-4">
-                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" />
-              </Form.Item>
-
-              <Form.Item name="standardReference" label="Calibration Standard Reference" className="!mb-4">
-                <FormInput placeholder="e.g. ISO 17025" />
-              </Form.Item>
-              <Form.Item name="dueReminder" label="Calibration Due Reminder" className="!mb-4">
-                <FormInput placeholder="Days before due" />
-              </Form.Item>
-              <Form.Item name="procedureReference" label="Calibration Procedures Reference Document" className="!mb-4">
-                <FormInput placeholder="Doc #" />
-              </Form.Item>
-              <Form.Item name="standardUsed" label="Calibration Standard used" className="!mb-4">
-                <FormInput placeholder="Standard name" />
-              </Form.Item>
-              <Form.Item name="parameters" label="Calibration Parameters" className="!mb-4">
-                <FormInput placeholder="e.g. Voltage, Current" />
-              </Form.Item>
-              <Form.Item name="unscheduledReason" label="Reason for Unscheduled or Event Based Calibration" className="!mb-4">
-                <FormInput placeholder="Explain reason" />
-              </Form.Item>
-              <Form.Item name="eventReference" label="Event Reference No." className="!mb-4">
-                <FormInput placeholder="e.g. EVT-123" />
-              </Form.Item>
-              <Form.Item name="calibrationResults" label="Calibration Results" className="!mb-4">
-                <FormSelect placeholder="Select" options={resultOptions} />
-              </Form.Item>
-              <Form.Item name="certificateNumber" label="Calibration Certificate number" className="!mb-4">
-                <FormInput placeholder="Cert #" />
-              </Form.Item> 
             </div>
 
             <div className="my-9 h-px w-full bg-slate-200" />

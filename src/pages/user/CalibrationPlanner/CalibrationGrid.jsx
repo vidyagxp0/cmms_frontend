@@ -385,7 +385,7 @@ const CalibrationGrid = ({
                     return (
                       <td key={month.key} style={{ minWidth: 300 }} className={`border-b border-r border-[#E0E7E4] p-2 align-top ${monthEnabled ? "bg-[#FCFDFC]" : "bg-[#F5F7F6]"}`}>
                         <div className="grid grid-cols-2 gap-2">
-                          <div className="min-w-0">{renderMonthlyDatePicker(row, rowIndex, month.key, "schedulerDaasllihnkjbkbje")}</div>
+                          <div className="min-w-0">{renderMonthlyDatePicker(row, rowIndex, month.key, "schedulerDate")}</div>
                           <div className="min-w-0">{renderMonthlyDatePicker(row, rowIndex, month.key, "calibrationDate")}</div>
                         </div>
                       </td>

@@ -435,6 +435,7 @@ const CalibrationChild = () => {
 
       const processData = buildFullProcessData(values);
       const gridData = normalizeGridRows(calibrationResultRows);
+      const testGridData = normalizeGridRows(calibrationResultTest);
 
       const initiationDate = values.dateOfInitiation || dateOfInitiation;
       const formattedInitiationDate = dayjs(initiationDate, "DD/MM/YYYY HH:mm").format("DD/MM/YYYY HH:mm");
@@ -450,6 +451,7 @@ const CalibrationChild = () => {
         initiation_date: formattedInitiationDate,
         process_data: processData,
         gridData: gridData,
+        testGridData: testGridData,
         checklistData: [],
       };
 
@@ -709,56 +711,13 @@ const CalibrationChild = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2 mt-6">
-              <Form.Item name="costOfCalibration" label="Cost of Calibration" className="!mb-4">
-                <FormInput placeholder="Enter cost" type="number" />
-              </Form.Item>
-              <Form.Item name="calibrationComment" label="Calibration Comment / Observations" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={3} placeholder="Enter any comments or observations..." />
-              </Form.Item>
-            </div>
-
             <div className="my-9 h-px w-full bg-slate-200" />
 
             {/* ASSIGNMENTS */}
-            <SectionHeader title="ASSIGNMENTS" />
+           
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item
-                name="hod"
-                label={<span>HOD / Designee <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select HOD" }]}
-                className="!mb-4"
-              >
-                <FormSelect
-                  placeholder={usersLoading ? "Loading..." : "Select HOD / Designee"}
-                  options={hodOptions}
-                  disabled={usersLoading}
-                />
-              </Form.Item>
-              <Form.Item
-                name="qaReviewer"
-                label={<span>QA Reviewer <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select QA Reviewer" }]}
-                className="!mb-4"
-              >
-                <FormSelect
-                  placeholder={usersLoading ? "Loading..." : "Select QA Reviewer"}
-                  options={qaReviewerOptions}
-                  disabled={usersLoading}
-                />
-              </Form.Item>
-              <Form.Item
-                name="qaApproval"
-                label={<span>QA Approval <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Please select QA Approver" }]}
-                className="!mb-4"
-              >
-                <FormSelect
-                  placeholder={usersLoading ? "Loading..." : "Select QA Approver"}
-                  options={qaApproverOptions}
-                  disabled={usersLoading}
-                />
-              </Form.Item>
+            
+             
               <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
                 <FormTextArea rows={4} placeholder="Additional comments..." />
               </Form.Item>

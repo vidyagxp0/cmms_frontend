@@ -57,7 +57,8 @@ const getProcessValue = (processData = [], key) => {
   return "";
 };
 
-const buildGridPayload = (rows = []) => {
+// Build row payload for a single grid (without wrapping in name)
+const buildGridRows = (rows = []) => {
   return rows.map((row, index) => {
     const rowData = { row_id: index + 1 };
     Object.keys(row).forEach((key) => {
@@ -68,6 +69,20 @@ const buildGridPayload = (rows = []) => {
     });
     return rowData;
   });
+};
+
+// Build combined gridData array for the payload
+const buildGridPayload = (calibrationRows, testRows) => {
+  return [
+    {
+      name: "calibrationResults",
+      rows: buildGridRows(calibrationRows),
+    },
+    {
+      name: "testResults",
+      rows: buildGridRows(testRows),
+    },
+  ];
 };
 
 const getUserPair = (userId, users) => {
@@ -310,18 +325,43 @@ const CalibrationChildPanel = () => {
         attachment: attachment || [],
       });
 
+      // ---- Parse grid data ----
       const gridRecords = data?.grid_records || [];
-      const rawRows = gridRecords.flatMap((rec) => rec?.grid_data || []);
-      const normalizedRows = rawRows.map((item) => {
-        const row = {};
-        Object.keys(item).forEach((key) => {
-          if (key === "row_id") row.row_id = item.row_id;
-          else if (item[key] && typeof item[key] === "object" && Object.prototype.hasOwnProperty.call(item[key], "value")) row[key] = item[key].value;
-          else row[key] = item[key];
+      // Flatten all grid_data objects (they are arrays)
+      const allGridData = gridRecords.flatMap((rec) => rec?.grid_data || []);
+      // Separate by name
+      const calibrationRows = [];
+      const testRows = [];
+
+      allGridData.forEach((gridEntry) => {
+        if (!gridEntry || !gridEntry.rows) return;
+        const { name, rows } = gridEntry;
+        // rows is an array of row objects with row_id and column objects
+        // Convert to plain row objects (value only)
+        const plainRows = rows.map((row) => {
+          const plainRow = {};
+          Object.keys(row).forEach((key) => {
+            if (key === "row_id") plainRow.row_id = row.row_id;
+            else if (row[key] && typeof row[key] === "object" && Object.prototype.hasOwnProperty.call(row[key], "value")) {
+              plainRow[key] = row[key].value;
+            } else {
+              plainRow[key] = row[key];
+            }
+          });
+          return plainRow;
         });
-        return row;
+
+        if (name === "calibrationResults") {
+          calibrationRows.push(...plainRows);
+        } else if (name === "testResults") {
+          testRows.push(...plainRows);
+        }
       });
-      setCalibrationResultRows(normalizedRows);
+
+      setCalibrationResultRows(calibrationRows);
+      setCalibrationResultTest(testRows);
+      // -------------------------------------
+
     } catch (error) {
       console.error("Failed to fetch child detail:", error);
       toast.error(error?.response?.data?.message || "Failed to load child calibration record.");
@@ -441,8 +481,10 @@ const CalibrationChildPanel = () => {
       setIsSaving(true);
       const mergedValues = { ...values };
       const processData = buildProcessData(mergedValues, systemValues, hodUsers, qaReviewers, qaApprovers);
-      const gridData = buildGridPayload(calibrationResultRows);
-      const testGridData = buildGridPayload(calibrationResultTest);
+      
+      // Build combined gridData payload
+      const gridData = buildGridPayload(calibrationResultRows, calibrationResultTest);
+
       const payload = {
         process_id: Number(processId),
         stage_id: Number(activeStageId),
@@ -451,10 +493,11 @@ const CalibrationChildPanel = () => {
         short_description: mergedValues.shortDescription || "",
         initiation_date: dayjs(mergedValues.dateOfInitiation || dateOfInitiation).format("DD/MM/YYYY HH:mm"),
         process_data: processData,
-        gridData: gridData,
-        testGridData: testGridData,
+        gridData: gridData,          // combined array
+        // testGridData removed
         checklistData: [],
       };
+
       const response = await updateCalibrationChild(recordId, payload);
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Child calibration updated successfully.");
@@ -628,7 +671,6 @@ const CalibrationChildPanel = () => {
                 addButtonLabel="Add Parameter"
                 minRows={0}
                 rowKey="_rowId"
-                deleteRow={(updatedRows) => updateCalibrationChild(recordId, { gridData: updatedRows })}
               />
             </div>
             <div className="mt-4">
@@ -643,7 +685,6 @@ const CalibrationChildPanel = () => {
                 addButtonLabel="Add Parameter"
                 minRows={0}
                 rowKey="_rowId"
-                deleteRow={(updatedRows) => updateCalibrationChild(recordId, { gridData: updatedRows })}
               />
             </div>
             <div className="my-9 h-px w-full bg-slate-200" />

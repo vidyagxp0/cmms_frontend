@@ -259,15 +259,32 @@ const CalibrationChild = () => {
     form.submit();
   };
 
+  // ========== UPDATED handleSubmit ==========
   const handleSubmit = async (values) => {
     if (isSaving) return;
     try {
       setIsSaving(true);
       const processData = buildFullProcessData(values);
-      const gridData = normalizeGridRows(calibrationResultRows);
-      const testGridData = normalizeGridRows(calibrationResultTest);
+
+      // Normalize both grids
+      const normalizedCalibrationRows = normalizeGridRows(calibrationResultRows);
+      const normalizedTestRows = normalizeGridRows(calibrationResultTest);
+
+      // Combine into one gridData array
+      const gridData = [
+        {
+          name: "calibrationResults",   // or any identifier you prefer
+          rows: normalizedCalibrationRows,
+        },
+        {
+          name: "testResults",
+          rows: normalizedTestRows,
+        },
+      ];
+
       const initiationDate = values.dateOfInitiation || dateOfInitiation;
       const formattedInitiationDate = dayjs(initiationDate, "DD/MM/YYYY HH:mm").format("DD/MM/YYYY HH:mm");
+
       const payload = {
         process_id: Number(processId),
         stage_id: 19,
@@ -278,10 +295,11 @@ const CalibrationChild = () => {
         short_description: values.shortDescription || "",
         initiation_date: formattedInitiationDate,
         process_data: processData,
-        gridData: gridData,
-        testGridData: testGridData,
+        gridData: gridData,          // single combined array
+        // testGridData removed
         checklistData: [],
       };
+
       const response = await addCalibrationChild(payload);
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Child calibration record created successfully.");
@@ -292,7 +310,9 @@ const CalibrationChild = () => {
     } catch (error) {
       console.error("Child calibration creation failed:", error);
       toast.error(error?.response?.data?.message || "Failed to create child calibration.");
-    } finally { setIsSaving(false); }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {

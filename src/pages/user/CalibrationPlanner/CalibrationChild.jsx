@@ -190,7 +190,10 @@ const CalibrationChild = () => {
         const parseDate = (val) => {
           if (!val) return null;
           if (dayjs.isDayjs(val)) return val;
-          return dayjs(val, "DD/MM/YYYY", true);
+          let d = dayjs(val, "DD/MM/YYYY", true);
+          if (d.isValid()) return d;
+          d = dayjs(val);
+          return d.isValid() ? d : null;
         };
 
         const values = {
@@ -395,7 +398,7 @@ const CalibrationChild = () => {
           <section>
             <SectionHeader title="SYSTEM INFORMATION" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="recordNumber" label="Record Number" className="!mb-4"><FormDisabledInput /></Form.Item>
+              {/* <Form.Item name="recordNumber" label="Record Number" className="!mb-4"><FormDisabledInput /></Form.Item> */}
               {SYSTEM_FIELDS.map((field) => (
                 <Form.Item key={field.key} name={field.key} label={field.label} className="!mb-4"><FormDisabledInput /></Form.Item>
               ))}

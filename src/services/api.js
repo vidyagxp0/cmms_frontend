@@ -39,7 +39,12 @@ api.interceptors.response.use(
             sessionStorage.removeItem("user_token");
             sessionStorage.removeItem("auth_type");
 
-            window.location.href = "/login";
+            const isLoginRequest = error.config?.url?.includes("/login");
+            const isLoginPage = window.location.pathname === "/login";
+
+            if (!isLoginRequest && !isLoginPage) {
+                window.location.href = "/login";
+            }
         }
 
         return Promise.reject(error);

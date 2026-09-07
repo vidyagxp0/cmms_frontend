@@ -503,8 +503,7 @@ useEffect(() => {
         short_description: mergedValues.shortDescription || "",
         initiation_date: dayjs(mergedValues.dateOfInitiation || dateOfInitiation).format("DD/MM/YYYY HH:mm"),
         process_data: processData,
-        gridData: gridData,          // combined array
-        // testGridData removed
+        gridData: gridData,       
         checklistData: [],
       };
 

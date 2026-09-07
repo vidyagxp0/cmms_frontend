@@ -136,21 +136,24 @@ const CreateCalibrationPanel = () => {
   const isUserDeptEditable = isStageEditable(3);
   const isQaReviewEditable = isStageEditable(4);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await getProfile();
-        const profile = response?.data?.data;
-        if (!profile) return;
-        setInitiator(profile?.name || "");
-        setInitiatorId(profile?.id || "");
-        setLoginUserId(profile?.id || "");
-        setDepartmentId(profile?.department?.id || "");
-        setInitiationDepartment(profile?.department?.name || "");
-      } catch (error) { console.error("Failed to fetch profile:", error); }
-    };
-    fetchProfile();
-  }, []);
+useEffect(() => {
+  const fetchProfile = async () => {
+    try {
+      const response = await getProfile();
+      const profile = response?.data?.data;
+
+      if (!profile) return;
+
+      // Current logged-in user ONLY.
+      // Used for e-sign / activity.
+      setLoginUserId(profile?.id || "");
+    } catch (error) {
+      console.error("Failed to fetch profile:", error);
+    }
+  };
+
+  fetchProfile();
+}, []);
 
   useEffect(() => {
     const fetchEquipment = async () => {
@@ -224,8 +227,18 @@ const CreateCalibrationPanel = () => {
 
       setSiteLocationCode(locationCode || "");
       // Set initiator from the API response (processData or responseData.initiator)
-      setInitiator(responseData?.initiator?.name || processInitiator || "");
-      setInitiatorId(responseData?.initiator?.id || responseData?.initiator_id || "");
+      const backendInitiatorId =
+        responseData?.initiator?.id ??
+        responseData?.initiator_id ??
+        "";
+
+      const backendInitiatorName =
+        responseData?.initiator?.name ??
+        processInitiator ??
+        "";
+
+      setInitiatorId(backendInitiatorId);
+      setInitiator(backendInitiatorName);
       setDepartmentId(responseData?.department?.id || responseData?.department_id || "");
       setInitiationDepartment(responseData?.department?.name || processDepartment || "");
       setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
@@ -235,7 +248,7 @@ const CreateCalibrationPanel = () => {
       form.setFieldsValue({
         recordNumber,
         siteLocationCode: locationCode || "",
-        initiator: responseData?.initiator?.name || processInitiator || "",
+        initiator: backendInitiatorName,
         dateOfInitiation: processDateOfInitiation || responseData?.initiation_date || "",
         dueDate,
         initiationDepartment: responseData?.department?.name || processDepartment || "",

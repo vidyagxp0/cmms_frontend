@@ -187,21 +187,23 @@ const CalibrationChildPanel = () => {
   const isQaReviewEditable = isStageEditable(STAGE_IDS.qaReview);
   const isQaApprovalEditable = isStageEditable(STAGE_IDS.qaApproval);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await getProfile();
-        const profile = response?.data?.data;
-        if (!profile) return;
-        setInitiator(profile?.name || "");
-        setInitiatorId(profile?.id || "");
-        setLoginUserId(profile?.id || "");
-        setDepartmentId(profile?.department?.id || "");
-        setInitiationDepartment(profile?.department?.name || "");
-      } catch (error) { console.error("Failed to fetch profile:", error); }
-    };
-    fetchProfile();
-  }, []);
+useEffect(() => {
+  const fetchProfile = async () => {
+    try {
+      const response = await getProfile();
+      const profile = response?.data?.data;
+
+      if (!profile) return;
+
+      // Current logged-in user ONLY for e-sign/activity.
+      setLoginUserId(profile?.id || "");
+    } catch (error) {
+      console.error("Failed to fetch profile:", error);
+    }
+  };
+
+  fetchProfile();
+}, []);
 
   useEffect(() => {
     const fetchEquipment = async () => {
@@ -261,6 +263,14 @@ const CalibrationChildPanel = () => {
       const recNum = getProcessValue(processData, "recordNumber");
       const locCode = getProcessValue(processData, "siteLocationCode");
       const initiatorName = getProcessValue(processData, "initiator");
+      const backendInitiatorId =
+        data?.initiator?.id ??
+        data?.initiator_id ??
+        "";
+      const backendInitiatorName =
+        data?.initiator?.name ??
+        initiatorName ??
+        "";
       const initDate = getProcessValue(processData, "dateOfInitiation");
       const dept = getProcessValue(processData, "initiationDepartment");
       const shortDesc = getProcessValue(processData, "shortDescription");
@@ -283,8 +293,8 @@ const CalibrationChildPanel = () => {
 
       setRecordNumber(recNum || "");
       setSiteLocationCode(locCode || "");
-      setInitiator(initiatorName || data?.initiator?.name || "");
-      setInitiatorId(data?.initiator?.id || "");
+      setInitiator(backendInitiatorName);
+      setInitiatorId(backendInitiatorId);
       setDepartmentId(data?.department?.id || "");
       setInitiationDepartment(dept || data?.department?.name || "");
       setDateOfInitiation(initDate || data?.initiation_date || "");
@@ -299,7 +309,7 @@ const CalibrationChildPanel = () => {
       form.setFieldsValue({
         recordNumber: recNum || "",
         siteLocationCode: locCode || "",
-        initiator: initiatorName || data?.initiator?.name || "",
+        initiator: backendInitiatorName || "",
         dateOfInitiation: initDate || data?.initiation_date || "",
         initiationDepartment: dept || data?.department?.name || "",
         shortDescription: shortDesc || "",
@@ -489,6 +499,7 @@ const CalibrationChildPanel = () => {
         stage_id: Number(activeStageId),
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
+        initiator_name: initiator,
         short_description: mergedValues.shortDescription || "",
         initiation_date: dayjs(mergedValues.dateOfInitiation || dateOfInitiation).format("DD/MM/YYYY HH:mm"),
         process_data: processData,

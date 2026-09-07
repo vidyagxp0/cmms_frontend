@@ -1,0 +1,76 @@
+/* =========================================================
+   Reusable Disabled Form Field Styles
+   Keeps disabled values clear, readable and non-faded.
+   ========================================================= */
+
+/* Ant Design Input */
+.ant-input-disabled {
+    color: #263B35 !important;
+    opacity: 1 !important;
+    font-weight: 600 !important;
+    cursor: not-allowed !important;
+}
+
+/* Ant Design Input with prefix/suffix */
+.ant-input-affix-wrapper-disabled {
+    color: #263B35 !important;
+    opacity: 1 !important;
+}
+
+.ant-input-affix-wrapper-disabled .ant-input {
+    color: #263B35 !important;
+    opacity: 1 !important;
+    font-weight: 600 !important;
+}
+
+/* Ant Design Select */
+.ant-select-disabled {
+    opacity: 1 !important;
+}
+
+.ant-select-disabled .ant-select-selector {
+    color: #263B35 !important;
+    opacity: 1 !important;
+}
+
+.ant-select-disabled .ant-select-selection-item {
+    color: #263B35 !important;
+    font-weight: 600 !important;
+}
+
+.ant-select-disabled .ant-select-selection-placeholder {
+    color: #263B35 !important;
+    opacity: 1 !important;
+}
+
+/* Ant Design DatePicker */
+.ant-picker-disabled {
+    color: #263B35 !important;
+    opacity: 1 !important;
+}
+
+.ant-picker-disabled input {
+    color: #263B35 !important;
+    opacity: 1 !important;
+    font-weight: 600 !important;
+}
+
+/* Ant Design TextArea */
+.ant-input-textarea-disabled {
+    color: #263B35 !important;
+    opacity: 1 !important;
+}
+
+textarea:disabled {
+    color: #263B35 !important;
+    opacity: 1 !important;
+    font-weight: 600 !important;
+    cursor: not-allowed !important;
+}
+
+/* General disabled controls */
+input:disabled,
+textarea:disabled {
+    color: #263B35 !important;
+    opacity: 1 !important;
+}

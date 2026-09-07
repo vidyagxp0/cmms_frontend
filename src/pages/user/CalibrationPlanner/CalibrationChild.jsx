@@ -395,7 +395,6 @@ const CalibrationChild = () => {
           <section>
             <SectionHeader title="SYSTEM INFORMATION" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="recordNumber" label="Record Number" className="!mb-4"><FormDisabledInput /></Form.Item>
               {SYSTEM_FIELDS.map((field) => (
                 <Form.Item key={field.key} name={field.key} label={field.label} className="!mb-4"><FormDisabledInput /></Form.Item>
               ))}

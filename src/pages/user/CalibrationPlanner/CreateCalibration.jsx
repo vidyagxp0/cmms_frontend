@@ -103,83 +103,94 @@ const CreateCalibration = () => {
   const { processName, siteName } = location.state || {};
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    let isMounted = true;
+
+    const loadInitialData = async () => {
+      setIsLoading(true);
+      setEquipmentLoading(true);
+      setUsersLoading(true);
+
       try {
-        setIsLoading(true);
-        const response = await getProfile();
-        const profile = response?.data?.data;
-        if (!profile) return;
-        const userName = profile?.name || "";
-        const userId = profile?.id || "";
-        const profileDepartmentId = profile?.department?.id || "";
-        const departmentName = profile?.department?.name || "";
-        setInitiator(userName);
-        setInitiatorId(userId);
-        setDepartmentId(profileDepartmentId);
-        setInitiationDepartment(departmentName);
+        const [profileRes, recordNumRes, equipmentRes, usersRes] = await Promise.allSettled([
+          getProfile(),
+          processId ? getRecordNumber(processId) : Promise.resolve(null),
+          getAllEquipmentData(),
+          getCalibrationUser(),
+        ]);
+
+        if (!isMounted) return;
+
+        let userName = "";
+        let departmentName = "";
+        let generatedRecordNumber = "";
+
+        if (profileRes.status === "fulfilled" && profileRes.value?.data?.data) {
+          const profile = profileRes.value.data.data;
+          userName = profile?.name || "";
+          setInitiator(userName);
+          setInitiatorId(profile?.id || "");
+          setDepartmentId(profile?.department?.id || "");
+          departmentName = profile?.department?.name || "";
+          setInitiationDepartment(departmentName);
+        } else if (profileRes.status === "rejected") {
+          console.error("Failed to fetch profile:", profileRes.reason);
+        }
+
+        if (recordNumRes.status === "fulfilled" && recordNumRes.value?.data?.data) {
+          generatedRecordNumber = recordNumRes.value.data.data.record_number || "";
+          setRecordNumber(generatedRecordNumber);
+        } else if (recordNumRes.status === "rejected") {
+          console.error("Failed to generate record number:", recordNumRes.reason);
+          toast.error(recordNumRes.reason?.response?.data?.message || "Failed to generate record number.");
+        }
+
         form.setFieldsValue({
           initiator: userName,
           initiationDepartment: departmentName,
           dateOfInitiation,
           siteLocationCode: "Unit IV",
+          recordNumber: generatedRecordNumber,
         });
-      } catch (error) { console.error("Failed to fetch profile:", error); } finally { setIsLoading(false); }
-    };
-    fetchProfile();
-  }, [form, dateOfInitiation]);
 
-  useEffect(() => {
-    const fetchEquipment = async () => {
-      try {
-        setEquipmentLoading(true);
-        const response = await getAllEquipmentData();
-        const data = response?.data?.data || [];
-        const options = data.map((item) => ({ value: item.id, label: item.name }));
-        const map = {};
-        data.forEach((item) => { map[item.id] = item; });
-        setEquipmentOptions(options);
-        setEquipmentMap(map);
-      } catch (error) {
-        console.error("Failed to fetch equipment:", error);
-        toast.error("Could not load equipment list.");
-      } finally { setEquipmentLoading(false); }
-    };
-    fetchEquipment();
-  }, []);
+        if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
+          const data = equipmentRes.value.data.data || [];
+          const options = data.map((item) => ({ value: item.id, label: item.name }));
+          const map = {};
+          data.forEach((item) => { map[item.id] = item; });
+          setEquipmentOptions(options);
+          setEquipmentMap(map);
+        } else if (equipmentRes.status === "rejected") {
+          console.error("Failed to fetch equipment:", equipmentRes.reason);
+          toast.error("Could not load equipment list.");
+        }
 
-  useEffect(() => {
-    if (!processId) return;
-    const fetchRecordNumber = async () => {
-      try {
-        const response = await getRecordNumber(processId);
-        const generatedRecordNumber = response?.data?.data?.record_number || "";
-        setRecordNumber(generatedRecordNumber);
-        form.setFieldsValue({ recordNumber: generatedRecordNumber });
+        if (usersRes.status === "fulfilled" && usersRes.value?.data?.data) {
+          const data = usersRes.value.data.data || {};
+          setHodUsers(data?.hod || []);
+          setQaReviewers(data?.qa_reviewer || []);
+        } else if (usersRes.status === "rejected") {
+          console.error("Failed to fetch calibration users:", usersRes.reason);
+          toast.error(usersRes.reason?.response?.data?.message || "Failed to load workflow users.");
+          setHodUsers([]);
+          setQaReviewers([]);
+        }
       } catch (error) {
-        console.error("Failed to generate record number:", error);
-        toast.error(error?.response?.data?.message || "Failed to generate record number.");
+        console.error("Error loading initial data:", error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+          setEquipmentLoading(false);
+          setUsersLoading(false);
+        }
       }
     };
-    fetchRecordNumber();
-  }, [processId, form]);
 
-  useEffect(() => {
-    const fetchCalibrationUsers = async () => {
-      try {
-        setUsersLoading(true);
-        const response = await getCalibrationUser();
-        const data = response?.data?.data || {};
-        setHodUsers(data?.hod || []);
-        setQaReviewers(data?.qa_reviewer || []);
-      } catch (error) {
-        console.error("Failed to fetch calibration users:", error);
-        toast.error(error?.response?.data?.message || "Failed to load workflow users.");
-        setHodUsers([]);
-        setQaReviewers([]);
-      } finally { setUsersLoading(false); }
+    loadInitialData();
+
+    return () => {
+      isMounted = false;
     };
-    fetchCalibrationUsers();
-  }, []);
+  }, [processId, form, dateOfInitiation]);
 
   const systemFields = [
     { name: "recordNumber", label: "Record Number", value: recordNumber },

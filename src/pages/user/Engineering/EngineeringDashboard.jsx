@@ -192,7 +192,7 @@ const EngineeringDashboard = () => {
                                 margin: 0;
                                 height: 100vh;
                                 display: flex;
-                                align-items: center;
+                                items-center: center;
                                 justify-content: center;
                                 font-family: Arial, sans-serif;
                                 background: white;

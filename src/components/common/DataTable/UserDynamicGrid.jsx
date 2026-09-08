@@ -173,7 +173,7 @@ const UserDynamicGrid = ({
                 <DatePicker
                     value={fieldValue || null}
                     disabled={disabled}
-                    format={column.format || "DD-MMM-YYYY"}
+                    format={column.format || "DD/MM/YYYY"}
                     placeholder={column.placeholder || "Select date"}
                     onChange={handleChange}
                     className="!h-10 !w-full !rounded-lg !border-[#D1DBD7] !bg-white !text-[12px] !font-medium !text-[#263B35] !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585]"

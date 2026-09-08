@@ -1,64 +1,92 @@
 import api from "../../../services/api";
 
-export const addSingleAttachment = ({
+// ==========================================================
+// SINGLE ATTACHMENT
+// POST /user/upload-attachment/{recordId}
+// ==========================================================
+
+export const addSingleAttachment = async ({
   record_id,
   attachment_field,
   label,
   file,
 }) => {
-  const formData = new FormData();
-
-  if (record_id) {
-    formData.append("record_id", record_id);
+  if (!record_id) {
+    throw new Error("record_id is required for attachment upload.");
   }
 
-  formData.append("attachment_field", attachment_field);
-  formData.append("label", label);
+  if (!file) {
+    throw new Error("File is required for attachment upload.");
+  }
+
+  const formData = new FormData();
+
+  formData.append("attachment_field", attachment_field || "");
+  formData.append("label", label || "");
   formData.append("file", file);
 
-  console.log("Single Attachment Payload:", {
+  console.log("Single Attachment Upload:", {
+    url: `/user/upload-attachment/${record_id}`,
     record_id,
     attachment_field,
     label,
     file,
   });
 
-  return api.post("/calibration/attachment", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  return api.post(
+    `/user/upload-attachment/${record_id}`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
 };
 
-export const addMultipleAttachments = ({
+// ==========================================================
+// MULTIPLE ATTACHMENTS
+// POST /user/upload-attachment/{recordId}
+// ==========================================================
+
+export const addMultipleAttachments = async ({
   record_id,
   attachment_field,
   label,
-  files,
+  files = [],
 }) => {
-  const formData = new FormData();
-
-  if (record_id) {
-    formData.append("record_id", record_id);
+  if (!record_id) {
+    throw new Error("record_id is required for attachment upload.");
   }
 
-  formData.append("attachment_field", attachment_field);
-  formData.append("label", label);
+  if (!files.length) {
+    throw new Error("At least one file is required.");
+  }
+
+  const formData = new FormData();
+
+  formData.append("attachment_field", attachment_field || "");
+  formData.append("label", label || "");
 
   files.forEach((file) => {
     formData.append("files", file);
   });
 
-  console.log("Multiple Attachments Payload:", {
+  console.log("Multiple Attachment Upload:", {
+    url: `/user/upload-attachment/${record_id}`,
     record_id,
     attachment_field,
     label,
     files,
   });
 
-  return api.post("/calibration/attachments", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  return api.post(
+    `/user/upload-attachment/${record_id}`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
 };

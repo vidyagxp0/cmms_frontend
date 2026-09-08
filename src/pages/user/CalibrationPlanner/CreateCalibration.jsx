@@ -355,10 +355,7 @@ const CreateCalibration = () => {
               className="!mb-4 md:col-span-2"
             >
               <FormAttachment
-                multiple={true}
-                attachmentField="attachment"
-                label="Attachment"
-                uploadApi={addMultipleAttachments}
+              disabled
               />
             </Form.Item>
             </div>

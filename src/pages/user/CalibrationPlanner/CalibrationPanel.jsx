@@ -22,6 +22,7 @@ import "../../../components/ui/disabledFields.css";
 
 import { getProfile } from "../../../services/authApi";
 import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration, getAllActivites, getAllActivityLogs, getAllStages, getAllPermissions, getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
+import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
 
 dayjs.extend(customParseFormat);
 
@@ -588,11 +589,17 @@ useEffect(() => {
             <Form.Item
               name="attachment"
               label="Attachment"
-              valuePropName="fileList"
-              getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
+              valuePropName="value"
               className="!mb-4 md:col-span-2"
             >
-              <FormAttachment disabled={!isGeneralEditable} />
+              <FormAttachment
+              multiple={false}
+              recordId={recordId}
+              attachmentField="attachment"
+              label="Attachment"
+              uploadApi={addSingleAttachment}
+              disabled={!isGeneralEditable}
+            />
             </Form.Item>
           </section>
         )}
@@ -607,11 +614,17 @@ useEffect(() => {
               <Form.Item
                 name="hodReviewAttachment"
                 label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
+                valuePropName="value"
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment disabled={!isHodEditable} />
+                <FormAttachment
+                  multiple={false}
+                  recordId={recordId}
+                  attachmentField="hod_review_attachment"
+                  label="HOD / Designee Review Attachment"
+                  uploadApi={addSingleAttachment}
+                  disabled={!isHodEditable}
+                />
               </Form.Item>
             </div>
           </section>
@@ -625,14 +638,20 @@ useEffect(() => {
                 <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isUserDeptEditable} />
               </Form.Item>
               <Form.Item
-                name="userDeptReviewAttachment"
-                label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
-                className="!mb-4 md:col-span-2"
-              >
-                <FormAttachment disabled={!isUserDeptEditable} />
-              </Form.Item>
+              name="userDeptReviewAttachment"
+              label="Attachment"
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={true}
+                recordId={recordId}
+                attachmentField="user_dept_review_attachment"
+                label="User Dept Review Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isUserDeptEditable}
+              />
+            </Form.Item>
             </div>
           </section>
         )}
@@ -644,15 +663,21 @@ useEffect(() => {
               <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
                 <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isQaReviewEditable} />
               </Form.Item>
-              <Form.Item
-                name="qaReviewAttachment"
-                label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
-                className="!mb-4 md:col-span-2"
-              >
-                <FormAttachment disabled={!isQaReviewEditable} />
-              </Form.Item>
+            <Form.Item
+              name="qaReviewAttachment"
+              label="Attachment"
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={true}
+                recordId={recordId}
+                attachmentField="qa_review_attachment"
+                label="QA Review Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isQaReviewEditable}
+              />
+            </Form.Item>
             </div>
           </section>
         )}
@@ -674,22 +699,22 @@ useEffect(() => {
                         // disabled={!isCancellationEditable}
                     />
                 </Form.Item>
+            <Form.Item
+              name="cancellationAttachment"
+              label="Attachment"
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={false}
+                recordId={recordId}
+                attachmentField="cancellation_attachment"
+                label="Cancellation Attachment"
+                uploadApi={addSingleAttachment}
+                disabled={!isCancellationEditable}
+              />
+            </Form.Item>
 
-                <Form.Item
-                    name="cancellationAttachment"
-                    label="Attachment"
-                    valuePropName="fileList"
-                    getValueFromEvent={(event) =>
-                        Array.isArray(event)
-                            ? event
-                            : event?.fileList
-                    }
-                    className="!mb-4 md:col-span-2"
-                >
-                    <FormAttachment
-                        // disabled={!isCancellationEditable}
-                    />
-                </Form.Item>
             </div>
         </section>
     )}

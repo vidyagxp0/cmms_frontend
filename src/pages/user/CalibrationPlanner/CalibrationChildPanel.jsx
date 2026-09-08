@@ -550,27 +550,6 @@ useEffect(() => {
 
   return (
     <div className="w-full">
-      <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Activity size={20} />
-            </div>
-            <h1 className="text-[22px] font-semibold tracking-tight text-[#263B35]">Child Calibration</h1>
-          </div>
-        </div>
-        <div className="flex items-center gap-8 border-l border-slate-200 pl-6">
-          <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">Site</p>
-            <p className="text-sm font-semibold text-[#344A43]">{siteLocationCode || "Unit IV"}</p>
-          </div>
-          <div className="h-9 w-px bg-slate-200" />
-          <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">Process</p>
-            <p className="text-sm font-semibold text-[#344A43]">{processName || "Calibration Management"}</p>
-          </div>
-        </div>
-      </div>
 
       <div className="mb-2 space-y-2">
         <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} />

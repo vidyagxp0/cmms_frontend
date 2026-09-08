@@ -686,8 +686,8 @@ useEffect(() => {
             </div>
             <div className="mt-4">
               <UserDynamicGrid
-                name="Calibration Results"
-                description="Parameter-wise calibration results"
+                name="Master Instruments Details"
+                // description="Parameter-wise calibration results"
                 columns={CALIBRATION_RESULT_GRID}
                 value={calibrationResultTest}
                 onChange={setCalibrationResultTest}

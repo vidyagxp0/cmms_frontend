@@ -470,8 +470,8 @@ const CalibrationChild = () => {
             </div>
             <div className="mt-4">
               <UserDynamicGrid
-                name="Calibration Results"
-                description="Add parameter-wise calibration results"
+                name="Master Instruments Details"
+                // description="Add parameter-wise calibration results"
                 columns={CALIBRATION_RESULT_GRID}
                 value={calibrationResultTest}
                 onChange={setCalibrationResultTest}

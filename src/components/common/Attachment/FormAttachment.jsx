@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Upload, message, Skeleton } from "antd";
 import { UploadCloud, X, FileText, CheckCircle2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const { Dragger } = Upload;
 
@@ -31,15 +32,15 @@ const FormAttachment = ({
   const handleChange = async ({ fileList: newFileList }) => {
     if (disabled || uploading) return;
     if (!newFileList || !newFileList.length) return;
-    if (!recordId) { message.error("Record ID is required for attachment upload."); return; }
-    if (!attachmentField) { message.error("Attachment field is required."); return; }
-    if (!label) { message.error("Attachment label is required."); return; }
-    if (!uploadApi) { message.error("Attachment API is not configured."); return; }
+    if (!recordId) { toast.error("Record ID is required for attachment upload."); return; }
+    if (!attachmentField) { toast.error("Attachment field is required."); return; }
+    if (!label) { toast.error("Attachment label is required."); return; }
+    if (!uploadApi) { toast.error("Attachment API is not configured."); return; }
 
     const selectedFiles = newFileList
       .map((item) => item?.originFileObj)
       .filter((file) => file instanceof File);
-    if (!selectedFiles.length) { message.error("No valid file selected."); return; }
+    if (!selectedFiles.length) { toast.error("No valid file selected."); return; }
 
     const existingKeys = new Set(fileList.filter((f) => f instanceof File).map(getFileKey));
     const filesToUpload = multiple
@@ -48,7 +49,7 @@ const FormAttachment = ({
     if (!filesToUpload.length) return;
 
     const cleanFiles = filesToUpload.map(createCleanFile).filter(Boolean);
-    if (!cleanFiles.length) { message.error("No valid file selected."); return; }
+    if (!cleanFiles.length) { toast.error("No valid file selected."); return; }
 
     try {
       setUploading(true);
@@ -56,17 +57,17 @@ const FormAttachment = ({
         const file = cleanFiles[0];
         await uploadApi({ record_id: recordId, attachment_field: attachmentField, label, file });
         onChange?.([file]);
-        message.success("Attachment uploaded successfully.");
+        toast.success("Attachment uploaded successfully.");
       } else {
         await uploadApi({ record_id: recordId, attachment_field: attachmentField, label, files: cleanFiles });
         const existingFiles = fileList.filter((f) => f instanceof File);
         const mergedFiles = [...existingFiles, ...cleanFiles];
         onChange?.(mergedFiles);
-        message.success(cleanFiles.length === 1 ? "Attachment uploaded successfully." : "Attachments uploaded successfully.");
+        toast.success(cleanFiles.length === 1 ? "Attachment uploaded successfully." : "Attachments uploaded successfully.");
       }
     } catch (error) {
       console.error("Attachment upload failed:", error);
-      message.error(error?.response?.data?.message || error?.response?.data?.error || error?.message || "Failed to upload attachment.");
+      toast.error(error?.response?.data?.message || error?.response?.data?.error || error?.message || "Failed to upload attachment.");
     } finally {
       setUploading(false);
     }

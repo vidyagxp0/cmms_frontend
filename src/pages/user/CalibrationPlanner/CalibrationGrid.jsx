@@ -5,6 +5,8 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import UserModal from "../../../components/common/UserModal/UserModal";
 import { updateCalibration } from "../../../services/usersApi/calibrationApi";
+import "../../../components/ui/disabledFields.css";
+
 
 dayjs.extend(customParseFormat);
 const { TextArea } = Input;

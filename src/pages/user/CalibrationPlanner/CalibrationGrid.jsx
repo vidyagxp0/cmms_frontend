@@ -1,10 +1,12 @@
-import React, { useState } from "react";
-import { Plus, Trash2, Table2, CalendarDays, ExternalLink } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Plus, Trash2, Table2, CalendarDays } from "lucide-react";
 import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import UserModal from "../../../components/common/UserModal/UserModal";
 import { updateCalibration } from "../../../services/usersApi/calibrationApi";
+import "../../../components/ui/disabledFields.css";
+
 
 dayjs.extend(customParseFormat);
 const { TextArea } = Input;
@@ -26,7 +28,9 @@ const MONTHS = [
 
 const createEmptyMonthlyData = () => {
   const monthlyData = {};
-  MONTHS.forEach(({ key }) => { monthlyData[key] = { schedulerDate: "", calibrationDate: "" }; });
+  MONTHS.forEach(({ key }) => {
+    monthlyData[key] = { schedulerDate: "", calibrationDate: "" };
+  });
   return monthlyData;
 };
 
@@ -42,6 +46,66 @@ const normalizeMonthlyData = (monthlyData) => {
   return normalized;
 };
 
+const FREQUENCY_MONTHS = { monthly: 1, quarterly: 3, "half-yearly": 6, yearly: 12 };
+const getFrequencyMonths = (frequency) => FREQUENCY_MONTHS[frequency] || 0;
+
+const getPlannedDates = (monthlyCalibration) => {
+  if (!monthlyCalibration || typeof monthlyCalibration !== "object") return [];
+  return MONTHS.map(({ key }) => {
+    const value = monthlyCalibration?.[key]?.schedulerDate;
+    if (!value) return null;
+    const date = dayjs(value);
+    if (!date.isValid()) return null;
+    return { monthKey: key, date };
+  })
+    .filter(Boolean)
+    .sort((a, b) => a.date.valueOf() - b.date.valueOf());
+};
+
+const isSameOrBefore = (dateA, dateB, unit = "millisecond") => dateA.isSame(dateB, unit) || dateA.isBefore(dateB, unit);
+
+const calculateCalibrationDates = (frequency, monthlyCalibration, existingPreviousDate = "", existingNextDate = "") => {
+  const frequencyMonths = getFrequencyMonths(frequency);
+  if (!frequencyMonths) return { previousCalibrationDate: existingPreviousDate || "", nextCalibrationDate: existingNextDate || "" };
+  const plannedDates = getPlannedDates(monthlyCalibration);
+  if (plannedDates.length === 0) return { previousCalibrationDate: "", nextCalibrationDate: "" };
+  const baseDate = plannedDates[0].date;
+  if (!baseDate.isValid()) return { previousCalibrationDate: "", nextCalibrationDate: "" };
+  const today = dayjs().startOf("day");
+  if (today.isBefore(baseDate, "day")) {
+    const nextDate = baseDate.add(frequencyMonths, "month");
+    return {
+      previousCalibrationDate: baseDate.format("YYYY-MM-DD"),
+      nextCalibrationDate: nextDate.format("YYYY-MM-DD"),
+    };
+  }
+  let currentCalibrationDate = baseDate;
+  let safetyCounter = 0;
+  while (isSameOrBefore(currentCalibrationDate.add(frequencyMonths, "month"), today, "day") && safetyCounter < 120) {
+    currentCalibrationDate = currentCalibrationDate.add(frequencyMonths, "month");
+    safetyCounter += 1;
+  }
+  const nextCalibrationDate = currentCalibrationDate.add(frequencyMonths, "month");
+  return {
+    previousCalibrationDate: currentCalibrationDate.format("YYYY-MM-DD"),
+    nextCalibrationDate: nextCalibrationDate.format("YYYY-MM-DD"),
+  };
+};
+
+const updateCalculatedCalibrationDates = (row) => {
+  if (!row || !row.calibrationFrequency) return row;
+  const result = calculateCalibrationDates(
+    row.calibrationFrequency,
+    row.monthlyCalibration,
+    row.previousCalibrationDate,
+    row.nextCalibrationDate
+  );
+  const previousChanged = (row.previousCalibrationDate || "") !== (result.previousCalibrationDate || "");
+  const nextChanged = (row.nextCalibrationDate || "") !== (result.nextCalibrationDate || "");
+  if (!previousChanged && !nextChanged) return row;
+  return { ...row, previousCalibrationDate: result.previousCalibrationDate, nextCalibrationDate: result.nextCalibrationDate };
+};
+
 const CalibrationGrid = ({
   value = [],
   onChange,
@@ -53,18 +117,16 @@ const CalibrationGrid = ({
   addButtonLabel = "Add Row",
   minRows = 0,
   maxRows,
-  onViewChild, // <-- NEW: callback for "Child" button
-  viewChildLabel = "Child", // optional label
-  recordId
+  onViewChild,
+  viewChildLabel = "Child",
+  recordId,
+  disabled = false,
+  canCreateChild = false,
 }) => {
   const columns = [
     { key: "equipmentInstrumentName", title: "Instrument Name", type: "select", placeholder: "Select instrument Name", required: true, minWidth: 220 },
     { key: "equipmentInstrumentId", title: "Instrument ID", type: "text", placeholder: "Enter instrument ID", required: true, minWidth: 200, disabled: true },
-    { key: "department", title: "Category", type: "select", placeholder: "select category", minWidth: 180,  options: [
-    { value: "category1", label: "Critical" },
-    { value: "category2", label: "Non Critical" },
-    { value: "category3", label: "Indicative" },
-  ] },
+    { key: "department", title: "Category", type: "select", placeholder: "select category", minWidth: 180, options: [{ value: "category1", label: "Critical" }, { value: "category2", label: "Non Critical" }, { value: "category3", label: "Indicative" }] },
     { key: "location", title: "Location", type: "text", placeholder: "Enter location", minWidth: 180 },
     { key: "make", title: "Make", type: "text", placeholder: "Enter make", minWidth: 200, disabled: true },
     { key: "model", title: "Model", type: "text", placeholder: "Enter model", minWidth: 200, disabled: true },
@@ -99,6 +161,7 @@ const CalibrationGrid = ({
   };
 
   const addRow = () => {
+    if (disabled) return;
     if (maxRows !== undefined && rows.length >= maxRows) return;
     const newRow = {};
     columns.forEach((column) => { newRow[column.key] = ""; });
@@ -108,25 +171,25 @@ const CalibrationGrid = ({
   };
 
   const handleDeleteRow = (rowIndex) => {
+    if (disabled) return;
     if (rows.length <= minRows) return;
-    console.log(rowIndex)
     setSelectedId(recordId);
     setDeleteRowIndex(rowIndex);
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = async() => {
+  const handleConfirmDelete = async () => {
     if (deleteRowIndex === null || rows.length <= minRows) return;
-   
-    const updatedRows = rows.filter((_, index) => index !== deleteRowIndex);
-    const payload = {
-    gridData: updatedRows
-};
-
-    await updateCalibration(selectedId,payload);
-    onChange(updatedRows);
-    setDeleteRowIndex(null);
-    setIsDeleteModalOpen(false);
+    try {
+      const updatedRows = rows.filter((_, index) => index !== deleteRowIndex);
+      const payload = { gridData: updatedRows };
+      if (selectedId) await updateCalibration(selectedId, payload);
+      onChange(updatedRows);
+      setDeleteRowIndex(null);
+      setIsDeleteModalOpen(false);
+    } catch (error) {
+      console.error("Failed to delete calibration row:", error);
+    }
   };
 
   const handleCancelDelete = () => {
@@ -135,84 +198,137 @@ const CalibrationGrid = ({
   };
 
   const updateRow = (rowIndex, key, newValue) => {
+    if (disabled) return;
     const updated = [...rows];
     const row = { ...updated[rowIndex] };
     row[key] = newValue;
+
     if (key === "calibrationFrequency") {
       row.calibrationFrequencyStartDate = newValue ? dayjs().format("YYYY-MM-DD") : "";
+      if (!newValue) {
+        row.previousCalibrationDate = "";
+        row.nextCalibrationDate = "";
+        row.monthlyCalibration = createEmptyMonthlyData();
+        updated[rowIndex] = row;
+        onChange(updated);
+        return;
+      }
+      row.monthlyCalibration = normalizeMonthlyData(row.monthlyCalibration);
+      const calculated = calculateCalibrationDates(newValue, row.monthlyCalibration, row.previousCalibrationDate, row.nextCalibrationDate);
+      row.previousCalibrationDate = calculated.previousCalibrationDate;
+      row.nextCalibrationDate = calculated.nextCalibrationDate;
     }
-  if (key === "equipmentInstrumentName") {
-  const equipmentId = newValue;
 
-  if (equipmentId && equipmentMap[equipmentId]) {
-    const equipment = equipmentMap[equipmentId];
+    if (key === "equipmentInstrumentName") {
+      const equipmentId = newValue;
+      if (equipmentId && equipmentMap[equipmentId]) {
+        const equipment = equipmentMap[equipmentId];
+        row.equipmentInstrumentId = equipment.equipment_id || "";
+        row.make = equipment.make || "";
+        row.model = equipment.model || "";
+      } else {
+        row.equipmentInstrumentId = "";
+        row.make = "";
+        row.model = "";
+      }
+    }
 
-    row.equipmentInstrumentId = equipment.equipment_id || "";
-    row.make = equipment.make || "";
-    row.model = equipment.model || "";
-  } else {
-    row.equipmentInstrumentId = "";
-    row.make = "";
-    row.model = "";
-  }
-}
     if (!row.monthlyCalibration || typeof row.monthlyCalibration !== "object") {
       row.monthlyCalibration = createEmptyMonthlyData();
     }
+
     updated[rowIndex] = row;
     onChange(updated);
   };
 
-  // const updateMonthlyDate = (rowIndex, monthKey, dateType, newValue) => {
-  //   const updated = [...rows];
-  //   const row = { ...updated[rowIndex] };
-  //   const monthlyCalibration = normalizeMonthlyData(row.monthlyCalibration);
-  //   monthlyCalibration[monthKey] = { ...monthlyCalibration[monthKey], [dateType]: newValue };
-  //   row.monthlyCalibration = monthlyCalibration;
-  //   updated[rowIndex] = row;
-  //   onChange(updated);
-  // };
-
   const updateMonthlyDate = (rowIndex, monthKey, dateType, newValue) => {
-  const updated = [...rows];
-  const row = { ...updated[rowIndex] };
-  const monthlyCalibration = normalizeMonthlyData(row.monthlyCalibration);
+    if (disabled) return;
+    const updated = [...rows];
+    const row = { ...updated[rowIndex] };
+    const monthlyCalibration = normalizeMonthlyData(row.monthlyCalibration);
 
-  // Update the current month's field
-  monthlyCalibration[monthKey] = {
-    ...monthlyCalibration[monthKey],
-    [dateType]: newValue,
-  };
+    monthlyCalibration[monthKey] = { ...monthlyCalibration[monthKey], [dateType]: newValue };
 
-  // If we are setting a Scheduler Date and it's not empty, auto‑fill subsequent months
-  if (dateType === "schedulerDate" && newValue) {
-    const currentMonthIndex = MONTHS.findIndex((m) => m.key === monthKey);
-    if (currentMonthIndex !== -1) {
-      const baseDate = dayjs(newValue);
-      if (baseDate.isValid()) {
-        for (let i = currentMonthIndex + 1; i < MONTHS.length; i++) {
-          const nextMonthKey = MONTHS[i].key;
-          const diffMonths = i - currentMonthIndex;
-          const nextDate = baseDate.add(diffMonths, "month").format("YYYY-MM-DD");
-          monthlyCalibration[nextMonthKey] = {
-            ...monthlyCalibration[nextMonthKey],
-            schedulerDate: nextDate,
-          };
+    if (dateType === "schedulerDate") {
+      const currentMonthIndex = MONTHS.findIndex((month) => month.key === monthKey);
+      if (!newValue) {
+        if (currentMonthIndex !== -1) {
+          for (let i = currentMonthIndex + 1; i < MONTHS.length; i++) {
+            const nextMonthKey = MONTHS[i].key;
+            monthlyCalibration[nextMonthKey] = { ...monthlyCalibration[nextMonthKey], schedulerDate: "" };
+          }
+        }
+      }
+      if (newValue && currentMonthIndex !== -1) {
+        const baseDate = dayjs(newValue);
+        if (baseDate.isValid()) {
+          const frequencyMonths = getFrequencyMonths(row.calibrationFrequency) || 1;
+          for (let i = currentMonthIndex + 1; i < MONTHS.length; i++) {
+            const nextMonthKey = MONTHS[i].key;
+            const diffMonths = i - currentMonthIndex;
+            if (frequencyMonths === 1) {
+              const nextDate = baseDate.add(diffMonths, "month").format("YYYY-MM-DD");
+              monthlyCalibration[nextMonthKey] = { ...monthlyCalibration[nextMonthKey], schedulerDate: nextDate };
+            } else {
+              if (diffMonths % frequencyMonths === 0) {
+                const nextDate = baseDate.add(diffMonths, "month").format("YYYY-MM-DD");
+                monthlyCalibration[nextMonthKey] = { ...monthlyCalibration[nextMonthKey], schedulerDate: nextDate };
+              }
+            }
+          }
+          if (!row.previousCalibrationDate) {
+            row.previousCalibrationDate = baseDate.format("YYYY-MM-DD");
+            row.nextCalibrationDate = baseDate.add(frequencyMonths, "month").format("YYYY-MM-DD");
+          }
         }
       }
     }
-  }
 
-  row.monthlyCalibration = monthlyCalibration;
-  updated[rowIndex] = row;
-  onChange(updated);
-};
+    row.monthlyCalibration = monthlyCalibration;
+    if (row.calibrationFrequency) {
+      const calculated = calculateCalibrationDates(row.calibrationFrequency, row.monthlyCalibration, row.previousCalibrationDate, row.nextCalibrationDate);
+      row.previousCalibrationDate = calculated.previousCalibrationDate;
+      row.nextCalibrationDate = calculated.nextCalibrationDate;
+    }
+
+    updated[rowIndex] = row;
+    onChange(updated);
+  };
+
+  useEffect(() => {
+    if (!rows.length) return;
+    let hasChanges = false;
+    const updatedRows = rows.map((row) => {
+      const updatedRow = updateCalculatedCalibrationDates(row);
+      if (updatedRow !== row) hasChanges = true;
+      return updatedRow;
+    });
+    if (hasChanges) onChange(updatedRows);
+
+    const intervalId = setInterval(() => {
+      const currentRows = Array.isArray(value) ? value : [];
+      if (!currentRows.length) return;
+      let changed = false;
+      const recalculatedRows = currentRows.map((row) => {
+        const updatedRow = updateCalculatedCalibrationDates(row);
+        if (updatedRow !== row) changed = true;
+        return updatedRow;
+      });
+      if (changed) onChange(recalculatedRows);
+    }, 60 * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [rows.length]);
 
   const renderField = (column, row, rowIndex) => {
-    const { key, type, placeholder, options: colOptions, disabled } = column;
+    const { key, type, placeholder, options: colOptions, disabled: columnDisabled } = column;
     const fieldValue = row[key] ?? "";
     const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
-    const commonProps = { disabled, className: "!w-full !rounded-lg !border-[#D1DBD7] !bg-white !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!shadow-[0_0_0_2px_rgba(78,117,133,0.08)] disabled:!cursor-not-allowed disabled:!bg-[#F3F6F4] disabled:!text-[#65746E]" };
+    const isDisabled = disabled || columnDisabled;
+    const commonProps = {
+      disabled: isDisabled,
+      className: "!w-full !rounded-lg !border-[#D1DBD7] !bg-white !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!shadow-[0_0_0_2px_rgba(78,117,133,0.08)] disabled:!cursor-not-allowed disabled:!bg-[#F3F6F4] disabled:!text-[#65746E]",
+    };
 
     if (type === "select") {
       if (key === "equipmentInstrumentName") {
@@ -223,7 +339,7 @@ const CalibrationGrid = ({
             placeholder={equipmentLoading ? "Loading..." : placeholder}
             onChange={handleChange}
             options={equipmentOptions}
-            disabled={disabled || equipmentLoading}
+            disabled={isDisabled || equipmentLoading}
             showSearch
             filterOption={(input, option) => (option?.label ?? "").toLowerCase().includes(input.toLowerCase())}
             className="!w-full [&_.ant-select-selector]:!h-10 [&_.ant-select-selector]:!rounded-lg [&_.ant-select-selector]:!border-[#D1DBD7] [&_.ant-select-selector]:!bg-white [&_.ant-select-selector]:!px-3 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[12px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[#9AA6A1] hover:[&_.ant-select-selector]:!border-[#A8B9B2] [&.ant-select-focused_.ant-select-selector]:!border-[#4E7585]"
@@ -283,18 +399,19 @@ const CalibrationGrid = ({
     const monthlyData = normalizeMonthlyData(row.monthlyCalibration);
     const dateValue = monthlyData?.[monthKey]?.[dateType] || "";
     const enabled = isMonthEnabled(row.calibrationFrequency, monthKey, row.calibrationFrequencyStartDate);
+    const isDisabled = disabled || !enabled;
     return (
       <DatePicker
         value={dateValue ? dayjs(dateValue) : null}
-        disabled={!enabled}
+        disabled={isDisabled}
         placeholder={enabled ? "Select date" : "Disabled"}
         onChange={(date) => {
-          if (!enabled) return;
+          if (!enabled || disabled) return;
           updateMonthlyDate(rowIndex, monthKey, dateType, date ? date.format("YYYY-MM-DD") : "");
         }}
         format="DD/MM/YYYY"
         allowClear
-        className={`!h-9 !w-full !rounded-md !text-[10px] !font-medium !shadow-none ${enabled ? "!border-[#D1DBD7] !bg-white !text-[#263B35] hover:!border-[#A8B9B2] focus:!border-[#4E7585]" : "!cursor-not-allowed !border-[#E1E7E4] !bg-[#F0F3F1] !text-[#9AA6A1]"}`}
+        className={`!h-9 !w-full !rounded-md !text-[10px] !font-medium !shadow-none ${enabled && !disabled ? "!border-[#D1DBD7] !bg-white !text-[#263B35] hover:!border-[#A8B9B2] focus:!border-[#4E7585]" : "!cursor-not-allowed !border-[#E1E7E4] !bg-[#F0F3F1] !text-[#9AA6A1]"}`}
       />
     );
   };
@@ -303,8 +420,6 @@ const CalibrationGrid = ({
   const frequencyIndex = visibleColumns.findIndex((column) => column.key === "calibrationFrequency");
   const columnsBeforeMonths = visibleColumns.filter((_, index) => index <= frequencyIndex);
   const columnsAfterMonths = visibleColumns.filter((_, index) => index > frequencyIndex);
-
-  // Determine if we should show the "Child" column
   const showChildColumn = typeof onViewChild === "function";
 
   return (
@@ -322,7 +437,7 @@ const CalibrationGrid = ({
         <button
           type="button"
           onClick={addRow}
-          disabled={maxRows !== undefined && rows.length >= maxRows}
+          disabled={disabled || (maxRows !== undefined && rows.length >= maxRows)}
           className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[#2B5577] px-3.5 text-[11px] font-semibold text-white shadow-[0_4px_12px_rgba(43,85,119,0.20)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-[#234766] hover:shadow-[0_7px_16px_rgba(43,85,119,0.25)] active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
         >
           <Plus size={14} strokeWidth={2} className="transition-transform duration-200 group-hover:rotate-90" />
@@ -349,7 +464,7 @@ const CalibrationGrid = ({
                     </div>
                   </div>
                   <div className="grid grid-cols-2">
-                    <div className="border-r border-[#D5DFDB] px-2 py-2.5 text-center text-[9px] font-bold uppercase tracking-[0.03em] text-[#63736C]">Plnned Date</div>
+                    <div className="border-r border-[#D5DFDB] px-2 py-2.5 text-center text-[9px] font-bold uppercase tracking-[0.03em] text-[#63736C]">Planned Date</div>
                     <div className="px-2 py-2.5 text-center text-[9px] font-bold uppercase tracking-[0.03em] text-[#63736C]">Execute Date</div>
                   </div>
                 </th>
@@ -359,14 +474,9 @@ const CalibrationGrid = ({
                   <div className="flex items-center gap-1">{column.title}{column.required && <span className="text-red-500">*</span>}</div>
                 </th>
               ))}
-
-              {/* Child column (conditional) */}
               {showChildColumn && (
-                <th className="w-[70px] border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-2 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]">
-                  {viewChildLabel}
-                </th>
+                <th className="w-[70px] border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-2 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]">{viewChildLabel}</th>
               )}
-
               <th className="w-[62px] border-b border-[#D5DFDB] bg-[#EEF3F1] px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]">Action</th>
             </tr>
           </thead>
@@ -394,28 +504,36 @@ const CalibrationGrid = ({
                   {columnsAfterMonths.map((column) => (
                     <td key={column.key} className="border-b border-r border-[#E0E7E4] px-3 py-2.5 align-top">{renderField(column, row, rowIndex)}</td>
                   ))}
-
-                  {/* Child button column */}
                   {showChildColumn && (
-<td className="border-b border-r border-[#E0E7E4] px-2 py-2.5 text-center align-top">
-  <button
-    type="button"
-    onClick={() => onViewChild(rowIndex, row)}
-    className="inline-flex h-8 items-center justify-center rounded-md bg-[#3d606d] px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-[#2B5577] hover:shadow-md active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1"
-    aria-label="Create child calibration"
-    title="Create child calibration"
-  >
-    Child
-  </button>
-</td>
-
+                    <td className="border-b border-r border-[#E0E7E4] px-2 py-2.5 text-center align-top">
+                    <button
+                        type="button"
+                        onClick={() => {
+                          if (!canCreateChild) return;
+                          onViewChild(rowIndex, row);
+                        }}
+                        disabled={!canCreateChild}
+                        className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${
+                          canCreateChild
+                            ? "bg-[#3d606d] hover:bg-[#2B5577] hover:shadow-md active:scale-95"
+                            : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
+                        }`}
+                        aria-label="Create child calibration"
+                        title={
+                          canCreateChild
+                            ? "Create child calibration"
+                            : "Child creation is available only to Initiator at Close Done stage"
+                        }
+                      >
+                        Child
+                      </button>
+                    </td>
                   )}
-
                   <td className="border-b border-[#E0E7E4] px-2 py-2.5 text-center align-top">
                     <button
                       type="button"
                       onClick={() => handleDeleteRow(rowIndex)}
-                      disabled={rows.length <= minRows}
+                      disabled={disabled || rows.length <= minRows}
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
                       aria-label="Delete row"
                     >
@@ -426,17 +544,7 @@ const CalibrationGrid = ({
               ))
             ) : (
               <tr>
-                <td
-                  colSpan={
-                    1 +
-                    columnsBeforeMonths.length +
-                    (showMonthlyCalendar ? MONTHS.length : 0) +
-                    columnsAfterMonths.length +
-                    (showChildColumn ? 1 : 0) +
-                    1 // Action column
-                  }
-                  className="h-[80px] border-b border-[#E0E7E4] px-5 text-center text-[11px] font-medium text-[#899690]"
-                >
+                <td colSpan={1 + columnsBeforeMonths.length + (showMonthlyCalendar ? MONTHS.length : 0) + columnsAfterMonths.length + (showChildColumn ? 1 : 0) + 1} className="h-[80px] border-b border-[#E0E7E4] px-5 text-center text-[11px] font-medium text-[#899690]">
                   No calibration rows added yet.
                 </td>
               </tr>
@@ -461,12 +569,29 @@ const CalibrationGrid = ({
       </UserModal>
 
       <style>{`
-        .grid-scroll { scrollbar-width: thin; scrollbar-color: #8FA8A0 #EEF3F1; }
-        .grid-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
-        .grid-scroll::-webkit-scrollbar-track { background: #EEF3F1; border-radius: 999px; }
-        .grid-scroll::-webkit-scrollbar-thumb { background: #8FA8A0; border-radius: 999px; border: 1px solid #EEF3F1; }
-        .grid-scroll::-webkit-scrollbar-thumb:hover { background: #66877C; }
-        .grid-scroll::-webkit-scrollbar-corner { background: #EEF3F1; }
+        .grid-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: #8FA8A0 #EEF3F1;
+        }
+        .grid-scroll::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        .grid-scroll::-webkit-scrollbar-track {
+          background: #EEF3F1;
+          border-radius: 999px;
+        }
+        .grid-scroll::-webkit-scrollbar-thumb {
+          background: #8FA8A0;
+          border-radius: 999px;
+          border: 1px solid #EEF3F1;
+        }
+        .grid-scroll::-webkit-scrollbar-thumb:hover {
+          background: #66877C;
+        }
+        .grid-scroll::-webkit-scrollbar-corner {
+          background: #EEF3F1;
+        }
       `}</style>
     </div>
   );

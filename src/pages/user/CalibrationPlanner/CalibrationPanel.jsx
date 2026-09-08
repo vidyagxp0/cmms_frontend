@@ -13,11 +13,12 @@ import FormInput from "../../../components/common/Form/FormInput";
 import FormSelect from "../../../components/common/Form/FormSelect";
 import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
-import FormAttachment from "../../../components/common/Form/FormAttachment";
+import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import CalibrationGrid from "./CalibrationGrid";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
+import "../../../components/ui/disabledFields.css";
 
 import { getProfile } from "../../../services/authApi";
 import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration, getAllActivites, getAllActivityLogs, getAllStages, getAllPermissions, getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
@@ -30,6 +31,7 @@ const TABS = [
   { id: "user-dept-review", label: "User Department Review (User Dept)", stageId: 3 },
   { id: "qa-review", label: "QA Approval Review", stageId: 4 },
   { id: "activity", label: "Activity Log", stageId: 5 },
+  { id: "cancellation", label: "Cancellation", stageId: 6 },
 ];
 
 const REQUIRED_FIELDS = [{ name: "shortDescription", label: "Short Description" }];
@@ -80,6 +82,8 @@ const buildProcessData = (values, systemFields) => [
   { key: "user_dept_review_attachment", label: "User Dept Review Attachment", value: values?.userDeptReviewAttachment || [] },
   { key: "qa_review_comments", label: "QA Review Comments", value: values?.qaReviewComments || "" },
   { key: "qa_review_attachment", label: "QA Review Attachment", value: values?.qaReviewAttachment || [] },
+  { key: "cancellation_remark", label: "Cancellation Remark", value: values?.cancellationRemark || "" },
+  { key: "cancellation_attachment", label: "Cancellation Attachment", value: values?.cancellationAttachment || [] },
 ];
 
 const validateCalibrationForm = (form, storedRequired) => {
@@ -122,6 +126,7 @@ const CreateCalibrationPanel = () => {
   const [processName, setProcessName] = useState("");
   const [hodUsers, setHodUsers] = useState([]);
   const [qaReviewers, setQaReviewers] = useState([]);
+  const [userRoles, setUserRoles] = useState([]);
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { recordId } = useParams();
@@ -135,22 +140,28 @@ const CreateCalibrationPanel = () => {
   const isHodEditable = isStageEditable(2);
   const isUserDeptEditable = isStageEditable(3);
   const isQaReviewEditable = isStageEditable(4);
+  const isCancellationEditable = isStageEditable(6);
+  const canCreateChild = Number(activeStageId) === 5 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await getProfile();
-        const profile = response?.data?.data;
-        if (!profile) return;
-        setInitiator(profile?.name || "");
-        setInitiatorId(profile?.id || "");
-        setLoginUserId(profile?.id || "");
-        setDepartmentId(profile?.department?.id || "");
-        setInitiationDepartment(profile?.department?.name || "");
-      } catch (error) { console.error("Failed to fetch profile:", error); }
-    };
-    fetchProfile();
-  }, []);
+useEffect(() => {
+  const fetchProfile = async () => {
+    try {
+      const response = await getProfile();
+      const profile = response?.data?.data;
+
+      if (!profile) return;
+
+      // Current logged-in user ONLY.
+      // Used for e-sign / activity.
+      setLoginUserId(profile?.id || "");
+      setUserRoles(Array.isArray(profile?.roles) ? profile.roles : []);
+    } catch (error) {
+      console.error("Failed to fetch profile:", error);
+    }
+  };
+
+  fetchProfile();
+}, []);
 
   useEffect(() => {
     const fetchEquipment = async () => {
@@ -221,11 +232,30 @@ const CreateCalibrationPanel = () => {
       const userDeptReviewAttachment = getProcessValue(processData, "user_dept_review_attachment");
       const qaReviewComments = getProcessValue(processData, "qa_review_comments");
       const qaReviewAttachment = getProcessValue(processData, "qa_review_attachment");
+      const cancellationRemark = getProcessValue(
+          processData,
+          "cancellation_remark"
+      );
+
+      const cancellationAttachment = getProcessValue(
+          processData,
+          "cancellation_attachment"
+      );
 
       setSiteLocationCode(locationCode || "");
       // Set initiator from the API response (processData or responseData.initiator)
-      setInitiator(responseData?.initiator?.name || processInitiator || "");
-      setInitiatorId(responseData?.initiator?.id || responseData?.initiator_id || "");
+      const backendInitiatorId =
+        responseData?.initiator?.id ??
+        responseData?.initiator_id ??
+        "";
+
+      const backendInitiatorName =
+        responseData?.initiator?.name ??
+        processInitiator ??
+        "";
+
+      setInitiatorId(backendInitiatorId);
+      setInitiator(backendInitiatorName);
       setDepartmentId(responseData?.department?.id || responseData?.department_id || "");
       setInitiationDepartment(responseData?.department?.name || processDepartment || "");
       setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
@@ -235,7 +265,7 @@ const CreateCalibrationPanel = () => {
       form.setFieldsValue({
         recordNumber,
         siteLocationCode: locationCode || "",
-        initiator: responseData?.initiator?.name || processInitiator || "",
+        initiator: backendInitiatorName,
         dateOfInitiation: processDateOfInitiation || responseData?.initiation_date || "",
         dueDate,
         initiationDepartment: responseData?.department?.name || processDepartment || "",
@@ -251,6 +281,8 @@ const CreateCalibrationPanel = () => {
         userDeptReviewAttachment: userDeptReviewAttachment || [],
         qaReviewComments,
         qaReviewAttachment: qaReviewAttachment || [],
+        cancellationRemark: cancellationRemark || "",
+        cancellationAttachment: cancellationAttachment || [],
       });
 
       const currentEquipmentMap = equipmentMapRef.current;
@@ -296,7 +328,9 @@ const CreateCalibrationPanel = () => {
         setWorkflowLoading(true);
         const response = await getAllStages(processId);
         const stages = response?.data?.data || [];
-        const activeStages = stages.filter((stage) => stage?.is_active !== false && Number(stage?.id) !== 6);
+        const activeStages = stages.filter(
+            (stage) => stage?.is_active !== false
+        );
         setWorkflowStages(activeStages);
       } catch (error) {
         console.error("Failed to fetch workflow stages:", error);
@@ -451,6 +485,20 @@ const CreateCalibrationPanel = () => {
     );
   }
 
+  const isCancellationStageActive =
+    Number(activeStageId) === 6;
+
+  // const visibleTabs = isCancellationStageActive
+  //   ? [...TABS]
+  //   : TABS.filter(
+  //         (tab) => tab.id !== "cancellation"
+  //     );
+
+  const visibleTabs = isCancellationStageActive
+    ? TABS.filter((tab) => tab.id === "cancellation")
+    : TABS.filter((tab) => tab.id !== "cancellation");
+
+    
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
@@ -480,7 +528,7 @@ const CreateCalibrationPanel = () => {
       </div>
 
       <div className="mb-6">
-        <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+        <ProcessTabs tabs={visibleTabs} activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
       <Form
@@ -531,6 +579,7 @@ const CreateCalibrationPanel = () => {
                 onViewChild={handleViewChild}
                 recordId={recordId}
                 disabled={!isGeneralEditable}
+                canCreateChild={canCreateChild}
               />
             </div>
             <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
@@ -607,6 +656,43 @@ const CreateCalibrationPanel = () => {
             </div>
           </section>
         )}
+
+        {activeTab === "cancellation" &&
+        Number(activeStageId) === 6 && (
+        <section>
+            <SectionHeader title="CANCELLATION" />
+
+            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+                <Form.Item
+                    name="cancellationRemark"
+                    label="Remark"
+                    className="!mb-4 md:col-span-2"
+                >
+                    <FormTextArea
+                        rows={5}
+                        placeholder="Enter cancellation remark..."
+                        // disabled={!isCancellationEditable}
+                    />
+                </Form.Item>
+
+                <Form.Item
+                    name="cancellationAttachment"
+                    label="Attachment"
+                    valuePropName="fileList"
+                    getValueFromEvent={(event) =>
+                        Array.isArray(event)
+                            ? event
+                            : event?.fileList
+                    }
+                    className="!mb-4 md:col-span-2"
+                >
+                    <FormAttachment
+                        // disabled={!isCancellationEditable}
+                    />
+                </Form.Item>
+            </div>
+        </section>
+    )}
 
         {activeTab === "activity" && (
           <section>

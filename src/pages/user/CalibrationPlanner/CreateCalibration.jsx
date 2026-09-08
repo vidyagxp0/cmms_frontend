@@ -11,7 +11,6 @@ import FormInput from "../../../components/common/Form/FormInput";
 import FormSelect from "../../../components/common/Form/FormSelect";
 import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
-import FormAttachment from "../../../components/common/Form/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
@@ -19,6 +18,9 @@ import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import { getProfile } from "../../../services/authApi";
 import { addCalibration, getAllEquipmentData, getCalibrationUser, getRecordNumber } from "../../../services/usersApi/calibrationApi";
 import { formatDate, formatDateTime } from "../../../utils/date";
+
+import { addSingleAttachment, addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
+import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 
 const TABS = [
   { id: "general", label: "General Information" },
@@ -346,15 +348,16 @@ const CreateCalibration = () => {
               <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
                 <FormTextArea rows={5} placeholder="Enter comments..." />
               </Form.Item>
-              <Form.Item
-                name="attachment"
-                label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
-                className="!mb-4 md:col-span-2"
-              >
-                <FormAttachment />
-              </Form.Item>
+             <Form.Item
+              name="attachment"
+              label="Attachment"
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+              disabled
+              />
+            </Form.Item>
             </div>
             <div className="my-9 h-px w-full bg-slate-200" />
           </section>
@@ -374,7 +377,7 @@ const CreateCalibration = () => {
                 getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment />
+                <FormAttachment/>
               </Form.Item>
             </div>
           </section>
@@ -394,7 +397,7 @@ const CreateCalibration = () => {
                 getValueFromEvent={(event) => (Array.isArray(event) ? event : event?.fileList)}
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment />
+                <FormAttachment/>
               </Form.Item>
             </div>
           </section>

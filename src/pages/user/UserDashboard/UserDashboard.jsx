@@ -382,16 +382,9 @@ const UserDashboard = () => {
                 <div>
                     <div className="flex items-center gap-2.5">
                         <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 font-sans">
-                            CMMS Executive Command Center
+                            CMMS Dashboard
                         </h1>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-teal-100/80 px-3 py-0.5 text-xs font-bold text-[#185B61] ring-1 ring-teal-500/30">
-                            <Sparkles size={13} className="text-teal-600 animate-spin" style={{ animationDuration: '4s' }} />
-                            Live Process Analytics
-                        </span>
                     </div>
-                    <p className="mt-1 text-sm text-slate-500 font-medium">
-                        Real-time visualization of Equipment, Calibration Planner & Management processes.
-                    </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">

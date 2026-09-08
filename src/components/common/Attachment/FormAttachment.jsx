@@ -31,6 +31,7 @@ const FormAttachment = ({
   const handleChange = async ({ fileList: newFileList }) => {
     if (disabled || uploading) return;
     if (!newFileList || !newFileList.length) return;
+    if (!recordId) { message.error("Record ID is required for attachment upload."); return; }
     if (!attachmentField) { message.error("Attachment field is required."); return; }
     if (!label) { message.error("Attachment label is required."); return; }
     if (!uploadApi) { message.error("Attachment API is not configured."); return; }
@@ -53,11 +54,11 @@ const FormAttachment = ({
       setUploading(true);
       if (!multiple) {
         const file = cleanFiles[0];
-        await uploadApi({ ...(recordId ? { record_id: recordId } : {}), attachment_field: attachmentField, label, file });
+        await uploadApi({ record_id: recordId, attachment_field: attachmentField, label, file });
         onChange?.([file]);
         message.success("Attachment uploaded successfully.");
       } else {
-        await uploadApi({ ...(recordId ? { record_id: recordId } : {}), attachment_field: attachmentField, label, files: cleanFiles });
+        await uploadApi({ record_id: recordId, attachment_field: attachmentField, label, files: cleanFiles });
         const existingFiles = fileList.filter((f) => f instanceof File);
         const mergedFiles = [...existingFiles, ...cleanFiles];
         onChange?.(mergedFiles);
@@ -65,7 +66,7 @@ const FormAttachment = ({
       }
     } catch (error) {
       console.error("Attachment upload failed:", error);
-      message.error(error?.response?.data?.message || error?.response?.data?.error || "Failed to upload attachment.");
+      message.error(error?.response?.data?.message || error?.response?.data?.error || error?.message || "Failed to upload attachment.");
     } finally {
       setUploading(false);
     }
@@ -141,7 +142,7 @@ const FormAttachment = ({
         <div className="mt-3 space-y-2">
           {fileList.map((file, index) => {
             const isNativeFile = file instanceof File;
-            const fileName = isNativeFile ? file.name : file?.name || "Attachment";
+            const fileName = isNativeFile ? file.name : file?.name || file?.file_name || "Attachment";
             const fileSize = isNativeFile ? file.size : file?.size || 0;
             const fileKey = isNativeFile ? getFileKey(file) : `${fileName}-${index}`;
             return (

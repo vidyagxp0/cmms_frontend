@@ -11,7 +11,6 @@ import FormInput from "../../../components/common/Form/FormInput";
 import FormSelect from "../../../components/common/Form/FormSelect";
 import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
-import FormAttachment from "../../../components/common/Form/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGrid";
@@ -19,6 +18,7 @@ import  { CALIBRATED_BY_COLUMNS, CALIBRATION_RESULT_GRID } from "./calibrationCo
 
 import { getProfile } from "../../../services/authApi";
 import { getCalibrationUser, getAllEquipmentData, getRecordNumber, addCalibrationChild } from "../../../services/usersApi/calibrationApi";
+import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 
 const TABS = [
   { id: "management", label: "General Information" },

@@ -126,8 +126,6 @@ const CreateCalibrationPanel = () => {
   const [processName, setProcessName] = useState("");
   const [hodUsers, setHodUsers] = useState([]);
   const [qaReviewers, setQaReviewers] = useState([]);
-  const [cancellationRemark, setCancellationRemark] = useState("");
-  const [cancellationAttachment, setCancellationAttachment] = useState([]);
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { recordId } = useParams();
@@ -258,8 +256,6 @@ useEffect(() => {
       setDepartmentId(responseData?.department?.id || responseData?.department_id || "");
       setInitiationDepartment(responseData?.department?.name || processDepartment || "");
       setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
-      setCancellationRemark(cancellationRemark || "");
-      setCancellationAttachment(cancellationAttachment || []);
 
       requiredValuesRef.current = { shortDescription: shortDescription || "" };
 
@@ -332,7 +328,6 @@ useEffect(() => {
         const activeStages = stages.filter(
             (stage) => stage?.is_active !== false
         );
-        setWorkflowStages(activeStages);
         setWorkflowStages(activeStages);
       } catch (error) {
         console.error("Failed to fetch workflow stages:", error);
@@ -490,12 +485,16 @@ useEffect(() => {
   const isCancellationStageActive =
     Number(activeStageId) === 6;
 
-  const visibleTabs = isCancellationStageActive
-    ? [...TABS]
-    : TABS.filter(
-          (tab) => tab.id !== "cancellation"
-      );
+  // const visibleTabs = isCancellationStageActive
+  //   ? [...TABS]
+  //   : TABS.filter(
+  //         (tab) => tab.id !== "cancellation"
+  //     );
 
+  const visibleTabs = isCancellationStageActive
+    ? TABS.filter((tab) => tab.id === "cancellation")
+    : TABS.filter((tab) => tab.id !== "cancellation");
+    
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">

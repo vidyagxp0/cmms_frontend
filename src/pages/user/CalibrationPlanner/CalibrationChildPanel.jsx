@@ -20,6 +20,8 @@ import FloatingActionButtons from "../../../components/ui/FloatingActionButtons"
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGrid";
 import  { CALIBRATED_BY_COLUMNS, CALIBRATION_RESULT_GRID } from "./calibrationColumn";
+import "../../../components/ui/disabledFields.css";
+
 
 import { getProfile } from "../../../services/authApi";
 import {

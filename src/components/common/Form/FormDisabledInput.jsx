@@ -1,7 +1,7 @@
 import React from "react";
 import { Input } from "antd";
 
-const FormDisabledInput = ({ ...props }) => {
+const FormDisabledInput = ({ className = "", ...props }) => {
     return (
         <Input
             {...props}
@@ -16,10 +16,10 @@ const FormDisabledInput = ({ ...props }) => {
                 !px-3.5
                 !text-[13px]
                 !font-semibold
-                !text-[#52645D]
+                !text-[#263B35]
                 !opacity-100
                 !shadow-none
-                ${props.className || ""}
+                ${className}
             `}
         />
     );

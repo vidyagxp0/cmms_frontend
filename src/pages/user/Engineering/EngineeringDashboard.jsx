@@ -28,9 +28,6 @@ const EngineeringDashboard = () => {
                 page,
                 per_page: perPage,
             });
-
-            console.log("Engineering Records API Response:", response);
-
             const paginationData = response?.data?.data;
             const recordsData = paginationData?.data || [];
 

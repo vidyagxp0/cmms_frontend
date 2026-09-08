@@ -9,7 +9,6 @@ import { Eye } from "lucide-react";
 const EquipDashboard = () => {
     const navigate = useNavigate();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    console.log(isCreateModalOpen,"isCreateModalOpen<<<")
     const [equipment, setEquipment] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -28,8 +27,6 @@ const EquipDashboard = () => {
                 page,
                 per_page: perPage,
             });
-
-            console.log("Equipment API Response:", response);
 
             const paginationData = response?.data?.data;
             const equipmentData = paginationData?.data || [];

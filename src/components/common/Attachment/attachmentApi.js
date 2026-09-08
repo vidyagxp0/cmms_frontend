@@ -25,14 +25,6 @@ export const addSingleAttachment = async ({
   formData.append("label", label || "");
   formData.append("file", file);
 
-  console.log("Single Attachment Upload:", {
-    url: `/user/upload-attachment/${record_id}`,
-    record_id,
-    attachment_field,
-    label,
-    file,
-  });
-
   return api.post(
     `/user/upload-attachment/${record_id}`,
     formData,
@@ -70,14 +62,6 @@ export const addMultipleAttachments = async ({
 
   files.forEach((file) => {
     formData.append("files", file);
-  });
-
-  console.log("Multiple Attachment Upload:", {
-    url: `/user/upload-attachment/${record_id}`,
-    record_id,
-    attachment_field,
-    label,
-    files,
   });
 
   return api.post(

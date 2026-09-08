@@ -446,7 +446,6 @@ useEffect(() => {
         gridData,
         checklistData: [],
       };
-      console.log("Calibration Update Payload:", payload);
       const response = await updateCalibration(recordId, payload);
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Calibration updated successfully.");

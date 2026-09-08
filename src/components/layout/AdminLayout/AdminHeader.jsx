@@ -11,7 +11,6 @@ const AdminHeader = () => {
     const dropdownRef = useRef(null);
     const userName = user?.name 
     const userRole = user?.roles?.[0] 
-    console.log("AdminHeader user:", user);
 
    
     useEffect(() => {
@@ -129,15 +128,12 @@ const AdminHeader = () => {
                             userName={userName}
                             userRole={userRole}
                             onProfile={() => {
-                                console.log("Profile clicked");
                                 setShowProfile(false);
                             }}
                             onSettings={() => {
-                                console.log("Settings clicked");
                                 setShowProfile(false);
                             }}
                             onLogout={() => {
-                                console.log("Logout clicked");
                                 setShowProfile(false);
                             }}
                         />

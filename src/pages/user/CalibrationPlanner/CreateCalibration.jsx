@@ -245,7 +245,6 @@ const CreateCalibration = () => {
         gridData,
         checklistData: [],
       };
-      console.log("Calibration Payload:", payload);
       const response = await addCalibration(payload);
       if (response?.data?.success) {
         toast.success("Calibration created successfully.");

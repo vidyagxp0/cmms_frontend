@@ -36,7 +36,6 @@ const ProcessPage = () => {
 
     const [selectedSite, setSelectedSite] = useState(null);
     const [processes, setProcesses] = useState([]);
-    console.log(processes,"processes>>>>")
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
@@ -44,8 +43,6 @@ const ProcessPage = () => {
         sourceRoute,
         sourceType,
     } = location.state || {};
-
-    console.log(sourceType);
 
     const handleSiteSelect = async (site) => {
         setSelectedSite(site.id);

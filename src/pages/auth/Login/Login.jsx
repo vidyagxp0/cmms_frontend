@@ -67,10 +67,6 @@ const handleLogin = async (event) => {
 
     try {
         const response = await login(payload);
-
-        console.log("STATUS:", response.status);
-        console.log("DATA:", response.data);
-
         // STOP HERE if backend did not authenticate
         if (response.status !== 200 || !response.data?.data?.token) {
             setLoginErrors(true);
@@ -113,8 +109,6 @@ const handleLogin = async (event) => {
         );
 
     } catch (error) {
-        console.log("LOGIN ERROR:", error);
-
         setLoginErrors(true);
 
         toast.error(

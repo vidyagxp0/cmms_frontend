@@ -126,6 +126,7 @@ const CreateCalibrationPanel = () => {
   const [processName, setProcessName] = useState("");
   const [hodUsers, setHodUsers] = useState([]);
   const [qaReviewers, setQaReviewers] = useState([]);
+  const [userRoles, setUserRoles] = useState([]);
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { recordId } = useParams();
@@ -140,6 +141,7 @@ const CreateCalibrationPanel = () => {
   const isUserDeptEditable = isStageEditable(3);
   const isQaReviewEditable = isStageEditable(4);
   const isCancellationEditable = isStageEditable(6);
+  const canCreateChild = Number(activeStageId) === 5 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
 
 useEffect(() => {
   const fetchProfile = async () => {
@@ -152,6 +154,7 @@ useEffect(() => {
       // Current logged-in user ONLY.
       // Used for e-sign / activity.
       setLoginUserId(profile?.id || "");
+      setUserRoles(Array.isArray(profile?.roles) ? profile.roles : []);
     } catch (error) {
       console.error("Failed to fetch profile:", error);
     }
@@ -494,6 +497,7 @@ useEffect(() => {
   const visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")
     : TABS.filter((tab) => tab.id !== "cancellation");
+
     
   return (
     <div className="w-full">
@@ -575,6 +579,7 @@ useEffect(() => {
                 onViewChild={handleViewChild}
                 recordId={recordId}
                 disabled={!isGeneralEditable}
+                canCreateChild={canCreateChild}
               />
             </div>
             <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">

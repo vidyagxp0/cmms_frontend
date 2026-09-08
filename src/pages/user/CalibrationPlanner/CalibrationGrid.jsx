@@ -121,6 +121,7 @@ const CalibrationGrid = ({
   viewChildLabel = "Child",
   recordId,
   disabled = false,
+  canCreateChild = false,
 }) => {
   const columns = [
     { key: "equipmentInstrumentName", title: "Instrument Name", type: "select", placeholder: "Select instrument Name", required: true, minWidth: 220 },
@@ -505,12 +506,24 @@ const CalibrationGrid = ({
                   ))}
                   {showChildColumn && (
                     <td className="border-b border-r border-[#E0E7E4] px-2 py-2.5 text-center align-top">
-                      <button
+                    <button
                         type="button"
-                        onClick={() => onViewChild(rowIndex, row)}
-                        className="inline-flex h-8 items-center justify-center rounded-md bg-[#3d606d] px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-[#2B5577] hover:shadow-md active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1"
+                        onClick={() => {
+                          if (!canCreateChild) return;
+                          onViewChild(rowIndex, row);
+                        }}
+                        disabled={!canCreateChild}
+                        className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${
+                          canCreateChild
+                            ? "bg-[#3d606d] hover:bg-[#2B5577] hover:shadow-md active:scale-95"
+                            : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
+                        }`}
                         aria-label="Create child calibration"
-                        title="Create child calibration"
+                        title={
+                          canCreateChild
+                            ? "Create child calibration"
+                            : "Child creation is available only to Initiator at Close Done stage"
+                        }
                       >
                         Child
                       </button>

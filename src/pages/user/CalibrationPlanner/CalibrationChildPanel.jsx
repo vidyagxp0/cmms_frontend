@@ -35,6 +35,7 @@ import {
   getAllPermissions,
   executeCalibrationActivity,
 } from "../../../services/usersApi/calibrationApi";
+import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
 
 const TABS = [
   { id: "management", label: "General Information", stageId: 19 },
@@ -632,10 +633,20 @@ useEffect(() => {
                 <FormInput placeholder="e.g. 0-500 V" disabled={!isManagementEditable} />
               </Form.Item>
               <Form.Item name="envTemperature" label="Environmental Condition Temperature" className="!mb-4">
-                <FormInput placeholder="e.g. 25°C ± 2°C" disabled={!isManagementEditable} />
+                {/* <FormInput placeholder="e.g. 25°C ± 2°C" disabled={!isManagementEditable} /> */}
+                  <SymbolicInput
+                  placeholder="e.g. 25"
+                  defaultDiscipline="Temperature"
+                  disabled={!isManagementEditable}
+                />
               </Form.Item>
               <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
-                <FormInput placeholder="e.g. 45% RH ± 5%" disabled={!isManagementEditable} />
+                {/* <FormInput placeholder="e.g. 45% RH ± 5%" disabled={!isManagementEditable} /> */}
+                  <SymbolicInput
+                  placeholder="e.g. 45% RH ± 5%"
+                  defaultDiscipline="Humidity"
+                  disabled={!isManagementEditable}
+                />
               </Form.Item>
               <Form.Item name="previousCalibrationDate" label="Previous Calibration Date" className="!mb-4">
                 <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled={!isManagementEditable} />

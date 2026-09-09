@@ -104,7 +104,7 @@ const handleLogin = async (event) => {
         navigate(
             isAdmin
                 ? "/admin/dashboard"
-                : "/user/equipment-dashboard",
+                : "/user/engineering-dashboard",
             { replace: true }
         );
 

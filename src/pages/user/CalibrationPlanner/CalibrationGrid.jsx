@@ -46,7 +46,11 @@ const normalizeMonthlyData = (monthlyData) => {
   return normalized;
 };
 
-const FREQUENCY_MONTHS = { monthly: 1, quarterly: 3, "half-yearly": 6, yearly: 12 };
+const FREQUENCY_MONTHS = {
+  "half-yearly": 6,
+  yearly: 12,
+  "two-yearly": 24,
+};
 const getFrequencyMonths = (frequency) => FREQUENCY_MONTHS[frequency] || 0;
 
 const getPlannedDates = (monthlyCalibration) => {
@@ -135,7 +139,7 @@ const CalibrationGrid = ({
     { key: "operatingrange", title: "Operating Range", type: "text", placeholder: "Enter range", minWidth: 160 },
     { key: "leastCount", title: "Least Count", type: "text", placeholder: "Enter least count", minWidth: 160 },
     { key: "accuracy", title: "Accuracy", type: "text", placeholder: "Enter accuracy", minWidth: 160 },
-    { key: "calibrationFrequency", title: "Calibration Frequency", type: "select", placeholder: "Select frequency", minWidth: 190, options: [{ value: "monthly", label: "Monthly" }, { value: "quarterly", label: "Quarterly" }, { value: "half-yearly", label: "Half Yearly" }, { value: "yearly", label: "Yearly" }] },
+    { key: "calibrationFrequency", title: "Calibration Frequency", type: "select", placeholder: "Select frequency", minWidth: 190, options: [{ value: "half-yearly", label: "Half Yearly" }, { value: "yearly", label: "Yearly" }, { value: "two-yearly", label: "Two Yearly" }] },
     { key: "previousCalibrationDate", title: "Previous / Calibration Date", type: "date", placeholder: "Select date", minWidth: 190 },
     { key: "nextCalibrationDate", title: "Next Calibration Date", type: "date", placeholder: "Select date", minWidth: 180 },
     { key: "remark", title: "Remark", type: "textarea", placeholder: "Enter remark", minWidth: 240 },

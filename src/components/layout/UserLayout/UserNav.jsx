@@ -5,28 +5,12 @@ import {
     Wrench,
     HardHat,
 } from "lucide-react";
+import { DASHBOARD_NAV_ITEMS } from "./navigation";
+
 
 const UserNav = () => {
-    const navItems = [
-        {
-            id: "dashboard",
-            label: "Dashboard",
-            path: "/user/cmms-dashboard",
-            icon: LayoutDashboard,
-        },
-        {
-            id: "equipment",
-            label: "Equipment Dashboard",
-            path: "/user/equipment-dashboard",
-            icon: Wrench,
-        },
-        {
-            id: "engineering",
-            label: "Engineering Dashboard",
-            path: "/user/engineering-dashboard",
-            icon: HardHat,
-        },
-    ];
+    
+const navItems = DASHBOARD_NAV_ITEMS;
 
     return (
         <nav className="fixed left-0 right-0 top-[74px] z-40 h-[64px] border-b border-[#DCEBE2] bg-[#F4FAF7]">

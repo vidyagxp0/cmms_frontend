@@ -245,7 +245,6 @@ const CreateCalibration = () => {
         gridData,
         checklistData: [],
       };
-      console.log("Calibration Payload:", payload);
       const response = await addCalibration(payload);
       if (response?.data?.success) {
         toast.success("Calibration created successfully.");
@@ -344,6 +343,7 @@ const CreateCalibration = () => {
                 equipmentOptions={equipmentOptions}
                 equipmentMap={equipmentMap}
                 equipmentLoading={equipmentLoading}
+                showAddButton={false}
               />
               <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
                 <FormTextArea rows={5} placeholder="Enter comments..." />

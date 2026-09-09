@@ -66,13 +66,9 @@ const Audit = () => {
         params.to_date = toDateValue;
       }
 
-      console.log("AUDIT REQUEST PARAMS:", params);
-
       const response = await getCalibrationAuditRecord(recordId, params);
 
       const apiData = response?.data?.data;
-
-      console.log("AUDIT API DATA:", apiData);
 
       /* record data */
       if (apiData?.record) {

@@ -201,12 +201,12 @@ useEffect(() => {
     fetchCalibrationUsers();
   }, []);
 
-  const fetchCalibrationDetail = useCallback(async () => {
+  const fetchCalibrationDetail = useCallback(async (isInitial = false) => {
     if (!recordId) { toast.error("Calibration record ID is missing."); return; }
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
-      setIsLoading(true);
+      if (isInitial) setIsLoading(true);
       const response = await getCalibrationDetail(recordId);
       const responseData = response?.data?.data;
       if (!responseData) { toast.error("Calibration record not found."); return; }
@@ -320,7 +320,7 @@ useEffect(() => {
     } finally { setIsLoading(false); isFetchingRef.current = false; }
   }, [recordId, form]);
 
-  useEffect(() => { fetchCalibrationDetail(); }, [fetchCalibrationDetail]);
+  useEffect(() => { fetchCalibrationDetail(true); }, [fetchCalibrationDetail]);
 
   useEffect(() => {
     if (!processId) return;
@@ -446,7 +446,6 @@ useEffect(() => {
         gridData,
         checklistData: [],
       };
-      console.log("Calibration Update Payload:", payload);
       const response = await updateCalibration(recordId, payload);
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Calibration updated successfully.");
@@ -465,10 +464,13 @@ useEffect(() => {
   const handleActivitySuccess = async () => {
     try {
       const values = form.getFieldsValue(true);
-      if (canPerformActivity) await handleSubmit(values);
-      await fetchCalibrationDetail();
-      await fetchPermissions();
-      await fetchActivityLogs();
+      if (canPerformActivity) {
+        await handleSubmit(values);
+      } else {
+        await fetchCalibrationDetail(false);
+        await fetchPermissions();
+        await fetchActivityLogs();
+      }
     } catch (error) { console.error("Failed to save calibration after activity:", error); }
   };
 
@@ -581,6 +583,7 @@ useEffect(() => {
                 recordId={recordId}
                 disabled={!isGeneralEditable}
                 canCreateChild={canCreateChild}
+                showAddButton={true}
               />
             </div>
             <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">

@@ -33,8 +33,9 @@ import {
   getAllActivityLogs,
   getAllStages,
   getAllPermissions,
-  executeCalibrationActivity,
+  executeCalibrationActivityChild,
 } from "../../../services/usersApi/calibrationApi";
+import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
 
 const TABS = [
   { id: "management", label: "General Information", stageId: 19 },
@@ -104,7 +105,9 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
     "shortDescription", "instrumentName", "instrumentId", "location", "make", "model",
     "instrumentRange", "leastCount", "accuracy", "calibrationTestPoints", "operatingRange",
     "envTemperature", "envHumidity", "previousCalibrationDate", "nextCalibrationDate",
-    "comments", "attachment"
+    "comments", "attachment",
+    "implementorComments", "implementorAttachment",
+    "qaReviewComments", "qaReviewAttachment"
   ];
   const labelMap = {
     shortDescription: "Short Description",
@@ -124,6 +127,10 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
     nextCalibrationDate: "Next Calibration Date",
     comments: "Comments",
     attachment: "Attachment",
+    implementorComments: "HOD / Designee Review Comments",
+    implementorAttachment: "HOD / Designee Review Attachment",
+    qaReviewComments: "QA Review Comments",
+    qaReviewAttachment: "QA Review Attachment",
   };
   otherFields.forEach((key) => {
     let value = values[key] !== undefined && values[key] !== null ? values[key] : "";
@@ -247,12 +254,12 @@ useEffect(() => {
   const qaReviewerOptions = qaReviewers.map((user) => ({ value: user?.id, label: user?.name }));
   const qaApproverOptions = qaApprovers.map((user) => ({ value: user?.id, label: user?.name }));
 
-  const fetchChildDetail = useCallback(async () => {
+  const fetchChildDetail = useCallback(async (isInitial = false) => {
     if (!recordId) { toast.error("Child record ID is missing."); return; }
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
-      setIsLoading(true);
+      if (isInitial) setIsLoading(true);
       const response = await getCalibrationChildDetail(recordId);
       const data = response?.data?.data;
       if (!data) { toast.error("Child calibration record not found."); return; }
@@ -292,6 +299,10 @@ useEffect(() => {
       const nextCalDate = getProcessValue(processData, "nextCalibrationDate");
       const comments = getProcessValue(processData, "comments");
       const attachment = getProcessValue(processData, "attachment");
+      const implementorComments = getProcessValue(processData, "implementorComments") || getProcessValue(processData, "implementor_review_comments");
+      const implementorAttachment = getProcessValue(processData, "implementorAttachment") || getProcessValue(processData, "implementor_review_attachment");
+      const qaReviewComments = getProcessValue(processData, "qaReviewComments") || getProcessValue(processData, "qa_review_comments");
+      const qaReviewAttachment = getProcessValue(processData, "qaReviewAttachment") || getProcessValue(processData, "qa_review_attachment");
 
       setRecordNumber(recNum || "");
       setSiteLocationCode(locCode || "");
@@ -334,6 +345,10 @@ useEffect(() => {
         qaApproval: "",
         comments: comments || "",
         attachment: attachment || [],
+        implementorComments: implementorComments || "",
+        implementorAttachment: implementorAttachment || [],
+        qaReviewComments: qaReviewComments || "",
+        qaReviewAttachment: qaReviewAttachment || [],
       });
 
       // ---- Parse grid data ----
@@ -379,7 +394,7 @@ useEffect(() => {
     } finally { setIsLoading(false); isFetchingRef.current = false; }
   }, [recordId, form]);
 
-  useEffect(() => { fetchChildDetail(); }, [fetchChildDetail]);
+  useEffect(() => { fetchChildDetail(true); }, [fetchChildDetail]);
 
   useEffect(() => {
     if (!processId) return;
@@ -453,24 +468,24 @@ useEffect(() => {
 
   const handleTabChange = (tabId) => {
     if (tabId === "activity") { setActiveTab(tabId); return; }
-    if (tabId !== "management" && !canPerformActivity) {
-      toast.warning("Please fill all mandatory fields and save the record before accessing other tabs.");
-      return;
-    }
+    // if (tabId !== "management" && !canPerformActivity) {
+    //   toast.warning("Please fill all mandatory fields and save the record before accessing other tabs.");
+    //   return;
+    // }
     setActiveTab(tabId);
   };
 
   const systemValues = {
-    recordNumber: form.getFieldValue("recordNumber") || recordNumber,
-    siteLocationCode: form.getFieldValue("siteLocationCode") || siteLocationCode,
-    initiator: form.getFieldValue("initiator") || initiator,
-    dateOfInitiation: form.getFieldValue("dateOfInitiation") || dateOfInitiation,
-    initiationDepartment: form.getFieldValue("initiationDepartment") || initiationDepartment,
+    recordNumber: recordNumber,
+    siteLocationCode: siteLocationCode,
+    initiator: initiator,
+    dateOfInitiation: dateOfInitiation,
+    initiationDepartment: initiationDepartment,
   };
 
   const handleSave = async () => {
     if (isSaving || isLoading || usersLoading) return;
-    const values = form.getFieldsValue();
+    const values = form.getFieldsValue(true);
     const missing = REQUIRED_FIELDS.filter((field) => {
       const val = values[field.name];
       if (typeof val === "string") return !val.trim();
@@ -490,7 +505,8 @@ useEffect(() => {
     if (isSaving || !recordId) return;
     try {
       setIsSaving(true);
-      const mergedValues = { ...values };
+      const allFormValues = form.getFieldsValue(true);
+      const mergedValues = { ...allFormValues, ...values };
       const processData = buildProcessData(mergedValues, systemValues, hodUsers, qaReviewers, qaApprovers);
       
       // Build combined gridData payload
@@ -524,13 +540,18 @@ useEffect(() => {
     } finally { setIsSaving(false); }
   };
 
-  const handleActivitySuccess = async () => {
+  const handleActivitySuccess = async (response, selectedActivity) => {
     try {
       const values = form.getFieldsValue(true);
+      const esignComment = response?.data?.data?.activity?.comment || response?.config?.data ? JSON.parse(response?.config?.data || "{}")?.comment : "";
+      if (activeTab === "implementor" && esignComment && !values.implementorComments) {
+        values.implementorComments = esignComment;
+        form.setFieldValue("implementorComments", esignComment);
+      } else if (activeTab === "qa-review" && esignComment && !values.qaReviewComments) {
+        values.qaReviewComments = esignComment;
+        form.setFieldValue("qaReviewComments", esignComment);
+      }
       await handleSubmit(values);
-      await fetchChildDetail();
-      await fetchPermissions();
-      await fetchActivityLogs();
     } catch (error) { console.error("Failed to save after activity:", error); }
   };
 
@@ -550,27 +571,6 @@ useEffect(() => {
 
   return (
     <div className="w-full">
-      <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Activity size={20} />
-            </div>
-            <h1 className="text-[22px] font-semibold tracking-tight text-[#263B35]">Child Calibration</h1>
-          </div>
-        </div>
-        <div className="flex items-center gap-8 border-l border-slate-200 pl-6">
-          <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">Site</p>
-            <p className="text-sm font-semibold text-[#344A43]">{siteLocationCode || "Unit IV"}</p>
-          </div>
-          <div className="h-9 w-px bg-slate-200" />
-          <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">Process</p>
-            <p className="text-sm font-semibold text-[#344A43]">{processName || "Calibration Management"}</p>
-          </div>
-        </div>
-      </div>
 
       <div className="mb-2 space-y-2">
         <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} />
@@ -588,7 +588,7 @@ useEffect(() => {
               loading={activitiesLoading}
               recordId={recordId}
               userId={loginUserId}
-              activityApi={executeCalibrationActivity}
+              activityApi={executeCalibrationActivityChild}
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
@@ -604,6 +604,7 @@ useEffect(() => {
 
       <Form
         form={form}
+        preserve={true}
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
@@ -656,10 +657,20 @@ useEffect(() => {
                 <FormInput placeholder="e.g. 0-500 V" disabled={!isManagementEditable} />
               </Form.Item>
               <Form.Item name="envTemperature" label="Environmental Condition Temperature" className="!mb-4">
-                <FormInput placeholder="e.g. 25°C ± 2°C" disabled={!isManagementEditable} />
+                {/* <FormInput placeholder="e.g. 25°C ± 2°C" disabled={!isManagementEditable} /> */}
+                  <SymbolicInput
+                  placeholder="e.g. 25"
+                  defaultDiscipline="Temperature"
+                  disabled={!isManagementEditable}
+                />
               </Form.Item>
               <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
-                <FormInput placeholder="e.g. 45% RH ± 5%" disabled={!isManagementEditable} />
+                {/* <FormInput placeholder="e.g. 45% RH ± 5%" disabled={!isManagementEditable} /> */}
+                  <SymbolicInput
+                  placeholder="e.g. 45% RH ± 5%"
+                  defaultDiscipline="Humidity"
+                  disabled={!isManagementEditable}
+                />
               </Form.Item>
               <Form.Item name="previousCalibrationDate" label="Previous Calibration Date" className="!mb-4">
                 <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled={!isManagementEditable} />
@@ -686,8 +697,8 @@ useEffect(() => {
             </div>
             <div className="mt-4">
               <UserDynamicGrid
-                name="Calibration Results"
-                description="Parameter-wise calibration results"
+                name="Master Instruments Details"
+                // description="Parameter-wise calibration results"
                 columns={CALIBRATION_RESULT_GRID}
                 value={calibrationResultTest}
                 onChange={setCalibrationResultTest}

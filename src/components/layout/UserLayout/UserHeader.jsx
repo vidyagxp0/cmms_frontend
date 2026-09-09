@@ -160,7 +160,6 @@ const UserHeader = ({
                                 setShowProfile(false);
                             }}
                             onLogout={() => {
-                                console.log("Logout clicked");
                                 setShowProfile(false);
                             }}
                         />

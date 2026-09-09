@@ -56,15 +56,15 @@ const CALIBRATION_RESULT_GRID = [
   {
     key: "calibrationdoneDATE",
     title: "Calibration DONE DATE",
-    type: "text",
-    placeholder: "Enter error",
+    type: "date",
+    placeholder: "Enter Calibration DONE DATE",
     minWidth: 160,
   },
   {
     key: "calibrationNewDueDate",
     title: "Calibration New Due Date",
-    type: "text",
-    placeholder: "Enter error",
+    type: "date",
+    placeholder: "Enter Calibration New Due Date",
     minWidth: 160,
   },
 ];

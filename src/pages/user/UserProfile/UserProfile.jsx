@@ -19,7 +19,6 @@ const UserProfile = () => {
             setLoadingProfile(true);
             const response = await getProfile();
             const apiUser = response?.data?.data;
-            console.log("Fetched User Profile:", apiUser);
             if (apiUser) {
                 setProfileData(apiUser);
             }

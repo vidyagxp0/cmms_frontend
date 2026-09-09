@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Plus, Trash2, Table2, GripVertical } from "lucide-react";
 import { Input, InputNumber, Select, DatePicker } from "antd";
+import dayjs from "dayjs";
 import UserModal from "../UserModal/UserModal";
 
 const { TextArea } = Input;
@@ -49,20 +50,20 @@ const UserDynamicGrid = ({
         setIsDeleteModalOpen(true);
     };
 
-  const handleConfirmDelete = async () => {
-    if (deleteRowIndex === null || rows.length <= minRows) return;
+    const handleConfirmDelete = async () => {
+        if (deleteRowIndex === null || rows.length <= minRows) return;
 
-    const updatedRows = rows.filter(
-        (_, index) => index !== deleteRowIndex
-    );
+        const updatedRows = rows.filter(
+            (_, index) => index !== deleteRowIndex
+        );
 
-    await deleteRow?.(updatedRows);
+        await deleteRow?.(updatedRows);
 
-    onChange?.(updatedRows);
+        onChange?.(updatedRows);
 
-    setDeleteRowIndex(null);
-    setIsDeleteModalOpen(false);
-};
+        setDeleteRowIndex(null);
+        setIsDeleteModalOpen(false);
+    };
 
     const handleCancelDelete = () => {
         setDeleteRowIndex(null);
@@ -169,11 +170,13 @@ const UserDynamicGrid = ({
         }
 
         if (column.type === "date") {
+            // ---------- FIX: Convert fieldValue to a valid dayjs object ----------
+            const dateValue = fieldValue ? dayjs(fieldValue) : null;
             return (
                 <DatePicker
-                    value={fieldValue || null}
+                    value={dateValue?.isValid() ? dateValue : null}
                     disabled={disabled}
-                    format={column.format || "DD-MMM-YYYY"}
+                    format={column.format || "DD/MM/YYYY"}
                     placeholder={column.placeholder || "Select date"}
                     onChange={handleChange}
                     className="!h-10 !w-full !rounded-lg !border-[#D1DBD7] !bg-white !text-[12px] !font-medium !text-[#263B35] !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585]"

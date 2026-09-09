@@ -19,6 +19,7 @@ import  { CALIBRATED_BY_COLUMNS, CALIBRATION_RESULT_GRID } from "./calibrationCo
 import { getProfile } from "../../../services/authApi";
 import { getCalibrationUser, getAllEquipmentData, getRecordNumber, addCalibrationChild } from "../../../services/usersApi/calibrationApi";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
+import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
 
 const TABS = [
   { id: "management", label: "General Information" },
@@ -439,9 +440,16 @@ const CalibrationChild = () => {
               <Form.Item name="operatingRange" label="Operating Range" className="!mb-4">
                 <FormInput placeholder="e.g. 0-500 V" />
               </Form.Item>
-              <Form.Item name="envTemperature" label="Environmental Condition Temperature" className="!mb-4">
-                <FormInput placeholder="e.g. 25°C ± 2°C" />
-              </Form.Item>
+<Form.Item
+  name="envTemperature"
+  label="Environmental Condition Temperature"
+  className="!mb-4"
+>
+  <SymbolicInput
+    placeholder="e.g. 25"
+    defaultDiscipline="Temperature"
+  />
+</Form.Item>
               <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
                 <FormInput placeholder="e.g. 45% RH ± 5%" />
               </Form.Item>

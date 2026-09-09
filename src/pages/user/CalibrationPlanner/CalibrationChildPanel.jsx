@@ -644,7 +644,12 @@ useEffect(() => {
                 />
               </Form.Item>
               <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
-                <FormInput placeholder="e.g. 45% RH ± 5%" disabled={!isManagementEditable} />
+                {/* <FormInput placeholder="e.g. 45% RH ± 5%" disabled={!isManagementEditable} /> */}
+                  <SymbolicInput
+                  placeholder="e.g. 45% RH ± 5%"
+                  defaultDiscipline="Humidity"
+                  disabled={!isManagementEditable}
+                />
               </Form.Item>
               <Form.Item name="previousCalibrationDate" label="Previous Calibration Date" className="!mb-4">
                 <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled={!isManagementEditable} />

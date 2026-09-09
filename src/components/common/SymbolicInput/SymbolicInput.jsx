@@ -407,23 +407,52 @@ const SymbolicInput = ({
           SYMBOL TREE
           Only appears when Symbol is ON
           ===================================================== */}
-      {symbolEnabled && showSelector && (
-        <div className="mt-2 w-full rounded-lg border border-[#D9E2DE] bg-white p-2 shadow-sm">
-          <div className="mb-2 px-2 text-xs font-semibold text-[#6B7D76]">
-            Select Discipline / Unit
-          </div>
+            {symbolEnabled && showSelector && (
+            <div className="mt-2 w-full rounded-lg border border-[#D9E2DE] bg-white p-2 shadow-sm">
+                {/* Header */}
+                <div className="mb-2 flex items-center justify-between px-2">
+                <div className="text-xs font-semibold text-[#6B7D76]">
+                    Select Discipline / Unit
+                </div>
 
-          <div className="max-h-[240px] overflow-y-auto">
-            <Tree
-              showLine
-              switcherIcon={<DownOutlined />}
-              treeData={treeData}
-              selectedKeys={selectedTreeKeys}
-              onSelect={handleTreeSelect}
-            />
-          </div>
-        </div>
-      )}
+                {/* Close button */}
+                <button
+                    type="button"
+                    onClick={() => setShowSelector(false)}
+                    disabled={disabled}
+                    className="
+                    flex
+                    h-6
+                    w-6
+                    items-center
+                    justify-center
+                    rounded-md
+                    text-[#7B8983]
+                    transition
+                    hover:bg-[#F3F7F5]
+                    hover:text-[#263B35]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                    "
+                    aria-label="Close symbol selector"
+                    title="Close"
+                >
+                    ×
+                </button>
+                </div>
+
+                {/* Tree */}
+                <div className="max-h-[240px] overflow-y-auto">
+                <Tree
+                    showLine
+                    switcherIcon={<DownOutlined />}
+                    treeData={treeData}
+                    selectedKeys={selectedTreeKeys}
+                    onSelect={handleTreeSelect}
+                />
+                </div>
+            </div>
+            )}
 
       {/* =====================================================
           SELECTED UNIT

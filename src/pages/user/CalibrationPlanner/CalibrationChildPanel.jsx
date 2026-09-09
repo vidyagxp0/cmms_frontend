@@ -453,10 +453,10 @@ useEffect(() => {
 
   const handleTabChange = (tabId) => {
     if (tabId === "activity") { setActiveTab(tabId); return; }
-    if (tabId !== "management" && !canPerformActivity) {
-      toast.warning("Please fill all mandatory fields and save the record before accessing other tabs.");
-      return;
-    }
+    // if (tabId !== "management" && !canPerformActivity) {
+    //   toast.warning("Please fill all mandatory fields and save the record before accessing other tabs.");
+    //   return;
+    // }
     setActiveTab(tabId);
   };
 

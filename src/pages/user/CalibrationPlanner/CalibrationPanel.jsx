@@ -580,6 +580,7 @@ useEffect(() => {
                 recordId={recordId}
                 disabled={!isGeneralEditable}
                 canCreateChild={canCreateChild}
+                showAddButton={true}
               />
             </div>
             <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">

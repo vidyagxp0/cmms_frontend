@@ -122,6 +122,7 @@ const CalibrationGrid = ({
   recordId,
   disabled = false,
   canCreateChild = false,
+  showAddButton = true,
 }) => {
   const columns = [
     { key: "equipmentInstrumentName", title: "Instrument Name", type: "select", placeholder: "Select instrument Name", required: true, minWidth: 220 },
@@ -434,6 +435,7 @@ const CalibrationGrid = ({
             {description && <p className="mt-0.5 truncate text-[11px] font-medium text-[#899690]">{description}</p>}
           </div>
         </div>
+          {showAddButton && (
         <button
           type="button"
           onClick={addRow}
@@ -443,6 +445,7 @@ const CalibrationGrid = ({
           <Plus size={14} strokeWidth={2} className="transition-transform duration-200 group-hover:rotate-90" />
           {addButtonLabel}
         </button>
+          )}
       </div>
 
       <div className="grid-scroll w-full max-h-[520px] overflow-auto rounded-b-xl">

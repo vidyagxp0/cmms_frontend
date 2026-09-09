@@ -343,6 +343,7 @@ const CreateCalibration = () => {
                 equipmentOptions={equipmentOptions}
                 equipmentMap={equipmentMap}
                 equipmentLoading={equipmentLoading}
+                showAddButton={false}
               />
               <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
                 <FormTextArea rows={5} placeholder="Enter comments..." />

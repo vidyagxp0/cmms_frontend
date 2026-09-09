@@ -247,12 +247,12 @@ useEffect(() => {
   const qaReviewerOptions = qaReviewers.map((user) => ({ value: user?.id, label: user?.name }));
   const qaApproverOptions = qaApprovers.map((user) => ({ value: user?.id, label: user?.name }));
 
-  const fetchChildDetail = useCallback(async () => {
+  const fetchChildDetail = useCallback(async (isInitial = false) => {
     if (!recordId) { toast.error("Child record ID is missing."); return; }
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
-      setIsLoading(true);
+      if (isInitial) setIsLoading(true);
       const response = await getCalibrationChildDetail(recordId);
       const data = response?.data?.data;
       if (!data) { toast.error("Child calibration record not found."); return; }
@@ -379,7 +379,7 @@ useEffect(() => {
     } finally { setIsLoading(false); isFetchingRef.current = false; }
   }, [recordId, form]);
 
-  useEffect(() => { fetchChildDetail(); }, [fetchChildDetail]);
+  useEffect(() => { fetchChildDetail(true); }, [fetchChildDetail]);
 
   useEffect(() => {
     if (!processId) return;
@@ -528,9 +528,6 @@ useEffect(() => {
     try {
       const values = form.getFieldsValue(true);
       await handleSubmit(values);
-      await fetchChildDetail();
-      await fetchPermissions();
-      await fetchActivityLogs();
     } catch (error) { console.error("Failed to save after activity:", error); }
   };
 

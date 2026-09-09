@@ -61,7 +61,7 @@ const UserDashboard = () => {
     const [engineeringRecords, setEngineeringRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [lastUpdated, setLastUpdated] = useState("");
-    const [autoRefreshInterval, setAutoRefreshInterval] = useState(30);
+    const [autoRefreshInterval, setAutoRefreshInterval] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [timelineView, setTimelineView] = useState("monthly");
     const [currentDateTime, setCurrentDateTime] = useState(new Date());

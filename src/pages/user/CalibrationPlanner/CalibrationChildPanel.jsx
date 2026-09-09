@@ -33,7 +33,7 @@ import {
   getAllActivityLogs,
   getAllStages,
   getAllPermissions,
-  executeCalibrationActivity,
+  executeCalibrationActivityChild,
 } from "../../../services/usersApi/calibrationApi";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
 
@@ -105,7 +105,9 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
     "shortDescription", "instrumentName", "instrumentId", "location", "make", "model",
     "instrumentRange", "leastCount", "accuracy", "calibrationTestPoints", "operatingRange",
     "envTemperature", "envHumidity", "previousCalibrationDate", "nextCalibrationDate",
-    "comments", "attachment"
+    "comments", "attachment",
+    "implementorComments", "implementorAttachment",
+    "qaReviewComments", "qaReviewAttachment"
   ];
   const labelMap = {
     shortDescription: "Short Description",
@@ -125,6 +127,10 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
     nextCalibrationDate: "Next Calibration Date",
     comments: "Comments",
     attachment: "Attachment",
+    implementorComments: "HOD / Designee Review Comments",
+    implementorAttachment: "HOD / Designee Review Attachment",
+    qaReviewComments: "QA Review Comments",
+    qaReviewAttachment: "QA Review Attachment",
   };
   otherFields.forEach((key) => {
     let value = values[key] !== undefined && values[key] !== null ? values[key] : "";
@@ -293,6 +299,10 @@ useEffect(() => {
       const nextCalDate = getProcessValue(processData, "nextCalibrationDate");
       const comments = getProcessValue(processData, "comments");
       const attachment = getProcessValue(processData, "attachment");
+      const implementorComments = getProcessValue(processData, "implementorComments") || getProcessValue(processData, "implementor_review_comments");
+      const implementorAttachment = getProcessValue(processData, "implementorAttachment") || getProcessValue(processData, "implementor_review_attachment");
+      const qaReviewComments = getProcessValue(processData, "qaReviewComments") || getProcessValue(processData, "qa_review_comments");
+      const qaReviewAttachment = getProcessValue(processData, "qaReviewAttachment") || getProcessValue(processData, "qa_review_attachment");
 
       setRecordNumber(recNum || "");
       setSiteLocationCode(locCode || "");
@@ -335,6 +345,10 @@ useEffect(() => {
         qaApproval: "",
         comments: comments || "",
         attachment: attachment || [],
+        implementorComments: implementorComments || "",
+        implementorAttachment: implementorAttachment || [],
+        qaReviewComments: qaReviewComments || "",
+        qaReviewAttachment: qaReviewAttachment || [],
       });
 
       // ---- Parse grid data ----
@@ -462,16 +476,16 @@ useEffect(() => {
   };
 
   const systemValues = {
-    recordNumber: form.getFieldValue("recordNumber") || recordNumber,
-    siteLocationCode: form.getFieldValue("siteLocationCode") || siteLocationCode,
-    initiator: form.getFieldValue("initiator") || initiator,
-    dateOfInitiation: form.getFieldValue("dateOfInitiation") || dateOfInitiation,
-    initiationDepartment: form.getFieldValue("initiationDepartment") || initiationDepartment,
+    recordNumber: recordNumber,
+    siteLocationCode: siteLocationCode,
+    initiator: initiator,
+    dateOfInitiation: dateOfInitiation,
+    initiationDepartment: initiationDepartment,
   };
 
   const handleSave = async () => {
     if (isSaving || isLoading || usersLoading) return;
-    const values = form.getFieldsValue();
+    const values = form.getFieldsValue(true);
     const missing = REQUIRED_FIELDS.filter((field) => {
       const val = values[field.name];
       if (typeof val === "string") return !val.trim();
@@ -491,7 +505,8 @@ useEffect(() => {
     if (isSaving || !recordId) return;
     try {
       setIsSaving(true);
-      const mergedValues = { ...values };
+      const allFormValues = form.getFieldsValue(true);
+      const mergedValues = { ...allFormValues, ...values };
       const processData = buildProcessData(mergedValues, systemValues, hodUsers, qaReviewers, qaApprovers);
       
       // Build combined gridData payload
@@ -525,9 +540,17 @@ useEffect(() => {
     } finally { setIsSaving(false); }
   };
 
-  const handleActivitySuccess = async () => {
+  const handleActivitySuccess = async (response, selectedActivity) => {
     try {
       const values = form.getFieldsValue(true);
+      const esignComment = response?.data?.data?.activity?.comment || response?.config?.data ? JSON.parse(response?.config?.data || "{}")?.comment : "";
+      if (activeTab === "implementor" && esignComment && !values.implementorComments) {
+        values.implementorComments = esignComment;
+        form.setFieldValue("implementorComments", esignComment);
+      } else if (activeTab === "qa-review" && esignComment && !values.qaReviewComments) {
+        values.qaReviewComments = esignComment;
+        form.setFieldValue("qaReviewComments", esignComment);
+      }
       await handleSubmit(values);
     } catch (error) { console.error("Failed to save after activity:", error); }
   };
@@ -565,7 +588,7 @@ useEffect(() => {
               loading={activitiesLoading}
               recordId={recordId}
               userId={loginUserId}
-              activityApi={executeCalibrationActivity}
+              activityApi={executeCalibrationActivityChild}
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
@@ -581,6 +604,7 @@ useEffect(() => {
 
       <Form
         form={form}
+        preserve={true}
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}

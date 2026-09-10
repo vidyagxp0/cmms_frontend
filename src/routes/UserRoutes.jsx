@@ -17,6 +17,7 @@ import CreateEquipment from "../pages/user/Equipment/CreateEquipment";
 import ManagementDashboard from "../pages/user/CalibrationManagement/ManagementDashorad";
 import PreventivePlannerDashboard from "../pages/user/PreventiveMaintence/PreventivePlannerDashboard";
 import PreventiveMaintenanceDashboard from "../pages/user/PreventiveMaintence/PreventiveMaintenanceDashboard ";
+import PreventivePlannerCreate from "../pages/user/PreventiveMaintence/PreventivePlannerCreate";
 
 function UserRoutes() {
   return (
@@ -48,6 +49,7 @@ function UserRoutes() {
         {/* Preventive Maintenance Routes*/}
         <Route path="preventive-planner-dashboard" element={<PreventivePlannerDashboard />} />
         <Route path="preventive-maintenance-dashboard" element={<PreventiveMaintenanceDashboard />} />
+        <Route path="preventive-maintenance-planner-create/:processId" element={<PreventivePlannerCreate />} />
 
         {/* <Route path="equipment-panel/:id" element={<EquipmentPanel/>} /> */}
       </Route>

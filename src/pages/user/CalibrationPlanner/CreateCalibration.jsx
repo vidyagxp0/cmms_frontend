@@ -16,11 +16,12 @@ import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 
 import { getProfile } from "../../../services/authApi";
-import { addCalibration, getAllEquipmentData, getCalibrationUser, getRecordNumber } from "../../../services/usersApi/calibrationApi";
+import { addCalibration, getAllEquipmentData, getCalibrationUser } from "../../../services/usersApi/calibrationApi";
 import { formatDate, formatDateTime } from "../../../utils/date";
 
 import { addSingleAttachment, addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
+import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
 
 const TABS = [
   { id: "general", label: "General Information" },

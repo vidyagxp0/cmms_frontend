@@ -21,8 +21,9 @@ import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import "../../../components/ui/disabledFields.css";
 
 import { getProfile } from "../../../services/authApi";
-import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration, getAllActivites, getAllActivityLogs, getAllStages, getAllPermissions, getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
+import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration,  getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
 import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
+import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
 
 dayjs.extend(customParseFormat);
 

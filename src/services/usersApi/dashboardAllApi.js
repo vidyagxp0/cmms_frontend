@@ -11,3 +11,9 @@ export const getAllCalibrationManagementRecords = (params = {}) => {
         params,
     });
 };
+
+export const getAllPreventivePlanner = (params = {}) => {
+    return api.get("/user/get-preventive-planner-records", {
+        params,
+    });
+};

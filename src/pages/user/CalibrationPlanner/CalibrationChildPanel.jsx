@@ -29,13 +29,10 @@ import {
   getAllEquipmentData,
   getCalibrationChildDetail,
   updateCalibrationChild,
-  getAllActivites,
-  getAllActivityLogs,
-  getAllStages,
-  getAllPermissions,
   executeCalibrationActivityChild,
 } from "../../../services/usersApi/calibrationApi";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
+import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
 
 const TABS = [
   { id: "management", label: "General Information", stageId: 19 },

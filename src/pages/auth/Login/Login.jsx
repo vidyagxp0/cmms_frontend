@@ -105,18 +105,14 @@ const Login = () => {
 
       toast.success("Login successful");
 
-      navigate(
-        isAdmin
-          ? "/admin/dashboard"
-          : "/user/engineering-dashboard",
-        { replace: true }
-      );
+      navigate(isAdmin ? "/admin/dashboard" : "/user/engineering-dashboard", {
+        replace: true,
+      });
     } catch (error) {
       setLoginErrors(true);
 
       toast.error(
-        error.response?.data?.message ||
-          "User or Password Incorrect"
+        error.response?.data?.message || "User or Password Incorrect",
       );
     } finally {
       setLoading(false);
@@ -342,7 +338,7 @@ const Login = () => {
                     fontFamily: "'Plus Jakarta Sans', sans-serif",
                   }}
                 >
-                  Sign in to Maintenix
+                  Sign in to CMMS
                 </h2>
 
                 <p className="mx-auto mt-2 max-w-[350px] text-[13px] leading-5 text-[#7a8589]">
@@ -354,10 +350,7 @@ const Login = () => {
                   LOGIN FORM
               ================================================= */}
 
-              <form
-                onSubmit={handleLogin}
-                className="space-y-3.5"
-              >
+              <form onSubmit={handleLogin} className="space-y-3.5">
                 {/* =================================================
                     EMAIL
                 ================================================= */}
@@ -507,9 +500,7 @@ const Login = () => {
                         hover:text-[#526267]
                       "
                       aria-label={
-                        showPassword
-                          ? "Hide password"
-                          : "Show password"
+                        showPassword ? "Hide password" : "Show password"
                       }
                     >
                       {showPassword ? (
@@ -540,13 +531,11 @@ const Login = () => {
                 <div className="flex flex-wrap items-center justify-between gap-y-2 pt-0.5">
                   {/* Remember Me */}
 
-                  <label className="group flex cursor-pointer items-center gap-2.5">
+                  {/* <label className="group flex cursor-pointer items-center gap-2.5">
                     <input
                       type="checkbox"
                       checked={remember}
-                      onChange={(e) =>
-                        setRemember(e.target.checked)
-                      }
+                      onChange={(e) => setRemember(e.target.checked)}
                       className="sr-only"
                     />
 
@@ -592,14 +581,13 @@ const Login = () => {
                     <span className="text-[12px] font-medium text-[#737f82]">
                       Remember me
                     </span>
-                  </label>
+                  </label> */}
 
                   {/* Secure Login */}
 
-                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.05em] text-[#9aa3a4]">
+                  <div className="flex w-full items-center justify-end gap-1.5 text-[10px] font-semibold uppercase tracking-[0.05em] text-[#9aa3a4]">
                     <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#76969a]" />
-
-                    Secure login
+                    <span>Secure login</span>
                   </div>
                 </div>
 
@@ -659,15 +647,11 @@ const Login = () => {
                     <div className="relative flex items-center gap-3">
                       <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/25 border-t-white" />
 
-                      <span>
-                        Log in...
-                      </span>
+                      <span>Log in...</span>
                     </div>
                   ) : (
                     <div className="relative flex items-center gap-2">
-                      <span>
-                        Log In
-                      </span>
+                      <span>Log In</span>
 
                       <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                     </div>

@@ -1,9 +1,130 @@
-import React, { useState } from "react";
-import { Upload, message, Skeleton } from "antd";
-import { UploadCloud, X, FileText, CheckCircle2, Loader2 } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Upload, Skeleton } from "antd";
+import { UploadCloud, X, FileText, CheckCircle2, Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import UserModal from "../UserModal/UserModal";
+import { appConfig } from "../../../config/appConfig";
 
 const { Dragger } = Upload;
+
+const getNormalizedFileKey = (item) => {
+  if (!item) return "";
+  if (item instanceof File) {
+    return `name-${item.name.toLowerCase()}`;
+  }
+  if (typeof item === "string") {
+    const raw = item.split("/").pop().split("?")[0].toLowerCase();
+    const clean = raw.replace(/^[0-9a-fA-F_-]+_(?=[^/]+\.[a-zA-Z0-9]+$)/, "");
+    return `name-${clean || raw}`;
+  }
+  if (typeof item === "object") {
+    const raw = (
+      item.original_name ||
+      item.name ||
+      item.file_name ||
+      (item.path ? item.path.split("/").pop().split("?")[0] : "") ||
+      (item.url ? item.url.split("/").pop().split("?")[0] : "")
+    );
+    if (raw) {
+      const lower = String(raw).toLowerCase();
+      const clean = lower.replace(/^[0-9a-fA-F_-]+_(?=[^/]+\.[a-zA-Z0-9]+$)/, "");
+      return `name-${clean || lower}`;
+    }
+    if (item.id) {
+      return `id-${item.id}`;
+    }
+  }
+  return JSON.stringify(item);
+};
+
+const deduplicateAttachments = (list) => {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  return list.filter((item) => {
+    if (!item) return false;
+    const key = getNormalizedFileKey(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const parseAttachmentList = (val, fileListProp) => {
+  const target = val !== undefined && val !== null ? val : fileListProp;
+  if (!target) return [];
+  let rawList = [];
+  if (Array.isArray(target)) {
+    rawList = target;
+  } else if (typeof target === "string" && target.trim() !== "") {
+    try {
+      const parsed = JSON.parse(target);
+      if (Array.isArray(parsed)) rawList = parsed;
+      else if (parsed && typeof parsed === "object") rawList = [parsed];
+    } catch (e) {
+      rawList = [{ name: target, path: target }];
+    }
+  } else if (typeof target === "object") {
+    rawList = [target];
+  }
+  return deduplicateAttachments(rawList);
+};
+
+const getFileName = (file) => {
+  if (!file) return "Attachment";
+  if (file instanceof File) return file.name;
+  if (typeof file === "string") {
+    const parts = file.split("/");
+    const raw = parts[parts.length - 1] || "Attachment";
+    return raw.replace(/^[0-9a-fA-F_-]+_(?=[^/]+\.[a-zA-Z0-9]+$)/, "");
+  }
+  if (typeof file === "object") {
+    if (file.original_name) return file.original_name;
+    if (file.name) return file.name;
+    if (file.file_name) {
+      return String(file.file_name).replace(/^[0-9a-fA-F_-]+_(?=[^/]+\.[a-zA-Z0-9]+$)/, "");
+    }
+    if (file.path) {
+      const parts = file.path.split("/");
+      const raw = parts[parts.length - 1] || "Attachment";
+      return raw.replace(/^[0-9a-fA-F_-]+_(?=[^/]+\.[a-zA-Z0-9]+$)/, "");
+    }
+  }
+  return "Attachment";
+};
+
+const getAttachmentUrl = (file) => {
+  if (!file) return "";
+  if (file instanceof File) {
+    if (file.url) return file.url;
+    return URL.createObjectURL(file);
+  }
+  if (typeof file === "string") {
+    if (file.startsWith("http://") || file.startsWith("https://") || file.startsWith("blob:")) {
+      return file;
+    }
+    const cleanPath = file.replace(/^\//, "");
+    const apiBase = appConfig.apiUrl || "";
+    const origin = apiBase.startsWith("http")
+      ? apiBase.replace(/\/api\/?$/, "")
+      : (window.location.origin || "http://127.0.0.1:8000");
+    return `${origin}/${cleanPath}`;
+  }
+  if (typeof file === "object") {
+    if (file.url) return file.url;
+    if (file.path) {
+      if (file.path.startsWith("http://") || file.path.startsWith("https://")) {
+        return file.path;
+      }
+      const cleanPath = file.path.replace(/^\//, "");
+      const apiBase = appConfig.apiUrl || "";
+      const origin = apiBase.startsWith("http")
+        ? apiBase.replace(/\/api\/?$/, "")
+        : (window.location.origin || "http://127.0.0.1:8000");
+      return `${origin}/${cleanPath}`;
+    }
+  }
+  return "";
+};
 
 const FormAttachment = ({
   multiple = false,
@@ -11,13 +132,18 @@ const FormAttachment = ({
   attachmentField,
   label,
   uploadApi,
-  value = [],
+  value,
+  fileList: fileListProp,
   onChange,
   disabled = false,
   maxCount,
 }) => {
   const [uploading, setUploading] = useState(false);
-  const fileList = Array.isArray(value) ? value : [];
+  const isUploadingRef = useRef(false);
+  const [removeModalOpen, setRemoveModalOpen] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState(null);
+
+  const fileList = parseAttachmentList(value, fileListProp);
 
   const createCleanFile = (file) => {
     if (!(file instanceof File)) return null;
@@ -25,12 +151,12 @@ const FormAttachment = ({
   };
 
   const getFileKey = (file) => {
-    if (!(file instanceof File)) return "";
-    return `${file.name}-${file.size}-${file.lastModified}`;
+    if (!file) return "";
+    return getNormalizedFileKey(file);
   };
 
   const handleChange = async ({ fileList: newFileList }) => {
-    if (disabled || uploading) return;
+    if (disabled || uploading || isUploadingRef.current) return;
     if (!newFileList || !newFileList.length) return;
     if (!recordId) { toast.error("Record ID is required for attachment upload."); return; }
     if (!attachmentField) { toast.error("Attachment field is required."); return; }
@@ -42,9 +168,9 @@ const FormAttachment = ({
       .filter((file) => file instanceof File);
     if (!selectedFiles.length) { toast.error("No valid file selected."); return; }
 
-    const existingKeys = new Set(fileList.filter((f) => f instanceof File).map(getFileKey));
+    const existingKeys = new Set(fileList.map((f) => getNormalizedFileKey(f)));
     const filesToUpload = multiple
-      ? selectedFiles.filter((file) => !existingKeys.has(getFileKey(file)))
+      ? selectedFiles.filter((file) => !existingKeys.has(getNormalizedFileKey(file)))
       : selectedFiles.slice(0, 1);
     if (!filesToUpload.length) return;
 
@@ -52,34 +178,116 @@ const FormAttachment = ({
     if (!cleanFiles.length) { toast.error("No valid file selected."); return; }
 
     try {
+      isUploadingRef.current = true;
       setUploading(true);
+      const attachmentType = cleanFiles.length > 1 ? "multiple-file" : "single-file";
       if (!multiple) {
         const file = cleanFiles[0];
-        await uploadApi({ record_id: recordId, attachment_field: attachmentField, label, file });
-        onChange?.([file]);
-        toast.success("Attachment uploaded successfully.");
+        const response = await uploadApi({
+          record_id: recordId,
+          attachment_field: attachmentField,
+          label,
+          file,
+          files: cleanFiles,
+          Type: attachmentType,
+        });
+        const responseData = response?.data;
+
+        // Prioritize new_attachments, then the last element of attachments, then attachment object, then fallback
+        const newAtts = responseData?.new_attachments || responseData?.data?.new_attachments;
+        const allAtts = responseData?.attachments || responseData?.data?.attachments || responseData?.files || responseData?.data?.files;
+        const singleAtt = responseData?.attachment || responseData?.data?.attachment;
+        const uploadedObj = (Array.isArray(newAtts) && newAtts.length > 0)
+          ? newAtts[newAtts.length - 1]
+          : (Array.isArray(allAtts) && allAtts.length > 0)
+          ? allAtts[allAtts.length - 1]
+          : (singleAtt || {
+              name: file.name,
+              size: file.size,
+              url: responseData?.url || "",
+              path: responseData?.path || "",
+            });
+
+        onChange?.([uploadedObj]);
+        toast.success(responseData?.message || "Attachment uploaded successfully.");
       } else {
-        await uploadApi({ record_id: recordId, attachment_field: attachmentField, label, files: cleanFiles });
-        const existingFiles = fileList.filter((f) => f instanceof File);
-        const mergedFiles = [...existingFiles, ...cleanFiles];
-        onChange?.(mergedFiles);
-        toast.success(cleanFiles.length === 1 ? "Attachment uploaded successfully." : "Attachments uploaded successfully.");
+        const response = await uploadApi({
+          record_id: recordId,
+          attachment_field: attachmentField,
+          label,
+          file: cleanFiles[0],
+          files: cleanFiles,
+          Type: attachmentType,
+        });
+        const responseData = response?.data;
+        const newAtts = responseData?.new_attachments || responseData?.data?.new_attachments;
+        const allAtts = responseData?.attachments || responseData?.data?.attachments || responseData?.files || responseData?.data?.files;
+        const singleAtt = responseData?.attachment || responseData?.data?.attachment;
+
+        let mergedFiles = [];
+        if (Array.isArray(allAtts) && allAtts.length > 0) {
+          mergedFiles = allAtts;
+        } else if (Array.isArray(newAtts) && newAtts.length > 0) {
+          const existingFiles = fileList.filter((f) => f instanceof File || typeof f === "object" || typeof f === "string");
+          mergedFiles = [...newAtts, ...existingFiles];
+        } else if (singleAtt && typeof singleAtt === "object" && (singleAtt.url || singleAtt.path || singleAtt.file_name || singleAtt.name)) {
+          const existingFiles = fileList.filter((f) => f instanceof File || typeof f === "object" || typeof f === "string");
+          mergedFiles = [singleAtt, ...existingFiles];
+        } else {
+          const existingFiles = fileList.filter((f) => f instanceof File || typeof f === "object" || typeof f === "string");
+          mergedFiles = [...cleanFiles, ...existingFiles];
+        }
+
+        const finalDeduplicated = deduplicateAttachments(mergedFiles);
+        onChange?.(finalDeduplicated);
+        toast.success(responseData?.message || (cleanFiles.length === 1 ? "Attachment uploaded successfully." : "Attachments uploaded successfully."));
       }
     } catch (error) {
       console.error("Attachment upload failed:", error);
       toast.error(error?.response?.data?.message || error?.response?.data?.error || error?.message || "Failed to upload attachment.");
     } finally {
       setUploading(false);
+      isUploadingRef.current = false;
     }
   };
 
-  const handleRemove = (file, index) => {
+  const handleRequestRemove = (file, index) => {
     if (disabled || uploading) return;
+    setItemToRemove({ file, index });
+    setRemoveModalOpen(true);
+  };
+
+  const handleConfirmRemove = () => {
+    if (!itemToRemove) return;
+    const { file, index } = itemToRemove;
     const newList = fileList.filter((item, itemIndex) => {
-      if (item instanceof File && file instanceof File) return getFileKey(item) !== getFileKey(file);
+      if (item instanceof File && file instanceof File) {
+        return getFileKey(item) !== getFileKey(file);
+      }
+      if (typeof item === "object" && typeof file === "object" && item?.file_name && file?.file_name) {
+        return item.file_name !== file.file_name;
+      }
       return itemIndex !== index;
     });
     onChange?.(newList);
+    setRemoveModalOpen(false);
+    setItemToRemove(null);
+    toast.success("Attachment removed.");
+  };
+
+  const handleCancelRemove = () => {
+    setRemoveModalOpen(false);
+    setItemToRemove(null);
+  };
+
+  const handleOpenAttachment = (file, event) => {
+    if (event) event.stopPropagation();
+    const url = getAttachmentUrl(file);
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } else {
+      toast.error("Attachment URL is not available.");
+    }
   };
 
   const uploadDisabled = disabled || uploading;
@@ -143,24 +351,42 @@ const FormAttachment = ({
         <div className="mt-3 space-y-2">
           {fileList.map((file, index) => {
             const isNativeFile = file instanceof File;
-            const fileName = isNativeFile ? file.name : file?.name || file?.file_name || "Attachment";
-            const fileSize = isNativeFile ? file.size : file?.size || 0;
-            const fileKey = isNativeFile ? getFileKey(file) : `${fileName}-${index}`;
+            const fileName = getFileName(file);
+            const fileSize = isNativeFile ? file.size : (file?.size || 0);
+            const fileKey = isNativeFile ? getFileKey(file) : (file?.file_name || file?.id || `${fileName}-${index}`);
+            const fileUrl = getAttachmentUrl(file);
+
             return (
-              <div key={fileKey} className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div
+                key={fileKey}
+                onClick={(e) => handleOpenAttachment(file, e)}
+                className="group flex w-full cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm transition hover:border-primary/40 hover:bg-slate-50/50"
+                title="Click to open attachment in a new tab"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition group-hover:scale-105">
                   <FileText size={18} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-[#263B35]">{fileName}</p>
-                  {fileSize > 0 && <p className="mt-0.5 text-[11px] text-slate-400">{(fileSize / 1024).toFixed(1)} KB</p>}
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-sm font-medium text-[#263B35] group-hover:text-primary group-hover:underline">
+                      {fileName}
+                    </p>
+                    {fileUrl && <ExternalLink size={13} className="shrink-0 text-slate-400 group-hover:text-primary" />}
+                  </div>
+                  {fileSize > 0 && (
+                    <p className="mt-0.5 text-[11px] text-slate-400">{(fileSize / 1024).toFixed(1)} KB</p>
+                  )}
                 </div>
                 <CheckCircle2 size={18} className="shrink-0 text-green-500" />
                 {!disabled && (
                   <button
                     type="button"
-                    onClick={() => handleRemove(file, index)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRequestRemove(file, index);
+                    }}
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                    title="Remove attachment"
                   >
                     <X size={15} />
                   </button>
@@ -170,6 +396,36 @@ const FormAttachment = ({
           })}
         </div>
       )}
+
+      <UserModal
+        isOpen={removeModalOpen}
+        onClose={handleCancelRemove}
+        title="Remove Attachment"
+        description="Please confirm this action before continuing."
+        width="max-w-[420px]"
+      >
+        <div className="space-y-5">
+          <p className="text-[13px] leading-6 text-[#596760]">
+            Are you sure you want to remove this attachment?
+          </p>
+          <div className="flex justify-end gap-3 border-t border-[#E8ECEA] pt-4">
+            <button
+              type="button"
+              onClick={handleCancelRemove}
+              className="h-9 rounded-lg border border-[#D5DEDA] bg-white px-4 text-[12px] font-semibold text-[#596760] transition-all duration-200 hover:bg-[#F6F8F7] hover:text-[#263B35] active:scale-[0.98]"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmRemove}
+              className="h-9 rounded-lg bg-[#F52F3E] px-4 text-[12px] font-semibold text-white shadow-[0_4px_12px_rgba(245,47,62,0.20)] transition-all duration-200 hover:bg-[#E52635] hover:shadow-[0_6px_15px_rgba(245,47,62,0.28)] active:scale-[0.98]"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      </UserModal>
     </div>
   );
 };

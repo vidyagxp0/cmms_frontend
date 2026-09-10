@@ -63,22 +63,45 @@ button:disabled {
     }
     
 }
+/* Reusable Custom Scrollbar Utility */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #A3B8B0 transparent;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-    background: #F0F6F3;
-    border-radius: 8px;
+    background: transparent;
+    border-radius: 9999px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #C2DFD4;
-    border-radius: 8px;
+    background: #A3B8B0;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    background-clip: content-box;
     transition: background 0.2s ease;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #9DC4B5;
+    background: #5B7B70;
 }
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+    background: #185B61;
+}
+
+.custom-scrollbar::-webkit-scrollbar-corner {
+    background: transparent;
+}
+

@@ -22,6 +22,7 @@ import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGri
 import { CALIBRATED_BY_COLUMNS, CALIBRATION_RESULT_GRID } from "./calibrationColumn";
 import "../../../components/ui/disabledFields.css";
 
+import { addSingleAttachment, addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
 import { getProfile } from "../../../services/authApi";
 import {
   getCalibrationUser,
@@ -712,11 +713,17 @@ const CalibrationChildPanel = () => {
             <Form.Item
               name="attachment"
               label="Attachment"
-              valuePropName="fileList"
-              getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+              valuePropName="value"
               className="!mb-4 md:col-span-2"
             >
-              <FormAttachment disabled={!isManagementEditable} />
+              <FormAttachment
+                multiple={true}
+                recordId={recordId}
+                attachmentField="attachment"
+                label="Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isManagementEditable}
+              />
             </Form.Item>
           </div>
         </section>
@@ -731,11 +738,17 @@ const CalibrationChildPanel = () => {
             <Form.Item
               name="implementorAttachment"
               label="Attachment"
-              valuePropName="fileList"
-              getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+              valuePropName="value"
               className="!mb-4 md:col-span-2"
             >
-              <FormAttachment disabled={!isImplementorEditable} />
+              <FormAttachment
+                multiple={false}
+                recordId={recordId}
+                attachmentField="implementorAttachment"
+                label="HOD / Designee Review Attachment"
+                uploadApi={addSingleAttachment}
+                disabled={!isImplementorEditable}
+              />
             </Form.Item>
           </div>
         </section>
@@ -750,11 +763,17 @@ const CalibrationChildPanel = () => {
             <Form.Item
               name="qaReviewAttachment"
               label="Attachment"
-              valuePropName="fileList"
-              getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+              valuePropName="value"
               className="!mb-4 md:col-span-2"
             >
-              <FormAttachment disabled={!isQaReviewEditable && !isQaApprovalEditable} />
+              <FormAttachment
+                multiple={true}
+                recordId={recordId}
+                attachmentField="qaReviewAttachment"
+                label="QA Review Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isQaReviewEditable && !isQaApprovalEditable}
+              />
             </Form.Item>
           </div>
         </section>

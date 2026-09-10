@@ -70,3 +70,9 @@ export const updateCalibrationChild = (id, payload) =>
 
 export const executeCalibrationActivityChild = (id, payload) =>
     api.post(`/user/calibrationManagement-record-stage/${id}`, payload);
+
+export const getCalibrationChildSingleReport = (id) => {
+    return api.get(`/user/calibration-management-singleReport/${id}`, {
+        responseType: "blob",
+    });
+};

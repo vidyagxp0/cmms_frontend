@@ -4,6 +4,7 @@ import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import UserModal from "../../../components/common/UserModal/UserModal";
+import CustomScrollContainer from "../../../components/common/CustomScrollbar/CustomScrollContainer";
 import { updateCalibration } from "../../../services/usersApi/calibrationApi";
 import "../../../components/ui/disabledFields.css";
 
@@ -452,7 +453,7 @@ const CalibrationGrid = ({
           )}
       </div>
 
-      <div className="grid-scroll w-full max-h-[520px] overflow-auto rounded-b-xl">
+      <CustomScrollContainer maxHeight="520px" direction="both" className="w-full rounded-b-xl">
         <table className="w-full min-w-[4300px] border-collapse">
           <thead className="sticky top-0 z-[5]">
             <tr className="bg-[#EEF3F1]">
@@ -558,7 +559,7 @@ const CalibrationGrid = ({
             )}
           </tbody>
         </table>
-      </div>
+      </CustomScrollContainer>
 
       <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">
         <span className="text-[10px] font-medium text-[#899690]">{rows.length} {rows.length === 1 ? "row" : "rows"}</span>
@@ -575,31 +576,6 @@ const CalibrationGrid = ({
         </div>
       </UserModal>
 
-      <style>{`
-        .grid-scroll {
-          scrollbar-width: thin;
-          scrollbar-color: #8FA8A0 #EEF3F1;
-        }
-        .grid-scroll::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
-        }
-        .grid-scroll::-webkit-scrollbar-track {
-          background: #EEF3F1;
-          border-radius: 999px;
-        }
-        .grid-scroll::-webkit-scrollbar-thumb {
-          background: #8FA8A0;
-          border-radius: 999px;
-          border: 1px solid #EEF3F1;
-        }
-        .grid-scroll::-webkit-scrollbar-thumb:hover {
-          background: #66877C;
-        }
-        .grid-scroll::-webkit-scrollbar-corner {
-          background: #EEF3F1;
-        }
-      `}</style>
     </div>
   );
 };

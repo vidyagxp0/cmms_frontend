@@ -5,6 +5,7 @@ import { useParams,useNavigate } from "react-router-dom";
 import { getCalibrationAuditRecord } from "../../../services/usersApi/calibrationApi";
 
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
+import CustomScrollContainer from "../../../components/common/CustomScrollbar/CustomScrollContainer";
 
 const Audit = () => {
   const navigate = useNavigate();
@@ -456,8 +457,7 @@ const Audit = () => {
             </div>
 
             <div className="w-full overflow-hidden rounded-2xl border border-[#E3E8EF] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-              <div className="w-full overflow-x-auto">
-                <div className="max-h-[640px] overflow-y-auto">
+              <CustomScrollContainer maxHeight="640px" direction="both" className="w-full">
                   <table className="w-full min-w-[1300px] border-collapse">
                     {/* HEADER */}
 
@@ -564,8 +564,7 @@ const Audit = () => {
                       )}
                     </tbody>
                   </table>
-                </div>
-              </div>
+              </CustomScrollContainer>
 
               <div className="flex flex-col gap-3 border-t border-[#E3E8EF] bg-[#F9FAFC] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
 

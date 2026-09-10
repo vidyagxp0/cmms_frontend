@@ -3,6 +3,7 @@ import { Plus, Trash2, Table2, GripVertical } from "lucide-react";
 import { Input, InputNumber, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import UserModal from "../UserModal/UserModal";
+import CustomScrollContainer from "../CustomScrollbar/CustomScrollContainer";
 
 const { TextArea } = Input;
 
@@ -230,7 +231,7 @@ const UserDynamicGrid = ({
                 )}
             </div>
 
-            <div className="grid-scroll w-full max-h-[520px] overflow-auto rounded-b-xl">
+            <CustomScrollContainer maxHeight="520px" direction="both" className="w-full rounded-b-xl">
                 <table className="w-full min-w-[900px] border-collapse">
                     <thead className="sticky top-0 z-[5]">
                         <tr className="bg-[#EEF3F1]">
@@ -326,7 +327,7 @@ const UserDynamicGrid = ({
                         )}
                     </tbody>
                 </table>
-            </div>
+            </CustomScrollContainer>
 
             <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">
                 <span className="text-[10px] font-medium text-[#899690]">
@@ -372,31 +373,6 @@ const UserDynamicGrid = ({
                 </div>
             </UserModal>
 
-            <style>{`
-                .grid-scroll {
-                    scrollbar-width: thin;
-                    scrollbar-color: #8FA8A0 #EEF3F1;
-                }
-                .grid-scroll::-webkit-scrollbar {
-                    width: 6px;
-                    height: 6px;
-                }
-                .grid-scroll::-webkit-scrollbar-track {
-                    background: #EEF3F1;
-                    border-radius: 999px;
-                }
-                .grid-scroll::-webkit-scrollbar-thumb {
-                    background: #8FA8A0;
-                    border-radius: 999px;
-                    border: 1px solid #EEF3F1;
-                }
-                .grid-scroll::-webkit-scrollbar-thumb:hover {
-                    background: #66877C;
-                }
-                .grid-scroll::-webkit-scrollbar-corner {
-                    background: #EEF3F1;
-                }
-            `}</style>
         </div>
     );
 };

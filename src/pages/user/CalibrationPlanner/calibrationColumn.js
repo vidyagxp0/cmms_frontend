@@ -6,6 +6,11 @@ const CALIBRATED_BY_COLUMNS = [
     placeholder: "Enter name",
     required: true,
     minWidth: 180,
+    toggleable: true,
+    splitFields: [
+      { key: "reading1", placeholder: "Reading 1" },
+      { key: "reading2", placeholder: "Reading 2" }
+    ]
   },
   {
     key: "result",
@@ -13,6 +18,11 @@ const CALIBRATED_BY_COLUMNS = [
     type: "text",
     placeholder: "Enter result",
     minWidth: 160,
+    toggleable: true,
+    splitFields: [
+      { key: "result1", placeholder: "Result 1" },
+      { key: "result2", placeholder: "Result 2" }
+    ]
   },
   {
     key: "error",

@@ -3,6 +3,7 @@ import { Plus, Trash2, Table2 } from "lucide-react";
 import { Input, InputNumber, Select, DatePicker, Switch } from "antd";
 import dayjs from "dayjs";
 import UserModal from "../UserModal/UserModal";
+import CustomScrollContainer from "../CustomScrollbar/CustomScrollContainer";
 
 const { TextArea } = Input;
 
@@ -336,8 +337,7 @@ const UserDynamicGrid = ({
                 )}
             </div>
 
-            {/* Table */}
-            <div className="grid-scroll w-full max-h-[520px] overflow-auto rounded-b-xl">
+            <CustomScrollContainer maxHeight="520px" direction="both" className="w-full rounded-b-xl">
                 <table className="w-full min-w-[900px] border-collapse">
                     <thead className="sticky top-0 z-[5]">
                         <tr className="bg-[#EEF3F1]">
@@ -440,7 +440,7 @@ const UserDynamicGrid = ({
                         )}
                     </tbody>
                 </table>
-            </div>
+            </CustomScrollContainer>
 
             {/* Footer */}
             <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">

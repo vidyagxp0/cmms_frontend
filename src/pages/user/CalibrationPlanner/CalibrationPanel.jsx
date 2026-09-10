@@ -592,11 +592,11 @@ const CreateCalibrationPanel = () => {
             className="!mb-4 md:col-span-2"
           >
             <FormAttachment
-              multiple={false}
+              multiple={true  }
               recordId={recordId}
               attachmentField="attachment"
               label="Attachment"
-              uploadApi={addSingleAttachment}
+              uploadApi={addMultipleAttachments}
               disabled={!isGeneralEditable}
             />
           </Form.Item>

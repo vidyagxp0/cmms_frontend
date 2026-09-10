@@ -10,8 +10,9 @@ function UserLayout() {
         location.pathname === "/user/cmms-dashboard" ||
         location.pathname === "/user/equipment-dashboard" ||
         location.pathname === "/user/engineering-dashboard" || 
-        location.pathname === "/user/calibration-management-dashboard"; 
-
+        location.pathname === "/user/calibration-management-dashboard" ||
+        location.pathname === "/user/preventive-planner-dashboard" ||
+        location.pathname === "/user/preventive-maintenance-dashboard";
     return (
         <div className={showNav ? "h-screen overflow-hidden bg-[#F7F9F8]" : "min-h-screen bg-[#F7F9F8]"}>
             <UserHeader />

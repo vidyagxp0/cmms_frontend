@@ -17,7 +17,7 @@ const DashboardActionBar = ({
   const location = useLocation();
 
   const actionItems = getDashboardActionItems(location.pathname);
-  console.log("DashboardActionBar: actionItems", actionItems);
+  console.log(actionItems,"actionItems<>")
 
   const handleCreate = () => {
     if (onCreate) {
@@ -54,17 +54,16 @@ const DashboardActionBar = ({
 
         {/* ── CENTER : Group pills (conditional) ──────────────────── */}
         <nav className="flex h-full min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {actionItems.map((item) => {
+          {actionItems.map((item) => {
   const Icon = item.icon;
   const isActive = location.pathname === item.path;
-  const displayLabel = item.actionLabel || item.label;   
 
   return (
     <button
       key={item.id}
       type="button"
       onClick={() => navigate(item.path)}
-      title={displayLabel}                               
+      title={item.label}
       className={`
         group relative flex h-[30px] shrink-0 items-center gap-2
         rounded-full px-2.5 text-[10px] font-semibold tracking-[-0.01em]
@@ -81,7 +80,7 @@ const DashboardActionBar = ({
         strokeWidth={isActive ? 2.3 : 1.8}
         className="transition-transform duration-200 group-hover:scale-[1.08]"
       />
-      <span className="whitespace-nowrap">{displayLabel}</span>   {/* 👈 here */}
+      <span className="whitespace-nowrap">{item.label}</span>
 
       {isActive && (
         <span className="pointer-events-none absolute -bottom-[10px] left-1/2 h-[3px] w-6 -translate-x-1/2 rounded-full bg-[#6ad4c8]" />

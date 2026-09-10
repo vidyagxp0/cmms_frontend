@@ -138,7 +138,7 @@ const DataTableToolbar = ({
             <div className="flex shrink-0 items-center gap-2">
                 {showColumnVisibility && visibleColumns.length > 0 && (
                     <div className="relative">
-                        <button
+                        {/* <button
                             type="button"
                             onClick={() =>
                                 setShowColumns((previous) => !previous)
@@ -171,7 +171,7 @@ const DataTableToolbar = ({
                                     ${showColumns ? "rotate-180" : ""}
                                 `}
                             />
-                        </button>
+                        </button> */}
 
                         {showColumns && (
                             <>

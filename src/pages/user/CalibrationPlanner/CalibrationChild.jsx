@@ -458,10 +458,10 @@ const CalibrationChild = () => {
                 />
               </Form.Item>
               <Form.Item name="previousCalibrationDate" label="Previous Calibration Date" className="!mb-4">
-                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" />
+                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
               </Form.Item>
               <Form.Item name="nextCalibrationDate" label="Next Calibration Date" className="!mb-4">
-                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" />
+                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
               </Form.Item>
             </div>
             <div className="my-9 h-px w-full bg-slate-200" />

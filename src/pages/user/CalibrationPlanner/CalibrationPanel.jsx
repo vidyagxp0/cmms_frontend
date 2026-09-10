@@ -144,25 +144,25 @@ const CreateCalibrationPanel = () => {
   const isCancellationEditable = isStageEditable(6);
   const canCreateChild = Number(activeStageId) === 5 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
 
-useEffect(() => {
-  const fetchProfile = async () => {
-    try {
-      const response = await getProfile();
-      const profile = response?.data?.data;
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await getProfile();
+        const profile = response?.data?.data;
 
-      if (!profile) return;
+        if (!profile) return;
 
-      // Current logged-in user ONLY.
-      // Used for e-sign / activity.
-      setLoginUserId(profile?.id || "");
-      setUserRoles(Array.isArray(profile?.roles) ? profile.roles : []);
-    } catch (error) {
-      console.error("Failed to fetch profile:", error);
-    }
-  };
+        // Current logged-in user ONLY.
+        // Used for e-sign / activity.
+        setLoginUserId(profile?.id || "");
+        setUserRoles(Array.isArray(profile?.roles) ? profile.roles : []);
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+      }
+    };
 
-  fetchProfile();
-}, []);
+    fetchProfile();
+  }, []);
 
   useEffect(() => {
     const fetchEquipment = async () => {
@@ -428,7 +428,9 @@ useEffect(() => {
     if (isSaving || !recordId) return;
     try {
       setIsSaving(true);
-      const mergedValues = { ...values };
+      // Get ALL form values (including hidden tabs) using getFieldsValue(true)
+      const allFormValues = form.getFieldsValue(true);
+      const mergedValues = { ...allFormValues, ...values };
       REQUIRED_FIELDS.forEach(({ name }) => {
         if (!mergedValues[name] && requiredValuesRef.current[name]) mergedValues[name] = requiredValuesRef.current[name];
       });
@@ -491,17 +493,10 @@ useEffect(() => {
   const isCancellationStageActive =
     Number(activeStageId) === 6;
 
-  // const visibleTabs = isCancellationStageActive
-  //   ? [...TABS]
-  //   : TABS.filter(
-  //         (tab) => tab.id !== "cancellation"
-  //     );
-
   const visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")
     : TABS.filter((tab) => tab.id !== "cancellation");
 
-    
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
@@ -536,66 +531,67 @@ useEffect(() => {
 
       <Form
         form={form}
+        preserve={true} // <-- ADD THIS
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
-        {activeTab === "general" && (
-          <section>
-            <SectionHeader title="GENERAL INFORMATION" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              {systemFields.map((field) => (
-                <Form.Item key={field.name} name={field.name} label={field.label} className="!mb-4">
-                  <FormDisabledInput />
-                </Form.Item>
-              ))}
-              <Form.Item
-                name="shortDescription"
-                label={<span>Short Description <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
-                className="!mb-4"
-              >
-                <FormInput placeholder="Enter short description" disabled={!isGeneralEditable} />
+        {/* General Information - always mounted, hidden when not active */}
+        <section style={{ display: activeTab === "general" ? "block" : "none" }}>
+          <SectionHeader title="GENERAL INFORMATION" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            {systemFields.map((field) => (
+              <Form.Item key={field.name} name={field.name} label={field.label} className="!mb-4">
+                <FormDisabledInput />
               </Form.Item>
-            </div>
-            <div className="my-9 h-px w-full bg-slate-200" />
-            <SectionHeader title="CALIBRATION INFORMATION" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="year" label="Year" className="!mb-4">
-                <Input placeholder="Enter Year" disabled={!isGeneralEditable} />
-              </Form.Item>
-              <Form.Item name="block" label="Block" className="!mb-4">
-                <Input placeholder="Enter Block" disabled={!isGeneralEditable} />
-              </Form.Item>
-              <Form.Item name="area" label="Area" className="!mb-4">
-                <Input placeholder="Enter Area" disabled={!isGeneralEditable} />
-              </Form.Item>
-            </div>
-            <div className="mt-5">
-              <CalibrationGrid
-                value={calibrationRows}
-                onChange={setCalibrationRows}
-                equipmentOptions={equipmentOptions}
-                equipmentMap={equipmentMap}
-                equipmentLoading={equipmentLoading}
-                onViewChild={handleViewChild}
-                recordId={recordId}
-                disabled={!isGeneralEditable}
-                canCreateChild={canCreateChild}
-                showAddButton={true}
-              />
-            </div>
-            <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
-              <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isGeneralEditable} />
-            </Form.Item>
+            ))}
             <Form.Item
-              name="attachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
+              name="shortDescription"
+              label={<span>Short Description <span className="text-red-500">*</span></span>}
+              rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
+              className="!mb-4"
             >
-              <FormAttachment
+              <FormInput placeholder="Enter short description" disabled={!isGeneralEditable} />
+            </Form.Item>
+          </div>
+          <div className="my-9 h-px w-full bg-slate-200" />
+          <SectionHeader title="CALIBRATION INFORMATION" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item name="year" label="Year" className="!mb-4">
+              <Input placeholder="Enter Year" disabled={!isGeneralEditable} />
+            </Form.Item>
+            <Form.Item name="block" label="Block" className="!mb-4">
+              <Input placeholder="Enter Block" disabled={!isGeneralEditable} />
+            </Form.Item>
+            <Form.Item name="area" label="Area" className="!mb-4">
+              <Input placeholder="Enter Area" disabled={!isGeneralEditable} />
+            </Form.Item>
+          </div>
+          <div className="mt-5">
+            <CalibrationGrid
+              value={calibrationRows}
+              onChange={setCalibrationRows}
+              equipmentOptions={equipmentOptions}
+              equipmentMap={equipmentMap}
+              equipmentLoading={equipmentLoading}
+              onViewChild={handleViewChild}
+              recordId={recordId}
+              disabled={!isGeneralEditable}
+              canCreateChild={canCreateChild}
+              showAddButton={true}
+            />
+          </div>
+          <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
+            <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isGeneralEditable} />
+          </Form.Item>
+          <Form.Item
+            name="attachment"
+            label="Attachment"
+            valuePropName="value"
+            className="!mb-4 md:col-span-2"
+          >
+            <FormAttachment
               multiple={false}
               recordId={recordId}
               attachmentField="attachment"
@@ -603,44 +599,42 @@ useEffect(() => {
               uploadApi={addSingleAttachment}
               disabled={!isGeneralEditable}
             />
+          </Form.Item>
+        </section>
+
+        {/* HOD Review - always mounted */}
+        <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
+          <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item name="hodReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+              <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isHodEditable} />
             </Form.Item>
-          </section>
-        )}
+            <Form.Item
+              name="hodReviewAttachment"
+              label="Attachment"
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={false}
+                recordId={recordId}
+                attachmentField="hod_review_attachment"
+                label="HOD / Designee Review Attachment"
+                uploadApi={addSingleAttachment}
+                disabled={!isHodEditable}
+              />
+            </Form.Item>
+          </div>
+        </section>
 
-        {activeTab === "hod" && (
-          <section>
-            <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="hodReviewComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isHodEditable} />
-              </Form.Item>
-              <Form.Item
-                name="hodReviewAttachment"
-                label="Attachment"
-                valuePropName="value"
-                className="!mb-4 md:col-span-2"
-              >
-                <FormAttachment
-                  multiple={false}
-                  recordId={recordId}
-                  attachmentField="hod_review_attachment"
-                  label="HOD / Designee Review Attachment"
-                  uploadApi={addSingleAttachment}
-                  disabled={!isHodEditable}
-                />
-              </Form.Item>
-            </div>
-          </section>
-        )}
-
-        {activeTab === "user-dept-review" && (
-          <section>
-            <SectionHeader title="USER DEPT REVIEW (USER DEPT)" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="userDeptReviewComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isUserDeptEditable} />
-              </Form.Item>
-              <Form.Item
+        {/* User Dept Review - always mounted */}
+        <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
+          <SectionHeader title="USER DEPT REVIEW (USER DEPT)" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item name="userDeptReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+              <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isUserDeptEditable} />
+            </Form.Item>
+            <Form.Item
               name="userDeptReviewAttachment"
               label="Attachment"
               valuePropName="value"
@@ -655,17 +649,16 @@ useEffect(() => {
                 disabled={!isUserDeptEditable}
               />
             </Form.Item>
-            </div>
-          </section>
-        )}
+          </div>
+        </section>
 
-        {activeTab === "qa-review" && (
-          <section>
-            <SectionHeader title="QA REVIEW" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isQaReviewEditable} />
-              </Form.Item>
+        {/* QA Review - always mounted */}
+        <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
+          <SectionHeader title="QA REVIEW" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+              <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isQaReviewEditable} />
+            </Form.Item>
             <Form.Item
               name="qaReviewAttachment"
               label="Attachment"
@@ -681,27 +674,24 @@ useEffect(() => {
                 disabled={!isQaReviewEditable}
               />
             </Form.Item>
-            </div>
-          </section>
-        )}
+          </div>
+        </section>
 
-        {activeTab === "cancellation" &&
-        Number(activeStageId) === 6 && (
-        <section>
-            <SectionHeader title="CANCELLATION" />
-
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-                <Form.Item
-                    name="cancellationRemark"
-                    label="Remark"
-                    className="!mb-4 md:col-span-2"
-                >
-                    <FormTextArea
-                        rows={5}
-                        placeholder="Enter cancellation remark..."
-                        // disabled={!isCancellationEditable}
-                    />
-                </Form.Item>
+        {/* Cancellation - always mounted (hidden unless stage 6) */}
+        <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
+          <SectionHeader title="CANCELLATION" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item
+              name="cancellationRemark"
+              label="Remark"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormTextArea
+                rows={5}
+                placeholder="Enter cancellation remark..."
+                // disabled={!isCancellationEditable}
+              />
+            </Form.Item>
             <Form.Item
               name="cancellationAttachment"
               label="Attachment"
@@ -717,52 +707,49 @@ useEffect(() => {
                 disabled={!isCancellationEditable}
               />
             </Form.Item>
-
-            </div>
+          </div>
         </section>
-    )}
 
-        {activeTab === "activity" && (
-          <section>
-            <SectionHeader title="ACTIVITY LOG" />
-            <div className="mt-5 space-y-4">
-              {activityLogsLoading ? (
-                <Skeleton variant="activityLog" />
-              ) : activityLogs.length === 0 ? (
-                <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">No activity history found.</div>
-              ) : (
-                activityLogs.map((log) => (
-                  <div key={log.id} className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]">
-                    <div className="mb-5">
-                      <p className="text-[13px] font-semibold text-[#3E4A5C]">Activity Name</p>
-                      <p className="mt-1 text-[14px] font-semibold text-[#182234]">{log.activity_name || "—"}</p>
+        {/* Activity Log - always mounted */}
+        <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
+          <SectionHeader title="ACTIVITY LOG" />
+          <div className="mt-5 space-y-4">
+            {activityLogsLoading ? (
+              <Skeleton variant="activityLog" />
+            ) : activityLogs.length === 0 ? (
+              <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">No activity history found.</div>
+            ) : (
+              activityLogs.map((log) => (
+                <div key={log.id} className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]">
+                  <div className="mb-5">
+                    <p className="text-[13px] font-semibold text-[#3E4A5C]">Activity Name</p>
+                    <p className="mt-1 text-[14px] font-semibold text-[#182234]">{log.activity_name || "—"}</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Performed By</p>
+                      <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                        <span className="text-[14px] text-[#526071]">{log.performed_by || "—"}</span>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                      <div>
-                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Performed By</p>
-                        <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                          <span className="text-[14px] text-[#526071]">{log.performed_by || "—"}</span>
-                        </div>
+                    <div>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Date Performed</p>
+                      <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                        <span className="text-[14px] text-[#526071]">{log.performed_at || "—"}</span>
                       </div>
-                      <div>
-                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Date Performed</p>
-                        <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                          <span className="text-[14px] text-[#526071]">{log.performed_at || "—"}</span>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Comments</p>
-                        <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
-                          <p className="break-words text-[14px] leading-5 text-[#526071]">{log.comment || "—"}</p>
-                        </div>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Comments</p>
+                      <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
+                        <p className="break-words text-[14px] leading-5 text-[#526071]">{log.comment || "—"}</p>
                       </div>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </section>
-        )}
+                </div>
+              ))
+            )}
+          </div>
+        </section>
       </Form>
 
       <FloatingActionButtons

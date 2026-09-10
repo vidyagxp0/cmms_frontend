@@ -14,6 +14,7 @@ import Audit from "../pages/user/Audit/Audit";
 import CalibrationChild from "../pages/user/CalibrationPlanner/CalibrationChild";
 import CalibrationChildPanel from "../pages/user/CalibrationPlanner/CalibrationChildPanel";
 import CreateEquipment from "../pages/user/Equipment/CreateEquipment";
+import ManagementDashboard from "../pages/user/CalibrationManagement/ManagementDashorad";
 
 function UserRoutes() {
   return (
@@ -40,6 +41,7 @@ function UserRoutes() {
         {/* Engineering and Calibration Child Routes*/}
         <Route path="calibration-management-create/:processId/:recordId" element={<CalibrationChild/>} />
         <Route path="calibration-management-panel/:processId/:recordId" element={<CalibrationChildPanel/>} />
+        <Route path="calibration-management-dashboard" element={<ManagementDashboard />} />
 
         {/* <Route path="equipment-panel/:id" element={<EquipmentPanel/>} /> */}
       </Route>

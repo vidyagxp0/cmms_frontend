@@ -19,9 +19,8 @@ import FormAttachment from "../../../components/common/Attachment/FormAttachment
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGrid";
-import  { CALIBRATED_BY_COLUMNS, CALIBRATION_RESULT_GRID } from "./calibrationColumn";
+import { CALIBRATED_BY_COLUMNS, CALIBRATION_RESULT_GRID } from "./calibrationColumn";
 import "../../../components/ui/disabledFields.css";
-
 
 import { getProfile } from "../../../services/authApi";
 import {
@@ -196,23 +195,23 @@ const CalibrationChildPanel = () => {
   const isQaReviewEditable = isStageEditable(STAGE_IDS.qaReview);
   const isQaApprovalEditable = isStageEditable(STAGE_IDS.qaApproval);
 
-useEffect(() => {
-  const fetchProfile = async () => {
-    try {
-      const response = await getProfile();
-      const profile = response?.data?.data;
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await getProfile();
+        const profile = response?.data?.data;
 
-      if (!profile) return;
+        if (!profile) return;
 
-      // Current logged-in user ONLY for e-sign/activity.
-      setLoginUserId(profile?.id || "");
-    } catch (error) {
-      console.error("Failed to fetch profile:", error);
-    }
-  };
+        // Current logged-in user ONLY for e-sign/activity.
+        setLoginUserId(profile?.id || "");
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+      }
+    };
 
-  fetchProfile();
-}, []);
+    fetchProfile();
+  }, []);
 
   useEffect(() => {
     const fetchEquipment = async () => {
@@ -468,10 +467,6 @@ useEffect(() => {
 
   const handleTabChange = (tabId) => {
     if (tabId === "activity") { setActiveTab(tabId); return; }
-    // if (tabId !== "management" && !canPerformActivity) {
-    //   toast.warning("Please fill all mandatory fields and save the record before accessing other tabs.");
-    //   return;
-    // }
     setActiveTab(tabId);
   };
 
@@ -505,7 +500,9 @@ useEffect(() => {
     if (isSaving || !recordId) return;
     try {
       setIsSaving(true);
+      // Get ALL form values (including hidden tabs) using getFieldsValue(true)
       const allFormValues = form.getFieldsValue(true);
+      // Merge with values passed from onFinish (they are the same, but safe)
       const mergedValues = { ...allFormValues, ...values };
       const processData = buildProcessData(mergedValues, systemValues, hodUsers, qaReviewers, qaApprovers);
       
@@ -610,204 +607,197 @@ useEffect(() => {
         onFinish={handleSubmit}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
-        {activeTab === "management" && (
-          <section>
-            <SectionHeader title="SYSTEM INFORMATION" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="recordNumber" label="Record Number" className="!mb-4"><FormDisabledInput /></Form.Item>
-              <Form.Item name="siteLocationCode" label="Site / Location Code" className="!mb-4"><FormDisabledInput /></Form.Item>
-              <Form.Item name="initiator" label="Initiator" className="!mb-4"><FormDisabledInput /></Form.Item>
-              <Form.Item name="dateOfInitiation" label="Date of Initiation" className="!mb-4"><FormDisabledInput /></Form.Item>
-              <Form.Item name="initiationDepartment" label="Initiation Department" className="!mb-4"><FormDisabledInput /></Form.Item>
-              <Form.Item name="shortDescription" label="Short Description" className="!mb-4">
-                <FormInput placeholder="Enter short description" disabled={!isManagementEditable} />
-              </Form.Item>
-            </div>
-            <div className="my-9 h-px w-full bg-slate-200" />
-            <SectionHeader title="INSTRUMENT / EQUIPMENT DETAILS" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="instrumentName" label="Instrument Name" className="!mb-4">
-                <FormSelect placeholder={equipmentLoading ? "Loading..." : "Select Instrument"} options={equipmentOptions} disabled={equipmentLoading || !isManagementEditable} />
-              </Form.Item>
-              <Form.Item name="instrumentId" label="Instrument ID No." className="!mb-4">
-                <FormInput placeholder="e.g. EQ-001" disabled={!isManagementEditable} />
-              </Form.Item>
-              <Form.Item name="location" label="Location" className="!mb-4">
-                <FormInput placeholder="Lab A, Room 101" disabled={!isManagementEditable} />
-              </Form.Item>
-              <Form.Item name="make" label="Make" className="!mb-4">
-                <FormInput placeholder="e.g. Fluke" disabled={!isManagementEditable} />
-              </Form.Item>
-              <Form.Item name="model" label="Model" className="!mb-4">
-                <FormInput placeholder="e.g. 87V" disabled={!isManagementEditable} />
-              </Form.Item>
-              <Form.Item name="instrumentRange" label="Instrument Range" className="!mb-4">
-                <FormInput placeholder="e.g. 0-1000 V" disabled={!isManagementEditable} />
-              </Form.Item>
-              <Form.Item name="leastCount" label="Least Count" className="!mb-4">
-                <FormInput placeholder="e.g. 0.01" disabled={!isManagementEditable} />
-              </Form.Item>
-              <Form.Item name="accuracy" label="Accuracy" className="!mb-4">
-                <FormInput placeholder="e.g. ±0.5%" disabled={!isManagementEditable} />
-              </Form.Item>
-              <Form.Item name="calibrationTestPoints" label="Calibration test points" className="!mb-4">
-                <FormInput placeholder="e.g. 0, 50, 100" disabled={!isManagementEditable} />
-              </Form.Item>
-              <Form.Item name="operatingRange" label="Operating Range" className="!mb-4">
-                <FormInput placeholder="e.g. 0-500 V" disabled={!isManagementEditable} />
-              </Form.Item>
-              <Form.Item name="envTemperature" label="Environmental Condition Temperature" className="!mb-4">
-                {/* <FormInput placeholder="e.g. 25°C ± 2°C" disabled={!isManagementEditable} /> */}
-                  <SymbolicInput
-                  placeholder="e.g. 25"
-                  defaultDiscipline="Temperature"
-                  disabled={!isManagementEditable}
-                />
-              </Form.Item>
-              <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
-                {/* <FormInput placeholder="e.g. 45% RH ± 5%" disabled={!isManagementEditable} /> */}
-                  <SymbolicInput
-                  placeholder="e.g. 45% RH ± 5%"
-                  defaultDiscipline="Humidity"
-                  disabled={!isManagementEditable}
-                />
-              </Form.Item>
-              <Form.Item name="previousCalibrationDate" label="Previous Calibration Date" className="!mb-4">
-                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled={!isManagementEditable} />
-              </Form.Item>
-              <Form.Item name="nextCalibrationDate" label="Next Calibration Date" className="!mb-4">
-                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled={!isManagementEditable} />
-              </Form.Item>
-            </div>
-            <div className="my-9 h-px w-full bg-slate-200" />
-            <SectionHeader title="CALIBRATION RESULT" />
-            <div className="mt-4">
-              <UserDynamicGrid
-                name="Calibration Results"
-                description="Parameter-wise calibration results"
-                columns={CALIBRATED_BY_COLUMNS}
-                value={calibrationResultRows}
-                onChange={setCalibrationResultRows}
-                allowAdd={isManagementEditable}
-                allowDelete={isManagementEditable}
-                addButtonLabel="Add Parameter"
-                minRows={0}
-                rowKey="_rowId"
+        {/* Management tab - always mounted, hidden when not active */}
+        <section style={{ display: activeTab === "management" ? "block" : "none" }}>
+          <SectionHeader title="SYSTEM INFORMATION" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item name="recordNumber" label="Record Number" className="!mb-4"><FormDisabledInput /></Form.Item>
+            <Form.Item name="siteLocationCode" label="Site / Location Code" className="!mb-4"><FormDisabledInput /></Form.Item>
+            <Form.Item name="initiator" label="Initiator" className="!mb-4"><FormDisabledInput /></Form.Item>
+            <Form.Item name="dateOfInitiation" label="Date of Initiation" className="!mb-4"><FormDisabledInput /></Form.Item>
+            <Form.Item name="initiationDepartment" label="Initiation Department" className="!mb-4"><FormDisabledInput /></Form.Item>
+            <Form.Item name="shortDescription" label="Short Description" className="!mb-4">
+              <FormInput placeholder="Enter short description" disabled={!isManagementEditable} />
+            </Form.Item>
+          </div>
+          <div className="my-9 h-px w-full bg-slate-200" />
+          <SectionHeader title="INSTRUMENT / EQUIPMENT DETAILS" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item name="instrumentName" label="Instrument Name" className="!mb-4">
+              <FormSelect placeholder={equipmentLoading ? "Loading..." : "Select Instrument"} options={equipmentOptions} disabled={equipmentLoading || !isManagementEditable} />
+            </Form.Item>
+            <Form.Item name="instrumentId" label="Instrument ID No." className="!mb-4">
+              <FormInput placeholder="e.g. EQ-001" disabled={!isManagementEditable} />
+            </Form.Item>
+            <Form.Item name="location" label="Location" className="!mb-4">
+              <FormInput placeholder="Lab A, Room 101" disabled={!isManagementEditable} />
+            </Form.Item>
+            <Form.Item name="make" label="Make" className="!mb-4">
+              <FormInput placeholder="e.g. Fluke" disabled={!isManagementEditable} />
+            </Form.Item>
+            <Form.Item name="model" label="Model" className="!mb-4">
+              <FormInput placeholder="e.g. 87V" disabled={!isManagementEditable} />
+            </Form.Item>
+            <Form.Item name="instrumentRange" label="Instrument Range" className="!mb-4">
+              <FormInput placeholder="e.g. 0-1000 V" disabled={!isManagementEditable} />
+            </Form.Item>
+            <Form.Item name="leastCount" label="Least Count" className="!mb-4">
+              <FormInput placeholder="e.g. 0.01" disabled={!isManagementEditable} />
+            </Form.Item>
+            <Form.Item name="accuracy" label="Accuracy" className="!mb-4">
+              <FormInput placeholder="e.g. ±0.5%" disabled={!isManagementEditable} />
+            </Form.Item>
+            <Form.Item name="calibrationTestPoints" label="Calibration test points" className="!mb-4">
+              <FormInput placeholder="e.g. 0, 50, 100" disabled={!isManagementEditable} />
+            </Form.Item>
+            <Form.Item name="operatingRange" label="Operating Range" className="!mb-4">
+              <FormInput placeholder="e.g. 0-500 V" disabled={!isManagementEditable} />
+            </Form.Item>
+            <Form.Item name="envTemperature" label="Environmental Condition Temperature" className="!mb-4">
+              <SymbolicInput
+                placeholder="e.g. 25"
+                defaultDiscipline="Temperature"
+                disabled={!isManagementEditable}
               />
-            </div>
-            <div className="mt-4">
-              <UserDynamicGrid
-                name="Master Instruments Details"
-                // description="Parameter-wise calibration results"
-                columns={CALIBRATION_RESULT_GRID}
-                value={calibrationResultTest}
-                onChange={setCalibrationResultTest}
-                allowAdd={isManagementEditable}
-                allowDelete={isManagementEditable}
-                addButtonLabel="Add Parameter"
-                minRows={0}
-                rowKey="_rowId"
+            </Form.Item>
+            <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
+              <SymbolicInput
+                placeholder="e.g. 45% RH ± 5%"
+                defaultDiscipline="Humidity"
+                disabled={!isManagementEditable}
               />
-            </div>
-            <div className="my-9 h-px w-full bg-slate-200" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={4} placeholder="Additional comments..." disabled={!isManagementEditable} />
-              </Form.Item>
-              <Form.Item
-                name="attachment"
-                label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
-                className="!mb-4 md:col-span-2"
-              >
-                <FormAttachment disabled={!isManagementEditable} />
-              </Form.Item>
-            </div>
-          </section>
-        )}
+            </Form.Item>
+            <Form.Item name="previousCalibrationDate" label="Previous Calibration Date" className="!mb-4">
+              <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
+            </Form.Item>
+            <Form.Item name="nextCalibrationDate" label="Next Calibration Date" className="!mb-4">
+              <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
+            </Form.Item>
+          </div>
+          <div className="my-9 h-px w-full bg-slate-200" />
+          <SectionHeader title="CALIBRATION RESULT" />
+          <div className="mt-4">
+            <UserDynamicGrid
+              name="Calibration Results"
+              description="Parameter-wise calibration results"
+              columns={CALIBRATED_BY_COLUMNS}
+              value={calibrationResultRows}
+              onChange={setCalibrationResultRows}
+              allowAdd={isManagementEditable}
+              allowDelete={isManagementEditable}
+              addButtonLabel="Add Parameter"
+              minRows={0}
+              rowKey="_rowId"
+            />
+          </div>
+          <div className="mt-4">
+            <UserDynamicGrid
+              name="Master Instruments Details"
+              columns={CALIBRATION_RESULT_GRID}
+              value={calibrationResultTest}
+              onChange={setCalibrationResultTest}
+              allowAdd={isManagementEditable}
+              allowDelete={isManagementEditable}
+              addButtonLabel="Add Parameter"
+              minRows={0}
+              rowKey="_rowId"
+            />
+          </div>
+          <div className="my-9 h-px w-full bg-slate-200" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
+              <FormTextArea rows={4} placeholder="Additional comments..." disabled={!isManagementEditable} />
+            </Form.Item>
+            <Form.Item
+              name="attachment"
+              label="Attachment"
+              valuePropName="fileList"
+              getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment disabled={!isManagementEditable} />
+            </Form.Item>
+          </div>
+        </section>
 
-        {activeTab === "implementor" && (
-          <section>
-            <SectionHeader title="HOD / DESIGNEE REVIEW" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="implementorComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter HOD / Designee review comments..." disabled={!isImplementorEditable} />
-              </Form.Item>
-              <Form.Item
-                name="implementorAttachment"
-                label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
-                className="!mb-4 md:col-span-2"
-              >
-                <FormAttachment disabled={!isImplementorEditable} />
-              </Form.Item>
-            </div>
-          </section>
-        )}
+        {/* Implementor tab - always mounted, hidden when not active */}
+        <section style={{ display: activeTab === "implementor" ? "block" : "none" }}>
+          <SectionHeader title="HOD / DESIGNEE REVIEW" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item name="implementorComments" label="Comments" className="!mb-4 md:col-span-2">
+              <FormTextArea rows={5} placeholder="Enter HOD / Designee review comments..." disabled={!isImplementorEditable} />
+            </Form.Item>
+            <Form.Item
+              name="implementorAttachment"
+              label="Attachment"
+              valuePropName="fileList"
+              getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment disabled={!isImplementorEditable} />
+            </Form.Item>
+          </div>
+        </section>
 
-        {activeTab === "qa-review" && (
-          <section>
-            <SectionHeader title="QA REVIEW & APPROVAL" />
-            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={5} placeholder="Enter QA review and approval comments..." disabled={!isQaReviewEditable && !isQaApprovalEditable} />
-              </Form.Item>
-              <Form.Item
-                name="qaReviewAttachment"
-                label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
-                className="!mb-4 md:col-span-2"
-              >
-                <FormAttachment disabled={!isQaReviewEditable && !isQaApprovalEditable} />
-              </Form.Item>
-            </div>
-          </section>
-        )}
+        {/* QA Review tab - always mounted, hidden when not active */}
+        <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
+          <SectionHeader title="QA REVIEW & APPROVAL" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+              <FormTextArea rows={5} placeholder="Enter QA review and approval comments..." disabled={!isQaReviewEditable && !isQaApprovalEditable} />
+            </Form.Item>
+            <Form.Item
+              name="qaReviewAttachment"
+              label="Attachment"
+              valuePropName="fileList"
+              getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment disabled={!isQaReviewEditable && !isQaApprovalEditable} />
+            </Form.Item>
+          </div>
+        </section>
 
-        {activeTab === "activity" && (
-          <section>
-            <SectionHeader title="ACTIVITY LOG" />
-            <div className="mt-5 space-y-4">
-              {activityLogsLoading ? (
-                <Skeleton variant="activityLog" />
-              ) : activityLogs.length === 0 ? (
-                <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">No activity history found.</div>
-              ) : (
-                activityLogs.map((log) => (
-                  <div key={log.id} className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]">
-                    <div className="mb-5">
-                      <p className="text-[13px] font-semibold text-[#3E4A5C]">Activity Name</p>
-                      <p className="mt-1 text-[14px] font-semibold text-[#182234]">{log.activity_name || "—"}</p>
+        {/* Activity Log tab - no form fields, but we keep it hidden/shown for consistency */}
+        <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
+          <SectionHeader title="ACTIVITY LOG" />
+          <div className="mt-5 space-y-4">
+            {activityLogsLoading ? (
+              <Skeleton variant="activityLog" />
+            ) : activityLogs.length === 0 ? (
+              <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">No activity history found.</div>
+            ) : (
+              activityLogs.map((log) => (
+                <div key={log.id} className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]">
+                  <div className="mb-5">
+                    <p className="text-[13px] font-semibold text-[#3E4A5C]">Activity Name</p>
+                    <p className="mt-1 text-[14px] font-semibold text-[#182234]">{log.activity_name || "—"}</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Performed By</p>
+                      <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                        <span className="text-[14px] text-[#526071]">{log.performed_by || "—"}</span>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                      <div>
-                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Performed By</p>
-                        <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                          <span className="text-[14px] text-[#526071]">{log.performed_by || "—"}</span>
-                        </div>
+                    <div>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Date Performed</p>
+                      <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                        <span className="text-[14px] text-[#526071]">{log.performed_at || "—"}</span>
                       </div>
-                      <div>
-                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Date Performed</p>
-                        <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                          <span className="text-[14px] text-[#526071]">{log.performed_at || "—"}</span>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Comments</p>
-                        <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
-                          <p className="break-words text-[14px] leading-5 text-[#526071]">{log.comment || "—"}</p>
-                        </div>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Comments</p>
+                      <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
+                        <p className="break-words text-[14px] leading-5 text-[#526071]">{log.comment || "—"}</p>
                       </div>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </section>
-        )}
+                </div>
+              ))
+            )}
+          </div>
+        </section>
       </Form>
 
       <FloatingActionButtons

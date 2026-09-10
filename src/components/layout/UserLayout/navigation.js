@@ -21,10 +21,10 @@ export const DASHBOARD_NAV_ITEMS = [
     icon: HardHat,
   },
   // Placeholder for future "Calibration Management"
-  // {
-  //   id: "calibration",
-  //   label: "Calibration Management",
-  //   path: "/user/calibration-dashboard",
-  //   icon: SomeIcon,
-  // },
+  {
+    id: "calibration",
+    label: "Calibration Management",
+    path: "/user/calibration-management-dashboard",
+    icon: HardHat,
+  },
 ];

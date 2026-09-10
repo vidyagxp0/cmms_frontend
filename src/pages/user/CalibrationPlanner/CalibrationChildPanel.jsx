@@ -701,6 +701,7 @@ const CalibrationChildPanel = () => {
               allowDelete={isManagementEditable}
               addButtonLabel="Add Parameter"
               minRows={0}
+              maxRows={2}
               rowKey="_rowId"
             />
           </div>

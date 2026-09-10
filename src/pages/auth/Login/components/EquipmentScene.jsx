@@ -1,464 +1,289 @@
 import React from "react";
 import { motion } from "framer-motion";
 import {
-  Activity,
-  Wrench,
-  Gauge,
   ShieldCheck,
-  Cog,
+  Wrench,
 } from "lucide-react";
-
-const FloatingBubble = ({
-  size = "h-2 w-2",
-  position = "",
-  duration = 6,
-  delay = 0,
-}) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{
-        opacity: [0.15, 0.5, 0.15],
-        y: [0, -18, 0],
-        x: [0, 6, 0],
-        scale: [1, 1.15, 1],
-      }}
-      transition={{
-        duration,
-        delay,
-        repeat: Infinity,
-        ease: "easeInOut",
-      }}
-      className={`absolute ${position} ${size} rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,0.45)]`}
-    />
-  );
-};
-
-const FloatingInfo = ({
-  icon: Icon,
-  text,
-  position,
-  delay = 0,
-}) => {
-  return (
-    <motion.div
-      initial={{
-        opacity: 0,
-        y: 8,
-      }}
-      animate={{
-        opacity: [0.35, 0.65, 0.35],
-        y: [0, -6, 0],
-      }}
-      transition={{
-        duration: 5,
-        delay,
-        repeat: Infinity,
-        ease: "easeInOut",
-      }}
-      className={`absolute ${position} z-20 flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.035] px-3 py-2 backdrop-blur-md`}
-    >
-      <Icon className="h-3.5 w-3.5 text-cyan-300/70" />
-
-      <span className="text-[10px] font-medium text-white/35">
-        {text}
-      </span>
-    </motion.div>
-  );
-};
 
 const EquipmentScene = () => {
   return (
-    <div className="relative hidden h-screen w-1/2 overflow-hidden lg:block">
-      {/* Background */}
-      <div className="absolute inset-0 bg-[#061b2e]" />
+    /*
+      Outer wrapper: carries drop-shadow so the curved edge
+      casts a shadow onto the right panel sitting behind it.
+      clip-path is on the inner div so the shadow renders outside the clip.
+    */
+    <div
+      className="relative hidden h-screen w-[54%] lg:block"
+      style={{
+        filter: "drop-shadow(12px 0px 22px rgba(0,0,0,0.42))",
+      }}
+    >
+      {/* =====================================================
+          SAME CURVE — UNCHANGED
+      ===================================================== */}
 
-      <div className="absolute inset-0 bg-gradient-to-br from-[#082a47] via-[#071f36] to-[#041321]" />
-
-      <motion.div
-        animate={{
-          x: [0, 40, 0],
-          y: [0, 30, 0],
-          scale: [1, 1.15, 1],
-          opacity: [0.16, 0.26, 0.16],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute -left-[180px] -top-[180px] h-[520px] w-[520px] rounded-full bg-cyan-400/20 blur-[100px]"
-      />
-
-      <motion.div
-        animate={{
-          x: [0, -40, 0],
-          y: [0, -30, 0],
-          scale: [1, 1.12, 1],
-          opacity: [0.1, 0.2, 0.1],
-        }}
-        transition={{
-          duration: 12,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute -bottom-[180px] -right-[150px] h-[500px] w-[500px] rounded-full bg-blue-500/20 blur-[110px]"
-      />
+      <svg width="0" height="0" style={{ position: "absolute" }}>
+        <defs>
+          <clipPath
+            id="left-panel-clip"
+            clipPathUnits="objectBoundingBox"
+          >
+            <path d="M 0,0 L 1,0 C 0.94,0.15 0.88,0.32 0.88,0.5 C 0.88,0.68 0.94,0.85 1,1 L 0,1 Z" />
+          </clipPath>
+        </defs>
+      </svg>
 
       <div
-        className="absolute inset-0 opacity-[0.045]"
+        className="relative h-full w-full overflow-hidden bg-[#101820]"
         style={{
-          backgroundImage: `
-                linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)
-              `,
-          backgroundSize: "55px 55px",
+          clipPath: "url(#left-panel-clip)",
         }}
-      />
-
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{
-          duration: 45,
-          repeat: Infinity,
-          ease: "linear",
-        }}
-        className="absolute left-1/2 top-[53%] h-[570px] w-[570px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/[0.06]"
-      />
-
-      <motion.div
-        animate={{ rotate: -360 }}
-        transition={{
-          duration: 35,
-          repeat: Infinity,
-          ease: "linear",
-        }}
-        className="absolute left-1/2 top-[53%] h-[430px] w-[430px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-blue-300/[0.08]"
-      />
-
-      <motion.div
-        animate={{
-          rotate: 360,
-          scale: [1, 1.03, 1],
-        }}
-        transition={{
-          rotate: {
-            duration: 25,
-            repeat: Infinity,
-            ease: "linear",
-          },
-          scale: {
-            duration: 5,
-            repeat: Infinity,
-            ease: "easeInOut",
-          },
-        }}
-        className="absolute left-1/2 top-[53%] h-[310px] w-[310px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/[0.1]"
-      />
-
-      <FloatingBubble
-        size="h-3 w-3"
-        position="left-[18%] top-[22%]"
-        duration={5}
-        delay={0}
-      />
-
-      <FloatingBubble
-        size="h-2 w-2"
-        position="left-[28%] top-[72%]"
-        duration={6}
-        delay={1}
-      />
-
-      <FloatingBubble
-        size="h-4 w-4"
-        position="right-[20%] top-[24%]"
-        duration={7}
-        delay={0.5}
-      />
-
-      <FloatingBubble
-        size="h-2.5 w-2.5"
-        position="right-[13%] top-[65%]"
-        duration={5.5}
-        delay={1.5}
-      />
-
-      <FloatingBubble
-        size="h-5 w-5"
-        position="left-[13%] bottom-[18%]"
-        duration={8}
-        delay={0.8}
-      />
-
-      <FloatingBubble
-        size="h-2 w-2"
-        position="right-[32%] bottom-[15%]"
-        duration={5}
-        delay={2}
-      />
-
-      <FloatingBubble
-        size="h-3 w-3"
-        position="left-[40%] top-[12%]"
-        duration={6}
-        delay={1.2}
-      />
-
-      <FloatingBubble
-        size="h-2 w-2"
-        position="right-[8%] top-[42%]"
-        duration={7}
-        delay={0.4}
-      />
-
-      <div className="absolute left-[18%] top-[35%] h-px w-[120px] rotate-[25deg] bg-gradient-to-r from-transparent via-cyan-300/20 to-transparent" />
-
-      <div className="absolute right-[15%] top-[38%] h-px w-[130px] rotate-[-25deg] bg-gradient-to-r from-transparent via-blue-300/20 to-transparent" />
-
-      <div className="absolute bottom-[27%] left-[20%] h-px w-[150px] rotate-[-18deg] bg-gradient-to-r from-transparent via-cyan-300/15 to-transparent" />
-
-      <motion.div
-        initial={{
-          opacity: 0,
-          y: -15,
-        }}
-        animate={{
-          opacity: 1,
-          y: 0,
-        }}
-        transition={{
-          duration: 0.7,
-        }}
-        className="absolute left-10 top-9 z-30 flex items-center gap-3"
       >
-        <motion.div
-          whileHover={{
-            scale: 1.08,
-            rotate: 5,
+        {/* =====================================================
+            BACKGROUND IMAGE
+        ===================================================== */}
+
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/cmms_bg.jpg')",
+            transform: "scale(1.015)",
           }}
-          className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/20 bg-white/[0.07] shadow-[0_0_30px_rgba(34,211,238,0.08)] backdrop-blur-xl"
+        />
+
+        {/* =====================================================
+            NATURAL DARK PHOTO TREATMENT
+        ===================================================== */}
+
+        {/* Overall muted navy tone */}
+
+        <div className="absolute inset-0 bg-[#142533]/58" />
+
+        {/* Darker left side for text readability */}
+
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0b1721]/88 via-[#142633]/68 to-[#1a3443]/30" />
+
+        {/* Slight top protection */}
+
+        <div className="absolute inset-x-0 top-0 h-[34%] bg-gradient-to-b from-[#08131d]/65 to-transparent" />
+
+        {/* Bottom photographic fade */}
+
+        <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-[#0b151d]/92 via-[#0d1c25]/48 to-transparent" />
+
+        {/* =====================================================
+            SUBTLE PHOTO DEPTH
+        ===================================================== */}
+
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-[#071117]/35" />
+
+        {/* Very soft, non-neon light balancing */}
+
+        <div className="absolute -left-24 -top-24 h-[420px] w-[420px] rounded-full bg-slate-300/[0.035] blur-[100px]" />
+
+        <div className="absolute -bottom-40 left-[35%] h-[460px] w-[460px] rounded-full bg-slate-900/[0.18] blur-[110px]" />
+
+        {/* =====================================================
+            TOP BRAND AREA
+        ===================================================== */}
+
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: -15,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            duration: 0.7,
+          }}
+          className="absolute left-10 top-9 z-30 flex items-center gap-3"
         >
-          <Wrench className="h-5 w-5 text-cyan-300" />
+          {/* Brand mark */}
+
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-[#13222c]/70 shadow-lg backdrop-blur-md">
+            <Wrench className="h-5 w-5 text-[#9cc9cf]" />
+          </div>
+
+          <div>
+            <h1
+              className="text-xl font-extrabold tracking-tight text-white"
+              style={{
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+              }}
+            >
+              CMMS
+            </h1>
+
+            <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-white/45">
+              Maintenance Intelligence
+            </p>
+          </div>
         </motion.div>
 
-        <div>
-          <h1
-            className="text-xl font-extrabold tracking-tight text-white"
+        {/* =====================================================
+            SMALL PHOTO LABEL
+        ===================================================== */}
+
+        <motion.div
+          initial={{
+            opacity: 0,
+          }}
+          animate={{
+            opacity: 1,
+          }}
+          transition={{
+            duration: 0.8,
+            delay: 0.2,
+          }}
+          className="absolute right-[13%] top-10 z-20 hidden items-center gap-2 xl:flex"
+        >
+          <div className="h-px w-8 bg-white/20" />
+
+          <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-white/35">
+            Operations Platform
+          </span>
+        </motion.div>
+
+        {/* =====================================================
+            MAIN CONTENT
+        ===================================================== */}
+
+        <div className="absolute left-[13%] top-1/2 z-30 w-[68%] -translate-y-1/2">
+          {/* =================================================
+              GxP BADGE
+          ================================================= */}
+
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 15,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.7,
+              delay: 0.15,
+            }}
+            className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#172933]/72 px-4 py-2 shadow-md backdrop-blur-md"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-[#a9d1d5]" />
+
+            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70">
+              GxP Compliant Environment
+            </span>
+          </motion.div>
+
+          {/* =================================================
+              HEADING
+          ================================================= */}
+
+          <motion.h2
+            initial={{
+              opacity: 0,
+              x: -20,
+            }}
+            animate={{
+              opacity: 1,
+              x: 0,
+            }}
+            transition={{
+              duration: 0.8,
+              delay: 0.25,
+            }}
+            className="max-w-[620px] text-[40px] font-extrabold leading-[1.07] tracking-[-1.6px] text-white xl:text-[48px]"
             style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
-            Maintenix
-          </h1>
+            Smarter maintenance.
+            <br />
 
-          <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-white/35">
-            Maintenance Intelligence
-          </p>
-        </div>
-      </motion.div>
+            <span className="text-[#b5d5d9]">
+              Better operations.
+            </span>
+          </motion.h2>
 
-      <div className="absolute left-1/2 top-[51%] z-20 w-full -translate-x-1/2 -translate-y-1/2 px-8 text-center">
-        {/* Small badge */}
+          {/* =================================================
+              DESCRIPTION
+          ================================================= */}
 
-        <motion.div
-          initial={{
-            opacity: 0,
-            y: 15,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.7,
-            delay: 0.2,
-          }}
-          className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/10 bg-cyan-300/[0.06] px-4 py-2 backdrop-blur-md"
-        >
-          <Activity className="h-3.5 w-3.5 text-cyan-300" />
-
-          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200/70">
-            Intelligent Maintenance
-          </span>
-        </motion.div>
-
-        {/* Heading */}
-
-        <motion.h2
-          initial={{
-            opacity: 0,
-            y: 20,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.8,
-            delay: 0.3,
-          }}
-          className="relative z-30 text-[34px] font-extrabold leading-tight tracking-[-1.2px] text-white xl:text-[40px]"
-          style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-          }}
-        >
-          Smarter maintenance.
-          <br />
-          <span className="bg-gradient-to-r from-cyan-300 via-sky-300 to-blue-400 bg-clip-text text-transparent">
-            Better operations.
-          </span>
-        </motion.h2>
-
-        {/* Description */}
-
-        <motion.p
-          initial={{
-            opacity: 0,
-            y: 15,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.7,
-            delay: 0.45,
-          }}
-          className="mx-auto mt-4 max-w-[440px] text-[13px] leading-6 text-white/40"
-        >
-          A centralized workspace for managing equipment, preventive
-          maintenance, calibration and compliance.
-        </motion.p>
-
-        <div className="relative mx-auto mt-8 h-[180px] w-[180px]">
-          {/* Glow */}
-
-          <motion.div
+          <motion.p
+            initial={{
+              opacity: 0,
+              y: 15,
+            }}
             animate={{
-              scale: [1, 1.15, 1],
-              opacity: [0.15, 0.28, 0.15],
+              opacity: 1,
+              y: 0,
             }}
             transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut",
+              duration: 0.7,
+              delay: 0.4,
             }}
-            className="absolute left-1/2 top-1/2 h-[210px] w-[210px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-400/10 blur-[50px]"
-          />
-
-          {/* Main circle */}
-
-          <motion.div
-            animate={{
-              scale: [1, 1.05, 1],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-            className="absolute left-1/2 top-1/2 flex h-[145px] w-[145px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-cyan-300/20 bg-[#0a2b46]/75 shadow-[0_0_80px_rgba(34,211,238,0.1)] backdrop-blur-xl"
+            className="mt-6 max-w-[590px] text-[16px] leading-7 text-white/65"
           >
-            {/* Inner ring */}
+            A centralized workspace for managing equipment, preventive
+            maintenance, calibration and compliance.
+          </motion.p>
 
-            <div className="absolute inset-3 rounded-full border border-white/[0.05]" />
+          {/* =================================================
+              TRUST LINE
+          ================================================= */}
 
-            {/* Rotating gear */}
+          <motion.div
+            initial={{
+              opacity: 0,
+              width: 0,
+            }}
+            animate={{
+              opacity: 1,
+              width: "100%",
+            }}
+            transition={{
+              duration: 0.8,
+              delay: 0.6,
+            }}
+            className="mt-9"
+          >
+            {/* Divider */}
 
-            <motion.div
-              animate={{
-                rotate: 360,
-              }}
-              transition={{
-                duration: 18,
-                repeat: Infinity,
-                ease: "linear",
-              }}
-              className="absolute"
-            >
-              <Cog className="h-[82px] w-[82px] text-cyan-300/[0.1]" />
-            </motion.div>
+            <div className="mb-4 h-px max-w-[520px] bg-gradient-to-r from-white/20 via-white/10 to-transparent" />
 
-            {/* Main icon */}
+            <div className="flex items-center gap-3">
+              <div className="h-[2px] w-9 bg-[#9ebfc3]" />
 
-            <div className="relative flex h-[64px] w-[64px] items-center justify-center rounded-[20px] bg-gradient-to-br from-cyan-300/20 to-blue-400/10 shadow-[0_0_35px_rgba(34,211,238,0.12)]">
-              <Wrench className="h-7 w-7 text-cyan-300" />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                Trusted maintenance operations
+              </span>
             </div>
           </motion.div>
-
-          {/* Orbit dot */}
-
-          <motion.div
-            animate={{
-              rotate: 360,
-            }}
-            transition={{
-              duration: 7,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            className="absolute inset-[-20px]"
-          >
-            <div className="absolute left-1/2 top-0 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-cyan-300 shadow-[0_0_15px_rgba(103,232,249,0.8)]" />
-          </motion.div>
-
-          {/* Second orbit */}
-
-          <motion.div
-            animate={{
-              rotate: -360,
-            }}
-            transition={{
-              duration: 11,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            className="absolute inset-[-38px]"
-          >
-            <div className="absolute bottom-0 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-blue-300 shadow-[0_0_15px_rgba(147,197,253,0.8)]" />
-          </motion.div>
         </div>
+
+        {/* =====================================================
+            BOTTOM LEFT INFORMATION
+        ===================================================== */}
+
+        <div className="absolute bottom-9 left-10 z-20 flex items-center gap-3">
+          <div className="h-[1px] w-7 bg-white/25" />
+
+          <span className="text-[9px] font-medium uppercase tracking-[0.24em] text-white/30">
+            Maintenance Intelligence
+          </span>
+        </div>
+
+        {/* =====================================================
+            VERY SUBTLE RIGHT EDGE SEPARATION
+        ===================================================== */}
+
+        <div className="absolute right-0 top-0 h-full w-16 bg-gradient-to-r from-transparent to-[#071117]/10" />
+
+        <div className="absolute right-0 top-[18%] h-[64%] w-px bg-gradient-to-b from-transparent via-white/10 to-transparent" />
       </div>
-
-      <FloatingInfo
-        icon={Activity}
-        text="Equipment"
-        position="left-[11%] top-[47%]"
-        delay={0.4}
-      />
-
-      <FloatingInfo
-        icon={Gauge}
-        text="Maintenance"
-        position="right-[10%] top-[48%]"
-        delay={0.8}
-      />
-
-      <FloatingInfo
-        icon={ShieldCheck}
-        text="Compliance"
-        position="left-[18%] bottom-[21%]"
-        delay={1.1}
-      />
-
-      <motion.div
-        initial={{
-          opacity: 0,
-        }}
-        animate={{
-          opacity: 1,
-        }}
-        transition={{
-          delay: 1,
-        }}
-        className="absolute bottom-8 left-10 z-30 flex items-center gap-2 text-[10px] font-medium text-white/30"
-      >
-        <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(74,222,128,0.7)]" />
-        System operational
-      </motion.div>
-
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#041321]/70 to-transparent" />
     </div>
   );
 };

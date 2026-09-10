@@ -446,6 +446,7 @@ const ManagementDashboard = () => {
                     navigationRoute="/user/create-record"
                     sourceRoute="/user/engineering-dashboard"
                     sourceType="engineering"
+                    showCreateButton={false}
                 />
             </div>
 

@@ -15,6 +15,8 @@ import CalibrationChild from "../pages/user/CalibrationPlanner/CalibrationChild"
 import CalibrationChildPanel from "../pages/user/CalibrationPlanner/CalibrationChildPanel";
 import CreateEquipment from "../pages/user/Equipment/CreateEquipment";
 import ManagementDashboard from "../pages/user/CalibrationManagement/ManagementDashorad";
+import PreventivePlannerDashboard from "../pages/user/PreventiveMaintence/PreventivePlannerDashboard";
+import PreventiveMaintenanceDashboard from "../pages/user/PreventiveMaintence/PreventiveMaintenanceDashboard ";
 
 function UserRoutes() {
   return (
@@ -42,6 +44,10 @@ function UserRoutes() {
         <Route path="calibration-management-create/:processId/:recordId" element={<CalibrationChild/>} />
         <Route path="calibration-management-panel/:processId/:recordId" element={<CalibrationChildPanel/>} />
         <Route path="calibration-management-dashboard" element={<ManagementDashboard />} />
+
+        {/* Preventive Maintenance Routes*/}
+        <Route path="preventive-planner-dashboard" element={<PreventivePlannerDashboard />} />
+        <Route path="preventive-maintenance-dashboard" element={<PreventiveMaintenanceDashboard />} />
 
         {/* <Route path="equipment-panel/:id" element={<EquipmentPanel/>} /> */}
       </Route>

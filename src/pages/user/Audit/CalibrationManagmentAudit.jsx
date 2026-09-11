@@ -7,7 +7,7 @@ import { getCalibrationAuditRecord } from "../../../services/usersApi/calibratio
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import CustomScrollContainer from "../../../components/common/CustomScrollbar/CustomScrollContainer";
 
-const Audit = () => {
+const CalibrationManagmentAudit = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
 
@@ -647,4 +647,4 @@ const Audit = () => {
   );
 };
 
-export default Audit;
+export default CalibrationManagmentAudit;

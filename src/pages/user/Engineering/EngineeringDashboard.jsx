@@ -5,6 +5,7 @@ import DashboardActionBar from "../../../components/common/DashboardActionBar/Da
 import DataTable from "../../../components/common/DataTable/DataTable";
 import { getAllRecords, getCalibrationSingleReport } from "../../../services/usersApi/calibrationApi";
 import { useNavigate } from "react-router-dom";
+import { getAllCalibrationPlannerRecords } from "../../../services/usersApi/dashboardAllApi";
 
 const EngineeringDashboard = () => {
     const navigate = useNavigate();
@@ -24,7 +25,7 @@ const EngineeringDashboard = () => {
         try {
             setLoading(true);
 
-            const response = await getAllRecords({
+            const response = await getAllCalibrationPlannerRecords({
                 page,
                 per_page: perPage,
             });

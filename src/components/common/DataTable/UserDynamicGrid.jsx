@@ -1,8 +1,11 @@
 import React, { useCallback, useMemo, useState, useEffect } from "react";
 import { Plus, Trash2, Table2 } from "lucide-react";
 import { Input, InputNumber, Select, DatePicker, Switch } from "antd";
+import { useParams } from "react-router-dom";
 import dayjs from "dayjs";
 import UserModal from "../UserModal/UserModal";
+import CustomScrollContainer from "../CustomScrollbar/CustomScrollContainer";
+import { getAllPermissions } from "../../../services/usersApi/workflowCommonApi";
 
 const { TextArea } = Input;
 
@@ -21,8 +24,56 @@ const UserDynamicGrid = ({
     emptyTitle = "No data added yet",
     rowKey = "_rowId",
     className = "",
+    // Optional: disable permission check when grid is used outside a record context
+    checkPermission = true,
 }) => {
     const rows = Array.isArray(value) ? value : [];
+    const { recordId } = useParams();
+
+    // ---- Permission state ----
+    const [canPerformAction, setCanPerformAction] = useState(true);
+    const [permissionsLoading, setPermissionsLoading] = useState(
+        Boolean(checkPermission && recordId)
+    );
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchPermissions = async () => {
+            // No permission check or no record context — allow by default
+            if (!checkPermission || !recordId) {
+                if (isMounted) {
+                    setCanPerformAction(true);
+                    setPermissionsLoading(false);
+                }
+                return;
+            }
+
+            try {
+                setPermissionsLoading(true);
+                const response = await getAllPermissions(recordId);
+                const allowed =
+                    response?.data?.data?.permission?.can_perform_action === true;
+                if (isMounted) setCanPerformAction(allowed);
+            } catch (error) {
+                console.error("Failed to fetch grid permissions:", error);
+                if (isMounted) setCanPerformAction(false);
+            } finally {
+                if (isMounted) setPermissionsLoading(false);
+            }
+        };
+
+        fetchPermissions();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [recordId, checkPermission]);
+
+    // Whether the grid should be interactive
+    const isReadOnly = permissionsLoading || !canPerformAction;
+    const effectiveAllowAdd = allowAdd && !isReadOnly;
+    const effectiveAllowDelete = allowDelete && !isReadOnly;
 
     // ---- Toggle state ----
     const [columnToggles, setColumnToggles] = useState(() => {
@@ -87,12 +138,14 @@ const UserDynamicGrid = ({
     }, [columns, rowKey]);
 
     const handleAddRow = () => {
+        if (!effectiveAllowAdd) return;
         if (maxRows !== undefined && rows.length >= maxRows) return;
         const newRow = createRow();
         onChange?.([...rows, newRow]);
     };
 
     const handleDeleteRow = (rowIndex) => {
+        if (!effectiveAllowDelete) return;
         if (rows.length <= minRows) return;
         setDeleteRowIndex(rowIndex);
         setIsDeleteModalOpen(true);
@@ -114,6 +167,7 @@ const UserDynamicGrid = ({
 
     // ---- Cell change handlers ----
     const handleCellChange = (rowIndex, columnKey, newValue) => {
+        if (isReadOnly) return;
         const updatedRows = rows.map((row, index) => {
             if (index !== rowIndex) return row;
             return { ...row, [columnKey]: newValue };
@@ -122,6 +176,7 @@ const UserDynamicGrid = ({
     };
 
     const handleSplitChange = (rowIndex, fieldKey, newValue) => {
+        if (isReadOnly) return;
         const updatedRows = rows.map((row, index) => {
             if (index !== rowIndex) return row;
             return { ...row, [fieldKey]: newValue };
@@ -131,26 +186,24 @@ const UserDynamicGrid = ({
 
     // ---- Toggle switch handler with confirmation ----
     const handleToggleChange = (checked, columnKey) => {
+        if (isReadOnly) return;
+
         if (!checked) {
-            // Turning OFF – check if any row has data in the split fields
             const col = columns.find(c => c.key === columnKey);
             const hasData = rows.some(row =>
                 col.splitFields.some(field => row[field.key] && row[field.key] !== '')
             );
             if (hasData) {
-                // Show confirmation modal
                 setToggleModalState({ open: true, columnKey });
-                return; // Do not change toggle yet
+                return;
             }
         }
-        // Either turning ON or turning OFF with no data – apply immediately
         setColumnToggles(prev => ({ ...prev, [columnKey]: checked }));
     };
 
     const handleConfirmToggleOff = () => {
         const { columnKey } = toggleModalState;
         const col = columns.find(c => c.key === columnKey);
-        // Clear split field data from all rows
         const updatedRows = rows.map(row => {
             const newRow = { ...row };
             col.splitFields.forEach(field => {
@@ -159,7 +212,6 @@ const UserDynamicGrid = ({
             return newRow;
         });
         onChange?.(updatedRows);
-        // Turn off toggle
         setColumnToggles(prev => ({ ...prev, [columnKey]: false }));
         setToggleModalState({ open: false, columnKey: null });
     };
@@ -178,6 +230,8 @@ const UserDynamicGrid = ({
     };
 
     const isColumnDisabled = (column, row, rowIndex) => {
+        // Permission-level read-only takes priority
+        if (isReadOnly) return true;
         if (typeof column.disabled === "function") {
             return column.disabled({ row, rowIndex });
         }
@@ -323,7 +377,7 @@ const UserDynamicGrid = ({
                         )}
                     </div>
                 </div>
-                {allowAdd && (
+                {effectiveAllowAdd && (
                     <button
                         type="button"
                         onClick={handleAddRow}
@@ -336,8 +390,7 @@ const UserDynamicGrid = ({
                 )}
             </div>
 
-            {/* Table */}
-            <div className="grid-scroll w-full max-h-[520px] overflow-auto rounded-b-xl">
+            <CustomScrollContainer maxHeight="520px" direction="both" className="w-full rounded-b-xl">
                 <table className="w-full min-w-[900px] border-collapse">
                     <thead className="sticky top-0 z-[5]">
                         <tr className="bg-[#EEF3F1]">
@@ -363,6 +416,7 @@ const UserDynamicGrid = ({
                                             <Switch
                                                 size="small"
                                                 checked={columnToggles[column.key] || false}
+                                                disabled={isReadOnly}
                                                 onChange={(checked) => handleToggleChange(checked, column.key)}
                                             />
                                         )}
@@ -370,7 +424,7 @@ const UserDynamicGrid = ({
                                 </th>
                             ))}
 
-                            {allowDelete && (
+                            {effectiveAllowDelete && (
                                 <th className="w-[62px] border-b border-[#D5DFDB] px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]">
                                     Action
                                 </th>
@@ -411,7 +465,7 @@ const UserDynamicGrid = ({
                                         );
                                     })}
 
-                                    {allowDelete && (
+                                    {effectiveAllowDelete && (
                                         <td className="border-b border-[#E0E7E4] px-2 py-2.5 text-center align-top">
                                             <button
                                                 type="button"
@@ -432,7 +486,7 @@ const UserDynamicGrid = ({
                                     colSpan={
                                         visibleColumns.length +
                                         1 +
-                                        (allowDelete ? 1 : 0)
+                                        (effectiveAllowDelete ? 1 : 0)
                                     }
                                     className="h-[20px] border-b border-[#E0E7E4] px-5"
                                 />
@@ -440,7 +494,7 @@ const UserDynamicGrid = ({
                         )}
                     </tbody>
                 </table>
-            </div>
+            </CustomScrollContainer>
 
             {/* Footer */}
             <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">

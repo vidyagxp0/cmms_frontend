@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
+import CustomScrollContainer from "../CustomScrollbar/CustomScrollContainer";
 
 const UserModal = ({
     isOpen,
@@ -125,9 +126,9 @@ const UserModal = ({
                 </div>
 
                 {/* CONTENT */}
-                <div className="px-5 py-5">
+                <CustomScrollContainer maxHeight="80vh" className="px-5 py-5">
                     {children}
-                </div>
+                </CustomScrollContainer>
             </div>
 
             <style>{`

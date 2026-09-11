@@ -17,9 +17,10 @@ import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGri
 import  { CALIBRATED_BY_COLUMNS, CALIBRATION_RESULT_GRID } from "./calibrationColumn";
 
 import { getProfile } from "../../../services/authApi";
-import { getCalibrationUser, getAllEquipmentData, getRecordNumber, addCalibrationChild } from "../../../services/usersApi/calibrationApi";
+import { getCalibrationUser, getAllEquipmentData, addCalibrationChild } from "../../../services/usersApi/calibrationApi";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
+import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
 
 const TABS = [
   { id: "management", label: "General Information" },
@@ -334,7 +335,7 @@ const CalibrationChild = () => {
       const response = await addCalibrationChild(payload);
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Child calibration record created successfully.");
-        navigate("/user/engineering-dashboard");
+        navigate("/user/calibration-management-dashboard");
       } else {
         toast.error(response?.data?.message || "Failed to create child calibration.");
       }
@@ -348,7 +349,7 @@ const CalibrationChild = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
-    navigate("/user/engineering-dashboard");
+    navigate("/user/calibration-management-dashboard");
   };
 
   if (isLoading) {

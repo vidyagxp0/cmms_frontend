@@ -3,11 +3,11 @@ import { Eye } from "lucide-react";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
 import DataTable from "../../../components/common/DataTable/DataTable";
-import { getAllRecords, getCalibrationSingleReport, getCalibrationChildSingleReport } from "../../../services/usersApi/calibrationApi";
+import { getAllRecords, getCalibrationSingleReport } from "../../../services/usersApi/calibrationApi";
 import { useNavigate } from "react-router-dom";
-import { getAllCalibrationManagementRecords } from "../../../services/usersApi/dashboardAllApi";
+import { getAllPreventivePlanner } from "../../../services/usersApi/dashboardAllApi";
 
-const ManagementDashboard = () => {
+const PreventivePlannerDashboard = () => {
     const navigate = useNavigate();
 
     const [records, setRecords] = useState([]);
@@ -25,7 +25,7 @@ const ManagementDashboard = () => {
         try {
             setLoading(true);
 
-            const response = await getAllCalibrationManagementRecords({
+            const response = await getAllPreventivePlanner({
                 page,
                 per_page: perPage,
             });
@@ -154,7 +154,7 @@ const ManagementDashboard = () => {
 
             reportWindow.document.close();
 
-            const response = await getCalibrationChildSingleReport(recordId);
+            const response = await getCalibrationSingleReport(recordId);
 
             const blob = new Blob(
                 [response.data],
@@ -257,13 +257,7 @@ const ManagementDashboard = () => {
                     const record = row.original;
                     const handleClick = () => {
                         if (!record?.id) return;
-                        if (record.is_child === 1) {
-                            // Child record → navigate to child panel with process_id and record id
-                            navigate(`/user/calibration-management-panel/${5}/${record.id}`);
-                        } else {
-                            // Parent/standard record → existing behaviour
-                            navigate(`/user/calibration-planner-panel/${record.id}`);
-                        }
+                      navigate(`/user/preventive-maintenance-planner-panel/${7}/${record.id}`);
                     };
                     return (
                         <button
@@ -421,7 +415,7 @@ const ManagementDashboard = () => {
                             focus:outline-none focus:ring-2
                             focus:ring-[#159A8C]/20
                         "
-                        title="View Calibration Management Report"
+                        title="View engineering record"
                     >
                         <Eye size={14} strokeWidth={2} />
                         <span>View Report</span>
@@ -441,12 +435,11 @@ const ManagementDashboard = () => {
         >
             <div className="shrink-0">
                 <DashboardActionBar
-                    // title="Engineering Dashboard"
-                    // buttonName="Create Record"
+                    title="Preventive Maintenance Dashboard"
+                    buttonName="Create Record"
                     navigationRoute="/user/create-record"
-                    sourceRoute="/user/engineering-dashboard"
-                    sourceType="engineering"
-                    showCreateButton={false}
+                    sourceRoute="/user/preventive-planner-dashboard"
+                    sourceType="preventive"
                 />
             </div>
 
@@ -461,7 +454,7 @@ const ManagementDashboard = () => {
                     columns={columns}
                     loading={loading}
                     searchable
-                    searchPlaceholder="Search engineering records..."
+                    searchPlaceholder="Search preventive records..."
                     pagination
                     pageSize={pagination.perPage}
                     pageSizeOptions={[10, 20, 50]}
@@ -479,9 +472,9 @@ const ManagementDashboard = () => {
                         const nextPage = pageIndex + 1;
                         fetchRecords(nextPage, pageSize);
                     }}
-                    emptyTitle="No engineering records found"
+                    emptyTitle="No preventive records found"
                     emptyDescription="
-                        Engineering records will appear here
+                        Preventive records will appear here
                         once they are created.
                     "
                 />
@@ -490,4 +483,4 @@ const ManagementDashboard = () => {
     );
 };
 
-export default ManagementDashboard;
+export default PreventivePlannerDashboard;

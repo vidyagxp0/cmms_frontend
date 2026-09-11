@@ -43,6 +43,7 @@ import KPICard from "../../../components/common/Charts/KPICard";
 import ChartCard from "../../../components/common/Charts/ChartCard";
 import RealTimeControls from "../../../components/common/Charts/RealTimeControls";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
+import CustomScrollContainer from "../../../components/common/CustomScrollbar/CustomScrollContainer";
 
 const VIBRANT_PALETTE = [
     "#185B61",
@@ -343,14 +344,14 @@ const UserDashboard = () => {
 
     if (loading) {
         return (
-            <div className="h-full overflow-y-auto pr-1 pb-12 space-y-6 bg-[#F7F9F8] p-4 sm:p-6">
+            <CustomScrollContainer className="pr-1 pb-12 space-y-6 bg-[#F7F9F8] p-4 sm:p-6">
                 <Skeleton variant="dashboard" />
-            </div>
+            </CustomScrollContainer>
         );
     }
 
     return (
-        <div className="h-full overflow-y-auto pr-1 pb-12 space-y-6 bg-[#F7F9F8]">
+        <CustomScrollContainer className="pr-1 pb-12 space-y-6 bg-[#F7F9F8]">
             {/* SVG GRADIENTS */}
             <svg style={{ height: 0, width: 0, position: "absolute" }}>
                 <defs>
@@ -721,7 +722,7 @@ const UserDashboard = () => {
                     </ChartCard>
                 </div>
             </div>
-        </div>
+        </CustomScrollContainer>
     );
 };
 

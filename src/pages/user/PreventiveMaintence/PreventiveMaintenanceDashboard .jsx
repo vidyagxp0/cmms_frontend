@@ -11,6 +11,7 @@ const PreventiveMaintenanceDashboard = () => {
           navigationRoute="/user/create-record"
           sourceRoute="/user/preventive-maintenance-dashboard"
           sourceType="preventive"
+          showCreateButton={false}
         />
       </div>
 

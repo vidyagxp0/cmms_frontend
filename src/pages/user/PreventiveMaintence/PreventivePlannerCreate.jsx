@@ -281,8 +281,8 @@ const PreventivePlannerCreate = () => {
       const payload = {
         process_id: Number(processId),
         stage_id: 7,
-        department_id: departmentId,
-        initiator_id: initiatorId,
+        department_id: Number(departmentId),
+        initiator_id: Number(initiatorId),
         initiator_name: initiator,
         short_description: values?.shortDescription || "",
         initiation_date: dateOfInitiation,
@@ -293,11 +293,11 @@ const PreventivePlannerCreate = () => {
 
       const response = await addPreventive(payload);
 
-      if (response?.data?.success) {
+      if (response?.data?.success || response?.data?.status === true) {
         toast.success("Preventive Planner created successfully.");
         form.resetFields();
         setPreventivePlannerRows([]);
-        navigate("/user/engineering-dashboard");
+        navigate("/user/preventive-planner-dashboard");
         return;
       }
 
@@ -320,7 +320,7 @@ const PreventivePlannerCreate = () => {
 
     form.resetFields();
     setPreventivePlannerRows([]);
-    navigate("/user/engineering-dashboard");
+    navigate("/user/preventive-planner-dashboard");
   };
 
   return (
@@ -465,10 +465,7 @@ const PreventivePlannerCreate = () => {
               <Form.Item
                 name="hodReviewAttachment"
                 label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(event) =>
-                  Array.isArray(event) ? event : event?.fileList
-                }
+                valuePropName="value"
                 className="!mb-4 md:col-span-2"
               >
                 <FormAttachment />
@@ -479,7 +476,7 @@ const PreventivePlannerCreate = () => {
 
         {activeTab === "user-dept-review" && (
           <section>
-            <SectionHeader title="USER DEPT REVIEW (USER DEPT)" />
+            <SectionHeader title="QA REVIEW" />
 
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item
@@ -493,10 +490,7 @@ const PreventivePlannerCreate = () => {
               <Form.Item
                 name="userDeptReviewAttachment"
                 label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(event) =>
-                  Array.isArray(event) ? event : event?.fileList
-                }
+                valuePropName="value"
                 className="!mb-4 md:col-span-2"
               >
                 <FormAttachment />
@@ -507,7 +501,7 @@ const PreventivePlannerCreate = () => {
 
         {activeTab === "qa-review" && (
           <section>
-            <SectionHeader title="QA REVIEW" />
+            <SectionHeader title="QA APPROVAL REVIEW" />
 
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item
@@ -521,10 +515,7 @@ const PreventivePlannerCreate = () => {
               <Form.Item
                 name="qaReviewAttachment"
                 label="Attachment"
-                valuePropName="fileList"
-                getValueFromEvent={(event) =>
-                  Array.isArray(event) ? event : event?.fileList
-                }
+                valuePropName="value"
                 className="!mb-4 md:col-span-2"
               >
                 <FormAttachment />

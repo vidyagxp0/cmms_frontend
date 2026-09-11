@@ -19,23 +19,29 @@ import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import "../../../components/ui/disabledFields.css";
 
 import { getProfile } from "../../../services/authApi";
+import { getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
 import {
-  getCalibrationUser,
-  getAllEquipmentData,
-} from "../../../services/usersApi/calibrationApi";
-import { executePreventiveActivity, getPreventiveDetail, updatePreventive } from "../../../services/usersApi/preventive";
+  executePreventiveActivity,
+  getPreventiveDetail,
+  updatePreventive,
+} from "../../../services/usersApi/preventive";
 import {
   addMultipleAttachments,
   addSingleAttachment,
 } from "../../../components/common/Attachment/attachmentApi";
 import CalibrationGrid from "../CalibrationPlanner/CalibrationGrid";
-import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
+import {
+  getAllActivites,
+  getAllActivityLogs,
+  getAllPermissions,
+  getAllStages,
+} from "../../../services/usersApi/workflowCommonApi";
 
 dayjs.extend(customParseFormat);
 
 const TABS = [
   { id: "general", label: "General Information", stageId: 7 },
-  { id: "hod", label: "HOD / Designee Review ", stageId: 8 },
+  { id: "hod", label: "HOD / Designee Review", stageId: 8 },
   { id: "user-dept-review", label: "QA Review", stageId: 9 },
   { id: "qa-review", label: "QA Approval Review", stageId: 10 },
   { id: "activity", label: "Activity Log", stageId: 11 },
@@ -66,10 +72,14 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
         return;
       }
       let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
-      if (key === "previousCalibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
-      else if (key === "nextCalibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
-      else if (key === "calibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
-      if (key === "equipmentInstrumentName" && value && equipmentMap[value]) value = equipmentMap[value]?.name || value;
+      if (key === "previousCalibrationDate" && value)
+        value = dayjs(value).format("DD/MM/YYYY");
+      else if (key === "nextCalibrationDate" && value)
+        value = dayjs(value).format("DD/MM/YYYY");
+      else if (key === "calibrationDate" && value)
+        value = dayjs(value).format("DD/MM/YYYY");
+      if (key === "equipmentInstrumentName" && value && equipmentMap[value])
+        value = equipmentMap[value]?.name || value;
       rowData[key] = { key, label: key, value };
     });
     return rowData;
@@ -142,7 +152,6 @@ const PreventivePlannerPanel = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [usersLoading, setUsersLoading] = useState(true);
   const [workflowLoading, setWorkflowLoading] = useState(true);
   const [workflowStages, setWorkflowStages] = useState([]);
   const [processId, setProcessId] = useState(null);
@@ -166,8 +175,6 @@ const PreventivePlannerPanel = () => {
   const [dateOfInitiation, setDateOfInitiation] = useState("");
   const [siteLocationCode, setSiteLocationCode] = useState("");
   const [processName, setProcessName] = useState("");
-  const [hodUsers, setHodUsers] = useState([]);
-  const [qaReviewers, setQaReviewers] = useState([]);
   const [userRoles, setUserRoles] = useState([]);
   const [form] = Form.useForm();
   const navigate = useNavigate();
@@ -184,14 +191,11 @@ const PreventivePlannerPanel = () => {
     canPerformActivity === true &&
     permissionsLoading === false;
 
-  const isGeneralEditable = isStageEditable(1);
-  const isHodEditable = isStageEditable(2);
-  const isUserDeptEditable = isStageEditable(3);
-  const isQaReviewEditable = isStageEditable(4);
+  const isGeneralEditable = isStageEditable(7);
+  const isHodEditable = isStageEditable(8);
+  const isUserDeptEditable = isStageEditable(9);
+  const isQaReviewEditable = isStageEditable(10);
   const isCancellationEditable = isStageEditable(6);
-  const canCreateChild =
-    Number(activeStageId) === 5 &&
-    userRoles.some((role) => String(role).toLowerCase() === "initiator");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -231,26 +235,6 @@ const PreventivePlannerPanel = () => {
     fetchEquipment();
   }, []);
 
-  useEffect(() => {
-    const fetchCalibrationUsers = async () => {
-      try {
-        setUsersLoading(true);
-        const response = await getCalibrationUser();
-        const data = response?.data?.data || {};
-        setHodUsers(data?.hod || []);
-        setQaReviewers(data?.qa_reviewer || []);
-      } catch (error) {
-        console.error("Failed to fetch calibration users:", error);
-        toast.error(error?.response?.data?.message || "Failed to load workflow users.");
-        setHodUsers([]);
-        setQaReviewers([]);
-      } finally {
-        setUsersLoading(false);
-      }
-    };
-    fetchCalibrationUsers();
-  }, []);
-
   const fetchPreventiveDetail = useCallback(
     async (isInitial = false) => {
       if (!recordId) {
@@ -261,7 +245,6 @@ const PreventivePlannerPanel = () => {
       isFetchingRef.current = true;
       try {
         if (isInitial) setIsLoading(true);
-        // ✅ Use the new preventive detail API
         const response = await getPreventiveDetail(recordId);
         const responseData = response?.data?.data;
         if (!responseData) {
@@ -548,20 +531,8 @@ const PreventivePlannerPanel = () => {
     },
   ];
 
-  const handleViewChild = (rowIndex, rowData) => {
-    const shortDesc = form.getFieldValue("shortDescription") || "";
-    navigate(`/user/calibration-management-create/${5}/${recordId}`, {
-      state: {
-        rowData,
-        shortDescription: shortDesc,
-        processId: 5,
-        parentId: recordId,
-      },
-    });
-  };
-
   const handleSave = async () => {
-    if (isSaving || isLoading || usersLoading) return;
+    if (isSaving || isLoading) return;
     const missingFields = validatePreventivePlannerForm(
       form,
       requiredValuesRef.current
@@ -611,7 +582,6 @@ const PreventivePlannerPanel = () => {
         checklistData: [],
       };
 
-      // ✅ Use the new preventive update API
       const response = await updatePreventive(recordId, payload);
 
       if (response?.data?.success || response?.data?.status === true) {
@@ -767,10 +737,8 @@ const PreventivePlannerPanel = () => {
               equipmentOptions={equipmentOptions}
               equipmentMap={equipmentMap}
               equipmentLoading={equipmentLoading}
-              onViewChild={handleViewChild}
               recordId={recordId}
               disabled={!isGeneralEditable}
-              canCreateChild={canCreateChild}
               showAddButton={true}
             />
           </div>
@@ -804,7 +772,7 @@ const PreventivePlannerPanel = () => {
 
         {/* HOD Review */}
         <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
-          <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
+          <SectionHeader title="HOD / DESIGNEE REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
               name="hodReviewComments"
@@ -835,11 +803,11 @@ const PreventivePlannerPanel = () => {
           </div>
         </section>
 
-        {/* User Dept Review */}
+        {/* QA Review */}
         <section
           style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}
         >
-          <SectionHeader title="USER DEPT REVIEW (USER DEPT)" />
+          <SectionHeader title="QA REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
               name="userDeptReviewComments"
@@ -862,7 +830,7 @@ const PreventivePlannerPanel = () => {
                 multiple={true}
                 recordId={recordId}
                 attachmentField="user_dept_review_attachment"
-                label="User Dept Review Attachment"
+                label="QA Review Attachment"
                 uploadApi={addMultipleAttachments}
                 disabled={!isUserDeptEditable}
               />
@@ -870,9 +838,9 @@ const PreventivePlannerPanel = () => {
           </div>
         </section>
 
-        {/* QA Review */}
+        {/* QA Approval Review */}
         <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
-          <SectionHeader title="QA REVIEW" />
+          <SectionHeader title="QA APPROVAL REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
               name="qaReviewComments"
@@ -1003,7 +971,7 @@ const PreventivePlannerPanel = () => {
       <FloatingActionButtons
         onSave={handleSave}
         onCancel={handleCancel}
-        isSaving={isSaving || isLoading || usersLoading}
+        isSaving={isSaving || isLoading}
         saveLabel="Update"
         cancelLabel="Cancel"
       />

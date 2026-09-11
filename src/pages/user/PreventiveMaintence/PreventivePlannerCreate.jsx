@@ -18,7 +18,6 @@ import { getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
 import { formatDate, formatDateTime } from "../../../utils/date";
 
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
-import CalibrationGrid from "../CalibrationPlanner/CalibrationGrid";
 import { addPreventive } from "../../../services/usersApi/preventive";
 import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
 import PreventiveGrid from "./PreventiveGrid";
@@ -37,7 +36,10 @@ const normalizePreventivePlannerGridRows = (rows = [], equipmentMap = {}) => {
     const rowData = { row_id: index + 1 };
 
     Object.keys(row).forEach((key) => {
-      if (key === "monthlyCalibration" || key === "calibrationFrequencyStartDate") {
+      if (
+        key === "monthlyPreventive" ||
+        key === "preventiveFrequencyStartDate"
+      ) {
         rowData[key] = row[key];
         return;
       }
@@ -48,10 +50,10 @@ const normalizePreventivePlannerGridRows = (rows = [], equipmentMap = {}) => {
         const id = value;
         if (id && equipmentMap[id]) value = equipmentMap[id].name;
         else value = "";
-      } else {
-        if (key === "previousCalibrationDate" && value) value = formatDate(value);
-        else if (key === "nextCalibrationDate" && value) value = formatDate(value);
-        else if (key === "calibrationDate" && value) value = formatDate(value);
+      } else if (key === "previousPreventiveDate" && value) {
+        value = formatDate(value);
+      } else if (key === "nextPreventiveDate" && value) {
+        value = formatDate(value);
       }
 
       rowData[key] = { key, label: key, value };
@@ -355,7 +357,7 @@ const PreventivePlannerCreate = () => {
               Process
             </p>
             <p className="text-sm font-semibold text-[#344A43]">
-              {processName || "Preventive Planner Management"}
+              {processName || "Preventive Maintenance Planner"}
             </p>
           </div>
         </div>
@@ -452,7 +454,7 @@ const PreventivePlannerCreate = () => {
 
         {activeTab === "hod" && (
           <section>
-            <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
+            <SectionHeader title="HOD / DESIGNEE REVIEW" />
 
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item

@@ -29,7 +29,6 @@ import {
   addMultipleAttachments,
   addSingleAttachment,
 } from "../../../components/common/Attachment/attachmentApi";
-import CalibrationGrid from "../CalibrationPlanner/CalibrationGrid";
 import {
   getAllActivites,
   getAllActivityLogs,
@@ -68,16 +67,17 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
   return rows.map((row, index) => {
     const rowData = { row_id: index + 1 };
     Object.keys(row).forEach((key) => {
-      if (key === "monthlyCalibration" || key === "calibrationFrequencyStartDate") {
+      if (
+        key === "monthlyPreventive" ||
+        key === "preventiveFrequencyStartDate"
+      ) {
         rowData[key] = row[key];
         return;
       }
       let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
-      if (key === "previousCalibrationDate" && value)
+      if (key === "previousPreventiveDate" && value)
         value = dayjs(value).format("DD/MM/YYYY");
-      else if (key === "nextCalibrationDate" && value)
-        value = dayjs(value).format("DD/MM/YYYY");
-      else if (key === "calibrationDate" && value)
+      else if (key === "nextPreventiveDate" && value)
         value = dayjs(value).format("DD/MM/YYYY");
       if (key === "equipmentInstrumentName" && value && equipmentMap[value])
         value = equipmentMap[value]?.name || value;
@@ -182,6 +182,10 @@ const PreventivePlannerPanel = () => {
   const { recordId } = useParams();
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "" });
+
+  const canCreateChild =
+    Number(activeStageId) === 11 &&
+    userRoles.some((role) => String(role).toLowerCase() === "initiator");
 
   useEffect(() => {
     equipmentMapRef.current = equipmentMap;
@@ -339,10 +343,10 @@ const PreventivePlannerPanel = () => {
           const row = {};
           Object.keys(item).forEach((key) => {
             if (key === "row_id") row.row_id = item.row_id;
-            else if (key === "monthlyCalibration")
-              row.monthlyCalibration = item[key] || {};
-            else if (key === "calibrationFrequencyStartDate")
-              row.calibrationFrequencyStartDate = item[key] || "";
+            else if (key === "monthlyPreventive")
+              row.monthlyPreventive = item[key] || {};
+            else if (key === "preventiveFrequencyStartDate")
+              row.preventiveFrequencyStartDate = item[key] || "";
             else if (
               item[key] &&
               typeof item[key] === "object" &&
@@ -356,12 +360,13 @@ const PreventivePlannerPanel = () => {
 
         const normalizedRows = rawRows.map((row) => {
           const newRow = { ...row };
-          newRow.monthlyCalibration =
-            row.monthlyCalibration && typeof row.monthlyCalibration === "object"
-              ? row.monthlyCalibration
+          newRow.monthlyPreventive =
+            row.monthlyPreventive && typeof row.monthlyPreventive === "object"
+              ? row.monthlyPreventive
               : {};
-          newRow.calibrationFrequencyStartDate =
-            row.calibrationFrequencyStartDate || "";
+          newRow.preventiveFrequencyStartDate =
+            row.preventiveFrequencyStartDate || "";
+
           if (
             newRow.equipmentInstrumentName &&
             typeof newRow.equipmentInstrumentName === "string"
@@ -371,20 +376,17 @@ const PreventivePlannerPanel = () => {
             );
             if (found) newRow.equipmentInstrumentName = found.id;
           }
-          if (newRow.previousCalibrationDate)
-            newRow.previousCalibrationDate = dayjs(
-              newRow.previousCalibrationDate,
-              "DD/MM/YYYY"
-            );
-          if (newRow.nextCalibrationDate)
-            newRow.nextCalibrationDate = dayjs(
-              newRow.nextCalibrationDate,
-              "DD/MM/YYYY"
-            );
-          if (newRow.calibrationDate)
-            newRow.calibrationDate = dayjs(newRow.calibrationDate, "DD/MM/YYYY");
+
+          newRow.previousPreventiveDate = newRow.previousPreventiveDate
+            ? dayjs(newRow.previousPreventiveDate, "DD/MM/YYYY")
+            : "";
+          newRow.nextPreventiveDate = newRow.nextPreventiveDate
+            ? dayjs(newRow.nextPreventiveDate, "DD/MM/YYYY")
+            : "";
+
           return newRow;
         });
+
         setPreventiveRows(normalizedRows);
       } catch (error) {
         console.error("Failed to fetch preventive planner detail:", error);
@@ -531,6 +533,18 @@ const PreventivePlannerPanel = () => {
       value: initiationDepartment,
     },
   ];
+
+  const handleViewChild = (rowIndex, rowData) => {
+    const shortDesc = form.getFieldValue("shortDescription") || "";
+    navigate(`/user/preventive-maintenance-create/${4}/${recordId}`, {
+      state: {
+        rowData,
+        shortDescription: shortDesc,
+        processId: 4,
+        parentId: recordId,
+      },
+    });
+  };
 
   const handleSave = async () => {
     if (isSaving || isLoading) return;
@@ -741,6 +755,8 @@ const PreventivePlannerPanel = () => {
               recordId={recordId}
               disabled={!isGeneralEditable}
               showAddButton={true}
+              canCreateChild={canCreateChild}
+              onViewChild={handleViewChild}
             />
           </div>
           <Form.Item

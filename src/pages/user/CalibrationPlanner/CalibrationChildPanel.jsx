@@ -38,7 +38,7 @@ const TABS = [
   { id: "management", label: "General Information", stageId: 19 },
   { id: "implementor", label: "HOD / Designee Review", stageId: 20 },
   { id: "qa-review", label: "QA Review & Approval", stageId: 21 },
-  { id: "activity", label: "Activity Log", stageId: 23 },
+  { id: "activity", label: "Activity Log", stageId: 22 },
 ];
 
 const REQUIRED_FIELDS = [];
@@ -552,7 +552,7 @@ const CalibrationChildPanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
-    navigate("/user/engineering-dashboard");
+    navigate("/user/calibration-management-dashboard");
   };
 
   if (isLoading) {
@@ -587,7 +587,7 @@ const CalibrationChildPanel = () => {
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
-              onExit={() => navigate("/user/engineering-dashboard")}
+              onExit={() => navigate("/user/calibration-management-dashboard")}
             />
           </div>
         </div>

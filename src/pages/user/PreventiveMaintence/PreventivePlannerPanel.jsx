@@ -622,7 +622,7 @@ const PreventivePlannerPanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
-    navigate("/user/engineering-dashboard");
+    navigate("/user/preventive-planner-dashboard");
   };
 
   if (isLoading) {
@@ -670,7 +670,7 @@ const PreventivePlannerPanel = () => {
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
-              onExit={() => navigate("/user/engineering-dashboard")}
+              onExit={() => navigate("/user/preventive-planner-dashboard")}
             />
           </div>
         </div>

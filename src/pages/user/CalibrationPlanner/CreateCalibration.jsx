@@ -207,7 +207,7 @@ const CreateCalibration = () => {
     if (tabId !== "general") {
       const missingFields = validateCalibrationForm(form);
       if (missingFields.length > 0) {
-        toast.warning("Please fill all mandatory fields in General Information before accessing other tabs.");
+      toast.warning("Please complete all mandatory fields in General Information and save the record before accessing the other tabs.");
         setActiveTab("general");
         return;
       }

@@ -53,16 +53,31 @@ const ProcessPage = () => {
         try {
             const response = await getAllProcess();
             const processData = response?.data?.data ?? [];
-            let filteredProcesses = Array.isArray(processData)
-                ? processData.filter(
-                      (process) =>
-                          process.is_active === true &&
-                          process.is_child === false
-                  )
-                : [];
-            if (sourceType === "engineering") {
-                filteredProcesses = filteredProcesses.slice(0, 2);
-            }
+       let filteredProcesses = Array.isArray(processData)
+    ? processData.filter(
+          (process) =>
+              process.is_active === true &&
+              process.is_child === false
+      )
+    : [];
+
+// Engineering → show first 2 processes
+if (sourceType === "engineering") {
+    filteredProcesses = filteredProcesses.filter(
+        (process) =>
+            process.name?.toLowerCase() === "calibration planner"
+    );
+}
+
+
+// Preventive Planner → show ONLY Preventive Maintenance Planner
+if (sourceType === "preventive") {
+    filteredProcesses = filteredProcesses.filter(
+        (process) =>
+            process.name?.toLowerCase() ===
+            "preventive maintenance planner"
+    );
+}
             setProcesses(filteredProcesses);
         } catch (error) {
             console.error("Failed to fetch processes:", error);
@@ -72,13 +87,17 @@ const ProcessPage = () => {
         }
     };
 
-    const handleProcessSelect = (process) => {
+const handleProcessSelect = (process) => {
     if (sourceType === "engineering") {
-        navigate(`/user/calibration-planner-create/${process.id}`, {
-        });
+        navigate(`/user/calibration-planner-create/${process.id}`);
+        return;
+    }
+
+    if (sourceType === "preventive") {
+        navigate(`/user/preventive-maintenance-planner-create/${process.id}`);
+        return;
     }
 };
-
     return (
         <div className="flex min-h-[calc(100vh-74px)] items-center justify-center bg-[#F6F8F7] px-4">
             <div className="w-full max-w-[650px]">

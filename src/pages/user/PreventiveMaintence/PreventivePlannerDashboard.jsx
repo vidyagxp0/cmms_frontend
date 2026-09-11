@@ -5,9 +5,9 @@ import DashboardActionBar from "../../../components/common/DashboardActionBar/Da
 import DataTable from "../../../components/common/DataTable/DataTable";
 import { getAllRecords, getCalibrationSingleReport } from "../../../services/usersApi/calibrationApi";
 import { useNavigate } from "react-router-dom";
-import { getAllCalibrationPlannerRecords } from "../../../services/usersApi/dashboardAllApi";
+import { getAllPreventivePlanner } from "../../../services/usersApi/dashboardAllApi";
 
-const EngineeringDashboard = () => {
+const PreventivePlannerDashboard = () => {
     const navigate = useNavigate();
 
     const [records, setRecords] = useState([]);
@@ -25,7 +25,7 @@ const EngineeringDashboard = () => {
         try {
             setLoading(true);
 
-            const response = await getAllCalibrationPlannerRecords({
+            const response = await getAllPreventivePlanner({
                 page,
                 per_page: perPage,
             });
@@ -257,13 +257,7 @@ const EngineeringDashboard = () => {
                     const record = row.original;
                     const handleClick = () => {
                         if (!record?.id) return;
-                        if (record.is_child === 1) {
-                            // Child record → navigate to child panel with process_id and record id
-                            navigate(`/user/calibration-management-panel/${5}/${record.id}`);
-                        } else {
-                            // Parent/standard record → existing behaviour
-                            navigate(`/user/calibration-planner-panel/${record.id}`);
-                        }
+                      navigate(`/user/preventive-maintenance-planner-panel/${7}/${record.id}`);
                     };
                     return (
                         <button
@@ -441,11 +435,11 @@ const EngineeringDashboard = () => {
         >
             <div className="shrink-0">
                 <DashboardActionBar
-                    title="Engineering Dashboard"
+                    title="Preventive Maintenance Dashboard"
                     buttonName="Create Record"
                     navigationRoute="/user/create-record"
-                    sourceRoute="/user/engineering-dashboard"
-                    sourceType="engineering"
+                    sourceRoute="/user/preventive-planner-dashboard"
+                    sourceType="preventive"
                 />
             </div>
 
@@ -460,7 +454,7 @@ const EngineeringDashboard = () => {
                     columns={columns}
                     loading={loading}
                     searchable
-                    searchPlaceholder="Search engineering records..."
+                    searchPlaceholder="Search preventive records..."
                     pagination
                     pageSize={pagination.perPage}
                     pageSizeOptions={[10, 20, 50]}
@@ -478,9 +472,9 @@ const EngineeringDashboard = () => {
                         const nextPage = pageIndex + 1;
                         fetchRecords(nextPage, pageSize);
                     }}
-                    emptyTitle="No engineering records found"
+                    emptyTitle="No preventive records found"
                     emptyDescription="
-                        Engineering records will appear here
+                        Preventive records will appear here
                         once they are created.
                     "
                 />
@@ -489,4 +483,4 @@ const EngineeringDashboard = () => {
     );
 };
 
-export default EngineeringDashboard;
+export default PreventivePlannerDashboard;

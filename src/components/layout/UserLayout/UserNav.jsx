@@ -1,31 +1,26 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
-import {
-    LayoutDashboard,
-    Wrench,
-    HardHat,
-} from "lucide-react";
-import { DASHBOARD_NAV_ITEMS } from "./navigation";
-
+import { useNavigate, useLocation } from "react-router-dom";
+import { USER_NAV_ITEMS, isNavItemActive } from "./navigation";
 
 const UserNav = () => {
-    
-const navItems = DASHBOARD_NAV_ITEMS;
+    const navigate = useNavigate();
+    const location = useLocation();
+    const navItems = USER_NAV_ITEMS;
 
     return (
         <nav className="fixed left-0 right-0 top-[74px] z-40 h-[64px] border-b border-[#DCEBE2] bg-[#F4FAF7]">
             <div className="flex h-full items-center px-4 sm:px-6 lg:px-8">
-
-                {/* NAVIGATION */}
                 <div className="flex h-full items-center gap-1">
                     {navItems.map((item) => {
                         const Icon = item.icon;
+                        const isActive = isNavItemActive(location.pathname, item);
 
                         return (
-                            <NavLink
+                            <button
                                 key={item.id}
-                                to={item.path}
-                                className={({ isActive }) => `
+                                type="button"
+                                onClick={() => navigate(item.path)}
+                                className={`
                                     group relative flex h-full items-center gap-2.5
                                     px-5 text-[13px] font-medium
                                     tracking-[-0.01em]
@@ -37,50 +32,38 @@ const navItems = DASHBOARD_NAV_ITEMS;
                                     }
                                 `}
                             >
-                                {({ isActive }) => (
-                                    <>
-                                        {/* ICON */}
-                                        <span
-                                            className={`
-                                                flex h-8 w-8 items-center justify-center
-                                                rounded-[9px]
-                                                transition-all duration-200
-                                                ${
-                                                    isActive
-                                                      ? "bg-[#E0F2FE] text-[#0284C7]"
-                                                       : "bg-transparent text-[#64748B] group-hover:bg-[#F0F9FF] group-hover:text-[#0284C7]"
-                                                }
-                                            `}
-                                        >
-                                            <Icon
-                                                size={17}
-                                                strokeWidth={isActive ? 2 : 1.75}
-                                            />
-                                        </span>
+                                <span
+                                    className={`
+                                        flex h-8 w-8 items-center justify-center
+                                        rounded-[9px]
+                                        transition-all duration-200
+                                        ${
+                                            isActive
+                                              ? "bg-[#E0F2FE] text-[#0284C7]"
+                                               : "bg-transparent text-[#64748B] group-hover:bg-[#F0F9FF] group-hover:text-[#0284C7]"
+                                        }
+                                    `}
+                                >
+                                    <Icon size={17} strokeWidth={isActive ? 2 : 1.75} />
+                                </span>
 
-                                        {/* LABEL */}
-                                        <span className="whitespace-nowrap">
-                                            {item.label}
-                                        </span>
+                                <span className="whitespace-nowrap">{item.label}</span>
 
-                                        {/* ACTIVE INDICATOR */}
-                                        <span
-                                            className={`
-                                                absolute bottom-0 left-1/2
-                                                h-[3px] -translate-x-1/2
-                                                rounded-t-full
-                                                bg-[#0EA5E9]
-                                                transition-all duration-200
-                                                ${
-                                                    isActive
-                                                        ? "w-[42px] opacity-100"
-                                                        : "w-0 opacity-0"
-                                                }
-                                            `}
-                                        />
-                                    </>
-                                )}
-                            </NavLink>
+                                <span
+                                    className={`
+                                        absolute bottom-0 left-1/2
+                                        h-[3px] -translate-x-1/2
+                                        rounded-t-full
+                                        bg-[#0EA5E9]
+                                        transition-all duration-200
+                                        ${
+                                            isActive
+                                                ? "w-[42px] opacity-100"
+                                                : "w-0 opacity-0"
+                                        }
+                                    `}
+                                />
+                            </button>
                         );
                     })}
                 </div>

@@ -4,9 +4,9 @@ import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import UserModal from "../../../components/common/UserModal/UserModal";
+import CustomScrollContainer from "../../../components/common/CustomScrollbar/CustomScrollContainer";
 import { updateCalibration } from "../../../services/usersApi/calibrationApi";
 import "../../../components/ui/disabledFields.css";
-
 
 dayjs.extend(customParseFormat);
 const { TextArea } = Input;
@@ -110,6 +110,30 @@ const updateCalculatedCalibrationDates = (row) => {
   return { ...row, previousCalibrationDate: result.previousCalibrationDate, nextCalibrationDate: result.nextCalibrationDate };
 };
 
+const CHILD_WINDOW_DAYS = 7;
+
+/**
+ * Returns true when `today` falls inside the window
+ * [date - 7 days, date + 7 days] for the given date value.
+ */
+const isWithinChildWindow = (dateValue) => {
+  if (!dateValue) return false;
+  const target = dayjs(dateValue).startOf("day");
+  if (!target.isValid()) return false;
+  const today = dayjs().startOf("day");
+  const diffDays = Math.abs(today.diff(target, "day"));
+  return diffDays <= CHILD_WINDOW_DAYS;
+};
+
+/**
+ * Child button is enabled only when today is within ±7 days
+ * of the Previous / Calibration Date OR of the Next Calibration Date.
+ */
+const isChildDateWindowOpen = (row) => {
+  if (!row) return false;
+  return isWithinChildWindow(row.previousCalibrationDate) || isWithinChildWindow(row.nextCalibrationDate);
+};
+
 const CalibrationGrid = ({
   value = [],
   onChange,
@@ -149,8 +173,18 @@ const CalibrationGrid = ({
   const [deleteRowIndex, setDeleteRowIndex] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [todayTick, setTodayTick] = useState(() => dayjs().startOf("day").valueOf());
 
   const showMonthlyCalendar = rows.some((row) => !!row?.calibrationFrequency);
+
+  // Keep the ±7 day window in sync with the calendar day.
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const now = dayjs().startOf("day").valueOf();
+      setTodayTick((prev) => (prev === now ? prev : now));
+    }, 60 * 1000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   const isMonthEnabled = (frequency, monthKey, frequencyStartDate) => {
     if (!frequency) return false;
@@ -452,7 +486,7 @@ const CalibrationGrid = ({
           )}
       </div>
 
-      <div className="grid-scroll w-full max-h-[520px] overflow-auto rounded-b-xl">
+      <CustomScrollContainer maxHeight="520px" direction="both" className="w-full rounded-b-xl">
         <table className="w-full min-w-[4300px] border-collapse">
           <thead className="sticky top-0 z-[5]">
             <tr className="bg-[#EEF3F1]">
@@ -489,7 +523,11 @@ const CalibrationGrid = ({
           </thead>
           <tbody>
             {rows.length > 0 ? (
-              rows.map((row, rowIndex) => (
+              rows.map((row, rowIndex) => {
+                const childDateWindowOpen = isChildDateWindowOpen(row);
+                const childButtonEnabled = canCreateChild && childDateWindowOpen;
+
+                return (
                 <tr key={rowIndex} className="group bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
                   <td className="sticky left-0 z-[4] border-b border-r border-[#E0E7E4] bg-white px-3 py-3 text-center align-top group-hover:bg-[#FAFCFB]">
                     <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-[#EDF2F0] px-1.5 text-[10px] font-bold text-[#60716A]">{String(rowIndex + 1).padStart(2, "0")}</span>
@@ -516,20 +554,22 @@ const CalibrationGrid = ({
                     <button
                         type="button"
                         onClick={() => {
-                          if (!canCreateChild) return;
+                          if (!childButtonEnabled) return;
                           onViewChild(rowIndex, row);
                         }}
-                        disabled={!canCreateChild}
+                        disabled={!childButtonEnabled}
                         className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${
-                          canCreateChild
+                          childButtonEnabled
                             ? "bg-[#3d606d] hover:bg-[#2B5577] hover:shadow-md active:scale-95"
                             : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
                         }`}
                         aria-label="Create child calibration"
                         title={
-                          canCreateChild
-                            ? "Create child calibration"
-                            : "Child creation is available only to Initiator at Close Done stage"
+                          !canCreateChild
+                            ? "Child creation is available only to Initiator at Close Done stage"
+                            : childDateWindowOpen
+                              ? "Create child calibration"
+                              : `Child can be created only within ±${CHILD_WINDOW_DAYS} days of the Previous / Calibration Date or the Next Calibration Date`
                         }
                       >
                         Child
@@ -548,7 +588,8 @@ const CalibrationGrid = ({
                     </button>
                   </td>
                 </tr>
-              ))
+                );
+              })
             ) : (
               <tr>
                 <td colSpan={1 + columnsBeforeMonths.length + (showMonthlyCalendar ? MONTHS.length : 0) + columnsAfterMonths.length + (showChildColumn ? 1 : 0) + 1} className="h-[80px] border-b border-[#E0E7E4] px-5 text-center text-[11px] font-medium text-[#899690]">
@@ -558,7 +599,7 @@ const CalibrationGrid = ({
             )}
           </tbody>
         </table>
-      </div>
+      </CustomScrollContainer>
 
       <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">
         <span className="text-[10px] font-medium text-[#899690]">{rows.length} {rows.length === 1 ? "row" : "rows"}</span>
@@ -575,31 +616,6 @@ const CalibrationGrid = ({
         </div>
       </UserModal>
 
-      <style>{`
-        .grid-scroll {
-          scrollbar-width: thin;
-          scrollbar-color: #8FA8A0 #EEF3F1;
-        }
-        .grid-scroll::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
-        }
-        .grid-scroll::-webkit-scrollbar-track {
-          background: #EEF3F1;
-          border-radius: 999px;
-        }
-        .grid-scroll::-webkit-scrollbar-thumb {
-          background: #8FA8A0;
-          border-radius: 999px;
-          border: 1px solid #EEF3F1;
-        }
-        .grid-scroll::-webkit-scrollbar-thumb:hover {
-          background: #66877C;
-        }
-        .grid-scroll::-webkit-scrollbar-corner {
-          background: #EEF3F1;
-        }
-      `}</style>
     </div>
   );
 };

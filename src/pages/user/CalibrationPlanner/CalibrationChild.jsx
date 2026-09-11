@@ -17,9 +17,10 @@ import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGri
 import  { CALIBRATED_BY_COLUMNS, CALIBRATION_RESULT_GRID } from "./calibrationColumn";
 
 import { getProfile } from "../../../services/authApi";
-import { getCalibrationUser, getAllEquipmentData, getRecordNumber, addCalibrationChild } from "../../../services/usersApi/calibrationApi";
+import { getCalibrationUser, getAllEquipmentData, addCalibrationChild } from "../../../services/usersApi/calibrationApi";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
+import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
 
 const TABS = [
   { id: "management", label: "General Information" },

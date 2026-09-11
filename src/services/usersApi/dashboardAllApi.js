@@ -17,3 +17,10 @@ export const getAllPreventivePlanner = (params = {}) => {
         params,
     });
 };
+
+
+export const getAllPreventiveManagementRecords = (params = {}) => {
+    return api.get("/user/get-preventive-maintenance-records", {
+        params,
+    });
+}

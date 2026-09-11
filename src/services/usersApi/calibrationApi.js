@@ -55,3 +55,7 @@ export const getCalibrationChildSingleReport = (id) => {
         responseType: "blob",
     });
 };
+
+export const getCalibrationManagementAudit = (id, params = {}) => {
+    return api.get(`/user/calibration-management-audit/${id}`, {params});
+};

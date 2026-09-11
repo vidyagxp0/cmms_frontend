@@ -581,6 +581,7 @@ const CalibrationChildPanel = () => {
             <ProcessActivities
               activities={activities}
               loading={activitiesLoading}
+              auditRoute={"/user/audit-calibration-management"}
               recordId={recordId}
               userId={loginUserId}
               activityApi={executeCalibrationActivityChild}

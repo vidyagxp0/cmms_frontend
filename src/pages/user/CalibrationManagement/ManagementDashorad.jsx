@@ -3,7 +3,7 @@ import { Eye } from "lucide-react";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
 import DataTable from "../../../components/common/DataTable/DataTable";
-import { getAllRecords, getCalibrationSingleReport } from "../../../services/usersApi/calibrationApi";
+import { getAllRecords, getCalibrationSingleReport, getCalibrationChildSingleReport } from "../../../services/usersApi/calibrationApi";
 import { useNavigate } from "react-router-dom";
 import { getAllCalibrationManagementRecords } from "../../../services/usersApi/dashboardAllApi";
 
@@ -154,7 +154,7 @@ const ManagementDashboard = () => {
 
             reportWindow.document.close();
 
-            const response = await getCalibrationSingleReport(recordId);
+            const response = await getCalibrationChildSingleReport(recordId);
 
             const blob = new Blob(
                 [response.data],
@@ -421,7 +421,7 @@ const ManagementDashboard = () => {
                             focus:outline-none focus:ring-2
                             focus:ring-[#159A8C]/20
                         "
-                        title="View engineering record"
+                        title="View Calibration Management Report"
                     >
                         <Eye size={14} strokeWidth={2} />
                         <span>View Report</span>

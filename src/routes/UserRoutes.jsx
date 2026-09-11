@@ -21,6 +21,7 @@ import PreventivePlannerCreate from "../pages/user/PreventiveMaintence/Preventiv
 import PreventivePlannerPanel from "../pages/user/PreventiveMaintence/PreventivePlannerPanel";
 import PreventiveMaintenanceCreate from "../pages/user/PreventiveMaintence/PreventiveMaintenanceCreate";
 import PreventiveMaintenancePanel from "../pages/user/PreventiveMaintence/PreventiveMaintenancePanel";
+import CalibrationManagmentAudit from "../pages/user/Audit/CalibrationManagmentAudit";
 
 function UserRoutes() {
   return (
@@ -33,6 +34,7 @@ function UserRoutes() {
         <Route path="cmms-dashboard" element={<UserDashboard />} />
         <Route path="create-record" element={<ProcessPage />} />
         <Route path="new-audit/:recordId" element={<Audit />} />
+        <Route path="audit-calibration-management/:recordId" element={<CalibrationManagmentAudit />} />
 
         {/* Equipment Routes*/}
         <Route path="equipment-dashboard" element={<EquipDashboard />} />

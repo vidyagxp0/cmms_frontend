@@ -337,60 +337,6 @@ const EquipmentPanel = () => {
                             </p>
                         </div>
                     </div>
-
-                    {/* RIGHT : ASSET IDENTIFIER */}
-                    <div
-                        className="
-                            inline-flex
-                            self-start
-                            items-center
-                            gap-2
-                            rounded-full
-                            border
-                            border-[var(--color-border-soft)]
-                            bg-[var(--color-surface)]
-                            px-3
-                            py-1.5
-                            shadow-[var(--shadow-xs)]
-                            lg:self-auto
-                        "
-                    >
-                        <Hash
-                            size={13}
-                            strokeWidth={1.8}
-                            className="text-[#A47D45]"
-                        />
-
-                        <span
-                            className="
-                                text-[9px]
-                                font-bold
-                                uppercase
-                                tracking-[0.10em]
-                                text-[var(--color-text-muted)]
-                            "
-                        >
-                            Asset ID
-                        </span>
-
-                        <span
-                            className="
-                                rounded-[6px]
-                                bg-[#F3F6F4]
-                                px-2
-                                py-1
-                                font-mono
-                                text-[10px]
-                                font-bold
-                                tracking-[0.04em]
-                                text-[#536D64]
-                            "
-                        >
-                            {form.getFieldValue(
-                                "equipment_id"
-                            ) || "—"}
-                        </span>
-                    </div>
                 </div>
 
                 {/* =====================================================

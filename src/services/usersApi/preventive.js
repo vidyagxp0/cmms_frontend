@@ -12,8 +12,5 @@ export const updatePreventive = (id, payload) =>
 export const executePreventiveActivity = (id, payload) =>
     api.post(`/user/preventive-planner-record-stage/${id}`, payload);
 
-
-
-
 // export const deleteRole = (id) =>
 //     api.delete(`/admin/delete-role/${id}`);

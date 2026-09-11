@@ -36,6 +36,7 @@ import {
   getAllPermissions,
   getAllStages,
 } from "../../../services/usersApi/workflowCommonApi";
+import PreventiveGrid from "./PreventiveGrid";
 
 dayjs.extend(customParseFormat);
 
@@ -731,7 +732,7 @@ const PreventivePlannerPanel = () => {
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="PREVENTIVE PLANNER INFORMATION" />
           <div className="mt-5">
-            <CalibrationGrid
+            <PreventiveGrid
               value={preventiveRows}
               onChange={setPreventiveRows}
               equipmentOptions={equipmentOptions}

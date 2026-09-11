@@ -21,6 +21,7 @@ import FormAttachment from "../../../components/common/Attachment/FormAttachment
 import CalibrationGrid from "../CalibrationPlanner/CalibrationGrid";
 import { addPreventive } from "../../../services/usersApi/preventive";
 import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
+import PreventiveGrid from "./PreventiveGrid";
 
 const TABS = [
   { id: "general", label: "General Information" },
@@ -418,7 +419,7 @@ const PreventivePlannerCreate = () => {
             <div className="mt-5">
               <SectionHeader title="PREVENTIVE PLANNER INFORMATION" />
 
-              <CalibrationGrid
+              <PreventiveGrid
                 value={preventivePlannerRows}
                 onChange={setPreventivePlannerRows}
                 equipmentOptions={equipmentOptions}

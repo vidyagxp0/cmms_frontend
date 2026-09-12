@@ -38,7 +38,7 @@ const TABS = [
   { id: "management", label: "General Information", stageId: 19 },
   { id: "implementor", label: "HOD / Designee Review", stageId: 20 },
   { id: "qa-review", label: "QA Review & Approval", stageId: 21 },
-  { id: "activity", label: "Activity Log", stageId: 23 },
+  { id: "activity", label: "Activity Log", stageId: 22 },
 ];
 
 const REQUIRED_FIELDS = [];
@@ -54,6 +54,19 @@ const getProcessValue = (processData = [], key) => {
     return field?.value ?? "";
   }
   return "";
+};
+
+// Normalise a backend date value into DD/MM/YYYY for the grid
+const getQaVerifiedDate = (value) => {
+  if (!value) return "";
+  const raw = String(value).trim();
+  // ISO string e.g. "2026-09-11T05:18:53.000000Z"
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    return dayjs(raw.slice(0, 10)).format("DD/MM/YYYY");
+  }
+  // Already formatted
+  const parsed = dayjs(raw, "DD/MM/YYYY", true);
+  return parsed.isValid() ? parsed.format("DD/MM/YYYY") : "";
 };
 
 // Build row payload for a single grid (without wrapping in name)
@@ -180,6 +193,7 @@ const CalibrationChildPanel = () => {
   const [calibrationResultRows, setCalibrationResultRows] = useState([]);
   const [calibrationResultTest, setCalibrationResultTest] = useState([]);
   const [parentId, setParentId] = useState(null);
+  const [calibrationDoneDate, setCalibrationDoneDate] = useState("");
 
   const isFetchingRef = useRef(false);
 
@@ -348,6 +362,10 @@ const CalibrationChildPanel = () => {
         qaReviewAttachment: qaReviewAttachment || [],
       });
 
+      // ---- Calibration DONE DATE (prefilled from qaVerifiedAt, read-only) ----
+      const qaVerifiedDate = getQaVerifiedDate(data?.qaVerifiedAt);
+      setCalibrationDoneDate(qaVerifiedDate);
+
       // ---- Parse grid data ----
       const gridRecords = data?.grid_records || [];
       // Flatten all grid_data objects (they are arrays)
@@ -382,7 +400,13 @@ const CalibrationChildPanel = () => {
       });
 
       setCalibrationResultRows(calibrationRows);
-      setCalibrationResultTest(testRows);
+      // Force the Calibration DONE DATE to the qaVerifiedAt date for every row
+      setCalibrationResultTest(
+        testRows.map((row) => ({
+          ...row,
+          calibrationdoneDATE: qaVerifiedDate || row.calibrationdoneDATE || "",
+        }))
+      );
       // -------------------------------------
 
     } catch (error) {
@@ -468,6 +492,20 @@ const CalibrationChildPanel = () => {
     setActiveTab(tabId);
   };
 
+  // Keep Calibration DONE DATE locked to qaVerifiedAt whenever the grid changes
+  const handleCalibrationTestChange = useCallback(
+    (rows = []) => {
+      setCalibrationResultTest(
+        rows.map((row) =>
+          calibrationDoneDate
+            ? { ...row, calibrationdoneDATE: calibrationDoneDate }
+            : row
+        )
+      );
+    },
+    [calibrationDoneDate]
+  );
+
   const systemValues = {
     recordNumber: recordNumber,
     siteLocationCode: siteLocationCode,
@@ -552,7 +590,7 @@ const CalibrationChildPanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
-    navigate("/user/engineering-dashboard");
+    navigate("/user/calibration-management-dashboard");
   };
 
   if (isLoading) {
@@ -581,13 +619,14 @@ const CalibrationChildPanel = () => {
             <ProcessActivities
               activities={activities}
               loading={activitiesLoading}
+              auditRoute={"/user/audit-calibration-management"}
               recordId={recordId}
               userId={loginUserId}
               activityApi={executeCalibrationActivityChild}
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
-              onExit={() => navigate("/user/engineering-dashboard")}
+              onExit={() => navigate("/user/calibration-management-dashboard")}
             />
           </div>
         </div>
@@ -693,7 +732,7 @@ const CalibrationChildPanel = () => {
               name="Master Instruments Details"
               columns={CALIBRATION_RESULT_GRID}
               value={calibrationResultTest}
-              onChange={setCalibrationResultTest}
+              onChange={handleCalibrationTestChange}
               allowAdd={isManagementEditable}
               allowDelete={isManagementEditable}
               addButtonLabel="Add Parameter"

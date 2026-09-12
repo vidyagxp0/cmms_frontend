@@ -19,6 +19,9 @@ import PreventivePlannerDashboard from "../pages/user/PreventiveMaintence/Preven
 import PreventiveMaintenanceDashboard from "../pages/user/PreventiveMaintence/PreventiveMaintenanceDashboard ";
 import PreventivePlannerCreate from "../pages/user/PreventiveMaintence/PreventivePlannerCreate";
 import PreventivePlannerPanel from "../pages/user/PreventiveMaintence/PreventivePlannerPanel";
+import PreventiveMaintenanceCreate from "../pages/user/PreventiveMaintence/PreventiveMaintenanceCreate";
+import PreventiveMaintenancePanel from "../pages/user/PreventiveMaintence/PreventiveMaintenancePanel";
+import CalibrationManagmentAudit from "../pages/user/Audit/CalibrationManagmentAudit";
 
 function UserRoutes() {
   return (
@@ -31,6 +34,7 @@ function UserRoutes() {
         <Route path="cmms-dashboard" element={<UserDashboard />} />
         <Route path="create-record" element={<ProcessPage />} />
         <Route path="new-audit/:recordId" element={<Audit />} />
+        <Route path="audit-calibration-management/:recordId" element={<CalibrationManagmentAudit />} />
 
         {/* Equipment Routes*/}
         <Route path="equipment-dashboard" element={<EquipDashboard />} />
@@ -52,6 +56,8 @@ function UserRoutes() {
         <Route path="preventive-maintenance-dashboard" element={<PreventiveMaintenanceDashboard />} />
         <Route path="preventive-maintenance-planner-create/:processId" element={<PreventivePlannerCreate />} />
         <Route path="preventive-maintenance-planner-panel/:processId/:recordId" element={<PreventivePlannerPanel />} />
+        <Route path="preventive-maintenance-create/:processId/:recordId" element={<PreventiveMaintenanceCreate  />} />
+        <Route path="preventive-maintenance-panel/:processId/:recordId" element={<PreventiveMaintenancePanel  />} />
 
         {/* <Route path="equipment-panel/:id" element={<EquipmentPanel/>} /> */}
       </Route>

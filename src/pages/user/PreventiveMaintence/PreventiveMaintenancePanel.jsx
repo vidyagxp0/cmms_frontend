@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Form } from "antd";
+import { Form, DatePicker } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
@@ -10,6 +10,7 @@ import ProcessStage from "../../../components/common/ProcesStageTabs/ProcessStag
 import ProcessActivities from "../../../components/common/ProcesStageTabs/ProcessActivities";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import FormInput from "../../../components/common/Form/FormInput";
+import FormSelect from "../../../components/common/Form/FormSelect";
 import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
@@ -21,9 +22,9 @@ import "../../../components/ui/disabledFields.css";
 import { getProfile } from "../../../services/authApi";
 import { getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
 import {
-  executePreventiveActivity,
-  getPreventiveDetail,
-  updatePreventive,
+  executePreventiveMaintenceActivity,
+  getPreventiveMaintenceDetail,
+  updatePreventiveMaintence,
 } from "../../../services/usersApi/preventive";
 import {
   addMultipleAttachments,
@@ -35,20 +36,20 @@ import {
   getAllPermissions,
   getAllStages,
 } from "../../../services/usersApi/workflowCommonApi";
-import PreventiveGrid from "./PreventiveGrid";
 
 dayjs.extend(customParseFormat);
 
 const TABS = [
-  { id: "general", label: "General Information", stageId: 7 },
-  { id: "hod", label: "HOD / Designee Review", stageId: 8 },
-  { id: "user-dept-review", label: "QA Review", stageId: 9 },
-  { id: "qa-review", label: "QA Approval Review", stageId: 10 },
-  { id: "activity", label: "Activity Log", stageId: 11 },
-  { id: "cancellation", label: "Cancellation", stageId: 6 },
+  { id: "general", label: "General Information", stageId: 13 },
+  { id: "engineer-review", label: "Review By Engineer Dept", stageId: 14 },
+  { id: "qa-approval", label: "QA Approval", stageId: 15 },
+  { id: "activity", label: "Activity Log", stageId: 16 },
+  { id: "cancellation", label: "Cancellation", stageId: 17 },
 ];
 
-const REQUIRED_FIELDS = [{ name: "shortDescription", label: "Short Description" }];
+const REQUIRED_FIELDS = [
+  { name: "shortDescription", label: "Short Description" },
+];
 
 const getProcessValue = (processData = [], key) => {
   if (Array.isArray(processData)) {
@@ -63,68 +64,69 @@ const getProcessValue = (processData = [], key) => {
   return "";
 };
 
-const buildGridPayload = (rows = [], equipmentMap = {}) => {
-  return rows.map((row, index) => {
-    const rowData = { row_id: index + 1 };
-    Object.keys(row).forEach((key) => {
-      if (
-        key === "monthlyPreventive" ||
-        key === "preventiveFrequencyStartDate"
-      ) {
-        rowData[key] = row[key];
-        return;
-      }
-      let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
-      if (key === "previousPreventiveDate" && value)
-        value = dayjs(value).format("DD/MM/YYYY");
-      else if (key === "nextPreventiveDate" && value)
-        value = dayjs(value).format("DD/MM/YYYY");
-      if (key === "equipmentInstrumentName" && value && equipmentMap[value])
-        value = equipmentMap[value]?.name || value;
-      rowData[key] = { key, label: key, value };
-    });
-    return rowData;
-  });
-};
-
 const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({
     key: field.name,
     label: field.label,
     value: values?.[field.name] || "",
   })),
-  { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
-  { key: "comment", label: "Comments", value: values?.comments || "" },
-  { key: "attachment", label: "Attachment", value: values?.attachment || [] },
   {
-    key: "hod_review_comments",
-    label: "HOD / Designee Review Comments",
-    value: values?.hodReviewComments || "",
+    key: "short_description",
+    label: "Short Description",
+    value: values?.shortDescription || "",
   },
   {
-    key: "hod_review_attachment",
-    label: "HOD / Designee Review Attachment",
-    value: values?.hodReviewAttachment || [],
+    key: "equipmentInstrumentName",
+    label: "Equipment Name",
+    value: values?.equipmentInstrumentName || "",
   },
   {
-    key: "user_dept_review_comments",
-    label: "User Dept Review Comments",
-    value: values?.userDeptReviewComments || "",
+    key: "equipmentInstrumentId",
+    label: "Equipment Code",
+    value: values?.equipmentInstrumentId || "",
+  },
+  { key: "block", label: "Block", value: values?.block || "" },
+  { key: "department", label: "Department", value: values?.department || "" },
+  { key: "location", label: "Location", value: values?.location || "" },
+  {
+    key: "previousPreventiveDate",
+    label: "Previous Preventive Date",
+    value: values?.previousPreventiveDate
+      ? dayjs(values.previousPreventiveDate).format("DD/MM/YYYY")
+      : "",
   },
   {
-    key: "user_dept_review_attachment",
-    label: "User Dept Review Attachment",
-    value: values?.userDeptReviewAttachment || [],
+    key: "nextPreventiveDate",
+    label: "Next Preventive Date",
+    value: values?.nextPreventiveDate
+      ? dayjs(values.nextPreventiveDate).format("DD/MM/YYYY")
+      : "",
+  },
+  { key: "remark", label: "Remark", value: values?.remark || "" },
+  {
+    key: "attachment",
+    label: "Attachment",
+    value: values?.attachment || [],
   },
   {
-    key: "qa_review_comments",
-    label: "QA Review Comments",
-    value: values?.qaReviewComments || "",
+    key: "engineer_review_comments",
+    label: "Review By Engineer Dept Comments",
+    value: values?.engineerReviewComments || "",
   },
   {
-    key: "qa_review_attachment",
-    label: "QA Review Attachment",
-    value: values?.qaReviewAttachment || [],
+    key: "engineer_review_attachment",
+    label: "Review By Engineer Dept Attachment",
+    value: values?.engineerReviewAttachment || [],
+  },
+  {
+    key: "qa_approval_comments",
+    label: "QA Approval Comments",
+    value: values?.qaApprovalComments || "",
+  },
+  {
+    key: "qa_approval_attachment",
+    label: "QA Approval Attachment",
+    value: values?.qaApprovalAttachment || [],
   },
   {
     key: "cancellation_remark",
@@ -138,7 +140,7 @@ const buildProcessData = (values, systemFields) => [
   },
 ];
 
-const validatePreventivePlannerForm = (form, storedRequired) => {
+const validatePreventiveMaintenceForm = (form, storedRequired) => {
   const values = form.getFieldsValue();
   return REQUIRED_FIELDS.filter((field) => {
     let value = values?.[field.name];
@@ -149,7 +151,7 @@ const validatePreventivePlannerForm = (form, storedRequired) => {
   });
 };
 
-const PreventivePlannerPanel = () => {
+const PreventiveMaintenancePanel = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -163,7 +165,6 @@ const PreventivePlannerPanel = () => {
   const [activityLogsLoading, setActivityLogsLoading] = useState(false);
   const [canPerformActivity, setCanPerformActivity] = useState(false);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
-  const [preventiveRows, setPreventiveRows] = useState([]);
   const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [equipmentMap, setEquipmentMap] = useState({});
   const equipmentMapRef = useRef(equipmentMap);
@@ -183,10 +184,6 @@ const PreventivePlannerPanel = () => {
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "" });
 
-  const canCreateChild =
-    Number(activeStageId) === 11 &&
-    userRoles.some((role) => String(role).toLowerCase() === "initiator");
-
   useEffect(() => {
     equipmentMapRef.current = equipmentMap;
   }, [equipmentMap]);
@@ -196,11 +193,10 @@ const PreventivePlannerPanel = () => {
     canPerformActivity === true &&
     permissionsLoading === false;
 
-  const isGeneralEditable = isStageEditable(7);
-  const isHodEditable = isStageEditable(8);
-  const isUserDeptEditable = isStageEditable(9);
-  const isQaReviewEditable = isStageEditable(10);
-  const isCancellationEditable = isStageEditable(6);
+  const isGeneralEditable = isStageEditable(13);
+  const isEngineerReviewEditable = isStageEditable(14);
+  const isQaApprovalEditable = isStageEditable(15);
+  const isCancellationEditable = isStageEditable(17);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -240,20 +236,20 @@ const PreventivePlannerPanel = () => {
     fetchEquipment();
   }, []);
 
-  const fetchPreventiveDetail = useCallback(
+  const fetchPreventiveMaintenceDetail = useCallback(
     async (isInitial = false) => {
       if (!recordId) {
-        toast.error("Preventive Planner record ID is missing.");
+        toast.error("Preventive Maintenance record ID is missing.");
         return;
       }
       if (isFetchingRef.current) return;
       isFetchingRef.current = true;
       try {
         if (isInitial) setIsLoading(true);
-        const response = await getPreventiveDetail(recordId);
+        const response = await getPreventiveMaintenceDetail(recordId);
         const responseData = response?.data?.data;
         if (!responseData) {
-          toast.error("Preventive Planner record not found.");
+          toast.error("Preventive Maintenance record not found.");
           return;
         }
         setProcessId(responseData?.process_id || null);
@@ -266,25 +262,53 @@ const PreventivePlannerPanel = () => {
         const recordNumber = getProcessValue(processData, "recordNumber");
         const locationCode = getProcessValue(processData, "siteLocationCode");
         const processInitiator = getProcessValue(processData, "initiator");
-        const processDateOfInitiation = getProcessValue(processData, "dateOfInitiation");
-        const dueDate = getProcessValue(processData, "dueDate");
-        const processDepartment = getProcessValue(processData, "initiationDepartment");
-        const shortDescription = getProcessValue(processData, "short_description");
-        const comments = getProcessValue(processData, "comment");
+        const processDateOfInitiation = getProcessValue(
+          processData,
+          "dateOfInitiation"
+        );
+        const processDepartment = getProcessValue(
+          processData,
+          "initiationDepartment"
+        );
+        const shortDescription = getProcessValue(
+          processData,
+          "short_description"
+        );
+        const equipmentName = getProcessValue(
+          processData,
+          "equipmentInstrumentName"
+        );
+        const equipmentCode = getProcessValue(
+          processData,
+          "equipmentInstrumentId"
+        );
+        const block = getProcessValue(processData, "block");
+        const department = getProcessValue(processData, "department");
+        const locationVal = getProcessValue(processData, "location");
+        const prevDate = getProcessValue(processData, "previousPreventiveDate");
+        const nextDate = getProcessValue(processData, "nextPreventiveDate");
+        const remark = getProcessValue(processData, "remark");
         const attachment = getProcessValue(processData, "attachment");
-        const hodReviewComments = getProcessValue(processData, "hod_review_comments");
-        const hodReviewAttachment = getProcessValue(processData, "hod_review_attachment");
-        const userDeptReviewComments = getProcessValue(
+        const engineerReviewComments = getProcessValue(
           processData,
-          "user_dept_review_comments"
+          "engineer_review_comments"
         );
-        const userDeptReviewAttachment = getProcessValue(
+        const engineerReviewAttachment = getProcessValue(
           processData,
-          "user_dept_review_attachment"
+          "engineer_review_attachment"
         );
-        const qaReviewComments = getProcessValue(processData, "qa_review_comments");
-        const qaReviewAttachment = getProcessValue(processData, "qa_review_attachment");
-        const cancellationRemark = getProcessValue(processData, "cancellation_remark");
+        const qaApprovalComments = getProcessValue(
+          processData,
+          "qa_approval_comments"
+        );
+        const qaApprovalAttachment = getProcessValue(
+          processData,
+          "qa_approval_attachment"
+        );
+        const cancellationRemark = getProcessValue(
+          processData,
+          "cancellation_remark"
+        );
         const cancellationAttachment = getProcessValue(
           processData,
           "cancellation_attachment"
@@ -313,86 +337,48 @@ const PreventivePlannerPanel = () => {
           shortDescription: shortDescription || "",
         };
 
+        // Resolve equipment name → id for the disabled Select
+        const currentEquipmentMap = equipmentMapRef.current;
+        let equipmentValue = equipmentName || undefined;
+        if (equipmentName && currentEquipmentMap[equipmentName]) {
+          equipmentValue = equipmentName;
+        } else if (equipmentName) {
+          const found = Object.values(currentEquipmentMap).find(
+            (eq) => eq.name === equipmentName
+          );
+          if (found) equipmentValue = found.id;
+        }
+
         form.setFieldsValue({
           recordNumber,
           siteLocationCode: locationCode || "",
           initiator: backendInitiatorName,
           dateOfInitiation:
             processDateOfInitiation || responseData?.initiation_date || "",
-          dueDate,
           initiationDepartment:
             responseData?.department?.name || processDepartment || "",
           shortDescription,
-          comments,
+          equipmentInstrumentName: equipmentValue,
+          equipmentInstrumentId: equipmentCode || "",
+          block: block || "",
+          department: department || "",
+          location: locationVal || "",
+          previousPreventiveDate: prevDate ? dayjs(prevDate, "DD/MM/YYYY") : null,
+          nextPreventiveDate: nextDate ? dayjs(nextDate, "DD/MM/YYYY") : null,
+          remark: remark || "",
           attachment: attachment || [],
-          hodReviewComments,
-          hodReviewAttachment: hodReviewAttachment || [],
-          userDeptReviewComments,
-          userDeptReviewAttachment: userDeptReviewAttachment || [],
-          qaReviewComments,
-          qaReviewAttachment: qaReviewAttachment || [],
+          engineerReviewComments: engineerReviewComments || "",
+          engineerReviewAttachment: engineerReviewAttachment || [],
+          qaApprovalComments: qaApprovalComments || "",
+          qaApprovalAttachment: qaApprovalAttachment || [],
           cancellationRemark: cancellationRemark || "",
           cancellationAttachment: cancellationAttachment || [],
         });
-
-        const currentEquipmentMap = equipmentMapRef.current;
-        const gridRows = (responseData?.grid_records || []).flatMap(
-          (record) => record?.grid_data || []
-        );
-        const rawRows = gridRows.map((item) => {
-          const row = {};
-          Object.keys(item).forEach((key) => {
-            if (key === "row_id") row.row_id = item.row_id;
-            else if (key === "monthlyPreventive")
-              row.monthlyPreventive = item[key] || {};
-            else if (key === "preventiveFrequencyStartDate")
-              row.preventiveFrequencyStartDate = item[key] || "";
-            else if (
-              item[key] &&
-              typeof item[key] === "object" &&
-              Object.prototype.hasOwnProperty.call(item[key], "value")
-            )
-              row[key] = item[key].value;
-            else row[key] = item[key];
-          });
-          return row;
-        });
-
-        const normalizedRows = rawRows.map((row) => {
-          const newRow = { ...row };
-          newRow.monthlyPreventive =
-            row.monthlyPreventive && typeof row.monthlyPreventive === "object"
-              ? row.monthlyPreventive
-              : {};
-          newRow.preventiveFrequencyStartDate =
-            row.preventiveFrequencyStartDate || "";
-
-          if (
-            newRow.equipmentInstrumentName &&
-            typeof newRow.equipmentInstrumentName === "string"
-          ) {
-            const found = Object.values(currentEquipmentMap).find(
-              (eq) => eq.name === newRow.equipmentInstrumentName
-            );
-            if (found) newRow.equipmentInstrumentName = found.id;
-          }
-
-          newRow.previousPreventiveDate = newRow.previousPreventiveDate
-            ? dayjs(newRow.previousPreventiveDate, "DD/MM/YYYY")
-            : "";
-          newRow.nextPreventiveDate = newRow.nextPreventiveDate
-            ? dayjs(newRow.nextPreventiveDate, "DD/MM/YYYY")
-            : "";
-
-          return newRow;
-        });
-
-        setPreventiveRows(normalizedRows);
       } catch (error) {
-        console.error("Failed to fetch preventive planner detail:", error);
+        console.error("Failed to fetch preventive maintenance detail:", error);
         toast.error(
           error?.response?.data?.message ||
-            "Failed to load Preventive Planner record."
+            "Failed to load Preventive Maintenance record."
         );
       } finally {
         setIsLoading(false);
@@ -403,8 +389,8 @@ const PreventivePlannerPanel = () => {
   );
 
   useEffect(() => {
-    fetchPreventiveDetail(true);
-  }, [fetchPreventiveDetail]);
+    fetchPreventiveMaintenceDetail(true);
+  }, [fetchPreventiveMaintenceDetail]);
 
   useEffect(() => {
     if (!processId) return;
@@ -413,7 +399,9 @@ const PreventivePlannerPanel = () => {
         setWorkflowLoading(true);
         const response = await getAllStages(processId);
         const stages = response?.data?.data || [];
-        const activeStages = stages.filter((stage) => stage?.is_active !== false);
+        const activeStages = stages.filter(
+          (stage) => stage?.is_active !== false
+        );
         setWorkflowStages(activeStages);
       } catch (error) {
         console.error("Failed to fetch workflow stages:", error);
@@ -471,7 +459,8 @@ const PreventivePlannerPanel = () => {
       console.error("Failed to fetch record permissions:", error);
       setCanPerformActivity(false);
       toast.error(
-        error?.response?.data?.message || "Failed to check activity permissions."
+        error?.response?.data?.message ||
+          "Failed to check activity permissions."
       );
     } finally {
       setPermissionsLoading(false);
@@ -526,7 +515,11 @@ const PreventivePlannerPanel = () => {
       value: form.getFieldValue("siteLocationCode") || "",
     },
     { name: "initiator", label: "Initiator", value: initiator },
-    { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
+    {
+      name: "dateOfInitiation",
+      label: "Date of Initiation",
+      value: dateOfInitiation,
+    },
     {
       name: "initiationDepartment",
       label: "Initiation Department",
@@ -534,21 +527,9 @@ const PreventivePlannerPanel = () => {
     },
   ];
 
-  const handleViewChild = (rowIndex, rowData) => {
-    const shortDesc = form.getFieldValue("shortDescription") || "";
-    navigate(`/user/preventive-maintenance-create/${4}/${recordId}`, {
-      state: {
-        rowData,
-        shortDescription: shortDesc,
-        processId: 4,
-        parentId: recordId,
-      },
-    });
-  };
-
   const handleSave = async () => {
     if (isSaving || isLoading) return;
-    const missingFields = validatePreventivePlannerForm(
+    const missingFields = validatePreventiveMaintenceForm(
       form,
       requiredValuesRef.current
     );
@@ -581,7 +562,6 @@ const PreventivePlannerPanel = () => {
       });
 
       const processData = buildProcessData(mergedValues, systemFields);
-      const gridData = buildGridPayload(preventiveRows, equipmentMap);
 
       const payload = {
         process_id: Number(processId),
@@ -593,27 +573,27 @@ const PreventivePlannerPanel = () => {
         initiation_date:
           mergedValues?.dateOfInitiation || dateOfInitiation || "",
         process_data: processData,
-        gridData,
+        gridData: [],
         checklistData: [],
       };
 
-      const response = await updatePreventive(recordId, payload);
+      const response = await updatePreventiveMaintence(recordId, payload);
 
       if (response?.data?.success || response?.data?.status === true) {
-        toast.success("Preventive Planner updated successfully.");
-        await fetchPreventiveDetail();
+        toast.success("Preventive Maintenance updated successfully.");
+        await fetchPreventiveMaintenceDetail();
         await fetchPermissions();
         await fetchActivityLogs();
         return;
       }
       toast.error(
-        response?.data?.message || "Failed to update Preventive Planner."
+        response?.data?.message || "Failed to update Preventive Maintenance."
       );
     } catch (error) {
-      console.error("Preventive Planner update failed:", error);
+      console.error("Preventive Maintenance update failed:", error);
       toast.error(
         error?.response?.data?.message ||
-          "Failed to update Preventive Planner. Please try again."
+          "Failed to update Preventive Maintenance. Please try again."
       );
     } finally {
       setIsSaving(false);
@@ -626,18 +606,21 @@ const PreventivePlannerPanel = () => {
       if (canPerformActivity) {
         await handleSubmit(values);
       } else {
-        await fetchPreventiveDetail(false);
+        await fetchPreventiveMaintenceDetail(false);
         await fetchPermissions();
         await fetchActivityLogs();
       }
     } catch (error) {
-      console.error("Failed to save preventive planner after activity:", error);
+      console.error(
+        "Failed to save preventive maintenance after activity:",
+        error
+      );
     }
   };
 
   const handleCancel = () => {
     if (isSaving) return;
-    navigate("/user/preventive-planner-dashboard");
+    navigate(-1);
   };
 
   if (isLoading) {
@@ -649,7 +632,7 @@ const PreventivePlannerPanel = () => {
     );
   }
 
-  const isCancellationStageActive = Number(activeStageId) === 6;
+  const isCancellationStageActive = Number(activeStageId) === 17;
 
   const visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")
@@ -681,11 +664,11 @@ const PreventivePlannerPanel = () => {
               loading={activitiesLoading}
               recordId={recordId}
               userId={loginUserId}
-              activityApi={executePreventiveActivity}
+              activityApi={executePreventiveMaintenceActivity}
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
-              onExit={() => navigate("/user/preventive-planner-dashboard")}
+              onExit={() => navigate(-1)}
             />
           </div>
         </div>
@@ -743,33 +726,81 @@ const PreventivePlannerPanel = () => {
               />
             </Form.Item>
           </div>
+
           <div className="my-9 h-px w-full bg-slate-200" />
-          <SectionHeader title="PREVENTIVE PLANNER INFORMATION" />
-          <div className="mt-5">
-            <PreventiveGrid
-              value={preventiveRows}
-              onChange={setPreventiveRows}
-              equipmentOptions={equipmentOptions}
-              equipmentMap={equipmentMap}
-              equipmentLoading={equipmentLoading}
-              recordId={recordId}
-              disabled={!isGeneralEditable}
-              showAddButton={true}
-              canCreateChild={canCreateChild}
-              onViewChild={handleViewChild}
-            />
+          <SectionHeader title="EQUIPMENT DETAILS" />
+
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item
+              name="equipmentInstrumentName"
+              label="Equipment Name"
+              className="!mb-4"
+            >
+              <FormSelect
+                placeholder={equipmentLoading ? "Loading..." : "Equipment name"}
+                options={equipmentOptions}
+                disabled
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="equipmentInstrumentId"
+              label="Equipment Code"
+              className="!mb-4"
+            >
+              <FormInput placeholder="Equipment code" disabled />
+            </Form.Item>
+
+            <Form.Item name="block" label="Block" className="!mb-4">
+              <FormInput placeholder="Block" disabled={!isGeneralEditable} />
+            </Form.Item>
+
+            <Form.Item name="department" label="Department" className="!mb-4">
+              <FormInput
+                placeholder="Department"
+                disabled={!isGeneralEditable}
+              />
+            </Form.Item>
+
+            <Form.Item name="location" label="Location" className="!mb-4">
+              <FormInput placeholder="Location" disabled={!isGeneralEditable} />
+            </Form.Item>
+
+            <Form.Item
+              name="previousPreventiveDate"
+              label="Previous Preventive Date"
+              className="!mb-4"
+            >
+              <DatePicker
+                className="w-full"
+                format="DD/MM/YYYY"
+                placeholder="Select date"
+                disabled={!isGeneralEditable}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="nextPreventiveDate"
+              label="Next Preventive Date"
+              className="!mb-4"
+            >
+              <DatePicker
+                className="w-full"
+                format="DD/MM/YYYY"
+                placeholder="Select date"
+                disabled={!isGeneralEditable}
+              />
+            </Form.Item>
           </div>
-          <Form.Item
-            name="comments"
-            label="Comments"
-            className="!mb-4 md:col-span-2"
-          >
+
+          <Form.Item name="remark" label="Remark" className="!mb-4 md:col-span-2">
             <FormTextArea
-              rows={5}
-              placeholder="Enter comments..."
+              rows={4}
+              placeholder="Enter remark..."
               disabled={!isGeneralEditable}
             />
           </Form.Item>
+
           <Form.Item
             name="attachment"
             label="Attachment"
@@ -787,58 +818,26 @@ const PreventivePlannerPanel = () => {
           </Form.Item>
         </section>
 
-        {/* HOD Review */}
-        <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
-          <SectionHeader title="HOD / DESIGNEE REVIEW" />
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item
-              name="hodReviewComments"
-              label="Comments"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormTextArea
-                rows={5}
-                placeholder="Enter comments..."
-                disabled={!isHodEditable}
-              />
-            </Form.Item>
-            <Form.Item
-              name="hodReviewAttachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormAttachment
-                multiple={false}
-                recordId={recordId}
-                attachmentField="hod_review_attachment"
-                label="HOD / Designee Review Attachment"
-                uploadApi={addSingleAttachment}
-                disabled={!isHodEditable}
-              />
-            </Form.Item>
-          </div>
-        </section>
-
-        {/* QA Review */}
+        {/* Review By Engineer Dept */}
         <section
-          style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}
+          style={{ display: activeTab === "engineer-review" ? "block" : "none" }}
         >
-          <SectionHeader title="QA REVIEW" />
+          <SectionHeader title="REVIEW BY ENGINEER DEPT" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
-              name="userDeptReviewComments"
+              name="engineerReviewComments"
               label="Comments"
               className="!mb-4 md:col-span-2"
             >
               <FormTextArea
                 rows={5}
                 placeholder="Enter comments..."
-                disabled={!isUserDeptEditable}
+                disabled={!isEngineerReviewEditable}
               />
             </Form.Item>
+
             <Form.Item
-              name="userDeptReviewAttachment"
+              name="engineerReviewAttachment"
               label="Attachment"
               valuePropName="value"
               className="!mb-4 md:col-span-2"
@@ -846,32 +845,35 @@ const PreventivePlannerPanel = () => {
               <FormAttachment
                 multiple={true}
                 recordId={recordId}
-                attachmentField="user_dept_review_attachment"
-                label="QA Review Attachment"
+                attachmentField="engineer_review_attachment"
+                label="Review By Engineer Dept Attachment"
                 uploadApi={addMultipleAttachments}
-                disabled={!isUserDeptEditable}
+                disabled={!isEngineerReviewEditable}
               />
             </Form.Item>
           </div>
         </section>
 
-        {/* QA Approval Review */}
-        <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
-          <SectionHeader title="QA APPROVAL REVIEW" />
+        {/* QA Approval */}
+        <section
+          style={{ display: activeTab === "qa-approval" ? "block" : "none" }}
+        >
+          <SectionHeader title="QA APPROVAL" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
-              name="qaReviewComments"
+              name="qaApprovalComments"
               label="Comments"
               className="!mb-4 md:col-span-2"
             >
               <FormTextArea
                 rows={5}
                 placeholder="Enter comments..."
-                disabled={!isQaReviewEditable}
+                disabled={!isQaApprovalEditable}
               />
             </Form.Item>
+
             <Form.Item
-              name="qaReviewAttachment"
+              name="qaApprovalAttachment"
               label="Attachment"
               valuePropName="value"
               className="!mb-4 md:col-span-2"
@@ -879,10 +881,10 @@ const PreventivePlannerPanel = () => {
               <FormAttachment
                 multiple={true}
                 recordId={recordId}
-                attachmentField="qa_review_attachment"
-                label="QA Review Attachment"
+                attachmentField="qa_approval_attachment"
+                label="QA Approval Attachment"
                 uploadApi={addMultipleAttachments}
-                disabled={!isQaReviewEditable}
+                disabled={!isQaApprovalEditable}
               />
             </Form.Item>
           </div>
@@ -996,4 +998,4 @@ const PreventivePlannerPanel = () => {
   );
 };
 
-export default PreventivePlannerPanel;
+export default PreventiveMaintenancePanel;

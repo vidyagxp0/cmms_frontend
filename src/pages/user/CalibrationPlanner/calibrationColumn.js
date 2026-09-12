@@ -50,18 +50,28 @@ const CALIBRATION_RESULT_GRID = [
     minWidth: 160,
   },
   {
-    key: "error",
+    key: "accuracy",
     title: "Accuracy",
     type: "text",
-    placeholder: "Enter error",
+    placeholder: "Enter Accuracy",
     minWidth: 160,
+    toggleable: true,
+    splitFields: [
+      { key: "accuracy1", placeholder: "Accuracy 1" },
+      { key: "accuracy2", placeholder: "Accuracy 2" }
+    ]
   },
   {
     key: "range",
     title: "Range",
     type: "text",
-    placeholder: "Enter error",
+    placeholder: "Enter Range",
     minWidth: 160,
+    toggleable: true,
+    splitFields: [
+      { key: "range1", placeholder: "Range 1" },
+      { key: "range2", placeholder: "Range 2" }
+    ]
   },
   {
     key: "calibrationdoneDATE",

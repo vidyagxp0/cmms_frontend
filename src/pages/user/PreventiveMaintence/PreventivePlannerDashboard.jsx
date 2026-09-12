@@ -6,6 +6,7 @@ import DataTable from "../../../components/common/DataTable/DataTable";
 import { getAllRecords, getCalibrationSingleReport } from "../../../services/usersApi/calibrationApi";
 import { useNavigate } from "react-router-dom";
 import { getAllPreventivePlanner } from "../../../services/usersApi/dashboardAllApi";
+import { getPreventivePlannerSingleReport } from "../../../services/usersApi/preventive";
 
 const PreventivePlannerDashboard = () => {
     const navigate = useNavigate();
@@ -154,7 +155,7 @@ const PreventivePlannerDashboard = () => {
 
             reportWindow.document.close();
 
-            const response = await getCalibrationSingleReport(recordId);
+            const response = await getPreventivePlannerSingleReport(recordId);
 
             const blob = new Blob(
                 [response.data],

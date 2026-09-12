@@ -21,7 +21,7 @@ import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import "../../../components/ui/disabledFields.css";
 
 import { getProfile } from "../../../services/authApi";
-import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration,  getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
+import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration, getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
 import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
 import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
 
@@ -234,15 +234,8 @@ const CreateCalibrationPanel = () => {
       const userDeptReviewAttachment = getProcessValue(processData, "user_dept_review_attachment");
       const qaReviewComments = getProcessValue(processData, "qa_review_comments");
       const qaReviewAttachment = getProcessValue(processData, "qa_review_attachment");
-      const cancellationRemark = getProcessValue(
-          processData,
-          "cancellation_remark"
-      );
-
-      const cancellationAttachment = getProcessValue(
-          processData,
-          "cancellation_attachment"
-      );
+      const cancellationRemark = getProcessValue(processData, "cancellation_remark");
+      const cancellationAttachment = getProcessValue(processData, "cancellation_attachment");
 
       setSiteLocationCode(locationCode || "");
       // Set initiator from the API response (processData or responseData.initiator)
@@ -330,9 +323,7 @@ const CreateCalibrationPanel = () => {
         setWorkflowLoading(true);
         const response = await getAllStages(processId);
         const stages = response?.data?.data || [];
-        const activeStages = stages.filter(
-            (stage) => stage?.is_active !== false
-        );
+        const activeStages = stages.filter((stage) => stage?.is_active !== false);
         setWorkflowStages(activeStages);
       } catch (error) {
         console.error("Failed to fetch workflow stages:", error);
@@ -442,7 +433,7 @@ const CreateCalibrationPanel = () => {
         stage_id: Number(activeStageId),
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
-        initiator_name: initiator,               
+        initiator_name: initiator,
         short_description: mergedValues?.shortDescription || "",
         initiation_date: mergedValues?.dateOfInitiation || dateOfInitiation || "",
         process_data: processData,
@@ -491,8 +482,7 @@ const CreateCalibrationPanel = () => {
     );
   }
 
-  const isCancellationStageActive =
-    Number(activeStageId) === 6;
+  const isCancellationStageActive = Number(activeStageId) === 6;
 
   const visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")
@@ -593,7 +583,7 @@ const CreateCalibrationPanel = () => {
             className="!mb-4 md:col-span-2"
           >
             <FormAttachment
-              multiple={true  }
+              multiple={true}
               recordId={recordId}
               attachmentField="attachment"
               label="Attachment"

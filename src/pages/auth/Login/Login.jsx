@@ -121,7 +121,7 @@ const Login = () => {
 
   return (
     <div
-      className="relative min-h-screen w-full overflow-hidden bg-[#e9e6dc]"
+      className="relative min-h-screen w-full overflow-x-hidden bg-[#e9e6dc]"
       style={{
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
@@ -177,7 +177,8 @@ const Login = () => {
             w-full
             items-center
             justify-center
-            overflow-hidden
+            overflow-x-hidden
+            overflow-y-auto
             px-4
             py-6
             sm:px-6
@@ -534,9 +535,7 @@ const Login = () => {
                     <input
                       type="checkbox"
                       checked={remember}
-                      onChange={(e) =>
-                        setRemember(e.target.checked)
-                      }
+                      onChange={(e) => setRemember(e.target.checked)}
                       className="sr-only"
                     />
 

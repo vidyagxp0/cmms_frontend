@@ -35,10 +35,10 @@ import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInpu
 import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
 
 const TABS = [
-  { id: "management", label: "General Information", stageId: 19 },
-  { id: "implementor", label: "HOD / Designee Review", stageId: 20 },
-  { id: "qa-review", label: "QA Review & Approval", stageId: 21 },
-  { id: "activity", label: "Activity Log", stageId: 22 },
+  { id: "management", label: "General Information", stageId: 18 },
+  { id: "implementor", label: "HOD / Designee Review", stageId: 19 },
+  { id: "qa-review", label: "QA Review & Approval", stageId: 20 },
+  { id: "activity", label: "Activity Log", stageId: 21 },
 ];
 
 const REQUIRED_FIELDS = [];
@@ -199,7 +199,7 @@ const CalibrationChildPanel = () => {
 
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
 
-  const STAGE_IDS = { management: 19, implementor: 20, qaReview: 21, qaApproval: 22 };
+  const STAGE_IDS = { management: 18, implementor: 19, qaReview: 20, qaApproval: 21 };
 
   const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
   const isManagementEditable = isStageEditable(STAGE_IDS.management);
@@ -722,6 +722,8 @@ const CalibrationChildPanel = () => {
               onChange={setCalibrationResultRows}
               allowAdd={isManagementEditable}
               allowDelete={isManagementEditable}
+              disabled={!isManagementEditable}
+              disabled={!isManagementEditable}
               addButtonLabel="Add Parameter"
               minRows={0}
               rowKey="_rowId"

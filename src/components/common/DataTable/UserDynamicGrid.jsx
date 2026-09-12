@@ -26,6 +26,7 @@ const UserDynamicGrid = ({
     className = "",
     // Optional: disable permission check when grid is used outside a record context
     checkPermission = true,
+    disabled = false,
 }) => {
     const rows = Array.isArray(value) ? value : [];
     const { recordId } = useParams();
@@ -71,7 +72,7 @@ const UserDynamicGrid = ({
     }, [recordId, checkPermission]);
 
     // Whether the grid should be interactive
-    const isReadOnly = permissionsLoading || !canPerformAction;
+    const isReadOnly = disabled || permissionsLoading || !canPerformAction;
     const effectiveAllowAdd = allowAdd && !isReadOnly;
     const effectiveAllowDelete = allowDelete && !isReadOnly;
 

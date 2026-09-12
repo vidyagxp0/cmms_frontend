@@ -22,15 +22,85 @@ const ESignModal = ({
     const [comment, setComment] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState({});
+    const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
         if (!isOpen) {
+            setIsVisible(false);
             setEmail("");
             setPassword("");
             setComment("");
             setShowPassword(false);
             setErrors({});
+            return;
         }
+
+        let frame2;
+        const frame1 = requestAnimationFrame(() => {
+            frame2 = requestAnimationFrame(() => {
+                setIsVisible(true);
+            });
+        });
+
+        return () => {
+            cancelAnimationFrame(frame1);
+            if (frame2) cancelAnimationFrame(frame2);
+        };
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        const previousBodyOverflow = document.body.style.overflow;
+        const previousBodyOverscroll = document.body.style.overscrollBehavior;
+        const previousHtmlOverflow = document.documentElement.style.overflow;
+        const previousHtmlOverscroll =
+            document.documentElement.style.overscrollBehavior;
+
+        document.body.style.overflow = "hidden";
+        document.body.style.overscrollBehavior = "none";
+        document.documentElement.style.overflow = "hidden";
+        document.documentElement.style.overscrollBehavior = "none";
+
+        const preventBackgroundScroll = (event) => {
+            const modalContent = event.target?.closest?.(
+                "[data-esign-content]"
+            );
+
+            if (!modalContent) {
+                event.preventDefault();
+            }
+        };
+
+        document.addEventListener(
+            "wheel",
+            preventBackgroundScroll,
+            { passive: false }
+        );
+        document.addEventListener(
+            "touchmove",
+            preventBackgroundScroll,
+            { passive: false }
+        );
+
+        return () => {
+            document.body.style.overflow = previousBodyOverflow;
+            document.body.style.overscrollBehavior = previousBodyOverscroll;
+            document.documentElement.style.overflow = previousHtmlOverflow;
+            document.documentElement.style.overscrollBehavior =
+                previousHtmlOverscroll;
+
+            document.removeEventListener(
+                "wheel",
+                preventBackgroundScroll
+            );
+            document.removeEventListener(
+                "touchmove",
+                preventBackgroundScroll
+            );
+        };
     }, [isOpen]);
 
     if (!isOpen) return null;
@@ -84,33 +154,103 @@ const ESignModal = ({
     };
 
     return (
-        <div
-            className="
-                fixed
-                inset-0
-                z-[9999]
-                flex
-                items-center
-                justify-center
-                bg-[#10231F]/55
-                px-4
-                py-6
-                backdrop-blur-[5px]
-            "
-            onMouseDown={handleOverlayClick}
-        >
+        <>
+            <style>{`
+                @keyframes esignSubmitPulse {
+                    0%, 100% {
+                        box-shadow: 0 4px 12px rgba(24, 184, 101, 0.18);
+                    }
+                    50% {
+                        box-shadow:
+                            0 8px 24px rgba(24, 184, 101, 0.24),
+                            0 0 0 4px rgba(24, 184, 101, 0.08);
+                    }
+                }
+
+                @keyframes esignButtonSweep {
+                    0% {
+                        transform: translateX(0) skewX(-16deg);
+                        opacity: 0;
+                    }
+                    18% {
+                        opacity: 0.12;
+                    }
+                    55% {
+                        opacity: 0.75;
+                    }
+                    100% {
+                        transform: translateX(420%) skewX(-16deg);
+                        opacity: 0;
+                    }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    @keyframes esignSubmitPulse {
+                        0%, 100% {
+                            box-shadow: 0 4px 12px rgba(24, 184, 101, 0.18);
+                        }
+                    }
+
+                    @keyframes esignButtonSweep {
+                        0%, 100% {
+                            transform: translateX(0) skewX(-16deg);
+                            opacity: 0;
+                        }
+                    }
+                }
+            `}</style>
+
             <div
+                className={`
+                    fixed
+                    inset-0
+                    z-[9999]
+                    flex
+                    items-center
+                    justify-center
+                    bg-transparent
+                    px-4
+                    py-6
+                    overscroll-none
+                `}
+                onMouseDown={handleOverlayClick}
+            >
+            <div
+                aria-hidden="true"
                 className="
+                    pointer-events-none
+                    absolute
+                    inset-0
+                    z-0
+                    bg-[#10231F]/18
+                "
+            />
+
+            <div
+                data-esign-content
+                className={`
                     relative
+                    z-10
                     w-full
                     max-w-[410px]
                     overflow-hidden
                     rounded-[18px]
                     border
-                    border-[#D6E0DB]
-                    bg-[#FBFCFA]
-                    shadow-[0_24px_70px_rgba(18,48,40,0.24)]
-                "
+                    border-white/45
+                    bg-white/35
+                    backdrop-blur-[22px]
+                    shadow-[0_28px_90px_rgba(18,48,40,0.30)]
+                    ring-1
+                    ring-black/[0.03]
+                    transform-gpu
+                    origin-center
+                    transition-transform
+                    duration-[620ms]
+                    ease-[cubic-bezier(.22,1,.36,1)]
+                    ${isVisible
+                        ? "translate-y-0 scale-100"
+                        : "translate-y-2 scale-[0.985]"}
+                `}
             >
                 {/* =================================================
                     TOP ACCENT
@@ -182,9 +322,11 @@ const ESignModal = ({
                                 justify-center
                                 rounded-[11px]
                                 border
-                                border-[#C9DAD3]
-                                bg-[#E9F0EC]
+                                border-white/50
+                                bg-white/35
+                                backdrop-blur-md
                                 text-[#56766D]
+                                shadow-[0_6px_16px_rgba(36,79,74,0.08)]
                             "
                         >
                             <ShieldCheck
@@ -310,10 +452,11 @@ const ESignModal = ({
                                 justify-center
                                 rounded-[8px]
                                 border
-                                border-[#D4E0DB]
-                                bg-[#FBFCFA]
+                                border-white/45
+                                bg-white/35
+                                backdrop-blur-md
                                 text-[#56766D]
-                                shadow-[0_2px_6px_rgba(36,79,74,0.06)]
+                                shadow-[0_4px_12px_rgba(36,79,74,0.08)]
                             "
                         >
                             <Check
@@ -331,7 +474,7 @@ const ESignModal = ({
                     onSubmit={handleSubmit}
                     className="
                         border-t
-                        border-[#E1E8E4]
+                        border-white/35
                         px-5
                         pb-5
                         pt-4
@@ -372,13 +515,15 @@ const ESignModal = ({
                                 ${
                                     errors.email
                                         ? `
-                                            border-[#E4B1B1]
+                                            border-[#D58B8F]/70
+                                            bg-[#FFF6F6]/45
                                             focus-within:border-[#C94B4F]
                                         `
                                         : `
-                                            border-[#D1DDD8]
+                                            border-white/45
                                             focus-within:border-[#6E9487]
-                                            focus-within:shadow-[0_0_0_3px_rgba(110,148,135,0.10)]
+                                            focus-within:bg-white/40
+                                            focus-within:shadow-[0_0_0_3px_rgba(110,148,135,0.10),0_8px_24px_rgba(36,79,74,0.06)]
                                         `
                                 }
                             `}
@@ -479,13 +624,15 @@ const ESignModal = ({
                                 ${
                                     errors.password
                                         ? `
-                                            border-[#E4B1B1]
+                                            border-[#D58B8F]/70
+                                            bg-[#FFF6F6]/45
                                             focus-within:border-[#C94B4F]
                                         `
                                         : `
-                                            border-[#D1DDD8]
+                                            border-white/45
                                             focus-within:border-[#6E9487]
-                                            focus-within:shadow-[0_0_0_3px_rgba(110,148,135,0.10)]
+                                            focus-within:bg-white/40
+                                            focus-within:shadow-[0_0_0_3px_rgba(110,148,135,0.10),0_8px_24px_rgba(36,79,74,0.06)]
                                         `
                                 }
                             `}
@@ -631,13 +778,15 @@ const ESignModal = ({
                                 ${
                                     errors.comment
                                         ? `
-                                            border-[#E4B1B1]
+                                            border-[#D58B8F]/70
+                                            bg-[#FFF6F6]/45
                                             focus-within:border-[#C94B4F]
                                         `
                                         : `
-                                            border-[#D1DDD8]
+                                            border-white/45
                                             focus-within:border-[#6E9487]
-                                            focus-within:shadow-[0_0_0_3px_rgba(110,148,135,0.10)]
+                                            focus-within:bg-white/40
+                                            focus-within:shadow-[0_0_0_3px_rgba(110,148,135,0.10),0_8px_24px_rgba(36,79,74,0.06)]
                                         `
                                 }
                             `}
@@ -716,8 +865,10 @@ const ESignModal = ({
                             gap-2
                             rounded-[9px]
                             border
-                            border-[#DDE6E1]
-                            bg-[#F3F6F4]
+                            border-white/40
+                            bg-white/26
+                            backdrop-blur-md
+                            shadow-[inset_0_1px_0_rgba(255,255,255,0.30)]
                             px-3
                             py-2
                         "
@@ -731,7 +882,9 @@ const ESignModal = ({
                                 items-center
                                 justify-center
                                 rounded-[7px]
-                                bg-[#E7EFEB]
+                                border
+                                border-white/35
+                                bg-white/30
                                 text-[#56766D]
                             "
                         >
@@ -766,8 +919,9 @@ const ESignModal = ({
                                 h-[34px]
                                 rounded-[9px]
                                 border
-                                border-[#D0DDD7]
-                                bg-white
+                                border-white/50
+                                bg-white/30
+                                backdrop-blur-md
                                 px-3.5
                                 font-[var(--font-display)]
                                 text-[10px]
@@ -776,8 +930,8 @@ const ESignModal = ({
                                 text-[#53675E]
                                 transition-all
                                 duration-150
-                                hover:border-[#BACBC3]
-                                hover:bg-[#F5F8F6]
+                                hover:border-white/65
+                                hover:bg-white/45
                                 hover:text-[#344A43]
                                 active:scale-[0.98]
                                 disabled:cursor-not-allowed
@@ -790,7 +944,7 @@ const ESignModal = ({
                         <button
                             type="submit"
                             disabled={loading}
-                            className="
+                            className={`
                                 group
                                 flex
                                 h-[34px]
@@ -800,8 +954,9 @@ const ESignModal = ({
                                 gap-2
                                 rounded-[9px]
                                 border
-                                border-[#119653]
-                                bg-[#18B865]
+                                border-[#119653]/80
+                                bg-[#18B865]/90
+                                backdrop-blur-md
                                 px-3.5
                                 font-[var(--font-display)]
                                 text-[10px]
@@ -818,10 +973,25 @@ const ESignModal = ({
                                 active:scale-[0.98]
                                 disabled:cursor-not-allowed
                                 disabled:opacity-60
-                            "
+                                ${loading ? "animate-[esignSubmitPulse_1.5s_ease-in-out_infinite]" : ""}
+                            `}
                         >
                             {loading ? (
                                 <>
+                                    <span
+                                        aria-hidden="true"
+                                        className="
+                                            pointer-events-none
+                                            absolute
+                                            inset-y-0
+                                            left-[-45%]
+                                            w-[35%]
+                                            skew-x-[-16deg]
+                                            bg-white/25
+                                            blur-[8px]
+                                            animate-[esignButtonSweep_1.25s_ease-in-out_infinite]
+                                        "
+                                    />
                                     <span
                                         className="
                                             h-3
@@ -851,6 +1021,7 @@ const ESignModal = ({
                 </form>
             </div>
         </div>
+        </>
     );
 };
 

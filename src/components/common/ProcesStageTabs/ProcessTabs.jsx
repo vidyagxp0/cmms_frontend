@@ -36,6 +36,7 @@ const ProcessTabs = ({
             className="
                 w-full
                 overflow-hidden
+                rounded-[12px]
                 bg-[#244F4A]
             "
         >

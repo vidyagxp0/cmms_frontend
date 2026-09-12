@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 
+import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import FormInput from "../../../components/common/Form/FormInput";
 import FormSelect from "../../../components/common/Form/FormSelect";
@@ -18,12 +19,18 @@ import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 
 import { getProfile } from "../../../services/authApi";
 import { getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
-import { addPreventive } from "../../../services/usersApi/preventive";
+import { addPreventiveMaintence } from "../../../services/usersApi/preventive";
 import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
 import { formatDateTime } from "../../../utils/date";
 import { addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
 
 dayjs.extend(customParseFormat);
+
+const TABS = [
+  { id: "general", label: "General Information" },
+  { id: "engineer-review", label: "Review By Engineer Dept" },
+  { id: "qa-approval", label: "QA Approval" },
+];
 
 const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
@@ -47,6 +54,7 @@ const PreventiveMaintenanceCreate = () => {
     params.parentId || params.recordId || stateParentId || null;
 
   const [form] = Form.useForm();
+  const [activeTab, setActiveTab] = useState("general");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
@@ -123,7 +131,6 @@ const PreventiveMaintenanceCreate = () => {
           console.error("Failed to fetch equipment:", equipmentRes.reason);
         }
 
-        // Resolve the passed equipment to an ID (fallback: name match)
         let equipmentValue = rowEquipmentId;
         if (rowEquipmentId && map[rowEquipmentId]) {
           equipmentValue = rowEquipmentId;
@@ -150,6 +157,10 @@ const PreventiveMaintenanceCreate = () => {
           nextPreventiveDate: rowNextDate ? dayjs(rowNextDate) : null,
           remark: rowRemark,
           attachment: [],
+          engineerReviewComments: "",
+          engineerReviewAttachment: [],
+          qaApprovalComments: "",
+          qaApprovalAttachment: [],
         });
       } catch (error) {
         console.error("Error loading initial data:", error);
@@ -221,10 +232,30 @@ const PreventiveMaintenanceCreate = () => {
       label: "Attachment",
       value: values?.attachment || [],
     },
+    {
+      key: "engineer_review_comments",
+      label: "Review By Engineer Dept Comments",
+      value: values?.engineerReviewComments || "",
+    },
+    {
+      key: "engineer_review_attachment",
+      label: "Review By Engineer Dept Attachment",
+      value: values?.engineerReviewAttachment || [],
+    },
+    {
+      key: "qa_approval_comments",
+      label: "QA Approval Comments",
+      value: values?.qaApprovalComments || "",
+    },
+    {
+      key: "qa_approval_attachment",
+      label: "QA Approval Attachment",
+      value: values?.qaApprovalAttachment || [],
+    },
   ];
 
-  const validateForm = () => {
-    const values = form.getFieldsValue();
+  const validateCalibrationForm = (formInstance) => {
+    const values = formInstance.getFieldsValue();
     return REQUIRED_FIELDS.filter((field) => {
       const value = values?.[field.name];
       if (typeof value === "string") return !value.trim();
@@ -232,9 +263,21 @@ const PreventiveMaintenanceCreate = () => {
     });
   };
 
+  // Only General Information tab is accessible on this create screen.
+  const handleTabChange = (tabId) => {
+    if (tabId !== "general") {
+      toast.warning(
+        "Please complete all mandatory fields in General Information and save the record before accessing the other tabs."
+      );
+      setActiveTab("general");
+      return;
+    }
+    setActiveTab(tabId);
+  };
+
   const handleSave = async () => {
     if (isSaving) return;
-    const missingFields = validateForm();
+    const missingFields = validateCalibrationForm(form);
     if (missingFields.length > 0) {
       const names = missingFields.map((f) => f.label).join(", ");
       toast.error(`Required fields missing: ${names}`);
@@ -244,6 +287,7 @@ const PreventiveMaintenanceCreate = () => {
           errors: [`${f.label} is required`],
         }))
       );
+      setActiveTab("general");
       return;
     }
     form.submit();
@@ -259,7 +303,7 @@ const PreventiveMaintenanceCreate = () => {
       const payload = {
         process_id: Number(routeProcessId),
         // TODO: replace 12 with the actual initial stage id of child process 4
-        stage_id: 12,
+        stage_id: 13,
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
         initiator_name: initiator,
@@ -272,12 +316,12 @@ const PreventiveMaintenanceCreate = () => {
         checklistData: [],
       };
 
-      const response = await addPreventive(payload);
+      const response = await addPreventiveMaintence(payload);
 
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Preventive Maintenance created successfully.");
         form.resetFields();
-        navigate("/user/preventive-planner-dashboard");
+        navigate("/user/preventive-maintenance-dashboard");
         return;
       }
 
@@ -343,6 +387,14 @@ const PreventiveMaintenanceCreate = () => {
         </div>
       </div>
 
+      <div className="mb-8">
+        <ProcessTabs
+          tabs={TABS}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
+      </div>
+
       <Form
         form={form}
         layout="vertical"
@@ -350,121 +402,182 @@ const PreventiveMaintenanceCreate = () => {
         onFinish={handleSubmit}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
-        <section>
-          <SectionHeader title="GENERAL INFORMATION" />
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            {systemFields.map((field) => (
+        {/* General Information */}
+        {activeTab === "general" && (
+          <section>
+            <SectionHeader title="GENERAL INFORMATION" />
+            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+              {systemFields.map((field) => (
+                <Form.Item
+                  key={field.name}
+                  name={field.name}
+                  label={field.label}
+                  className="!mb-4"
+                >
+                  <FormDisabledInput />
+                </Form.Item>
+              ))}
+
               <Form.Item
-                key={field.name}
-                name={field.name}
-                label={field.label}
+                name="shortDescription"
+                label={
+                  <span>
+                    Short Description <span className="text-red-500">*</span>
+                  </span>
+                }
+                rules={[
+                  {
+                    required: true,
+                    whitespace: true,
+                    message: "Please enter Short Description",
+                  },
+                ]}
                 className="!mb-4"
               >
-                <FormDisabledInput />
+                <FormInput placeholder="Enter short description" />
               </Form.Item>
-            ))}
+            </div>
 
-            {/* Short Description right after Initiation Department */}
-            <Form.Item
-              name="shortDescription"
-              label={
-                <span>
-                  Short Description <span className="text-red-500">*</span>
-                </span>
-              }
-              rules={[
-                {
-                  required: true,
-                  whitespace: true,
-                  message: "Please enter Short Description",
-                },
-              ]}
-              className="!mb-4"
-            >
-              <FormInput placeholder="Enter short description" />
-            </Form.Item>
-          </div>
+            <div className="my-9 h-px w-full bg-slate-200" />
+            <SectionHeader title="EQUIPMENT DETAILS" />
 
-          <div className="my-9 h-px w-full bg-slate-200" />
-          <SectionHeader title="EQUIPMENT DETAILS" />
+            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+              <Form.Item
+                name="equipmentInstrumentName"
+                label="Equipment Name"
+                className="!mb-4"
+              >
+                <FormSelect
+                  placeholder={equipmentLoading ? "Loading..." : "Equipment name"}
+                  options={equipmentOptions}
+                  disabled
+                />
+              </Form.Item>
 
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item
-              name="equipmentInstrumentName"
-              label="Equipment Name"
-              className="!mb-4"
-            >
-              <FormSelect
-                placeholder={equipmentLoading ? "Loading..." : "Equipment name"}
-                options={equipmentOptions}
-                disabled
-              />
-            </Form.Item>
+              <Form.Item
+                name="equipmentInstrumentId"
+                label="Equipment Code"
+                className="!mb-4"
+              >
+                <FormInput placeholder="Equipment code" disabled />
+              </Form.Item>
 
-            <Form.Item
-              name="equipmentInstrumentId"
-              label="Equipment Code"
-              className="!mb-4"
-            >
-              <FormInput placeholder="Equipment code" disabled />
-            </Form.Item>
+              <Form.Item name="block" label="Block" className="!mb-4">
+                <FormInput placeholder="Block" />
+              </Form.Item>
 
-            <Form.Item name="block" label="Block" className="!mb-4">
-              <FormInput placeholder="Block" />
-            </Form.Item>
+              <Form.Item name="department" label="Department" className="!mb-4">
+                <FormInput placeholder="Department" />
+              </Form.Item>
 
-            <Form.Item name="department" label="Department" className="!mb-4">
-              <FormInput placeholder="Department" />
-            </Form.Item>
+              <Form.Item name="location" label="Location" className="!mb-4">
+                <FormInput placeholder="Location" />
+              </Form.Item>
 
-            <Form.Item name="location" label="Location" className="!mb-4">
-              <FormInput placeholder="Location" />
-            </Form.Item>
+              <Form.Item
+                name="previousPreventiveDate"
+                label="Previous Preventive Date"
+                className="!mb-4"
+              >
+                <DatePicker
+                  className="w-full"
+                  format="DD/MM/YYYY"
+                  placeholder="Select date"
+                />
+              </Form.Item>
 
-            <Form.Item
-              name="previousPreventiveDate"
-              label="Previous Preventive Date"
-              className="!mb-4"
-            >
-              <DatePicker
-                className="w-full"
-                format="DD/MM/YYYY"
-                placeholder="Select date"
-              />
+              <Form.Item
+                name="nextPreventiveDate"
+                label="Next Preventive Date"
+                className="!mb-4"
+              >
+                <DatePicker
+                  className="w-full"
+                  format="DD/MM/YYYY"
+                  placeholder="Select date"
+                />
+              </Form.Item>
+            </div>
+
+            <Form.Item name="remark" label="Remark" className="!mb-4 md:col-span-2">
+              <FormTextArea rows={4} placeholder="Enter remark..." />
             </Form.Item>
 
             <Form.Item
-              name="nextPreventiveDate"
-              label="Next Preventive Date"
-              className="!mb-4"
-            >
-              <DatePicker
-                className="w-full"
-                format="DD/MM/YYYY"
-                placeholder="Select date"
-              />
-            </Form.Item>
-          </div>
-
-          <Form.Item name="remark" label="Remark" className="!mb-4 md:col-span-2">
-            <FormTextArea rows={4} placeholder="Enter remark..." />
-          </Form.Item>
-
-          {/* Attachment after Remark */}
-          <Form.Item
-            name="attachment"
-            label="Attachment"
-            valuePropName="value"
-            className="!mb-4 md:col-span-2"
-          >
-            <FormAttachment
-              multiple={true}
-              attachmentField="attachment"
+              name="attachment"
               label="Attachment"
-              uploadApi={addMultipleAttachments}
-            />
-          </Form.Item>
-        </section>
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={true}
+                attachmentField="attachment"
+                label="Attachment"
+                uploadApi={addMultipleAttachments}
+              />
+            </Form.Item>
+          </section>
+        )}
+
+        {/* Review By Engineer Dept */}
+        {activeTab === "engineer-review" && (
+          <section>
+            <SectionHeader title="REVIEW BY ENGINEER DEPT" />
+            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+              <Form.Item
+                name="engineerReviewComments"
+                label="Comments"
+                className="!mb-4 md:col-span-2"
+              >
+                <FormTextArea rows={5} placeholder="Enter comments..." />
+              </Form.Item>
+
+              <Form.Item
+                name="engineerReviewAttachment"
+                label="Attachment"
+                valuePropName="value"
+                className="!mb-4 md:col-span-2"
+              >
+                <FormAttachment
+                  multiple={true}
+                  attachmentField="engineer_review_attachment"
+                  label="Review By Engineer Dept Attachment"
+                  uploadApi={addMultipleAttachments}
+                />
+              </Form.Item>
+            </div>
+          </section>
+        )}
+
+        {/* QA Approval */}
+        {activeTab === "qa-approval" && (
+          <section>
+            <SectionHeader title="QA APPROVAL" />
+            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+              <Form.Item
+                name="qaApprovalComments"
+                label="Comments"
+                className="!mb-4 md:col-span-2"
+              >
+                <FormTextArea rows={5} placeholder="Enter comments..." />
+              </Form.Item>
+
+              <Form.Item
+                name="qaApprovalAttachment"
+                label="Attachment"
+                valuePropName="value"
+                className="!mb-4 md:col-span-2"
+              >
+                <FormAttachment
+                  multiple={true}
+                  attachmentField="qa_approval_attachment"
+                  label="QA Approval Attachment"
+                  uploadApi={addMultipleAttachments}
+                />
+              </Form.Item>
+            </div>
+          </section>
+        )}
       </Form>
 
       <FloatingActionButtons

@@ -79,6 +79,7 @@ const CALIBRATION_RESULT_GRID = [
     type: "date",
     placeholder: "Enter Calibration DONE DATE",
     minWidth: 160,
+    disabled: true,
   },
   {
     key: "calibrationNewDueDate",

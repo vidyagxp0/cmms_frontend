@@ -12,5 +12,26 @@ export const updatePreventive = (id, payload) =>
 export const executePreventiveActivity = (id, payload) =>
     api.post(`/user/preventive-planner-record-stage/${id}`, payload);
 
+export const getPreventivePlannerSingleReport = (id) => {
+    return api.get(`/user/preventive-planner-singleReport/${id}`, {
+        responseType: "blob",
+    });
+};
+
 // export const deleteRole = (id) =>
 //     api.delete(`/admin/delete-role/${id}`);
+
+{/* Preventive Maintenance Management  Child Apis*/}
+
+export const getPreventiveMaintenceDetail = (id) =>
+    api.get(`/user/show-preventive-maintenance-record/${id}`);
+
+export const addPreventiveMaintence = (payload) =>
+    api.post("/user/store-preventive-maintenance-record", payload);
+
+export const updatePreventiveMaintence = (id, payload) =>
+    api.put(`/user/update-preventive-maintenance-record/${id}`, payload);
+
+export const executePreventiveMaintenceActivity = (id, payload) =>
+    api.post(`/user/preventive-maintenance-record-stage/${id}`, payload);
+

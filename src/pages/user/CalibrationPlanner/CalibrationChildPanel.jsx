@@ -723,7 +723,6 @@ const CalibrationChildPanel = () => {
               allowAdd={isManagementEditable}
               allowDelete={isManagementEditable}
               disabled={!isManagementEditable}
-              disabled={!isManagementEditable}
               addButtonLabel="Add Parameter"
               minRows={0}
               rowKey="_rowId"
@@ -737,6 +736,7 @@ const CalibrationChildPanel = () => {
               onChange={handleCalibrationTestChange}
               allowAdd={isManagementEditable}
               allowDelete={isManagementEditable}
+              disabled={!isManagementEditable}
               addButtonLabel="Add Parameter"
               minRows={0}
               maxRows={2}

@@ -954,8 +954,8 @@ const ESignModal = ({
                                 gap-2
                                 rounded-[9px]
                                 border
-                                border-[#119653]/80
-                                bg-[#18B865]/90
+                                border-[#5817dadd]/80
+                                bg-[#5817dadd]/95
                                 backdrop-blur-md
                                 px-3.5
                                 font-[var(--font-display)]
@@ -967,7 +967,7 @@ const ESignModal = ({
                                 transition-all
                                 duration-150
                                 hover:-translate-y-px
-                                hover:bg-[#16AA5C]
+                                hover:bg-[#5715d9dd]
                                 hover:shadow-[0_6px_15px_rgba(24,184,101,0.22)]
                                 active:translate-y-0
                                 active:scale-[0.98]

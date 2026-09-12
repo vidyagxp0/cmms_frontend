@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
     USER_NAV_ITEMS,
@@ -8,6 +7,7 @@ import {
 const UserNav = () => {
     const navigate = useNavigate();
     const location = useLocation();
+
     const navItems = USER_NAV_ITEMS;
 
     return (
@@ -19,31 +19,32 @@ const UserNav = () => {
                 top-[74px]
                 z-40
                 h-[64px]
-                w-full
                 border-b
-                border-[var(--color-border)]
-                bg-[var(--color-background)]
+                border-[#DCEBE2]
+                bg-[#F4FAF7]
             "
-            style={{
-                boxShadow:
-                    "0 3px 14px -12px rgba(36,50,56,0.16)",
-            }}
         >
             <div
                 className="
                     flex
                     h-full
                     items-center
-                    overflow-x-auto
                     px-4
                     sm:px-6
                     lg:px-8
-                    custom-scrollbar
                 "
             >
-                <div className="flex h-full min-w-max items-center gap-1.5">
+                <div
+                    className="
+                        flex
+                        h-full
+                        items-center
+                        gap-1
+                    "
+                >
                     {navItems.map((item) => {
-                        const Icon = item.icon;
+                        const Icon =
+                            item.icon;
 
                         const isActive =
                             isNavItemActive(
@@ -56,81 +57,54 @@ const UserNav = () => {
                                 key={item.id}
                                 type="button"
                                 onClick={() =>
-                                    navigate(item.path)
+                                    navigate(
+                                        item.path
+                                    )
                                 }
                                 className={`
                                     group
                                     relative
                                     flex
-                                    h-[44px]
-                                    shrink-0
+                                    h-full
                                     items-center
                                     gap-2.5
-                                    rounded-[11px]
-                                    border
-                                    px-3.5
-                                    text-[12px]
-                                    font-semibold
-                                    tracking-[-0.01em]
+                                    px-5
                                     transition-all
                                     duration-200
                                     ease-out
-
                                     focus:outline-none
                                     focus-visible:ring-2
-                                    focus-visible:ring-[var(--color-primary-muted)]
-                                    focus-visible:ring-offset-1
+                                    focus-visible:ring-[#9DBCB2]
+                                    focus-visible:ring-inset
 
                                     ${
                                         isActive
-                                            ? `
-                                                border-[var(--color-border-strong)]
-                                                bg-[var(--color-primary-soft)]
-                                                text-[var(--color-primary-dark)]
-                                                shadow-[0_2px_8px_rgba(86,118,109,0.07)]
-                                            `
-                                            : `
-                                                border-transparent
-                                                bg-transparent
-                                                text-[var(--color-text-secondary)]
-                                                hover:border-[var(--color-border-soft)]
-                                                hover:bg-[var(--color-surface-muted)]
-                                                hover:text-[var(--color-text-primary)]
-                                            `
+                                            ? "text-[#244F4A]"
+                                            : "text-[#647773] hover:text-[#244F4A]"
                                     }
                                 `}
                             >
-                                {/* =================================================
-                                    ICON
-                                ================================================== */}
+                                {/* ICON */}
                                 <span
                                     className={`
                                         flex
-                                        h-[30px]
-                                        w-[30px]
-                                        shrink-0
+                                        h-8
+                                        w-8
                                         items-center
                                         justify-center
-                                        rounded-[8px]
+                                        rounded-[9px]
                                         transition-all
                                         duration-200
+
                                         ${
                                             isActive
-                                                ? `
-                                                    bg-[var(--color-surface)]
-                                                    text-[var(--color-primary)]
-                                                    shadow-[0_1px_4px_rgba(36,50,56,0.045)]
-                                                `
-                                                : `
-                                                    bg-transparent
-                                                    text-[var(--color-text-muted)]
-                                                    group-hover:text-[var(--color-primary)]
-                                                `
+                                                ? "bg-[#E3EFEB] text-[#4E766B]"
+                                                : "bg-transparent text-[#71827C] group-hover:bg-[#EDF5F2] group-hover:text-[#4E766B]"
                                         }
                                     `}
                                 >
                                     <Icon
-                                        size={16}
+                                        size={17}
                                         strokeWidth={
                                             isActive
                                                 ? 2
@@ -139,31 +113,37 @@ const UserNav = () => {
                                     />
                                 </span>
 
-                                {/* =================================================
-                                    LABEL
-                                ================================================== */}
-                                <span className="whitespace-nowrap">
-                                    {item.label}
+                                {/* LABEL */}
+                                <span
+                                    className="
+                                        whitespace-nowrap
+                                        font-[var(--font-display)]
+                                        text-[13px]
+                                        font-semibold
+                                        tracking-[-0.025em]
+                                    "
+                                >
+                                    {
+                                        item.label
+                                    }
                                 </span>
 
-                                {/* =================================================
-                                    ACTIVE INDICATOR
-                                ================================================== */}
+                                {/* ACTIVE INDICATOR */}
                                 <span
                                     className={`
-                                        pointer-events-none
                                         absolute
-                                        bottom-[-10px]
+                                        bottom-0
                                         left-1/2
                                         h-[3px]
                                         -translate-x-1/2
-                                        rounded-full
-                                        bg-[var(--color-primary)]
+                                        rounded-t-full
+                                        bg-[#A47D45]
                                         transition-all
                                         duration-200
+
                                         ${
                                             isActive
-                                                ? "w-[28px] opacity-100"
+                                                ? "w-[42px] opacity-100"
                                                 : "w-0 opacity-0"
                                         }
                                     `}

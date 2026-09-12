@@ -1,9 +1,19 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+
 import { Eye } from "lucide-react";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
 import DataTable from "../../../components/common/DataTable/DataTable";
-import { getAllRecords, getCalibrationSingleReport } from "../../../services/usersApi/calibrationApi";
+
+import {
+    getAllRecords,
+    getCalibrationSingleReport,
+} from "../../../services/usersApi/calibrationApi";
+
 import { useNavigate } from "react-router-dom";
 import { getAllPreventivePlanner } from "../../../services/usersApi/dashboardAllApi";
 import { getPreventivePlannerSingleReport } from "../../../services/usersApi/preventive";
@@ -15,33 +25,58 @@ const PreventivePlannerDashboard = () => {
     const [loading, setLoading] = useState(true);
 
     // Backend pagination state
-    const [pagination, setPagination] = useState({
-        currentPage: 1,
-        lastPage: 1,
-        perPage: 10,
-        total: 0,
-    });
+    const [pagination, setPagination] =
+        useState({
+            currentPage: 1,
+            lastPage: 1,
+            perPage: 10,
+            total: 0,
+        });
 
-    const fetchRecords = async (page = 1, perPage = 10) => {
+    // ================================================================
+    // FETCH PREVENTIVE PLANNER RECORDS
+    // FUNCTIONALITY UNCHANGED
+    // ================================================================
+    const fetchRecords = async (
+        page = 1,
+        perPage = 10
+    ) => {
         try {
             setLoading(true);
 
-            const response = await getAllPreventivePlanner({
-                page,
-                per_page: perPage,
-            });
-            const paginationData = response?.data?.data;
-            const recordsData = paginationData?.data || [];
+            const response =
+                await getAllPreventivePlanner({
+                    page,
+                    per_page: perPage,
+                });
+
+            const paginationData =
+                response?.data?.data;
+
+            const recordsData =
+                paginationData?.data || [];
 
             setRecords(
-                Array.isArray(recordsData) ? recordsData : []
+                Array.isArray(recordsData)
+                    ? recordsData
+                    : []
             );
 
             setPagination({
-                currentPage: paginationData?.current_page || page,
-                lastPage: paginationData?.last_page || 1,
-                perPage: paginationData?.per_page || perPage,
-                total: paginationData?.total || 0,
+                currentPage:
+                    paginationData?.current_page ||
+                    page,
+
+                lastPage:
+                    paginationData?.last_page ||
+                    1,
+
+                perPage:
+                    paginationData?.per_page ||
+                    perPage,
+
+                total:
+                    paginationData?.total || 0,
             });
         } catch (error) {
             console.error(
@@ -66,12 +101,22 @@ const PreventivePlannerDashboard = () => {
         fetchRecords(1, 10);
     }, []);
 
-    const handleViewReport = async (recordId) => {
-        const reportWindow = window.open("", "_blank");
+    // ================================================================
+    // VIEW REPORT
+    // FUNCTIONALITY UNCHANGED
+    // ================================================================
+    const handleViewReport = async (
+        recordId
+    ) => {
+        const reportWindow =
+            window.open("", "_blank");
 
         try {
             if (!reportWindow) {
-                alert("Please allow pop-ups to view the report.");
+                alert(
+                    "Please allow pop-ups to view the report."
+                );
+
                 return;
             }
 
@@ -80,10 +125,12 @@ const PreventivePlannerDashboard = () => {
                 <html>
                 <head>
                     <title>Loading Report...</title>
+
                     <style>
                         * {
                             box-sizing: border-box;
                         }
+
                         html,
                         body {
                             margin: 0;
@@ -91,10 +138,12 @@ const PreventivePlannerDashboard = () => {
                             width: 100%;
                             height: 100%;
                         }
+
                         body {
                             overflow: hidden;
                             font-family: Arial, sans-serif;
                         }
+
                         .loader {
                             position: fixed;
                             inset: 0;
@@ -104,17 +153,20 @@ const PreventivePlannerDashboard = () => {
                             justify-content: center;
                             background: white;
                         }
+
                         .loader-content {
                             display: flex;
                             flex-direction: column;
                             align-items: center;
                         }
+
                         .logo {
                             margin-bottom: 24px;
                             height: 56px;
                             width: auto;
                             object-fit: contain;
                         }
+
                         .spinner {
                             width: 32px;
                             height: 32px;
@@ -123,18 +175,26 @@ const PreventivePlannerDashboard = () => {
                             border-radius: 50%;
                             animation: spin 0.8s linear infinite;
                         }
+
                         .text {
                             margin-top: 16px;
                             font-size: 12px;
                             font-weight: 500;
                             color: #94a3b8;
                         }
+
                         @keyframes spin {
-                            from { transform: rotate(0deg); }
-                            to { transform: rotate(360deg); }
+                            from {
+                                transform: rotate(0deg);
+                            }
+
+                            to {
+                                transform: rotate(360deg);
+                            }
                         }
                     </style>
                 </head>
+
                 <body>
                     <div class="loader">
                         <div class="loader-content">
@@ -143,7 +203,9 @@ const PreventivePlannerDashboard = () => {
                                 alt="VidyaGxP"
                                 class="logo"
                             />
+
                             <div class="spinner"></div>
+
                             <p class="text">
                                 Loading your workspace...
                             </p>
@@ -164,21 +226,29 @@ const PreventivePlannerDashboard = () => {
                 }
             );
 
-            const pdfUrl = window.URL.createObjectURL(blob);
+            const pdfUrl =
+                window.URL.createObjectURL(
+                    blob
+                );
 
-            reportWindow.location.href = pdfUrl;
+            reportWindow.location.href =
+                pdfUrl;
 
             setTimeout(() => {
-                window.URL.revokeObjectURL(pdfUrl);
+                window.URL.revokeObjectURL(
+                    pdfUrl
+                );
             }, 10000);
-
         } catch (error) {
             console.error(
                 "Failed to open calibration report:",
                 error
             );
 
-            if (reportWindow && !reportWindow.closed) {
+            if (
+                reportWindow &&
+                !reportWindow.closed
+            ) {
                 reportWindow.document.open();
 
                 reportWindow.document.write(`
@@ -186,24 +256,28 @@ const PreventivePlannerDashboard = () => {
                     <html>
                     <head>
                         <title>Report Error</title>
+
                         <style>
                             body {
                                 margin: 0;
                                 height: 100vh;
                                 display: flex;
-                                items-center: center;
+                                align-items: center;
                                 justify-content: center;
                                 font-family: Arial, sans-serif;
                                 background: white;
                             }
+
                             .error {
                                 text-align: center;
                             }
+
                             .error-title {
                                 font-size: 16px;
                                 font-weight: 600;
                                 color: #b91c1c;
                             }
+
                             .error-message {
                                 margin-top: 8px;
                                 font-size: 12px;
@@ -211,11 +285,13 @@ const PreventivePlannerDashboard = () => {
                             }
                         </style>
                     </head>
+
                     <body>
                         <div class="error">
                             <div class="error-title">
                                 Failed to generate report
                             </div>
+
                             <div class="error-message">
                                 Please close this tab and try again.
                             </div>
@@ -229,83 +305,162 @@ const PreventivePlannerDashboard = () => {
         }
     };
 
-    const getProcessValue = (record, key) => {
-        const processData = record?.process_data;
+    // ================================================================
+    // PROCESS VALUE HELPER
+    // FUNCTIONALITY UNCHANGED
+    // ================================================================
+    const getProcessValue = (
+        record,
+        key
+    ) => {
+        const processData =
+            record?.process_data;
+
         if (Array.isArray(processData)) {
-            const field = processData.find(
-                (item) => item?.key === key
+            const field =
+                processData.find(
+                    (item) =>
+                        item?.key === key
+                );
+
+            return (
+                field?.value ?? "-"
             );
-            return field?.value ?? "-";
         }
-        if (processData && typeof processData === "object") {
-            if (processData[key] !== undefined) {
-                return processData[key] ?? "-";
+
+        if (
+            processData &&
+            typeof processData ===
+                "object"
+        ) {
+            if (
+                processData[key] !==
+                undefined
+            ) {
+                return (
+                    processData[key] ??
+                    "-"
+                );
             }
-            const field = Object.values(processData).find(
-                (item) => item?.key === key
+
+            const field =
+                Object.values(
+                    processData
+                ).find(
+                    (item) =>
+                        item?.key === key
+                );
+
+            return (
+                field?.value ?? "-"
             );
-            return field?.value ?? "-";
         }
+
         return "-";
     };
 
+    // ================================================================
+    // TABLE COLUMNS
+    // ================================================================
     const columns = useMemo(
         () => [
+            /* =========================================================
+               ID
+            ========================================================== */
             {
                 accessorKey: "id",
+
                 header: "ID",
-                cell: ({ row, getValue }) => {
-                    const record = row.original;
-                    const handleClick = () => {
-                        if (!record?.id) return;
-                      navigate(`/user/preventive-maintenance-planner-panel/${7}/${record.id}`);
-                    };
+
+                cell: ({
+                    row,
+                    getValue,
+                }) => {
+                    const record =
+                        row.original;
+
+                    const handleClick =
+                        () => {
+                            if (
+                                !record?.id
+                            ) {
+                                return;
+                            }
+
+                            navigate(
+                                `/user/preventive-maintenance-planner-panel/${7}/${record.id}`
+                            );
+                        };
+
                     return (
                         <button
                             type="button"
-                            onClick={handleClick}
+                            onClick={
+                                handleClick
+                            }
                             className="
-                                inline-flex cursor-pointer rounded-md border
-                                border-indigo-100 bg-indigo-50/70 px-2 py-1.5
-                                font-mono text-[11px] font-semibold tracking-wide
-                                text-gray-500 shadow-sm transition-all duration-200
-                                hover:border-indigo-200 hover:bg-indigo-100
-                                hover:text-indigo-800 hover:shadow
-                                focus:outline-none focus:ring-2
-                                focus:ring-indigo-500/20
+                                group
+                                inline-flex
+                                cursor-pointer
+                                items-center
+                                gap-1.5
+                                rounded-[9px]
+                                border
+                                border-[#D5E0DB]
+                                bg-[#F0F5F2]
+                                px-2.5
+                                py-1.5
+                                font-mono
+                                text-[10.5px]
+                                font-bold
+                                tracking-[0.03em]
+                                text-[#536D64]
+                                shadow-[0_1px_4px_rgba(36,50,56,0.035)]
+                                transition-all
+                                duration-200
+                                hover:border-[#B7CAC2]
+                                hover:bg-[#E5EEEA]
+                                hover:text-[#405F55]
+                                hover:shadow-[0_3px_8px_rgba(86,118,109,0.08)]
+                                focus:outline-none
+                                focus-visible:ring-2
+                                focus-visible:ring-[var(--color-primary-muted)]
+                                focus-visible:ring-offset-1
                             "
                             title="View record details"
                         >
-                            #{getValue() || "-"}
+                            <span>
+                                #{getValue() || "-"}
+                            </span>
                         </button>
                     );
                 },
             },
 
+            /* =========================================================
+               RECORD NUMBER
+            ========================================================== */
             {
                 id: "recordNumber",
+
                 header: "Record Number",
+
                 accessorFn: (row) =>
                     row?.record_number ||
-                    getProcessValue(row, "recordNumber"),
+                    getProcessValue(
+                        row,
+                        "recordNumber"
+                    ),
 
-                cell: ({ getValue }) => (
-                    <span className="text-sm font-semibold text-slate-700">
-                        {getValue() || "-"}
-                    </span>
-                ),
-            },
-            {
-                id: "process",
-                header: "Process",
-                accessorFn: (row) =>
-                    row?.process?.name || "-",
-                cell: ({ getValue }) => (
+                cell: ({
+                    getValue,
+                }) => (
                     <span
                         className="
-                            inline-flex rounded-md bg-indigo-50
-                            px-2.5 py-1 text-xs font-semibold
-                            text-indigo-700
+                            text-[11.5px]
+                            font-bold
+                            tracking-[-0.01em]
+                            text-[#475A55]
                         "
                     >
                         {getValue() || "-"}
@@ -313,35 +468,118 @@ const PreventivePlannerDashboard = () => {
                 ),
             },
 
+            /* =========================================================
+               PROCESS
+            ========================================================== */
             {
-                accessorKey: "short_description",
-                header: "Short Description",
-                cell: ({ getValue }) => (
-                    <div className="max-w-[260px]">
-                        <p className="truncate text-sm font-semibold text-slate-700">
-                            {getValue() || "-"}
-                        </p>
-                    </div>
-                ),
-            },
+                id: "process",
 
-            {
-                id: "initiator",
-                header: "Initiator",
+                header: "Process",
+
                 accessorFn: (row) =>
-                    row?.initiator?.name ||
-                    getProcessValue(row, "initiator") ||
+                    row?.process?.name ||
                     "-",
-                cell: ({ getValue }) => (
-                    <span className="text-sm font-medium text-slate-600">
+
+                cell: ({
+                    getValue,
+                }) => (
+                    <span
+                        className="
+                            inline-flex
+                            max-w-full
+                            items-center
+                            rounded-full
+                            border
+                            border-[#D9E3DE]
+                            bg-[#F1F5F3]
+                            px-2.5
+                            py-1
+                            text-[10px]
+                            font-bold
+                            tracking-[0.02em]
+                            text-[#56766D]
+                        "
+                        title={
+                            getValue() || "-"
+                        }
+                    >
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
+            /* =========================================================
+               SHORT DESCRIPTION
+            ========================================================== */
+            {
+                accessorKey:
+                    "short_description",
+
+                header:
+                    "Short Description",
+
+                cell: ({
+                    getValue,
+                }) => (
+                    <div className="max-w-[280px]">
+                        <p
+                            className="
+                                truncate
+                                text-[11.5px]
+                                font-semibold
+                                text-[#53635E]
+                            "
+                            title={
+                                getValue() ||
+                                "-"
+                            }
+                        >
+                            {getValue() ||
+                                "-"}
+                        </p>
+                    </div>
+                ),
+            },
+
+            /* =========================================================
+               INITIATOR
+            ========================================================== */
+            {
+                id: "initiator",
+
+                header: "Initiator",
+
+                accessorFn: (row) =>
+                    row?.initiator?.name ||
+                    getProcessValue(
+                        row,
+                        "initiator"
+                    ) ||
+                    "-",
+
+                cell: ({
+                    getValue,
+                }) => (
+                    <span
+                        className="
+                            text-[11.5px]
+                            font-medium
+                            text-[#687773]
+                        "
+                    >
+                        {getValue() || "-"}
+                    </span>
+                ),
+            },
+
+            /* =========================================================
+               DEPARTMENT
+            ========================================================== */
             {
                 id: "department",
+
                 header: "Department",
+
                 accessorFn: (row) =>
                     row?.department?.name ||
                     getProcessValue(
@@ -349,136 +587,270 @@ const PreventivePlannerDashboard = () => {
                         "initiationDepartment"
                     ) ||
                     "-",
-                cell: ({ getValue }) => (
+
+                cell: ({
+                    getValue,
+                }) => (
                     <span
                         className="
-                            inline-flex rounded-md bg-slate-100
-                            px-2.5 py-1 text-xs font-semibold
-                            text-slate-600
+                            inline-flex
+                            max-w-full
+                            items-center
+                            rounded-full
+                            border
+                            border-[#E0E5E2]
+                            bg-[#F6F7F5]
+                            px-2.5
+                            py-1
+                            text-[10px]
+                            font-bold
+                            text-[#65736E]
                         "
+                        title={
+                            getValue() || "-"
+                        }
                     >
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
+            /* =========================================================
+               STAGE
+            ========================================================== */
             {
                 id: "stage",
+
                 header: "Stage",
+
                 accessorFn: (row) =>
-                    row?.stage?.name || "-",
-                cell: ({ getValue }) => (
-                    <span
-                        className="
-                            inline-flex rounded-full bg-emerald-50
-                            px-2.5 py-1 text-[11px] font-semibold
-                            text-emerald-700
-                        "
-                    >
-                        {getValue() || "-"}
-                    </span>
-                ),
+                    row?.stage?.name ||
+                    "-",
+
+                cell: ({ getValue }) => {
+                    const stage = String(
+                        getValue() || "-"
+                    ).trim();
+
+                    const isClosedDone =
+                        stage.toLowerCase() === "closed - done";
+
+                    return (
+                        <span
+                            className={`
+                                inline-flex
+                                items-center
+                                rounded-full
+                                border
+                                px-2.5
+                                py-1
+                                text-[10px]
+                                font-bold
+                                ${
+                                    isClosedDone
+                                        ? `
+                                            border-[#B83E43]
+                                            bg-[#F8E8E8]
+                                            text-[#B83E43]
+                                        `
+                                        : `
+                                            border-[#CFE1D9]
+                                            bg-[#EEF5F2]
+                                            text-[#56766D]
+                                        `
+                                }
+                            `}
+                        >
+                            {stage}
+                        </span>
+                    );
+                },
             },
 
+            /* =========================================================
+               INITIATED
+            ========================================================== */
             {
                 id: "dateOfInitiation",
+
                 header: "Initiated",
+
                 accessorFn: (row) =>
                     getProcessValue(
                         row,
                         "dateOfInitiation"
                     ),
-                cell: ({ getValue }) => (
-                    <span className="whitespace-nowrap text-xs font-semibold text-[#456B6B]">
+
+                cell: ({
+                    getValue,
+                }) => (
+                    <span
+                        className="
+                            whitespace-nowrap
+                            font-mono
+                            text-[10.5px]
+                            font-semibold
+                            text-[#5F7770]
+                        "
+                    >
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
+            /* =========================================================
+               ACTION
+            ========================================================== */
             {
                 id: "actions",
+
                 header: "Action",
+
                 enableSorting: false,
-                cell: ({ row }) => (
+
+                cell: ({
+                    row,
+                }) => (
                     <button
                         type="button"
-                        onClick={() => handleViewReport(row.original?.id)}
+                        onClick={() =>
+                            handleViewReport(
+                                row.original?.id
+                            )
+                        }
                         className="
-                            inline-flex items-center gap-2 rounded-lg
-                            border border-[#B8DCD7] bg-[#E7F4F2]
-                            px-3 py-1.5 text-xs font-semibold
-                            text-[#185B61] shadow-sm
-                            transition-all duration-200
-                            hover:border-[#159A8C]
-                            hover:bg-[#D2ECE8]
-                            hover:text-[#087F73]
-                            hover:shadow
-                            focus:outline-none focus:ring-2
-                            focus:ring-[#159A8C]/20
+                            inline-flex
+                            cursor-pointer
+                            items-center
+                            gap-2
+                            rounded-[9px]
+                            border
+                            border-[#C9D9D3]
+                            bg-[#EEF4F1]
+                            px-3
+                            py-1.5
+                            text-[10.5px]
+                            font-bold
+                            text-[#56766D]
+                            shadow-[0_1px_4px_rgba(86,118,109,0.045)]
+                            transition-all
+                            duration-200
+                            hover:border-[#AFC5BC]
+                            hover:bg-[#E2ECE8]
+                            hover:text-[#48685F]
+                            hover:shadow-[0_3px_9px_rgba(86,118,109,0.09)]
+                            focus:outline-none
+                            focus-visible:ring-2
+                            focus-visible:ring-[var(--color-primary-muted)]
+                            focus-visible:ring-offset-1
                         "
-                        title="View engineering record"
+                        title="View preventive maintenance report"
                     >
-                        <Eye size={14} strokeWidth={2} />
-                        <span>View Report</span>
+                        <Eye
+                            size={14}
+                            strokeWidth={1.9}
+                        />
+
+                        <span>
+                            View Report
+                        </span>
                     </button>
                 ),
             },
         ],
-        [navigate] // include navigate in dependencies so the cell uses the latest navigate
+        [navigate]
     );
 
     return (
         <div
             className="
-                flex h-full min-h-0 flex-col overflow-hidden
-                bg-[#F4F8F7]
+                flex
+                h-full
+                min-h-0
+                flex-col
+                overflow-hidden
+                bg-[var(--color-background)]
             "
         >
-            <div className="shrink-0">
-                <DashboardActionBar
-                    title="Preventive Maintenance Dashboard"
-                    buttonName="Create Record"
-                    navigationRoute="/user/create-record"
-                    sourceRoute="/user/preventive-planner-dashboard"
-                    sourceType="preventive"
-                />
-            </div>
+            {/* =====================================================
+                DARK SECONDARY ACTION BAR
+            ====================================================== */}
+            <DashboardActionBar
+                title="Preventive Maintenance Dashboard"
+                buttonName="Create Record"
+                navigationRoute="/user/create-record"
+                sourceRoute="/user/preventive-planner-dashboard"
+                sourceType="preventive"
+            />
 
+            {/* =====================================================
+                FULL-WIDTH HIGH-DENSITY TABLE
+            ====================================================== */}
             <main
-                className="
-                    mt-8 min-h-0 flex-1 overflow-hidden
-                      pt-3
-                "
-            >
-                <DataTable
-                    data={records}
-                    columns={columns}
-                    loading={loading}
-                    searchable
-                    searchPlaceholder="Search preventive records..."
-                    pagination
-                    pageSize={pagination.perPage}
-                    pageSizeOptions={[10, 20, 50]}
-                    sortable
-                    showColumnVisibility
-                    hoverable
-                    /* Backend pagination */
-                    manualPagination
-                    pageCount={pagination.lastPage}
-                    totalRows={pagination.total}
-                    onPaginationChange={({
-                        pageIndex,
-                        pageSize,
-                    }) => {
-                        const nextPage = pageIndex + 1;
-                        fetchRecords(nextPage, pageSize);
-                    }}
-                    emptyTitle="No preventive records found"
-                    emptyDescription="
-                        Preventive records will appear here
-                        once they are created.
-                    "
-                />
+    className="
+        min-h-0
+        flex-1
+        overflow-hidden
+        px-0
+        pb-0
+        pt-[58px]
+    "
+>
+                <div
+        className="
+            h-full
+            min-h-0
+            overflow-hidden
+        "
+    >
+                    <DataTable
+                        data={records}
+                        columns={columns}
+                        loading={loading}
+                        searchable
+                        searchPlaceholder="Search preventive records..."
+                        pagination
+                        pageSize={
+                            pagination.perPage
+                        }
+                        pageSizeOptions={[
+                            10,
+                            20,
+                            50,
+                        ]}
+                        sortable
+                        showColumnVisibility
+                        hoverable
+
+                        /* Backend pagination */
+                        manualPagination
+                        pageCount={
+                            pagination.lastPage
+                        }
+                        totalRows={
+                            pagination.total
+                        }
+
+                        onPaginationChange={({
+                            pageIndex,
+                            pageSize,
+                        }) => {
+                            const nextPage =
+                                pageIndex + 1;
+
+                            fetchRecords(
+                                nextPage,
+                                pageSize
+                            );
+                        }}
+
+                        emptyTitle="No preventive records found"
+                        emptyDescription="
+                            Preventive records will appear here
+                            once they are created.
+                        "
+                    />
+                </div>
             </main>
         </div>
     );

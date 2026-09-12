@@ -4,36 +4,54 @@ import React, {
     useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
     Eye,
     Wrench,
-    Database,
     ArrowUpRight,
 } from "lucide-react";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
 import CreateEquipmentModal from "./CreateEquipmentModal";
-import { getAllEquipment } from "../../../services/usersApi/equipmentApi";
+import {
+    getAllEquipment,
+} from "../../../services/usersApi/equipmentApi";
 import DataTable from "../../../components/common/DataTable/DataTable";
 
 const EquipDashboard = () => {
     const navigate = useNavigate();
 
-    const [isCreateModalOpen, setIsCreateModalOpen] =
-        useState(false);
+    const [
+        isCreateModalOpen,
+        setIsCreateModalOpen,
+    ] = useState(false);
 
-    const [equipment, setEquipment] = useState([]);
+    const [
+        equipment,
+        setEquipment,
+    ] = useState([]);
 
-    const [loading, setLoading] = useState(true);
+    const [
+        loading,
+        setLoading,
+    ] = useState(true);
 
-    // Backend pagination state
-    const [pagination, setPagination] = useState({
+    // ================================================================
+    // BACKEND PAGINATION
+    // ================================================================
+    const [
+        pagination,
+        setPagination,
+    ] = useState({
         currentPage: 1,
         lastPage: 1,
         perPage: 10,
         total: 0,
     });
 
+    // ================================================================
+    // FETCH EQUIPMENT
+    // ================================================================
     const fetchEquipment = async (
         page = 1,
         perPage = 10
@@ -54,7 +72,9 @@ const EquipDashboard = () => {
                 paginationData?.data || [];
 
             setEquipment(
-                Array.isArray(equipmentData)
+                Array.isArray(
+                    equipmentData
+                )
                     ? equipmentData
                     : []
             );
@@ -73,7 +93,8 @@ const EquipDashboard = () => {
                     perPage,
 
                 total:
-                    paginationData?.total || 0,
+                    paginationData?.total ||
+                    0,
             });
         } catch (error) {
             console.error(
@@ -94,28 +115,43 @@ const EquipDashboard = () => {
         }
     };
 
+    // ================================================================
+    // INITIAL LOAD
+    // ================================================================
     useEffect(() => {
         fetchEquipment(1, 10);
     }, []);
 
+    // ================================================================
+    // TABLE COLUMNS
+    // ================================================================
     const columns = useMemo(
         () => [
-            /* =====================================================
-               EQUIPMENT ID
-            ====================================================== */
+            // ========================================================
+            // EQUIPMENT ID
+            // ========================================================
             {
-                accessorKey: "equipment_id",
-                header: "Equipment ID",
+                accessorKey:
+                    "equipment_id",
 
-                cell: ({ row, getValue }) => {
-                    const value = getValue();
+                header:
+                    "Equipment ID",
+
+                cell: ({
+                    row,
+                    getValue,
+                }) => {
+                    const value =
+                        getValue();
 
                     return (
                         <button
                             type="button"
                             onClick={() => {
                                 if (
-                                    !row.original?.id
+                                    !row
+                                        .original
+                                        ?.id
                                 ) {
                                     return;
                                 }
@@ -174,17 +210,17 @@ const EquipDashboard = () => {
                 },
             },
 
-            /* =====================================================
-               EQUIPMENT
-            ====================================================== */
+            // ========================================================
+            // EQUIPMENT
+            // ========================================================
             {
                 accessorKey: "name",
                 header: "Equipment",
 
                 cell: ({ row }) => {
                     const name =
-                        row.original?.name ||
-                        "-";
+                        row.original
+                            ?.name || "-";
 
                     return (
                         <div
@@ -212,7 +248,9 @@ const EquipDashboard = () => {
                             >
                                 <Wrench
                                     size={14}
-                                    strokeWidth={1.9}
+                                    strokeWidth={
+                                        1.9
+                                    }
                                 />
                             </div>
 
@@ -225,7 +263,9 @@ const EquipDashboard = () => {
                                         tracking-[-0.01em]
                                         text-[var(--color-text-primary)]
                                     "
-                                    title={name}
+                                    title={
+                                        name
+                                    }
                                 >
                                     {name}
                                 </p>
@@ -248,17 +288,20 @@ const EquipDashboard = () => {
                 },
             },
 
-            /* =====================================================
-               TYPE
-            ====================================================== */
+            // ========================================================
+            // TYPE
+            // ========================================================
             {
                 accessorKey:
                     "equipment_type",
 
                 header: "Type",
 
-                cell: ({ getValue }) => {
-                    const value = getValue();
+                cell: ({
+                    getValue,
+                }) => {
+                    const value =
+                        getValue();
 
                     return (
                         <span
@@ -277,7 +320,9 @@ const EquipDashboard = () => {
                                 tracking-[0.025em]
                                 text-[#61716C]
                             "
-                            title={value || "-"}
+                            title={
+                                value || "-"
+                            }
                         >
                             {value || "-"}
                         </span>
@@ -285,14 +330,16 @@ const EquipDashboard = () => {
                 },
             },
 
-            /* =====================================================
-               MAKE
-            ====================================================== */
+            // ========================================================
+            // MAKE
+            // ========================================================
             {
                 accessorKey: "make",
                 header: "Make",
 
-                cell: ({ getValue }) => (
+                cell: ({
+                    getValue,
+                }) => (
                     <span
                         className="
                             text-[11.5px]
@@ -300,19 +347,22 @@ const EquipDashboard = () => {
                             text-[#566560]
                         "
                     >
-                        {getValue() || "-"}
+                        {getValue() ||
+                            "-"}
                     </span>
                 ),
             },
 
-            /* =====================================================
-               MODEL
-            ====================================================== */
+            // ========================================================
+            // MODEL
+            // ========================================================
             {
                 accessorKey: "model",
                 header: "Model",
 
-                cell: ({ getValue }) => (
+                cell: ({
+                    getValue,
+                }) => (
                     <span
                         className="
                             inline-flex
@@ -327,20 +377,26 @@ const EquipDashboard = () => {
                             text-[#52625E]
                         "
                     >
-                        {getValue() || "-"}
+                        {getValue() ||
+                            "-"}
                     </span>
                 ),
             },
 
-            /* =====================================================
-               CREATED
-            ====================================================== */
+            // ========================================================
+            // CREATED
+            // ========================================================
             {
-                accessorKey: "created_at",
+                accessorKey:
+                    "created_at",
+
                 header: "Created",
 
-                cell: ({ getValue }) => {
-                    const value = getValue();
+                cell: ({
+                    getValue,
+                }) => {
+                    const value =
+                        getValue();
 
                     if (!value) {
                         return (
@@ -356,7 +412,9 @@ const EquipDashboard = () => {
                     }
 
                     const date =
-                        new Date(value);
+                        new Date(
+                            value
+                        );
 
                     if (
                         Number.isNaN(
@@ -425,18 +483,25 @@ const EquipDashboard = () => {
                 },
             },
 
-            /* =====================================================
-               ACTION
-            ====================================================== */
+            // ========================================================
+            // ACTION
+            // ========================================================
             {
                 id: "actions",
-                header: "Action",
-                enableSorting: false,
 
-                cell: ({ row }) => (
+                header: "Action",
+
+                enableSorting:
+                    false,
+
+                cell: ({
+                    row,
+                }) => (
                     <button
                         type="button"
-                        onClick={(event) => {
+                        onClick={(
+                            event
+                        ) => {
                             event.stopPropagation();
 
                             alert(
@@ -494,7 +559,6 @@ const EquipDashboard = () => {
                 min-h-0
                 flex-col
                 overflow-hidden
-                bg-[var(--color-background)]
             "
         >
             {/* =====================================================
@@ -510,53 +574,34 @@ const EquipDashboard = () => {
 
             {/* =====================================================
                 MAIN CONTENT
-
-                Fixed sub-header:
-                top = 138px
-                height = 54px
-                therefore content needs only a small offset
-                below it.
             ====================================================== */}
             <main
                 className="
                     min-h-0
                     flex-1
                     overflow-hidden
-                    px-1
-                    pb-1
+                    px-0
+                    pb-0
                     pt-[58px]
-                    sm:px-1.5
-                    sm:pb-1.5
                 "
             >
+                {/* =================================================
+                    TABLE SURFACE
+                    DataTable is now the only visual boundary.
+                ================================================== */}
                 <section
                     className="
-                        flex
                         h-full
                         min-h-0
-                        flex-col
                         overflow-hidden
-                        rounded-[16px]
-                        border
-                        border-[var(--color-border)]
-                        bg-[var(--color-surface)]
-                        shadow-[0_5px_20px_rgba(36,50,56,0.055)]
+                        bg-transparent
                     "
                 >
-                    {/* =================================================
-                        REGISTRY HEADER
-                    ================================================== */}
-                    
-
-                    {/* =================================================
-                        DATA TABLE
-                    ================================================== */}
                     <div
                         className="
+                            h-full
                             min-h-0
-                            flex-1
                             overflow-hidden
-                            bg-[var(--color-surface)]
                         "
                     >
                         <DataTable
@@ -592,7 +637,8 @@ const EquipDashboard = () => {
                                 pageSize,
                             }) => {
                                 const nextPage =
-                                    pageIndex + 1;
+                                    pageIndex +
+                                    1;
 
                                 fetchEquipment(
                                     nextPage,
@@ -601,6 +647,7 @@ const EquipDashboard = () => {
                             }}
 
                             emptyTitle="No equipment found"
+
                             emptyDescription="
                                 Equipment records will appear here
                                 once they are created.
@@ -614,11 +661,17 @@ const EquipDashboard = () => {
                 CREATE EQUIPMENT MODAL
             ====================================================== */}
             <CreateEquipmentModal
-                open={isCreateModalOpen}
-                onClose={() =>
-                    setIsCreateModalOpen(false)
+                open={
+                    isCreateModalOpen
                 }
-                onSuccess={fetchEquipment}
+                onClose={() =>
+                    setIsCreateModalOpen(
+                        false
+                    )
+                }
+                onSuccess={
+                    fetchEquipment
+                }
             />
         </div>
     );

@@ -91,7 +91,7 @@ const buildGridPayload = (calibrationRows, testRows) => {
       rows: buildGridRows(calibrationRows),
     },
     {
-      name: "testResults",
+      name: "masterInstrumentsDetails",
       rows: buildGridRows(testRows),
     },
   ];
@@ -394,7 +394,7 @@ const CalibrationChildPanel = () => {
 
         if (name === "calibrationResults") {
           calibrationRows.push(...plainRows);
-        } else if (name === "testResults") {
+        } else if (name === "masterInstrumentsDetails") {
           testRows.push(...plainRows);
         }
       });

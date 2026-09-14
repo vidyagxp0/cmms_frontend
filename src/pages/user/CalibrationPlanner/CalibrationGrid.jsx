@@ -155,7 +155,7 @@ const CalibrationGrid = ({
   const columns = [
     { key: "equipmentInstrumentName", title: "Instrument Name", type: "select", placeholder: "Select instrument Name", required: true, minWidth: 220 },
     { key: "equipmentInstrumentId", title: "Instrument ID", type: "text", placeholder: "Enter instrument ID", required: true, minWidth: 200, disabled: true },
-    { key: "department", title: "Category", type: "select", placeholder: "select category", minWidth: 180, options: [{ value: "category1", label: "Critical" }, { value: "category2", label: "Non Critical" }, { value: "category3", label: "Indicative" }] },
+    { key: "category", title: "Category", type: "select", placeholder: "select category", minWidth: 180, options: [{ value: "critical", label: "Critical" }, { value: "non-critical", label: "Non Critical" }, { value: "indicative", label: "Indicative" }] },
     { key: "location", title: "Location", type: "text", placeholder: "Enter location", minWidth: 180 },
     { key: "make", title: "Make", type: "text", placeholder: "Enter make", minWidth: 200, disabled: true },
     { key: "model", title: "Model", type: "text", placeholder: "Enter model", minWidth: 200, disabled: true },

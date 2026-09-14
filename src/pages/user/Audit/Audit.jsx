@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Activity, ArrowUpDown, Search, X } from "lucide-react";
-import { useParams,useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 import { getCalibrationAuditRecord } from "../../../services/usersApi/calibrationApi";
 
@@ -70,6 +70,7 @@ const Audit = () => {
       const response = await getCalibrationAuditRecord(recordId, params);
 
       const apiData = response?.data?.data;
+      console.log(apiData, "apiDataapiData>>>>>>>>>>>>>>>>>>>>>>>>>");
 
       /* record data */
       if (apiData?.record) {
@@ -229,14 +230,114 @@ const Audit = () => {
     }
 
     if (typeof value === "object") {
-      try {
-        return JSON.stringify(value, null, 2);
-      } catch {
-        return String(value);
-      }
+      return value;
     }
 
     return String(value);
+  };
+
+  /* parse attachment audit value */
+  const parseAttachmentValue = (value) => {
+    if (!value) {
+      return [];
+    }
+
+    /* already parsed array */
+    if (Array.isArray(value)) {
+      return value;
+    }
+
+    /* JSON string from backend */
+    if (typeof value === "string") {
+      try {
+        const parsedValue = JSON.parse(value);
+
+        if (Array.isArray(parsedValue)) {
+          return parsedValue;
+        }
+
+        if (Array.isArray(parsedValue?.attachments)) {
+          return parsedValue.attachments;
+        }
+      } catch (error) {
+        return [];
+      }
+    }
+
+    return [];
+  };
+
+  const isAttachmentValue = (value) => {
+    const attachments = parseAttachmentValue(value);
+
+    if (!Array.isArray(attachments) || attachments.length === 0) {
+      return false;
+    }
+
+    return attachments.some(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        (item.name ||
+          item.Name ||
+          item.path ||
+          item.Path ||
+          item.url ||
+          item.Url),
+    );
+  };
+
+  /* build attachment URL on frontend */
+  const getAttachmentUrl = (attachment) => {
+    const path = attachment?.path || attachment?.Path || "";
+
+    const backendUrl = "http://127.0.0.1:8000";
+
+    if (path) {
+      return `${backendUrl}/${path.replace(/^\/+/, "")}`;
+    }
+
+    return attachment?.url || attachment?.Url || "";
+  };
+
+  const renderAttachmentValue = (value) => {
+    const attachments = parseAttachmentValue(value);
+
+    if (!Array.isArray(attachments) || attachments.length === 0) {
+      return "-";
+    }
+
+    return (
+      <div className="flex flex-col gap-1.5">
+        {attachments.map((attachment, index) => {
+          const attachmentName =
+            attachment?.name ||
+            attachment?.Name ||
+            attachment?.file_name ||
+            attachment?.["File Name"] ||
+            "Attachment";
+
+          const attachmentUrl = getAttachmentUrl(attachment);
+
+          return (
+            <a
+              key={`${attachmentName}-${index}`}
+              href={attachmentUrl || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                if (!attachmentUrl) {
+                  e.preventDefault();
+                }
+              }}
+              className="block break-words text-[12px] font-medium text-[#2F6FB0] underline decoration-[#B8CCE0] underline-offset-2 hover:text-[#1D4F80] hover:decoration-[#2F6FB0]"
+            >
+              {attachmentName}
+            </a>
+          );
+        })}
+      </div>
+    );
   };
 
   const isMultiline = (value) => {
@@ -284,7 +385,6 @@ const Audit = () => {
 
   return (
     <div className="w-full">
-
       <div className="mb-5 flex items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2.5">
@@ -299,14 +399,16 @@ const Audit = () => {
 
           <p className="pl-[46px] text-[12.5px] text-[#66707C]">
             View and track all changes made to this record.
-          </p> 
+          </p>
         </div>
-         {/* Exit Button */}
-           <button
-           onClick={() => navigate(-1)} 
-           type="button" className="inline-flex h-9 items-center justify-center rounded-lg border border-[#D0D5DD] bg-white px-4 text-[12px] font-semibold text-[#475467] shadow-sm transition-all duration-200 hover:border-[#2F6FB0] hover:bg-[#F5F9FD] hover:text-[#2F6FB0] active:scale-95" > 
-            Exit
-             </button>
+        {/* Exit Button */}
+        <button
+          onClick={() => navigate(-1)}
+          type="button"
+          className="inline-flex h-9 items-center justify-center rounded-lg border border-[#D0D5DD] bg-white px-4 text-[12px] font-semibold text-[#475467] shadow-sm transition-all duration-200 hover:border-[#2F6FB0] hover:bg-[#F5F9FD] hover:text-[#2F6FB0] active:scale-95"
+        >
+          Exit
+        </button>
       </div>
 
       <div className="w-full">
@@ -320,7 +422,6 @@ const Audit = () => {
           </div>
         ) : (
           <>
-
             {record && (
               <div className="mb-5 grid grid-cols-1 gap-3 rounded-2xl border border-[#E3E8EF] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)] sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-xl border border-[#EDF0F4] bg-[#F9FAFC] px-4 py-3">
@@ -457,117 +558,123 @@ const Audit = () => {
             </div>
 
             <div className="w-full overflow-hidden rounded-2xl border border-[#E3E8EF] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-              <CustomScrollContainer maxHeight="640px" direction="both" className="w-full">
-                  <table className="w-full min-w-[1300px] border-collapse">
-                    {/* HEADER */}
+              <CustomScrollContainer
+                maxHeight="640px"
+                direction="both"
+                className="w-full"
+              >
+                <table className="w-full min-w-[1300px] border-collapse">
+                  {/* HEADER */}
 
-                    <thead className="sticky top-0 z-10">
-                      <tr className="border-b border-[#D7E3EE] bg-[#EAF1F8]">
-                        {columns.map((col) => (
-                          <th
-                            key={col.label}
-                            className={`${col.width} px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.04em] text-[#1B3A5C]`}
-                          >
-                            <span className="inline-flex items-center gap-1.5">
-                              {col.label}
+                  <thead className="sticky top-0 z-10">
+                    <tr className="border-b border-[#D7E3EE] bg-[#EAF1F8]">
+                      {columns.map((col) => (
+                        <th
+                          key={col.label}
+                          className={`${col.width} px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.04em] text-[#1B3A5C]`}
+                        >
+                          <span className="inline-flex items-center gap-1.5">
+                            {col.label}
 
-                              <ArrowUpDown
-                                size={11}
-                                strokeWidth={2.25}
-                                className="text-[#8FA6BE]"
-                              />
-                            </span>
-                          </th>
-                        ))}
+                            <ArrowUpDown
+                              size={11}
+                              strokeWidth={2.25}
+                              className="text-[#8FA6BE]"
+                            />
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-[#EEF1F5]">
+                    {audits.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-12 text-center">
+                          <p className="text-[12px] text-[#8A94A3]">
+                            No audit records found.
+                          </p>
+                        </td>
                       </tr>
-                    </thead>
+                    ) : (
+                      audits.map((audit, index) => (
+                        <tr
+                          key={`${audit.id}-${audit.module}-${index}`}
+                          className="group border-l-4 border-l-transparent bg-white transition-colors hover:border-l-[#2F6FB0] hover:bg-[#EDF4FC]"
+                        >
+                          <td className="px-4 py-3.5 align-top">
+                            <span
+                              className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[10.5px] font-semibold ${getActionStyle(
+                                audit.action,
+                              )}`}
+                            >
+                              {audit.action || "-"}
+                            </span>
+                          </td>
 
-                    <tbody className="divide-y divide-[#EEF1F5]">
-                      {audits.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="px-6 py-12 text-center">
-                            <p className="text-[12px] text-[#8A94A3]">
-                              No audit records found.
-                            </p>
+                          <td className="px-4 py-3.5 align-top">
+                            <span className="inline-flex w-fit max-w-full rounded-full border border-[#DCE3EA] bg-[#F5F7FA] px-2.5 py-1 text-[10.5px] font-semibold text-[#5A6472]">
+                              {audit.module || "-"}
+                            </span>
+                          </td>
+
+                          <td className="px-4 py-3.5 align-top">
+                            <div
+                              className={`max-w-[270px] whitespace-pre-wrap break-words text-[#66707C] ${
+                                isMultiline(audit.old_value)
+                                  ? "rounded-md bg-[#F9FAFC] px-2 py-1.5 font-mono text-[10.5px] leading-4"
+                                  : "text-[12px] leading-5"
+                              }`}
+                            >
+                              {isAttachmentValue(audit.old_value)
+                                ? renderAttachmentValue(audit.old_value)
+                                : formatValue(audit.old_value)}
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-3.5 align-top">
+                            <div
+                              className={`max-w-[270px] whitespace-pre-wrap break-words text-[#1D2939] ${
+                                isMultiline(audit.new_value)
+                                  ? "rounded-md bg-[#F9FAFC] px-2 py-1.5 font-mono text-[10.5px] leading-4"
+                                  : "text-[12px] font-medium leading-5"
+                              }`}
+                            >
+                              {isAttachmentValue(audit.new_value)
+                                ? renderAttachmentValue(audit.new_value)
+                                : formatValue(audit.new_value)}
+                            </div>
+                          </td>
+
+                          {/* COMMENT / REASON */}
+
+                          <td className="px-4 py-3.5 align-top">
+                            <div className="max-w-[230px] whitespace-pre-wrap break-words text-[12px] leading-5 text-[#66707C]">
+                              {formatValue(audit.comment)}
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-3.5 align-top">
+                            <div className="whitespace-nowrap text-[12px] font-semibold text-[#1D2939]">
+                              {audit.responsible_person || "-"}
+                            </div>
+                          </td>
+
+                          {/* DATE */}
+
+                          <td className="px-4 py-3.5 align-top">
+                            <div className="whitespace-nowrap text-[11.5px] text-[#66707C]">
+                              {audit.created_at || "-"}
+                            </div>
                           </td>
                         </tr>
-                      ) : (
-                        audits.map((audit, index) => (
-                          <tr
-                            key={`${audit.id}-${audit.module}-${index}`}
-                            className="group border-l-4 border-l-transparent bg-white transition-colors hover:border-l-[#2F6FB0] hover:bg-[#EDF4FC]"
-                          >
-
-                            <td className="px-4 py-3.5 align-top">
-                              <span
-                                className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[10.5px] font-semibold ${getActionStyle(
-                                  audit.action,
-                                )}`}
-                              >
-                                {audit.action || "-"}
-                              </span>
-                            </td>
-
-                            <td className="px-4 py-3.5 align-top">
-                              <span className="inline-flex w-fit max-w-full rounded-full border border-[#DCE3EA] bg-[#F5F7FA] px-2.5 py-1 text-[10.5px] font-semibold text-[#5A6472]">
-                                {audit.module || "-"}
-                              </span>
-                            </td>
-
-                            <td className="px-4 py-3.5 align-top">
-                              <div
-                                className={`max-w-[270px] whitespace-pre-wrap break-words text-[#66707C] ${
-                                  isMultiline(audit.old_value)
-                                    ? "rounded-md bg-[#F9FAFC] px-2 py-1.5 font-mono text-[10.5px] leading-4"
-                                    : "text-[12px] leading-5"
-                                }`}
-                              >
-                                {formatValue(audit.old_value)}
-                              </div>
-                            </td>
-
-                            <td className="px-4 py-3.5 align-top">
-                              <div
-                                className={`max-w-[270px] whitespace-pre-wrap break-words text-[#1D2939] ${
-                                  isMultiline(audit.new_value)
-                                    ? "rounded-md bg-[#F9FAFC] px-2 py-1.5 font-mono text-[10.5px] leading-4"
-                                    : "text-[12px] font-medium leading-5"
-                                }`}
-                              >
-                                {formatValue(audit.new_value)}
-                              </div>
-                            </td>
-
-                            {/* COMMENT / REASON */}
-
-                            <td className="px-4 py-3.5 align-top">
-                              <div className="max-w-[230px] whitespace-pre-wrap break-words text-[12px] leading-5 text-[#66707C]">
-                                {formatValue(audit.comment)}
-                              </div>
-                            </td>
-
-                            <td className="px-4 py-3.5 align-top">
-                              <div className="whitespace-nowrap text-[12px] font-semibold text-[#1D2939]">
-                                {audit.responsible_person || "-"}
-                              </div>
-                            </td>
-
-                            {/* DATE */}
-
-                            <td className="px-4 py-3.5 align-top">
-                              <div className="whitespace-nowrap text-[11.5px] text-[#66707C]">
-                                {audit.created_at || "-"}
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </CustomScrollContainer>
 
               <div className="flex flex-col gap-3 border-t border-[#E3E8EF] bg-[#F9FAFC] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-
                 <p className="text-[11.5px] text-[#66707C]">
                   Showing{" "}
                   <span className="font-semibold text-[#1D2939]">
@@ -586,7 +693,6 @@ const Audit = () => {
 
                 {pagination.last_page > 1 && (
                   <div className="flex items-center gap-1">
-
                     <button
                       type="button"
                       disabled={pagination.current_page === 1 || loading}

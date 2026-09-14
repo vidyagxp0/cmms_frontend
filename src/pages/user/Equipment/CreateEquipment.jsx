@@ -6,46 +6,154 @@ import { toast } from "sonner";
 
 import FormInput from "../../../components/common/Form/FormInput";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
-
 import { addEquipment } from "../../../services/usersApi/equipmentApi";
 import ChecklistConfiguration from "./ChecklistConfig";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
+import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
+
+/* ───────────────────────── Tabs config ───────────────────────── */
+
+const TABS = [
+  { id: "equipment", label: "Equipment Information" },
+  { id: "checklist", label: "Checklist Configuration" },
+];
+
+const EMPTY_CHECKLIST = {
+  checklist_name: "",
+  include_serial_number: true,
+  question_columns: [],
+  data_columns: [],
+  questions: [],
+};
+
+/* ───────────────────────── Component ───────────────────────── */
 
 const CreateEquipment = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  const [isSaving, setIsSaving] = useState(false);
-  const [categories, setCategories] = useState([]);
 
-  // ─── Submit ─────────────────────────────────────────────────────────
+  const [isSaving, setIsSaving] = useState(false);
+  const [checklistConfig, setChecklistConfig] = useState(EMPTY_CHECKLIST);
+  const [activeTab, setActiveTab] = useState("equipment");
+
+  /* ───────── Tab switch (free navigation) ───────── */
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+  };
+
+  /* ───────── Submit ───────── */
   const handleSubmit = async (values) => {
     if (isSaving) return;
 
-    // Build checklist payload – skip empty categories or checkpoints
-    const checklistConfig = categories
-      .filter((cat) => cat.name.trim() !== "")
-      .map((cat) => ({
-        category: cat.name.trim(),
-        checkpoints: cat.checkpoints
-          .map((cp) => cp.text.trim())
-          .filter((t) => t !== ""),
-      }))
-      .filter((cat) => cat.checkpoints.length > 0);
+    /* ── Clean + reindex checklist (ids become 1, 2, 3, 4…) ── */
+    const SELECTION_TYPES = ["single_select", "multi_select"];
 
+    const questionColumnIdMap = {};
+
+    const cleanedQuestionColumns = checklistConfig.question_columns
+      .filter((column) => column?.column_header?.trim() !== "")
+      .map((column, idx) => {
+        const newId = idx + 1;
+        questionColumnIdMap[column.id] = newId;
+        return {
+          id: newId,
+          column_header: column.column_header.trim(),
+        };
+      });
+
+    const cleanedDataColumns = checklistConfig.data_columns
+      .filter((column) => column?.column_header?.trim() !== "")
+      .map((column, idx) => {
+        const isSelection = SELECTION_TYPES.includes(column.field_type);
+        return {
+          id: idx + 1,
+          column_header: column.column_header.trim(),
+          field_type: column.field_type || "text",
+          options: isSelection
+            ? (column.options || [])
+                .filter((o) => o?.value?.trim())
+                .map((o, optIdx) => ({
+                  id: optIdx + 1,
+                  value: o.value.trim(),
+                }))
+            : [],
+        };
+      });
+
+    let questionCounter = 0;
+
+    const cleanedQuestions = checklistConfig.questions
+      .map((row) => {
+        const values = {};
+        let hasAny = false;
+
+        checklistConfig.question_columns.forEach((col) => {
+          const newColId = questionColumnIdMap[col.id];
+          if (!newColId) return;
+
+          const v = row.values?.[col.id]?.trim() || "";
+          if (v) hasAny = true;
+
+          values[newColId] = v;
+        });
+
+        if (!hasAny) return null;
+
+        questionCounter += 1;
+        return { id: questionCounter, values };
+      })
+      .filter(Boolean);
+
+    const cleanedChecklistConfig = {
+      checklist_name: checklistConfig.checklist_name?.trim() || "",
+      include_serial_number: checklistConfig.include_serial_number !== false,
+      question_columns: cleanedQuestionColumns,
+      data_columns: cleanedDataColumns,
+      questions: cleanedQuestions,
+    };
+
+    /* ── Validation ── */
+    if (checklistConfig.checklist_name?.trim() === "") {
+      toast.error("Please enter checklist name.");
+      setActiveTab("checklist");
+      return;
+    }
+
+    if (cleanedQuestionColumns.length === 0) {
+      toast.error("Please add at least one Question Column.");
+      setActiveTab("checklist");
+      return;
+    }
+
+    if (cleanedQuestions.length === 0) {
+      toast.error("Please add at least one checklist question.");
+      setActiveTab("checklist");
+      return;
+    }
+
+    /* ── Submit ── */
     try {
       setIsSaving(true);
+
       const payload = {
         name: values.name.trim(),
         equipment_id: values.equipment_id.trim(),
         make: values.make.trim(),
         model: values.model.trim(),
         equipment_type: values.equipment_type.trim(),
-        checklist_config: checklistConfig,
+        checklist_config: cleanedChecklistConfig,
       };
+
+      console.log("Create Equipment Payload:", payload);
+
       await addEquipment(payload);
+
       toast.success("Equipment created successfully.");
+
       form.resetFields();
-      setCategories([]);
+      setChecklistConfig({ ...EMPTY_CHECKLIST });
+      setActiveTab("equipment");
+
       navigate("/user/equipment-dashboard");
     } catch (error) {
       console.error("Failed to create equipment:", error);
@@ -58,16 +166,20 @@ const CreateEquipment = () => {
     }
   };
 
+  /* ───────── Cancel ───────── */
   const handleCancel = () => {
     if (isSaving) return;
+
     form.resetFields();
-    setCategories([]);
+    setChecklistConfig({ ...EMPTY_CHECKLIST });
+    setActiveTab("equipment");
+
     navigate("/user/equipment-dashboard");
   };
 
   return (
     <div className="w-full">
-      {/* ─── Header ─────────────────────────────────────────────────── */}
+      {/* ═══════════════ HEADER ═══════════════ */}
       <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-3">
@@ -81,73 +193,148 @@ const CreateEquipment = () => {
         </div>
       </div>
 
-      {/* ─── Form ──────────────────────────────────────────────────── */}
+      {/* ═══════════════ TABS ═══════════════ */}
+      <div className="mb-5">
+        <ProcessTabs
+          tabs={TABS}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
+      </div>
+
+      {/* ═══════════════ TAB 1: EQUIPMENT INFORMATION ═══════════════ */}
       <Form
         form={form}
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
-        className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
+        className="
+          w-full
+          [&_.ant-form-item-label>label]:!text-[12px]
+          [&_.ant-form-item-label>label]:!font-semibold
+          [&_.ant-form-item-label]:!pb-1.5
+          [&_.ant-form-item-explain-error]:!text-[11px]
+        "
       >
-        <section>
-          <SectionHeader title="EQUIPMENT INFORMATION" />
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item
-              name="name"
-              label={<span>Equipment Name <span className="text-red-500">*</span></span>}
-              rules={[{ required: true, whitespace: true, message: "Please enter equipment name" }]}
-              className="!mb-4"
-            >
-              <FormInput placeholder="Enter equipment name" />
-            </Form.Item>
+        <div style={{ display: activeTab === "equipment" ? "block" : "none" }}>
+          <section>
+            <SectionHeader title="EQUIPMENT INFORMATION" />
 
-            <Form.Item
-              name="equipment_id"
-              label={<span>Equipment ID <span className="text-red-500">*</span></span>}
-              rules={[{ required: true, whitespace: true, message: "Please enter equipment ID" }]}
-              className="!mb-4"
-            >
-              <FormInput placeholder="e.g. EQ-001" />
-            </Form.Item>
+            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+              {/* EQUIPMENT NAME */}
+              <Form.Item
+                name="name"
+                label={
+                  <span>
+                    Equipment Name <span className="text-red-500">*</span>
+                  </span>
+                }
+                rules={[
+                  {
+                    required: true,
+                    whitespace: true,
+                    message: "Please enter equipment name",
+                  },
+                ]}
+                className="!mb-4"
+              >
+                <FormInput placeholder="Enter equipment name" />
+              </Form.Item>
 
-            <Form.Item
-              name="make"
-              label={<span>Make <span className="text-red-500">*</span></span>}
-              rules={[{ required: true, whitespace: true, message: "Please enter manufacturer" }]}
-              className="!mb-4"
-            >
-              <FormInput placeholder="Enter manufacturer" />
-            </Form.Item>
+              {/* EQUIPMENT ID */}
+              <Form.Item
+                name="equipment_id"
+                label={
+                  <span>
+                    Equipment ID <span className="text-red-500">*</span>
+                  </span>
+                }
+                rules={[
+                  {
+                    required: true,
+                    whitespace: true,
+                    message: "Please enter equipment ID",
+                  },
+                ]}
+                className="!mb-4"
+              >
+                <FormInput placeholder="e.g. EQ-001" />
+              </Form.Item>
 
-            <Form.Item
-              name="model"
-              label={<span>Model <span className="text-red-500">*</span></span>}
-              rules={[{ required: true, whitespace: true, message: "Please enter equipment model" }]}
-              className="!mb-4"
-            >
-              <FormInput placeholder="Enter equipment model" />
-            </Form.Item>
+              {/* MAKE */}
+              <Form.Item
+                name="make"
+                label={
+                  <span>
+                    Make <span className="text-red-500">*</span>
+                  </span>
+                }
+                rules={[
+                  {
+                    required: true,
+                    whitespace: true,
+                    message: "Please enter manufacturer",
+                  },
+                ]}
+                className="!mb-4"
+              >
+                <FormInput placeholder="Enter manufacturer" />
+              </Form.Item>
 
-            <Form.Item
-              name="equipment_type"
-              label={<span>Equipment Type <span className="text-red-500">*</span></span>}
-              rules={[{ required: true, whitespace: true, message: "Please enter equipment type" }]}
-              className="!mb-4 md:col-span-2"
-            >
-              <FormInput placeholder="Enter equipment type" />
-            </Form.Item>
-          </div>
-        </section>
+              {/* MODEL */}
+              <Form.Item
+                name="model"
+                label={
+                  <span>
+                    Model <span className="text-red-500">*</span>
+                  </span>
+                }
+                rules={[
+                  {
+                    required: true,
+                    whitespace: true,
+                    message: "Please enter equipment model",
+                  },
+                ]}
+                className="!mb-4"
+              >
+                <FormInput placeholder="Enter equipment model" />
+              </Form.Item>
+
+              {/* EQUIPMENT TYPE */}
+              <Form.Item
+                name="equipment_type"
+                label={
+                  <span>
+                    Equipment Type <span className="text-red-500">*</span>
+                  </span>
+                }
+                rules={[
+                  {
+                    required: true,
+                    whitespace: true,
+                    message: "Please enter equipment type",
+                  },
+                ]}
+                className="!mb-4 md:col-span-2"
+              >
+                <FormInput placeholder="Enter equipment type" />
+              </Form.Item>
+            </div>
+          </section>
+        </div>
       </Form>
 
-      {/* ─── CHECKLIST CONFIGURATION (Reusable Component) ────────── */}
-      <ChecklistConfiguration
-        value={categories}
-        onChange={setCategories}
-        description="Define categorical inspection checkpoints for the field engineers."
-      />
+      {/* ═══════════════ TAB 2: CHECKLIST CONFIGURATION ═══════════════ */}
+      {activeTab === "checklist" && (
+        <ChecklistConfiguration
+          value={checklistConfig}
+          onChange={setChecklistConfig}
+          description="Build a flexible multi-question inspection checklist with configurable response fields."
+        />
+      )}
 
-      {/* ─── Floating Action Buttons ──────────────────────────────── */}
+      {/* ═══════════════ FLOATING ACTIONS ═══════════════ */}
       <FloatingActionButtons
         onSave={() => form.submit()}
         onCancel={handleCancel}

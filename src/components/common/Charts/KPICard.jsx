@@ -1,6 +1,10 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import {
+    TrendingUp,
+    TrendingDown,
+    Minus,
+} from "lucide-react";
 
 const KPICard = ({
     title,
@@ -18,54 +22,263 @@ const KPICard = ({
         <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: delay, ease: "easeOut" }}
-            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md hover:border-slate-300"
+            transition={{
+                duration: 0.35,
+                delay: delay,
+                ease: "easeOut",
+            }}
+            className="
+                group
+                relative
+                flex
+                min-h-[166px]
+                flex-col
+                justify-between
+                overflow-hidden
+                rounded-[18px]
+                border
+                border-[#D6D8D3]
+                bg-[#F7F6F2]
+                p-4
+                shadow-[0_3px_12px_rgba(36,50,56,0.045)]
+                transition-all
+                duration-300
+                hover:-translate-y-1
+                hover:border-[#C4CCC7]
+                hover:shadow-[0_12px_28px_rgba(36,50,56,0.09)]
+            "
         >
-            {/* Top Gradient Accent Bar */}
-            <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${gradient}`} />
+            {/* =====================================================
+                INNER CARD SURFACE
+            ====================================================== */}
+            <div
+                className="
+                    absolute
+                    inset-[1px]
+                    rounded-[17px]
+                    bg-white
+                "
+            />
 
-            <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                    <p className="text-xs font-semibold tracking-wide uppercase text-slate-500">
-                        {title}
-                    </p>
-                    <div className="flex items-baseline gap-2">
-                        <h4 className="text-2xl font-bold tracking-tight text-slate-900 font-mono">
-                            {value}
-                        </h4>
+            {/* =====================================================
+                SUBTLE ACCENT
+            ====================================================== */}
+            <div
+                className="
+                    pointer-events-none
+                    absolute
+                    right-0
+                    top-0
+                    h-[82px]
+                    w-[82px]
+                    translate-x-[24px]
+                    -translate-y-[24px]
+                    rounded-full
+                    bg-[#DCE7E2]
+                    opacity-40
+                    blur-[1px]
+                    transition-all
+                    duration-300
+                    group-hover:opacity-60
+                "
+            />
+
+            <div
+                className="
+                    pointer-events-none
+                    absolute
+                    bottom-0
+                    left-0
+                    h-[3px]
+                    w-full
+                    bg-[#DCE7E2]
+                "
+            />
+
+            {/* =====================================================
+                CONTENT
+            ====================================================== */}
+            <div className="relative z-10 flex h-full flex-col justify-between">
+
+                {/* TOP */}
+                <div className="flex items-start justify-between gap-3">
+
+                    {/* TITLE + VALUE */}
+                    <div className="min-w-0">
+
+                        <div className="flex items-center gap-2">
+                            <span
+                                className="
+                                    h-[5px]
+                                    w-[5px]
+                                    shrink-0
+                                    rounded-full
+                                    bg-[#A47D45]
+                                "
+                            />
+
+                            <p
+                                className="
+                                    truncate
+                                    text-[10.5px]
+                                    font-bold
+                                    uppercase
+                                    tracking-[0.11em]
+                                    text-[#7A8583]
+                                "
+                            >
+                                {title}
+                            </p>
+                        </div>
+
+                        <div className="mt-3 flex items-baseline gap-2">
+                            <h4
+                                className="
+                                    truncate
+                                    text-[29px]
+                                    font-bold
+                                    leading-none
+                                    tracking-[-0.035em]
+                                    text-[#243238]
+                                "
+                            >
+                                {value}
+                            </h4>
+                        </div>
                     </div>
+
+                    {/* ICON */}
+                    {Icon && (
+                        <div
+                            className="
+                                relative
+                                flex
+                                h-[45px]
+                                w-[45px]
+                                shrink-0
+                                items-center
+                                justify-center
+                                overflow-hidden
+                                rounded-[13px]
+                                border
+                                border-[#C9D8D3]
+                                bg-[#E8F0ED]
+                                text-[#56766D]
+                                shadow-[0_3px_8px_rgba(86,118,109,0.07)]
+                                transition-all
+                                duration-300
+                                group-hover:scale-[1.04]
+                                group-hover:border-[#B9CCC5]
+                                group-hover:bg-[#E2ECE8]
+                            "
+                        >
+                            <Icon
+                                size={21}
+                                strokeWidth={1.9}
+                            />
+
+                            <span
+                                className="
+                                    absolute
+                                    bottom-0
+                                    left-0
+                                    h-[2px]
+                                    w-full
+                                    bg-[#A47D45]
+                                    opacity-80
+                                "
+                            />
+                        </div>
+                    )}
                 </div>
 
-                {Icon && (
-                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${bgColor} ${iconColor} transition-transform duration-300 group-hover:scale-105 shadow-2xs ring-1 ring-black/5`}>
-                        <Icon size={22} strokeWidth={2} />
-                    </div>
-                )}
-            </div>
+                {/* =================================================
+                    FOOTER
+                ================================================== */}
+                <div
+                    className="
+                        mt-5
+                        flex
+                        min-w-0
+                        items-end
+                        justify-between
+                        gap-3
+                        border-t
+                        border-[#ECEDEA]
+                        pt-3
+                    "
+                >
+                    {/* SUBTEXT */}
+                    {subtext ? (
+                        <span
+                            className="
+                                min-w-0
+                                max-w-[62%]
+                                truncate
+                                text-[11px]
+                                font-medium
+                                leading-[1.35]
+                                text-[#7B8584]
+                            "
+                            title={subtext}
+                        >
+                            {subtext}
+                        </span>
+                    ) : (
+                        <span />
+                    )}
 
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
-                {subtext && (
-                    <span className="text-slate-500 font-medium truncate max-w-[170px]" title={subtext}>
-                        {subtext}
-                    </span>
-                )}
+                    {/* TREND */}
+                    {trend && (
+                        <div
+                            className={`
+                                inline-flex
+                                shrink-0
+                                items-center
+                                gap-1.5
+                                rounded-full
+                                border
+                                px-2.5
+                                py-1
+                                text-[10px]
+                                font-bold
+                                tracking-[0.01em]
+                                transition-all
+                                duration-200
+                                ${
+                                    trendType === "up"
+                                        ? "border-[#CFE1D9] bg-[#EEF5F2] text-[#56766D]"
+                                        : trendType === "down"
+                                        ? "border-[#E8D0D0] bg-[#FBF2F2] text-[#B54A4A]"
+                                        : "border-[#DDE1DE] bg-[#F3F4F2] text-[#707B79]"
+                                }
+                            `}
+                        >
+                            {trendType === "up" && (
+                                <TrendingUp
+                                    size={11}
+                                    strokeWidth={2.2}
+                                />
+                            )}
 
-                {trend && (
-                    <div
-                        className={`inline-flex items-center gap-1 font-semibold rounded-full px-2 py-0.5 text-[11px] ${
-                            trendType === "up"
-                                ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/20"
-                                : trendType === "down"
-                                ? "bg-rose-50 text-rose-700 ring-1 ring-rose-500/20"
-                                : "bg-slate-100 text-slate-600 ring-1 ring-slate-400/20"
-                        }`}
-                    >
-                        {trendType === "up" && <TrendingUp size={12} />}
-                        {trendType === "down" && <TrendingDown size={12} />}
-                        {trendType === "neutral" && <Minus size={12} />}
-                        <span>{trend}</span>
-                    </div>
-                )}
+                            {trendType === "down" && (
+                                <TrendingDown
+                                    size={11}
+                                    strokeWidth={2.2}
+                                />
+                            )}
+
+                            {trendType === "neutral" && (
+                                <Minus
+                                    size={11}
+                                    strokeWidth={2.2}
+                                />
+                            )}
+
+                            <span>{trend}</span>
+                        </div>
+                    )}
+                </div>
             </div>
         </motion.div>
     );

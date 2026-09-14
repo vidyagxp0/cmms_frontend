@@ -7,18 +7,55 @@ const ProcessStage = ({
 }) => {
     if (loading) {
         return (
-            <div className="flex h-[46px] w-full items-center gap-2 overflow-x-auto rounded-xl border border-[#DCE8E2] bg-[#F7FAF8] px-3 shadow-[0_2px_10px_rgba(21,44,32,0.03)] scrollbar-thin">
-                {[1, 2, 3, 4, 5].map((item) => (
-                    <div
-                        key={item}
-                        className="h-8 w-[140px] shrink-0 animate-pulse rounded-lg bg-slate-200"
-                    />
-                ))}
+            <div
+                className="
+                    w-full
+                    overflow-hidden
+                    rounded-[14px]
+                    border
+                    border-[#D7E1DC]
+                    bg-[#F7F9F7]
+                    px-3
+                    shadow-[0_3px_12px_rgba(36,50,56,0.04)]
+                "
+            >
+                <div
+                    className="
+                        flex
+                        min-h-[56px]
+                        w-max
+                        min-w-full
+                        items-center
+                        gap-2
+                        overflow-x-auto
+                        overflow-y-hidden
+                        py-2
+                        scrollbar-thin
+                        scrollbar-track-transparent
+                        scrollbar-thumb-[#C8D8D0]
+                    "
+                >
+                    {[1, 2, 3, 4, 5].map((item) => (
+                        <div
+                            key={item}
+                            className="
+                                h-[38px]
+                                w-[150px]
+                                shrink-0
+                                animate-pulse
+                                rounded-full
+                                bg-[#DDE8E2]
+                            "
+                        />
+                    ))}
+                </div>
             </div>
         );
     }
 
-    if (!stages.length) return null;
+    if (!stages.length) {
+        return null;
+    }
 
     const normalizedActiveStageId = Number(activeStageId);
 
@@ -30,25 +67,13 @@ const ProcessStage = ({
         normalizedActiveStageId === 6 ||
         activeStage?.name?.trim().toLowerCase() === "close - cancelled";
 
-    /*
-     * If Close - Cancelled is active:
-     * - Hide every other stage
-     * - Show only Close - Cancelled
-     * - Give it full red treatment
-     */
     const visibleStages = isCancelledStageActive
         ? activeStage
             ? [activeStage]
-            : [
-                  {
-                      id: 6,
-                      name: "Close - Cancelled",
-                  },
-              ]
+            : [{ id: 6, name: "Close - Cancelled" }]
         : stages.filter(
               (stage) =>
-                  stage?.name?.trim().toLowerCase() !==
-                  "close - cancelled"
+                  stage?.name?.trim().toLowerCase() !== "close - cancelled"
           );
 
     const activeStageIndex = stages.findIndex(
@@ -56,70 +81,395 @@ const ProcessStage = ({
     );
 
     return (
-        <div className="w-full overflow-hidden rounded-xl border border-[#DCE8E2] bg-[#F7FAF8] px-3 shadow-[0_2px_10px_rgba(21,44,32,0.03)]">
-            <div className="flex min-h-[46px] w-full items-center gap-2 overflow-x-auto py-1.5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[#C8D8D0]">
-                {visibleStages.map((stage) => {
-                    const originalIndex = stages.findIndex(
-                        (item) =>
-                            Number(item?.id) === Number(stage?.id)
-                    );
+        <>
+            <div
+                className="
+                    w-full
+                    overflow-hidden
+                    rounded-[14px]
+                    border
+                    border-[#D5DED9]
+                    bg-[#F7F9F7]
+                    px-2.5
+                    shadow-[0_3px_12px_rgba(36,50,56,0.04)]
+                "
+            >
+                <div
+                    className="
+                        flex
+                        min-h-[56px]
+                        w-full
+                        items-center
+                        overflow-x-auto
+                        overflow-y-hidden
+                        py-2
+                        scrollbar-thin
+                        scrollbar-track-transparent
+                        scrollbar-thumb-[#BFCFC7]
+                        overscroll-x-contain
+                    "
+                >
+                    <div
+                        className="
+                            flex
+                            w-max
+                            min-w-full
+                            items-center
+                            gap-2
+                        "
+                    >
+                        {visibleStages.map((stage) => {
+                            const originalIndex = stages.findIndex(
+                                (item) =>
+                                    Number(item?.id) === Number(stage?.id)
+                            );
 
-                    const isActive =
-                        Number(stage?.id) === normalizedActiveStageId;
+                            const isActive =
+                                Number(stage?.id) === normalizedActiveStageId;
 
-                    const isCompleted =
-                        activeStageIndex >= 0 &&
-                        originalIndex <= activeStageIndex;
+                            const isCompleted =
+                                activeStageIndex >= 0 &&
+                                originalIndex < activeStageIndex;
 
-                    const isClosedDone =
-                        stage?.name?.trim().toLowerCase() ===
-                        "closed - done";
+                            const normalizedName =
+                                stage?.name?.trim().toLowerCase();
 
-                    /*
-                     * Stage 6 / Close - Cancelled
-                     */
-                    if (isCancelledStageActive) {
-                        return (
-                            <div
-                                key={stage?.id}
-                                title={stage?.name}
-                                className="flex h-8 min-w-[140px] max-w-[280px] shrink-0 items-center justify-center rounded-lg bg-[#C43D3D] px-5 text-center text-[10.5px] font-semibold leading-none text-white shadow-[0_3px_12px_rgba(196,61,61,0.24)] transition-all duration-300"
-                            >
-                                <span className="truncate">
-                                    {stage?.name || "Close - Cancelled"}
-                                </span>
-                            </div>
-                        );
+                            const isClosedDone =
+                                normalizedName === "closed - done";
+
+                            const isCancelled =
+                                normalizedName === "close - cancelled";
+
+                            if (isCancelled) {
+                                return (
+                                    <div
+                                        key={stage?.id}
+                                        title={stage?.name}
+                                        className={`
+                                            relative
+                                            flex
+                                            h-[38px]
+                                            min-w-[170px]
+                                            shrink-0
+                                            items-center
+                                            justify-center
+                                            overflow-hidden
+                                            rounded-full
+                                            border
+                                            border-[#B83E43]
+                                            bg-[#C94B4F]
+                                            px-5
+                                            text-center
+                                            text-[10.5px]
+                                            font-bold
+                                            leading-none
+                                            whitespace-nowrap
+                                            text-white
+                                            shadow-[0_4px_12px_rgba(201,75,79,0.22)]
+                                        `}
+                                    >
+                                        {isActive && (
+                                            <span
+                                                aria-hidden="true"
+                                                className="
+                                                    pointer-events-none
+                                                    absolute
+                                                    inset-y-[-25%]
+                                                    left-[-45%]
+                                                    z-0
+                                                    w-[45%]
+                                                    rotate-[8deg]
+                                                    rounded-full
+                                                    bg-white/16
+                                                    blur-[13px]
+                                                    animate-[stageBackgroundSweep_2.8s_ease-in-out_infinite]
+                                                "
+                                            />
+                                        )}
+
+                                        <span
+                                            className={`
+                                                relative
+                                                z-10
+                                                whitespace-nowrap
+                                                ${
+                                                    isActive
+                                                        ? "animate-[stageTextBreathRed_2.4s_ease-in-out_infinite]"
+                                                        : ""
+                                                }
+                                            `}
+                                        >
+                                            {stage?.name}
+                                        </span>
+                                    </div>
+                                );
+                            }
+
+                            if (isClosedDone && isActive) {
+                                return (
+                                    <div
+                                        key={stage?.id}
+                                        title={stage?.name}
+                                        className="
+                                            relative
+                                            flex
+                                            h-[38px]
+                                            min-w-[150px]
+                                            shrink-0
+                                            items-center
+                                            justify-center
+                                            overflow-hidden
+                                            rounded-full
+                                            border
+                                            border-[#B83E43]
+                                            bg-[#C93F45]
+                                            px-5
+                                            text-center
+                                            text-[10.5px]
+                                            font-bold
+                                            leading-none
+                                            whitespace-nowrap
+                                            text-white
+                                            shadow-[0_4px_13px_rgba(201,63,69,0.24)]
+                                        "
+                                    >
+                                        <span
+                                            aria-hidden="true"
+                                            className="
+                                                pointer-events-none
+                                                absolute
+                                                inset-y-[-25%]
+                                                left-[-45%]
+                                                z-0
+                                                w-[45%]
+                                                rotate-[8deg]
+                                                rounded-full
+                                                bg-white/18
+                                                blur-[13px]
+                                                animate-[stageBackgroundSweep_2.8s_ease-in-out_infinite]
+                                            "
+                                        />
+
+                                        <span
+                                            aria-hidden="true"
+                                            className="
+                                                pointer-events-none
+                                                absolute
+                                                inset-[2px]
+                                                z-[1]
+                                                rounded-full
+                                                border
+                                                border-white/10
+                                            "
+                                        />
+
+                                        <span
+                                            className="
+                                                relative
+                                                z-10
+                                                whitespace-nowrap
+                                                animate-[stageTextBreathRed_2.4s_ease-in-out_infinite]
+                                            "
+                                        >
+                                            {stage?.name}
+                                        </span>
+                                    </div>
+                                );
+                            }
+
+                            if (isCompleted || isActive) {
+                                return (
+                                    <div
+                                        key={stage?.id}
+                                        title={stage?.name}
+                                        className={`
+                                            relative
+                                            flex
+                                            h-[38px]
+                                            min-w-[150px]
+                                            shrink-0
+                                            items-center
+                                            justify-center
+                                            overflow-hidden
+                                            rounded-full
+                                            border
+                                            px-5
+                                            text-center
+                                            text-[10.5px]
+                                            font-bold
+                                            leading-none
+                                            whitespace-nowrap
+                                            text-white
+                                            transition-colors
+                                            duration-200
+                                            ${
+                                                isActive
+                                                    ? `
+                                                        border-[#119653]
+                                                        bg-[#18B865]
+                                                        shadow-[0_4px_13px_rgba(24,184,101,0.22)]
+                                                    `
+                                                    : `
+                                                        border-[#20A961]
+                                                        bg-[#20B96B]
+                                                        shadow-[0_2px_8px_rgba(32,185,107,0.14)]
+                                                    `
+                                            }
+                                        `}
+                                    >
+                                        {isActive && (
+                                            <>
+                                                <span
+                                                    aria-hidden="true"
+                                                    className="
+                                                        pointer-events-none
+                                                        absolute
+                                                        inset-y-[-25%]
+                                                        left-[-45%]
+                                                        z-0
+                                                        w-[45%]
+                                                        rotate-[8deg]
+                                                        rounded-full
+                                                        bg-white/18
+                                                        blur-[13px]
+                                                        animate-[stageBackgroundSweep_2.8s_ease-in-out_infinite]
+                                                    "
+                                                />
+
+                                                <span
+                                                    aria-hidden="true"
+                                                    className="
+                                                        pointer-events-none
+                                                        absolute
+                                                        inset-[2px]
+                                                        z-[1]
+                                                        rounded-full
+                                                        border
+                                                        border-white/12
+                                                    "
+                                                />
+                                            </>
+                                        )}
+
+                                        <span
+                                            className={`
+                                                relative
+                                                z-10
+                                                whitespace-nowrap
+                                                ${
+                                                    isActive
+                                                        ? "animate-[stageTextBreathGreen_2.4s_ease-in-out_infinite]"
+                                                        : ""
+                                                }
+                                            `}
+                                        >
+                                            {stage?.name}
+                                        </span>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div
+                                    key={stage?.id}
+                                    title={stage?.name}
+                                    className="
+                                        flex
+                                        h-[38px]
+                                        min-w-[145px]
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-full
+                                        border
+                                        border-[#D5DFDA]
+                                        bg-white
+                                        px-5
+                                        text-center
+                                        text-[10.5px]
+                                        font-semibold
+                                        leading-none
+                                        whitespace-nowrap
+                                        text-[#7D8A85]
+                                        transition-all
+                                        duration-200
+                                        hover:border-[#C7D5CF]
+                                        hover:bg-[#FBFCFB]
+                                        hover:text-[#5F7169]
+                                    "
+                                >
+                                    <span className="whitespace-nowrap">
+                                        {stage?.name}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                {`
+                    @keyframes stageBackgroundSweep {
+                        0% {
+                            transform: translateX(0) rotate(8deg);
+                            opacity: 0;
+                        }
+
+                        12% {
+                            opacity: 0;
+                        }
+
+                        35% {
+                            opacity: 0.72;
+                        }
+
+                        55% {
+                            opacity: 0.52;
+                        }
+
+                        75% {
+                            opacity: 0.18;
+                        }
+
+                        100% {
+                            transform: translateX(330%) rotate(8deg);
+                            opacity: 0;
+                        }
                     }
 
-                    return (
-                        <div
-                            key={stage?.id}
-                            title={stage?.name}
-                            className={`
-                                flex h-8 min-w-[120px] max-w-[260px] shrink-0
-                                items-center justify-center rounded-lg
-                                px-5 text-center text-[10.5px]
-                                font-semibold leading-none
-                                whitespace-nowrap
-                                transition-all duration-300
-                                ${
-                                    isClosedDone && isActive
-                                        ? "bg-[#C43D3D] text-white shadow-[0_3px_10px_rgba(196,61,61,0.22)]"
-                                        : isCompleted
-                                        ? "bg-[#20BF63] text-white shadow-[0_3px_10px_rgba(32,191,99,0.18)]"
-                                        : "border border-[#DCE8E2] bg-white text-[#60736B] hover:border-[#BFD4C8] hover:text-[#3D574D]"
-                                }
-                            `}
-                        >
-                            <span className="truncate">
-                                {stage?.name}
-                            </span>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
+                    @keyframes stageTextBreathGreen {
+                        0%,
+                        100% {
+                            transform: scale(1);
+                        }
+
+                        50% {
+                            transform: scale(1.06);
+                        }
+                    }
+
+                    @keyframes stageTextBreathRed {
+                        0%,
+                        100% {
+                            transform: scale(1);
+                        }
+
+                        50% {
+                            transform: scale(1.06);
+                        }
+                    }
+
+                    @media (prefers-reduced-motion: reduce) {
+                        [class*="animate-[stageBackgroundSweep"],
+                        [class*="animate-[stageTextBreathGreen"],
+                        [class*="animate-[stageTextBreathRed"] {
+                            animation: none !important;
+                        }
+                    }
+                `}
+            </style>
+        </>
     );
 };
 

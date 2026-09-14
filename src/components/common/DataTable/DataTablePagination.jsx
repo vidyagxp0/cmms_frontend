@@ -11,14 +11,19 @@ const DataTablePagination = ({
     table,
     pageSizeOptions = [10, 20, 50],
 }) => {
-    const pageIndex = table.getState().pagination.pageIndex;
+    const pageIndex =
+        table.getState().pagination.pageIndex;
 
-    const pageSize = table.getState().pagination.pageSize;
+    const pageSize =
+        table.getState().pagination.pageSize;
 
-    const totalRows = table.getFilteredRowModel().rows.length;
+    const totalRows =
+        table.getFilteredRowModel().rows.length;
 
     const firstRow =
-        totalRows === 0 ? 0 : pageIndex * pageSize + 1;
+        totalRows === 0
+            ? 0
+            : pageIndex * pageSize + 1;
 
     const lastRow = Math.min(
         (pageIndex + 1) * pageSize,
@@ -31,78 +36,153 @@ const DataTablePagination = ({
                 flex
                 min-h-[62px]
                 shrink-0
+                flex-wrap
                 items-center
                 justify-between
-                gap-4
+                gap-3
                 border-t
-                border-slate-100
-                bg-white
-                px-5
+                border-[var(--color-border-soft)]
+                bg-[var(--color-surface)]
+                px-4
                 py-3
+                sm:px-5
             "
         >
-            {/* Result count */}
-            <div className="text-xs text-slate-400">
+            {/* =====================================================
+                RESULT COUNT
+            ====================================================== */}
+            <div
+                className="
+                    whitespace-nowrap
+                    text-[10.5px]
+                    font-medium
+                    text-[var(--color-text-muted)]
+                "
+            >
                 Showing{" "}
-                <span className="font-semibold text-slate-600">
+                <span className="font-bold text-[#61706C]">
                     {firstRow}
                 </span>{" "}
                 to{" "}
-                <span className="font-semibold text-slate-600">
+                <span className="font-bold text-[#61706C]">
                     {lastRow}
                 </span>{" "}
                 of{" "}
-                <span className="font-semibold text-slate-600">
+                <span className="font-bold text-[#61706C]">
                     {totalRows}
                 </span>{" "}
                 results
             </div>
 
-            {/* Controls */}
-            <div className="flex items-center gap-4">
-                {/* Page size */}
-                <div className="flex items-center gap-2">
-                    <span className="hidden text-xs text-slate-400 sm:block">
+            {/* =====================================================
+                CONTROLS
+            ====================================================== */}
+            <div
+                className="
+                    flex
+                    items-center
+                    gap-3
+                "
+            >
+                {/* =================================================
+                    PAGE SIZE
+                ================================================== */}
+                <div
+                    className="
+                        flex
+                        items-center
+                        gap-2
+                    "
+                >
+                    <span
+                        className="
+                            hidden
+                            text-[10px]
+                            font-semibold
+                            uppercase
+                            tracking-[0.07em]
+                            text-[var(--color-text-muted)]
+                            sm:block
+                        "
+                    >
                         Rows
                     </span>
 
-                    <select
-                        value={pageSize}
-                        onChange={(event) => {
-                            table.setPageSize(
-                                Number(event.target.value)
-                            );
-                        }}
-                        className="
-                            h-9
-                            cursor-pointer
-                            rounded-lg
-                            border
-                            border-slate-200
-                            bg-white
-                            px-2.5
-                            text-xs
-                            font-semibold
-                            text-slate-600
-                            outline-none
-                            transition
-                            hover:border-slate-300
-                            focus:border-indigo-300
-                        "
-                    >
-                        {pageSizeOptions.map((size) => (
-                            <option
-                                key={size}
-                                value={size}
-                            >
-                                {size}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="relative">
+                        <select
+                            value={pageSize}
+                            onChange={(event) => {
+                                table.setPageSize(
+                                    Number(
+                                        event.target
+                                            .value
+                                    )
+                                );
+                            }}
+                            className="
+                                h-[36px]
+                                min-w-[62px]
+                                cursor-pointer
+                                appearance-none
+                                rounded-[9px]
+                                border
+                                border-[var(--color-border)]
+                                bg-[var(--color-surface-soft)]
+                                py-1
+                                pl-2.5
+                                pr-7
+                                text-[10.5px]
+                                font-bold
+                                text-[#5B6965]
+                                outline-none
+                                transition-all
+                                duration-200
+                                hover:border-[#C2CCC7]
+                                hover:bg-white
+                                focus:border-[#9FBAB0]
+                                focus:bg-white
+                                focus:shadow-[0_0_0_3px_rgba(86,118,109,0.06)]
+                            "
+                        >
+                            {pageSizeOptions.map(
+                                (size) => (
+                                    <option
+                                        key={size}
+                                        value={size}
+                                    >
+                                        {size}
+                                    </option>
+                                )
+                            )}
+                        </select>
+
+                        {/* SELECT CHEVRON */}
+                        <span
+                            className="
+                                pointer-events-none
+                                absolute
+                                right-2.5
+                                top-1/2
+                                -translate-y-1/2
+                                text-[8px]
+                                text-[#7E8A86]
+                            "
+                        >
+                            ▼
+                        </span>
+                    </div>
                 </div>
 
-                {/* Navigation */}
-                <div className="flex items-center gap-1">
+                {/* =================================================
+                    PAGINATION NAVIGATION
+                ================================================== */}
+                <div
+                    className="
+                        flex
+                        items-center
+                        gap-1
+                    "
+                >
                     <PaginationButton
                         disabled={
                             !table.getCanPreviousPage()
@@ -110,8 +190,12 @@ const DataTablePagination = ({
                         onClick={() =>
                             table.setPageIndex(0)
                         }
+                        label="First page"
                     >
-                        <ChevronsLeft size={14} />
+                        <ChevronsLeft
+                            size={13}
+                            strokeWidth={1.9}
+                        />
                     </PaginationButton>
 
                     <PaginationButton
@@ -121,46 +205,65 @@ const DataTablePagination = ({
                         onClick={() =>
                             table.previousPage()
                         }
+                        label="Previous page"
                     >
-                        <ChevronLeft size={14} />
+                        <ChevronLeft
+                            size={13}
+                            strokeWidth={1.9}
+                        />
                     </PaginationButton>
 
+                    {/* CURRENT PAGE */}
                     <div
                         className="
                             flex
-                            h-9
-                            min-w-9
+                            h-[36px]
+                            min-w-[36px]
                             items-center
                             justify-center
-                            rounded-lg
-                            bg-indigo-50
-                            px-3
-                            text-xs
+                            rounded-[9px]
+                            border
+                            border-[#C7D8D2]
+                            bg-[var(--color-primary-soft)]
+                            px-2.5
+                            text-[10.5px]
                             font-bold
-                            text-indigo-600
+                            text-[var(--color-primary-dark)]
                         "
                     >
                         {pageIndex + 1}
                     </div>
 
                     <PaginationButton
-                        disabled={!table.getCanNextPage()}
+                        disabled={
+                            !table.getCanNextPage()
+                        }
                         onClick={() =>
                             table.nextPage()
                         }
+                        label="Next page"
                     >
-                        <ChevronRight size={14} />
+                        <ChevronRight
+                            size={13}
+                            strokeWidth={1.9}
+                        />
                     </PaginationButton>
 
                     <PaginationButton
-                        disabled={!table.getCanNextPage()}
+                        disabled={
+                            !table.getCanNextPage()
+                        }
                         onClick={() =>
                             table.setPageIndex(
                                 table.getPageCount() - 1
                             )
                         }
+                        label="Last page"
                     >
-                        <ChevronsRight size={14} />
+                        <ChevronsRight
+                            size={13}
+                            strokeWidth={1.9}
+                        />
                     </PaginationButton>
                 </div>
             </div>
@@ -172,25 +275,36 @@ const PaginationButton = ({
     children,
     disabled,
     onClick,
+    label,
 }) => {
     return (
         <button
             type="button"
             disabled={disabled}
             onClick={onClick}
+            aria-label={label}
             className="
                 flex
-                h-9
-                w-9
+                h-[36px]
+                w-[34px]
                 items-center
                 justify-center
-                rounded-lg
-                text-slate-400
+                rounded-[9px]
+                border
+                border-transparent
+                text-[#87938F]
                 transition-all
-                hover:bg-slate-50
-                hover:text-slate-600
+                duration-200
+                hover:border-[var(--color-border-soft)]
+                hover:bg-[var(--color-surface-muted)]
+                hover:text-[var(--color-primary)]
+                active:scale-[0.96]
                 disabled:cursor-not-allowed
-                disabled:opacity-30
+                disabled:opacity-25
+                focus:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-[var(--color-primary-muted)]
+                focus-visible:ring-offset-1
             "
         >
             {children}

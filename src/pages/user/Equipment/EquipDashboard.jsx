@@ -269,19 +269,6 @@ const EquipDashboard = () => {
                                 >
                                     {name}
                                 </p>
-
-                                <p
-                                    className="
-                                        mt-0.5
-                                        text-[9.5px]
-                                        font-medium
-                                        uppercase
-                                        tracking-[0.07em]
-                                        text-[var(--color-text-muted)]
-                                    "
-                                >
-                                    Asset
-                                </p>
                             </div>
                         </div>
                     );

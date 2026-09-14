@@ -1,811 +1,869 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
-    Plus,
-    X,
-    Trash2,
-    ClipboardCheck,
-    ListChecks,
+  Plus,
+  X,
+  Trash2,
+  ClipboardCheck,
+  ListChecks,
+  Hash,
+  HelpCircle,
+  Database,
+  Eye,
+  GripVertical,
 } from "lucide-react";
-
+import { Input, Select, Switch, Tooltip } from "antd";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 
+/* ─────────────────────────────── Constants ─────────────────────────────── */
+
+const FIELD_TYPES = [
+  { value: "text", label: "Text" },
+  { value: "textarea", label: "Textarea" },
+  { value: "number", label: "Number" },
+  { value: "date", label: "Date" },
+  { value: "time", label: "Time" },
+  { value: "datetime", label: "Date & Time" },
+  { value: "checkbox", label: "Checkbox" },
+  { value: "single_select", label: "Single Selection" },
+  { value: "multi_select", label: "Multiple Selection" },
+];
+
+const SELECTION_TYPES = ["single_select", "multi_select"];
+
+const createId = (prefix) =>
+  `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+/* ─────────────────────────── Main component ─────────────────────────── */
+
 const ChecklistConfiguration = ({
-    value = [],
-    onChange,
-    description = "Define categorical inspection checkpoints for the field engineers.",
-    disabled = false,
-    className = "",
+  value = {},
+  onChange,
+  description = "Configure questions and data fields that engineers will use during inspection.",
+  disabled = false,
+  className = "",
 }) => {
-    // ─── Category handlers ──────────────────────────────────────────────
-    const addCategory = () => {
-        const newCategory = {
-            id: Date.now().toString(),
-            name: "",
-            checkpoints: [],
-        };
+  /* ── Normalized state ── */
+  const checklist = useMemo(
+    () => ({
+      checklist_name: value?.checklist_name || "",
+      include_serial_number: value?.include_serial_number !== false,
+      question_columns: Array.isArray(value?.question_columns)
+        ? value.question_columns
+        : [],
+      data_columns: Array.isArray(value?.data_columns)
+        ? value.data_columns
+        : [],
+      questions: Array.isArray(value?.questions) ? value.questions : [],
+    }),
+    [value]
+  );
 
-        onChange([...value, newCategory]);
+  const updateChecklist = (updates) => {
+    onChange({ ...checklist, ...updates });
+  };
+
+  /* ── Basic info ── */
+  const updateChecklistName = (v) => updateChecklist({ checklist_name: v });
+  const updateSerialNumber = (v) =>
+    updateChecklist({ include_serial_number: v });
+
+  /* ── Question columns ── */
+  const addQuestionColumn = () => {
+    const newCol = { id: createId("question-column"), column_header: "" };
+    updateChecklist({
+      question_columns: [...checklist.question_columns, newCol],
+    });
+  };
+
+  const updateQuestionColumn = (columnId, columnHeader) => {
+    updateChecklist({
+      question_columns: checklist.question_columns.map((c) =>
+        c.id === columnId ? { ...c, column_header: columnHeader } : c
+      ),
+    });
+  };
+
+  const deleteQuestionColumn = (columnId) => {
+    updateChecklist({
+      question_columns: checklist.question_columns.filter(
+        (c) => c.id !== columnId
+      ),
+    });
+  };
+
+  /* ── Data columns ── */
+  const addDataColumn = () => {
+    const newCol = {
+      id: createId("data-column"),
+      column_header: "",
+      field_type: "text",
+      options: [],
     };
+    updateChecklist({ data_columns: [...checklist.data_columns, newCol] });
+  };
 
-    const deleteCategory = (catId) => {
-        onChange(
-            value.filter(
-                (cat) => cat.id !== catId
-            )
-        );
-    };
+  const updateDataColumn = (columnId, field, fieldValue) => {
+    updateChecklist({
+      data_columns: checklist.data_columns.map((c) =>
+        c.id === columnId ? { ...c, [field]: fieldValue } : c
+      ),
+    });
+  };
 
-    const updateCategoryName = (
-        catId,
-        newName
-    ) => {
-        onChange(
-            value.map((cat) =>
-                cat.id === catId
-                    ? {
-                          ...cat,
-                          name: newName,
-                      }
-                    : cat
-            )
-        );
-    };
+  /** Update field_type and manage options automatically */
+  const updateDataColumnType = (columnId, fieldType) => {
+    updateChecklist({
+      data_columns: checklist.data_columns.map((c) => {
+        if (c.id !== columnId) return c;
+        const isSelection = SELECTION_TYPES.includes(fieldType);
+        let options = c.options || [];
+        if (isSelection && options.length === 0) {
+          options = [{ id: createId("option"), value: "" }];
+        }
+        if (!isSelection) options = [];
+        return { ...c, field_type: fieldType, options };
+      }),
+    });
+  };
 
-    // ─── Checkpoint handlers ────────────────────────────────────────────
-    const addCheckpoint = (catId) => {
-        onChange(
-            value.map((cat) =>
-                cat.id === catId
-                    ? {
-                          ...cat,
-                          checkpoints: [
-                              ...cat.checkpoints,
-                              {
-                                  id: Date.now().toString(),
-                                  text: "",
-                              },
-                          ],
-                      }
-                    : cat
-            )
-        );
-    };
+  const deleteDataColumn = (columnId) => {
+    updateChecklist({
+      data_columns: checklist.data_columns.filter((c) => c.id !== columnId),
+    });
+  };
 
-    const deleteCheckpoint = (
-        catId,
-        cpId
-    ) => {
-        onChange(
-            value.map((cat) =>
-                cat.id === catId
-                    ? {
-                          ...cat,
-                          checkpoints:
-                              cat.checkpoints.filter(
-                                  (cp) =>
-                                      cp.id !==
-                                      cpId
-                              ),
-                      }
-                    : cat
-            )
-        );
-    };
+  /* ── Data column options (single/multi select) ── */
+  const addOption = (columnId) => {
+    updateChecklist({
+      data_columns: checklist.data_columns.map((c) =>
+        c.id === columnId
+          ? {
+              ...c,
+              options: [
+                ...(c.options || []),
+                { id: createId("option"), value: "" },
+              ],
+            }
+          : c
+      ),
+    });
+  };
 
-    const updateCheckpointText = (
-        catId,
-        cpId,
-        newText
-    ) => {
-        onChange(
-            value.map((cat) =>
-                cat.id === catId
-                    ? {
-                          ...cat,
-                          checkpoints:
-                              cat.checkpoints.map(
-                                  (cp) =>
-                                      cp.id ===
-                                      cpId
-                                          ? {
-                                                ...cp,
-                                                text: newText,
-                                            }
-                                          : cp
-                              ),
-                      }
-                    : cat
-            )
-        );
-    };
+  const updateOption = (columnId, optionId, value) => {
+    updateChecklist({
+      data_columns: checklist.data_columns.map((c) =>
+        c.id === columnId
+          ? {
+              ...c,
+              options: (c.options || []).map((o) =>
+                o.id === optionId ? { ...o, value } : o
+              ),
+            }
+          : c
+      ),
+    });
+  };
 
-    return (
-        <div
-            className={`
-                mt-8
-                w-full
-                ${className}
-            `}
-        >
-            {/* =========================================================
-                SECTION HEADING
-            ========================================================== */}
-            <div className="mb-4">
-                <SectionHeader title="CHECKLIST CONFIGURATION" />
+  const deleteOption = (columnId, optionId) => {
+    updateChecklist({
+      data_columns: checklist.data_columns.map((c) =>
+        c.id === columnId
+          ? {
+              ...c,
+              options: (c.options || []).filter((o) => o.id !== optionId),
+            }
+          : c
+      ),
+    });
+  };
+
+  /* ── Questions (rows × question columns) ── */
+  const addQuestion = () => {
+    updateChecklist({
+      questions: [
+        ...checklist.questions,
+        { id: createId("question"), values: {} },
+      ],
+    });
+  };
+
+  const updateQuestionValue = (questionId, columnId, value) => {
+    updateChecklist({
+      questions: checklist.questions.map((q) =>
+        q.id === questionId
+          ? { ...q, values: { ...(q.values || {}), [columnId]: value } }
+          : q
+      ),
+    });
+  };
+
+  const deleteQuestion = (questionId) => {
+    updateChecklist({
+      questions: checklist.questions.filter((q) => q.id !== questionId),
+    });
+  };
+
+  /* ── Derived / preview helpers ── */
+  const validQuestionColumns = checklist.question_columns.filter((c) =>
+    c.column_header?.trim()
+  );
+  const validDataColumns = checklist.data_columns.filter((c) =>
+    c.column_header?.trim()
+  );
+  const validQuestions = checklist.questions.filter((q) =>
+    Object.values(q.values || {}).some((v) => v?.trim())
+  );
+
+  const getFieldPreview = (column) => {
+    const opts = (column.options || [])
+      .map((o) => o.value)
+      .filter(Boolean);
+    switch (column.field_type) {
+      case "textarea":
+        return "Enter remarks…";
+      case "number":
+        return "0";
+      case "date":
+        return "DD / MM / YYYY";
+      case "time":
+        return "HH : MM";
+      case "datetime":
+        return "DD / MM / YYYY  HH : MM";
+      case "checkbox":
+        return "☐ Checkbox";
+      case "single_select":
+        return opts.length ? `Select: ${opts.join(" · ")}` : "Select…";
+      case "multi_select":
+        return opts.length ? `Multi: ${opts.join(" · ")}` : "Select…";
+      case "text":
+      default:
+        return "Enter value…";
+    }
+  };
+
+  return (
+    <div className={`mt-8 w-full ${className}`}>
+      <div className="mb-4">
+        <SectionHeader title="CHECKLIST CONFIGURATION" />
+      </div>
+
+      <div className="overflow-hidden rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.045)]">
+        <div className="h-[2px] w-full bg-[var(--color-secondary)]" />
+
+        {/* ── Header ── */}
+        <div className="flex flex-col gap-4 border-b border-[var(--color-border-soft)] bg-[var(--color-surface)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] border border-[#D4DFDA] bg-[#EEF4F1] text-[var(--color-primary)]">
+              <ClipboardCheck size={16} strokeWidth={1.9} />
             </div>
+            <div className="min-w-0">
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.07em] text-[var(--color-text-primary)]">
+                Multi Question Checklist
+              </p>
+              <p className="mt-0.5 max-w-[700px] text-[10.5px] font-medium leading-5 text-[var(--color-text-muted)]">
+                {description}
+              </p>
+            </div>
+          </div>
+        </div>
 
-            {/* =========================================================
-                MAIN CHECKLIST CONTAINER
-            ========================================================== */}
-            <div
-                className="
-                    overflow-hidden
-                    rounded-[16px]
-                    border
-                    border-[var(--color-border)]
-                    bg-[var(--color-surface)]
-                    shadow-[0_5px_20px_rgba(36,50,56,0.045)]
-                "
-            >
-                {/* TOP ACCENT */}
-                <div
-                    className="
-                        h-[2px]
-                        w-full
-                        bg-[var(--color-secondary)]
-                    "
+        <div className="p-4 sm:p-5">
+          {/* ═══════════════ 01 BASIC INFORMATION ═══════════════ */}
+          <section>
+            <SectionHeading
+              number="01"
+              title="Basic Information"
+              subtitle="Define the checklist identity and basic display settings."
+            />
+
+            <div className="rounded-[12px] border border-[#DCE4E0] bg-[#FAFBF9] p-4">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-[1fr_auto] md:items-end">
+                <div>
+                  <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.07em] text-[#65736E]">
+                    Checklist Name <span className="ml-1 text-red-500">*</span>
+                  </label>
+                  <Input
+                    value={checklist.checklist_name}
+                    onChange={(e) => updateChecklistName(e.target.value)}
+                    disabled={disabled}
+                    placeholder="e.g. Daily Equipment Inspection"
+                    size="large"
+                    className="!rounded-[9px] !text-[11.5px]"
+                  />
+                  <p className="mt-1.5 text-[9px] font-medium text-[#929D99]">
+                    Give this checklist a clear and identifiable name.
+                  </p>
+                </div>
+
+                <div className="flex min-h-[40px] items-center gap-3 rounded-[10px] border border-[#DCE4E0] bg-white px-3 py-2.5">
+                  <div className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[7px] bg-[#EEF4F1] text-[#56766D]">
+                    <Hash size={14} strokeWidth={2} />
+                  </div>
+                  <div className="min-w-[120px]">
+                    <p className="text-[10.5px] font-bold text-[var(--color-text-primary)]">
+                      Serial Number
+                    </p>
+                    <p className="text-[8.5px] font-medium text-[#8B9692]">
+                      Include S/N column
+                    </p>
+                  </div>
+                  <Switch
+                    checked={checklist.include_serial_number}
+                    onChange={updateSerialNumber}
+                    disabled={disabled}
+                    size="small"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ═══════════════ 02 COLUMN CONFIGURATION ═══════════════ */}
+          <section className="mt-7">
+            <SectionHeading
+              number="02"
+              title="Column Configuration"
+              subtitle="Configure the question and response columns of your checklist."
+            />
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {/* ── Question Columns card ── */}
+              <div className="overflow-hidden rounded-[12px] border border-[#DCE4E0] bg-[#FAFBF9]">
+                <ColumnHeader
+                  icon={<HelpCircle size={15} strokeWidth={1.8} />}
+                  title="Question Column"
+                  tooltip="This column is used to display your inspection questions."
+                  subtitle="Configure the column where questions will appear."
+                  buttonLabel="Add Question Column"
+                  onAdd={addQuestionColumn}
+                  disabled={disabled}
                 />
 
-                {/* =====================================================
-                    HEADER / DESCRIPTION
-                ====================================================== */}
-                <div
-                    className="
-                        flex
-                        flex-col
-                        gap-4
-                        border-b
-                        border-[var(--color-border-soft)]
-                        bg-[var(--color-surface)]
-                        px-4
-                        py-4
-                        sm:flex-row
-                        sm:items-center
-                        sm:justify-between
-                        sm:px-5
-                    "
-                >
-                    {/* DESCRIPTION */}
-                    <div className="flex min-w-0 items-start gap-3">
+                <div className="p-3">
+                  {checklist.question_columns.length === 0 ? (
+                    <EmptyState
+                      icon={<HelpCircle size={20} />}
+                      title="No question column added"
+                      subtitle="Add a column to display your checklist questions."
+                    />
+                  ) : (
+                    <div className="space-y-2">
+                      {checklist.question_columns.map((column, index) => (
                         <div
-                            className="
-                                flex
-                                h-[34px]
-                                w-[34px]
-                                shrink-0
-                                items-center
-                                justify-center
-                                rounded-[9px]
-                                border
-                                border-[#D4DFDA]
-                                bg-[#EEF4F1]
-                                text-[var(--color-primary)]
-                            "
+                          key={column.id}
+                          className="flex items-center gap-2 rounded-[9px] border border-[#DDE5E1] bg-white p-2"
                         >
-                            <ClipboardCheck
-                                size={16}
-                                strokeWidth={1.9}
+                          <GripVertical
+                            size={13}
+                            className="shrink-0 text-[#A8B2AE]"
+                          />
+                          <span className="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full bg-[#EAF0ED] text-[8.5px] font-bold text-[#56766D]">
+                            {index + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="mb-1 text-[8px] font-bold uppercase tracking-[0.08em] text-[#8A9591]">
+                              Column Header
+                            </p>
+                            <input
+                              type="text"
+                              value={column.column_header}
+                              onChange={(e) =>
+                                updateQuestionColumn(column.id, e.target.value)
+                              }
+                              disabled={disabled}
+                              placeholder="e.g. Inspection Question"
+                              className="w-full border-none bg-transparent p-0 text-[11px] font-semibold text-[var(--color-text-primary)] outline-none placeholder:text-[#A3ADA9] focus:ring-0"
                             />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => deleteQuestionColumn(column.id)}
+                            disabled={disabled}
+                            className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[7px] text-[#929E99] transition-all hover:bg-[#FCF1F1] hover:text-[#B54A4A] disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
-
-                        <div className="min-w-0">
-                            <p
-                                className="
-                                    text-[10.5px]
-                                    font-bold
-                                    uppercase
-                                    tracking-[0.07em]
-                                    text-[var(--color-text-primary)]
-                                "
-                            >
-                                Inspection Checklist
-                            </p>
-
-                            <p
-                                className="
-                                    mt-0.5
-                                    max-w-[650px]
-                                    text-[10.5px]
-                                    font-medium
-                                    leading-5
-                                    text-[var(--color-text-muted)]
-                                "
-                            >
-                                {description}
-                            </p>
-                        </div>
+                      ))}
                     </div>
-
-                    {/* ADD CATEGORY */}
-                    <button
-                        type="button"
-                        onClick={addCategory}
-                        disabled={disabled}
-                        className="
-                            inline-flex
-                            h-[37px]
-                            shrink-0
-                            items-center
-                            justify-center
-                            gap-2
-                            self-start
-                            rounded-[10px]
-                            border
-                            border-[#BFCFC8]
-                            bg-[var(--color-primary)]
-                            px-3.5
-                            text-[10.5px]
-                            font-bold
-                            text-white
-                            shadow-[0_4px_11px_rgba(86,118,109,0.14)]
-                            transition-all
-                            duration-200
-                            hover:bg-[var(--color-primary-hover)]
-                            hover:shadow-[0_6px_15px_rgba(86,118,109,0.18)]
-                            active:scale-[0.98]
-                            disabled:cursor-not-allowed
-                            disabled:opacity-50
-                            sm:self-auto
-                            focus:outline-none
-                            focus-visible:ring-2
-                            focus-visible:ring-[var(--color-primary-muted)]
-                            focus-visible:ring-offset-1
-                        "
-                    >
-                        <span
-                            className="
-                                flex
-                                h-[22px]
-                                w-[22px]
-                                items-center
-                                justify-center
-                                rounded-[6px]
-                                bg-white/10
-                            "
-                        >
-                            <Plus
-                                size={13}
-                                strokeWidth={2.4}
-                            />
-                        </span>
-
-                        Add Category
-                    </button>
+                  )}
                 </div>
+              </div>
 
-                {/* =====================================================
-                    BODY
-                ====================================================== */}
-                <div className="p-4 sm:p-5">
+              {/* ── Data Columns card ── */}
+              <div className="overflow-hidden rounded-[12px] border border-[#DCE4E0] bg-[#FAFBF9]">
+                <ColumnHeader
+                  icon={<Database size={15} strokeWidth={1.8} />}
+                  title="Data Column"
+                  tooltip="Use this column to configure the data field that engineers will fill in."
+                  subtitle="Configure the response field for each question."
+                  buttonLabel="Add Data Column"
+                  onAdd={addDataColumn}
+                  disabled={disabled}
+                />
 
-                    {/* =================================================
-                        EMPTY STATE
-                    ================================================== */}
-                    {value.length === 0 && (
-                        <div
-                            className="
-                                flex
-                                min-h-[220px]
-                                flex-col
-                                items-center
-                                justify-center
-                                rounded-[13px]
-                                border
-                                border-dashed
-                                border-[#CFDAD5]
-                                bg-[#F8FAF8]
-                                px-5
-                                text-center
-                            "
-                        >
-                            <div
-                                className="
-                                    mb-4
-                                    flex
-                                    h-[54px]
-                                    w-[54px]
-                                    items-center
-                                    justify-center
-                                    rounded-[15px]
-                                    border
-                                    border-[#D4E0DB]
-                                    bg-[#EEF4F1]
-                                    text-[#708780]
-                                "
-                            >
-                                <ListChecks
-                                    size={24}
-                                    strokeWidth={1.6}
-                                />
+                <div className="p-3">
+                  {checklist.data_columns.length === 0 ? (
+                    <EmptyState
+                      icon={<Database size={20} />}
+                      title="No data columns added"
+                      subtitle="Add fields such as Status, Remarks, Reading, etc."
+                    />
+                  ) : (
+                    <div className="space-y-2">
+                      {checklist.data_columns.map((column, index) => {
+                        const isSelection = SELECTION_TYPES.includes(
+                          column.field_type
+                        );
+                        return (
+                          <div
+                            key={column.id}
+                            className="rounded-[9px] border border-[#DDE5E1] bg-white p-3"
+                          >
+                            <div className="mb-2 flex items-center gap-2">
+                              <GripVertical
+                                size={13}
+                                className="shrink-0 text-[#A8B2AE]"
+                              />
+                              <span className="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full bg-[#EAF0ED] text-[8.5px] font-bold text-[#56766D]">
+                                {index + 1}
+                              </span>
+                              <p className="flex-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#8A9591]">
+                                Data Field
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => deleteDataColumn(column.id)}
+                                disabled={disabled}
+                                className="flex h-[28px] w-[28px] items-center justify-center rounded-[7px] text-[#929E99] transition-all hover:bg-[#FCF1F1] hover:text-[#B54A4A] disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                <Trash2 size={14} />
+                              </button>
                             </div>
 
-                            <p
-                                className="
-                                    text-[12.5px]
-                                    font-bold
-                                    text-[var(--color-text-primary)]
-                                "
-                            >
-                                No categories yet
-                            </p>
-
-                            <p
-                                className="
-                                    mt-1
-                                    max-w-[370px]
-                                    text-[10.5px]
-                                    font-medium
-                                    leading-5
-                                    text-[var(--color-text-muted)]
-                                "
-                            >
-                                Add an inspection category to
-                                start building the equipment
-                                checklist.
-                            </p>
-
-                            <button
-                                type="button"
-                                onClick={addCategory}
-                                disabled={disabled}
-                                className="
-                                    mt-4
-                                    inline-flex
-                                    h-[34px]
-                                    items-center
-                                    gap-1.5
-                                    rounded-[9px]
-                                    border
-                                    border-[#C9D9D3]
-                                    bg-white
-                                    px-3.5
-                                    text-[10.5px]
-                                    font-bold
-                                    text-[var(--color-primary)]
-                                    shadow-[0_2px_7px_rgba(36,50,56,0.04)]
-                                    transition-all
-                                    duration-200
-                                    hover:border-[#B8CAC2]
-                                    hover:bg-[var(--color-primary-soft)]
-                                    disabled:cursor-not-allowed
-                                    disabled:opacity-50
-                                    focus:outline-none
-                                    focus-visible:ring-2
-                                    focus-visible:ring-[var(--color-primary-muted)]
-                                    focus-visible:ring-offset-1
-                                "
-                            >
-                                <Plus
-                                    size={13}
-                                    strokeWidth={2.3}
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              <div>
+                                <label className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-[0.07em] text-[#8A9591]">
+                                  Column Header{" "}
+                                  <span className="ml-1 text-red-500">*</span>
+                                </label>
+                                <Input
+                                  value={column.column_header}
+                                  onChange={(e) =>
+                                    updateDataColumn(
+                                      column.id,
+                                      "column_header",
+                                      e.target.value
+                                    )
+                                  }
+                                  disabled={disabled}
+                                  placeholder="e.g. Remarks"
+                                  size="middle"
+                                  className="!rounded-[8px] !text-[10.5px]"
                                 />
+                              </div>
 
-                                Add Category
-                            </button>
-                        </div>
-                    )}
+                              <div>
+                                <label className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-[0.07em] text-[#8A9591]">
+                                  Field Type{" "}
+                                  <span className="ml-1 text-red-500">*</span>
+                                </label>
+                                <Select
+                                  value={column.field_type || "text"}
+                                  onChange={(val) =>
+                                    updateDataColumnType(column.id, val)
+                                  }
+                                  disabled={disabled}
+                                  options={FIELD_TYPES}
+                                  className="w-full"
+                                  size="middle"
+                                  popupMatchSelectWidth={false}
+                                />
+                              </div>
+                            </div>
 
-                    {/* =================================================
-                        CATEGORIES
-                    ================================================== */}
-                    {value.length > 0 && (
-                        <div className="space-y-4">
-                            {value.map(
-                                (
-                                    category,
-                                    categoryIndex
-                                ) => (
-                                    <div
-                                        key={
-                                            category.id
-                                        }
-                                        className="
-                                            group
-                                            overflow-hidden
-                                            rounded-[14px]
-                                            border
-                                            border-[#DCE3DF]
-                                            bg-[#FAFBF9]
-                                            transition-all
-                                            duration-200
-                                            hover:border-[#C9D6D0]
-                                            hover:shadow-[0_4px_12px_rgba(36,50,56,0.035)]
-                                        "
-                                    >
-                                        {/* =================================
-                                            CATEGORY HEADER
-                                        ================================== */}
+                            {/* Options editor for single/multi select */}
+                            {isSelection && (
+                              <div className="mt-3 rounded-[10px] border border-[#DCE4E0] bg-[#F8FAF8] p-3">
+                                <div className="mb-2 flex items-center justify-between">
+                                  <label className="text-[8.5px] font-bold uppercase tracking-[0.07em] text-[#8A9591]">
+                                    Options{" "}
+                                    <span className="text-red-500">*</span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => addOption(column.id)}
+                                    disabled={disabled}
+                                    className="inline-flex h-[24px] items-center gap-1 rounded-[6px] bg-[var(--color-primary)] px-2 text-[9px] font-bold text-white transition-all hover:bg-[var(--color-primary-hover)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    <Plus size={10} /> Add Option
+                                  </button>
+                                </div>
+
+                                <div className="space-y-2">
+                                  {(column.options || []).length === 0 ? (
+                                    <p className="py-1 text-center text-[9px] font-medium italic text-[#9AA5A1]">
+                                      Add at least one option for this field.
+                                    </p>
+                                  ) : (
+                                    (column.options || []).map(
+                                      (option, optIdx) => (
                                         <div
-                                            className="
-                                                flex
-                                                items-center
-                                                gap-3
-                                                border-b
-                                                border-[#E2E7E4]
-                                                bg-white
-                                                px-3.5
-                                                py-3
-                                                sm:px-4
-                                            "
+                                          key={option.id}
+                                          className="flex items-center gap-2"
                                         >
-                                            {/* CATEGORY NUMBER */}
-                                            <div
-                                                className="
-                                                    flex
-                                                    h-[30px]
-                                                    w-[30px]
-                                                    shrink-0
-                                                    items-center
-                                                    justify-center
-                                                    rounded-[8px]
-                                                    border
-                                                    border-[#D2DFDA]
-                                                    bg-[#E8F0ED]
-                                                    text-[10px]
-                                                    font-bold
-                                                    text-[#56766D]
-                                                "
-                                            >
-                                                {String(
-                                                    categoryIndex +
-                                                        1
-                                                ).padStart(
-                                                    2,
-                                                    "0"
-                                                )}
-                                            </div>
-
-                                            {/* CATEGORY INPUT */}
-                                            <div className="min-w-0 flex-1">
-                                                <p
-                                                    className="
-                                                        mb-1
-                                                        text-[8.5px]
-                                                        font-bold
-                                                        uppercase
-                                                        tracking-[0.10em]
-                                                        text-[#8A9591]
-                                                    "
-                                                >
-                                                    Category
-                                                </p>
-
-                                                <input
-                                                    type="text"
-                                                    value={
-                                                        category.name
-                                                    }
-                                                    onChange={(
-                                                        e
-                                                    ) =>
-                                                        updateCategoryName(
-                                                            category.id,
-                                                            e
-                                                                .target
-                                                                .value
-                                                        )
-                                                    }
-                                                    placeholder="e.g. Electrical Safety"
-                                                    disabled={
-                                                        disabled
-                                                    }
-                                                    className="
-                                                        w-full
-                                                        border-none
-                                                        bg-transparent
-                                                        p-0
-                                                        text-[12px]
-                                                        font-bold
-                                                        tracking-[-0.01em]
-                                                        text-[var(--color-text-primary)]
-                                                        outline-none
-                                                        placeholder:text-[#A1AAA6]
-                                                        focus:ring-0
-                                                        disabled:cursor-not-allowed
-                                                        disabled:opacity-60
-                                                    "
-                                                />
-                                            </div>
-
-                                            {/* DELETE CATEGORY */}
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    deleteCategory(
-                                                        category.id
-                                                    )
-                                                }
-                                                disabled={
-                                                    disabled
-                                                }
-                                                aria-label="Delete category"
-                                                title="Delete category"
-                                                className="
-                                                    flex
-                                                    h-[31px]
-                                                    w-[31px]
-                                                    shrink-0
-                                                    items-center
-                                                    justify-center
-                                                    rounded-[8px]
-                                                    border
-                                                    border-transparent
-                                                    text-[#929E99]
-                                                    transition-all
-                                                    duration-150
-                                                    hover:border-[#E8D2D2]
-                                                    hover:bg-[#FCF1F1]
-                                                    hover:text-[#B54A4A]
-                                                    disabled:cursor-not-allowed
-                                                    disabled:opacity-40
-                                                    focus:outline-none
-                                                    focus-visible:ring-2
-                                                    focus-visible:ring-[#E4BDBD]
-                                                    focus-visible:ring-offset-1
-                                                "
-                                            >
-                                                <Trash2
-                                                    size={15}
-                                                    strokeWidth={
-                                                        1.8
-                                                    }
-                                                />
-                                            </button>
+                                          <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#EAF0ED] text-[8.5px] font-bold text-[#56766D]">
+                                            {optIdx + 1}
+                                          </span>
+                                          <Input
+                                            value={option.value}
+                                            onChange={(e) =>
+                                              updateOption(
+                                                column.id,
+                                                option.id,
+                                                e.target.value
+                                              )
+                                            }
+                                            disabled={disabled}
+                                            placeholder={`Option ${optIdx + 1}`}
+                                            size="middle"
+                                            className="!rounded-[7px] !text-[10.5px]"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              deleteOption(
+                                                column.id,
+                                                option.id
+                                              )
+                                            }
+                                            disabled={
+                                              disabled ||
+                                              (column.options || []).length <= 1
+                                            }
+                                            className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[7px] text-[#929E99] transition-all hover:bg-[#FCF1F1] hover:text-[#B54A4A] disabled:cursor-not-allowed disabled:opacity-40"
+                                          >
+                                            <X size={13} />
+                                          </button>
                                         </div>
-
-                                        {/* =================================
-                                            CHECKPOINT CONTENT
-                                        ================================== */}
-                                        <div className="p-3.5 sm:p-4">
-
-                                            {/* EMPTY CHECKPOINTS */}
-                                            {category
-                                                .checkpoints
-                                                .length ===
-                                                0 ? (
-                                                <div
-                                                    className="
-                                                        rounded-[11px]
-                                                        border
-                                                        border-dashed
-                                                        border-[#D8E1DD]
-                                                        bg-[#F7F9F7]
-                                                        px-4
-                                                        py-6
-                                                        text-center
-                                                    "
-                                                >
-                                                    <p
-                                                        className="
-                                                            text-[10.5px]
-                                                            font-semibold
-                                                            text-[#7D8985]
-                                                        "
-                                                    >
-                                                        No checkpoints defined yet.
-                                                    </p>
-
-                                                    <p
-                                                        className="
-                                                            mt-1
-                                                            text-[9.5px]
-                                                            font-medium
-                                                            text-[#9AA5A1]
-                                                        "
-                                                    >
-                                                        Add a checkpoint below to define the inspection step.
-                                                    </p>
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-2">
-                                                    {category.checkpoints.map(
-                                                        (
-                                                            cp,
-                                                            index
-                                                        ) => (
-                                                            <div
-                                                                key={
-                                                                    cp.id
-                                                                }
-                                                                className="
-                                                                    group/checkpoint
-                                                                    flex
-                                                                    items-center
-                                                                    gap-2.5
-                                                                    rounded-[10px]
-                                                                    border
-                                                                    border-[#E0E6E3]
-                                                                    bg-white
-                                                                    p-2
-                                                                    pl-2.5
-                                                                    shadow-[0_1px_4px_rgba(36,50,56,0.025)]
-                                                                    transition-all
-                                                                    duration-200
-                                                                    hover:border-[#CCD9D3]
-                                                                    hover:shadow-[0_3px_9px_rgba(36,50,56,0.045)]
-                                                                "
-                                                            >
-                                                                {/* INDEX */}
-                                                                <span
-                                                                    className="
-                                                                        flex
-                                                                        h-[25px]
-                                                                        w-[25px]
-                                                                        shrink-0
-                                                                        items-center
-                                                                        justify-center
-                                                                        rounded-full
-                                                                        bg-[#EAF0ED]
-                                                                        text-[9px]
-                                                                        font-bold
-                                                                        text-[#56766D]
-                                                                    "
-                                                                >
-                                                                    {index +
-                                                                        1}
-                                                                </span>
-
-                                                                {/* CHECKPOINT */}
-                                                                <input
-                                                                    type="text"
-                                                                    value={
-                                                                        cp.text
-                                                                    }
-                                                                    onChange={(
-                                                                        e
-                                                                    ) =>
-                                                                        updateCheckpointText(
-                                                                            category.id,
-                                                                            cp.id,
-                                                                            e
-                                                                                .target
-                                                                                .value
-                                                                        )
-                                                                    }
-                                                                    placeholder="Describe the inspection step..."
-                                                                    disabled={
-                                                                        disabled
-                                                                    }
-                                                                    className="
-                                                                        min-w-0
-                                                                        flex-1
-                                                                        border-none
-                                                                        bg-transparent
-                                                                        py-1
-                                                                        text-[11.5px]
-                                                                        font-medium
-                                                                        text-[var(--color-text-primary)]
-                                                                        outline-none
-                                                                        placeholder:text-[#A0AAA5]
-                                                                        focus:ring-0
-                                                                        disabled:cursor-not-allowed
-                                                                        disabled:opacity-60
-                                                                    "
-                                                                />
-
-                                                                {/* DELETE CHECKPOINT */}
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        deleteCheckpoint(
-                                                                            category.id,
-                                                                            cp.id
-                                                                        )
-                                                                    }
-                                                                    disabled={
-                                                                        disabled
-                                                                    }
-                                                                    aria-label="Delete checkpoint"
-                                                                    title="Delete checkpoint"
-                                                                    className="
-                                                                        flex
-                                                                        h-[29px]
-                                                                        w-[29px]
-                                                                        shrink-0
-                                                                        items-center
-                                                                        justify-center
-                                                                        rounded-[8px]
-                                                                        border
-                                                                        border-transparent
-                                                                        text-[#97A19D]
-                                                                        opacity-65
-                                                                        transition-all
-                                                                        duration-150
-                                                                        hover:border-[#E8D2D2]
-                                                                        hover:bg-[#FCF1F1]
-                                                                        hover:text-[#B54A4A]
-                                                                        hover:opacity-100
-                                                                        disabled:cursor-not-allowed
-                                                                        disabled:opacity-35
-                                                                        focus:outline-none
-                                                                        focus-visible:ring-2
-                                                                        focus-visible:ring-[#E4BDBD]
-                                                                        focus-visible:ring-offset-1
-                                                                    "
-                                                                >
-                                                                    <X
-                                                                        size={
-                                                                            14
-                                                                        }
-                                                                        strokeWidth={
-                                                                            1.9
-                                                                        }
-                                                                    />
-                                                                </button>
-                                                            </div>
-                                                        )
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* =================================
-                                                ADD CHECKPOINT
-                                            ================================== */}
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    addCheckpoint(
-                                                        category.id
-                                                    )
-                                                }
-                                                disabled={
-                                                    disabled
-                                                }
-                                                className="
-                                                    mt-3
-                                                    inline-flex
-                                                    h-[32px]
-                                                    items-center
-                                                    gap-1.5
-                                                    rounded-[8px]
-                                                    border
-                                                    border-transparent
-                                                    px-2.5
-                                                    text-[10px]
-                                                    font-bold
-                                                    text-[#56766D]
-                                                    transition-all
-                                                    duration-150
-                                                    hover:border-[#D5E1DC]
-                                                    hover:bg-[#E8F0ED]
-                                                    hover:text-[#48685F]
-                                                    disabled:cursor-not-allowed
-                                                    disabled:opacity-50
-                                                    focus:outline-none
-                                                    focus-visible:ring-2
-                                                    focus-visible:ring-[var(--color-primary-muted)]
-                                                    focus-visible:ring-offset-1
-                                                "
-                                            >
-                                                <Plus
-                                                    size={13}
-                                                    strokeWidth={
-                                                        2.3
-                                                    }
-                                                />
-
-                                                Add Checkpoint
-                                            </button>
-                                        </div>
-                                    </div>
-                                )
+                                      )
+                                    )
+                                  )}
+                                </div>
+                              </div>
                             )}
-                        </div>
-                    )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
+              </div>
             </div>
+          </section>
+
+          {/* ═══════════════ 03 ADD QUESTIONS ═══════════════ */}
+          <section className="mt-7">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <SectionHeading
+                number="03"
+                title="Add Questions"
+                subtitle="Add the inspection questions that engineers need to answer."
+                noMargin
+              />
+              <button
+                type="button"
+                onClick={addQuestion}
+                disabled={disabled || checklist.question_columns.length === 0}
+                className="inline-flex h-[34px] items-center gap-1.5 rounded-[9px] bg-[var(--color-primary)] px-3 text-[10px] font-bold text-white shadow-[0_4px_11px_rgba(86,118,109,0.12)] transition-all hover:bg-[var(--color-primary-hover)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Plus size={13} />
+                Add Question
+              </button>
+            </div>
+
+            <div className="rounded-[12px] border border-[#DCE4E0] bg-[#FAFBF9] p-3">
+              {/* No question columns yet */}
+              {checklist.question_columns.length === 0 ? (
+                <EmptyState
+                  icon={<HelpCircle size={22} />}
+                  title="Add a question column first"
+                  subtitle="You need at least one question column to start adding questions."
+                />
+              ) : checklist.questions.length === 0 ? (
+                <EmptyState
+                  icon={<ListChecks size={22} />}
+                  title="No questions added"
+                  subtitle='Click "Add Question" to start building your checklist.'
+                />
+              ) : (
+                <div className="space-y-3">
+                  {checklist.questions.map((question, rowIndex) => (
+                    <div
+                      key={question.id}
+                      className="rounded-[10px] border border-[#DDE5E1] bg-white p-3 transition-all hover:border-[#CCD9D3]"
+                    >
+                      {/* Row header */}
+                      <div className="mb-2 flex items-center gap-2">
+                        <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[8px] bg-[#E8F0ED] text-[9px] font-bold text-[#56766D]">
+                          {String(rowIndex + 1).padStart(2, "0")}
+                        </div>
+                        <p className="flex-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#8A9591]">
+                          Row {rowIndex + 1}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => deleteQuestion(question.id)}
+                          disabled={disabled}
+                          className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[8px] text-[#929E99] transition-all hover:bg-[#FCF1F1] hover:text-[#B54A4A] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+
+                      {/* One input per question column */}
+                      <div
+                        className={`grid gap-3 ${
+                          checklist.question_columns.length === 1
+                            ? "grid-cols-1"
+                            : "grid-cols-1 md:grid-cols-2"
+                        }`}
+                      >
+                        {checklist.question_columns.map((col, colIdx) => (
+                          <div key={col.id}>
+                            <label className="mb-1 block text-[8.5px] font-bold uppercase tracking-[0.07em] text-[#8A9591]">
+                              {col.column_header?.trim() ||
+                                `Column ${colIdx + 1}`}
+                            </label>
+                            <input
+                              type="text"
+                              value={question.values?.[col.id] || ""}
+                              onChange={(e) =>
+                                updateQuestionValue(
+                                  question.id,
+                                  col.id,
+                                  e.target.value
+                                )
+                              }
+                              disabled={disabled}
+                              placeholder={`Enter ${
+                                col.column_header?.toLowerCase() || "question"
+                              }`}
+                              className="w-full rounded-[8px] border border-[#DCE4E0] bg-white px-3 py-2 text-[11px] font-medium text-[var(--color-text-primary)] outline-none placeholder:text-[#A3ADA9] focus:border-[var(--color-primary)]"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ═══════════════ 04 PREVIEW ═══════════════ */}
+          <section className="mt-7">
+            <SectionHeading
+              number="04"
+              title="Checklist Preview"
+              subtitle="Preview how the checklist will appear to the field engineer."
+            />
+
+            <div className="overflow-hidden rounded-[12px] border border-[#D5DFDB] bg-white shadow-[0_3px_12px_rgba(36,50,56,0.035)]">
+              {/* Preview header */}
+              <div className="flex items-center justify-between gap-3 border-b border-[#E1E7E4] bg-[#F7F9F7] px-4 py-3">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[8px] bg-[#E8F0ED] text-[#56766D]">
+                    <Eye size={15} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[10.5px] font-bold text-[var(--color-text-primary)]">
+                      {checklist.checklist_name?.trim() || "Checklist Preview"}
+                    </p>
+                    <p className="text-[8.5px] font-medium text-[#8A9591]">
+                      Live preview
+                    </p>
+                  </div>
+                </div>
+                <span className="shrink-0 rounded-full border border-[#D5E0DB] bg-white px-2.5 py-1 text-[8px] font-bold text-[#60766D]">
+                  {validQuestions.length} Questions
+                </span>
+              </div>
+
+              {validQuestionColumns.length === 0 &&
+              validDataColumns.length === 0 ? (
+                <div className="px-5 py-12 text-center">
+                  <ClipboardCheck
+                    size={24}
+                    className="mx-auto text-[#A1ADA8]"
+                  />
+                  <p className="mt-2 text-[10.5px] font-semibold text-[#6E7B76]">
+                    Nothing to preview yet
+                  </p>
+                  <p className="mt-1 text-[9px] font-medium text-[#9AA5A1]">
+                    Add at least one column to see your checklist layout.
+                  </p>
+                </div>
+              ) : (
+                <div className="w-full overflow-x-auto">
+                  <table className="w-full min-w-[650px] border-collapse">
+                    <thead>
+                      <tr className="bg-[#F8FAF8]">
+                        {checklist.include_serial_number && (
+                          <th className="w-[55px] border-b border-r border-[#E1E7E4] px-3 py-3 text-center text-[8.5px] font-bold uppercase tracking-[0.06em] text-[#73817C]">
+                            S/N
+                          </th>
+                        )}
+                        {validQuestionColumns.map((column) => (
+                          <th
+                            key={column.id}
+                            className="min-w-[220px] border-b border-r border-[#E1E7E4] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.06em] text-[#596B64]"
+                          >
+                            {column.column_header.trim()}
+                          </th>
+                        ))}
+                        {validDataColumns.map((column) => (
+                          <th
+                            key={column.id}
+                            className="min-w-[140px] border-b border-r border-[#E1E7E4] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.06em] text-[#596B64]"
+                          >
+                            <div>{column.column_header.trim()}</div>
+                            <div className="mt-0.5 text-[7.5px] font-medium normal-case tracking-normal text-[#9AA5A1]">
+                              {FIELD_TYPES.find(
+                                (t) => t.value === column.field_type
+                              )?.label || "Text"}
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {validQuestions.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={
+                              (checklist.include_serial_number ? 1 : 0) +
+                              validQuestionColumns.length +
+                              validDataColumns.length
+                            }
+                            className="px-5 py-10 text-center text-[9.5px] font-medium text-[#929D99]"
+                          >
+                            Add questions to populate the checklist preview.
+                          </td>
+                        </tr>
+                      ) : (
+                        validQuestions.map((question, qIndex) => (
+                          <tr
+                            key={question.id}
+                            className="transition-colors hover:bg-[#FAFCFA]"
+                          >
+                            {checklist.include_serial_number && (
+                              <td className="border-b border-r border-[#E7ECE9] px-3 py-3 text-center text-[9px] font-bold text-[#70817A]">
+                                {String(qIndex + 1).padStart(2, "0")}
+                              </td>
+                            )}
+                            {validQuestionColumns.map((column) => (
+                              <td
+                                key={column.id}
+                                className="border-b border-r border-[#E7ECE9] px-3 py-3 text-[10px] font-medium leading-5 text-[#35453F]"
+                              >
+                                {question.values?.[column.id]?.trim() || "—"}
+                              </td>
+                            ))}
+                            {validDataColumns.map((column) => (
+                              <td
+                                key={column.id}
+                                className="border-b border-r border-[#E7ECE9] px-3 py-3"
+                              >
+                                <div className="rounded-[7px] border border-[#E0E6E3] bg-[#FAFBFA] px-2.5 py-2 text-[8.5px] font-medium text-[#9AA5A1]">
+                                  {getFieldPreview(column)}
+                                </div>
+                              </td>
+                            ))}
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </section>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
+
+/* ─────────────────────── Small presentational helpers ─────────────────────── */
+
+const SectionHeading = ({ number, title, subtitle, noMargin }) => (
+  <div className={`flex items-center gap-2 ${noMargin ? "" : "mb-3"}`}>
+    <div className="flex h-[25px] w-[25px] items-center justify-center rounded-[7px] bg-[#E8F0ED] text-[9px] font-bold text-[#56766D]">
+      {number}
+    </div>
+    <div>
+      <h3 className="text-[12px] font-bold text-[var(--color-text-primary)]">
+        {title}
+      </h3>
+      <p className="mt-0.5 text-[9.5px] font-medium text-[var(--color-text-muted)]">
+        {subtitle}
+      </p>
+    </div>
+  </div>
+);
+
+const ColumnHeader = ({
+  icon,
+  title,
+  tooltip,
+  subtitle,
+  buttonLabel,
+  onAdd,
+  disabled,
+}) => (
+  <div className="flex items-center justify-between gap-3 border-b border-[#E2E8E4] bg-white px-4 py-3">
+    <div className="flex items-center gap-2.5">
+      <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] bg-[#EEF4F1] text-[#56766D]">
+        {icon}
+      </div>
+      <div>
+        <div className="flex items-center gap-1.5">
+          <p className="text-[10.5px] font-bold text-[var(--color-text-primary)]">
+            {title}
+          </p>
+          <Tooltip title={tooltip} placement="top">
+            <HelpCircle
+              size={12}
+              className="cursor-help text-[#98A39F]"
+            />
+          </Tooltip>
+        </div>
+        <p className="mt-0.5 text-[8.5px] font-medium text-[#8B9692]">
+          {subtitle}
+        </p>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      onClick={onAdd}
+      disabled={disabled}
+      className="inline-flex h-[31px] shrink-0 items-center gap-1.5 rounded-[8px] bg-[var(--color-primary)] px-2.5 text-[9.5px] font-bold text-white transition-all hover:bg-[var(--color-primary-hover)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <Plus size={12} />
+      {buttonLabel}
+    </button>
+  </div>
+);
+
+const EmptyState = ({ icon, title, subtitle }) => (
+  <div className="rounded-[10px] border border-dashed border-[#D3DED9] bg-white px-4 py-7 text-center">
+    <div className="mx-auto text-[#A1ADA8]">{icon}</div>
+    <p className="mt-2 text-[10.5px] font-semibold text-[#6E7B76]">{title}</p>
+    <p className="mt-1 text-[9px] font-medium text-[#9AA5A1]">{subtitle}</p>
+  </div>
+);
 
 export default ChecklistConfiguration;

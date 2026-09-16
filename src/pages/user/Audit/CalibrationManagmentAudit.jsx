@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Activity, ArrowUpDown, Search, X } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 
-import { getCalibrationAuditRecord } from "../../../services/usersApi/calibrationApi";
+import { getCalibrationAuditRecord, getCalibrationManagementAudit } from "../../../services/usersApi/calibrationApi";
 
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import CustomScrollContainer from "../../../components/common/CustomScrollbar/CustomScrollContainer";
@@ -67,9 +67,12 @@ const Audit = () => {
         params.to_date = toDateValue;
       }
 
-      const response = await getCalibrationAuditRecord(recordId, params);
+      const response = await getCalibrationManagementAudit(recordId, params);
 
       const apiData = response?.data?.data;
+      console.log(apiData, "apiDataapiData");
+      
+      
 
       /* record data */
       if (apiData?.record) {

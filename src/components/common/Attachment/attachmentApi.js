@@ -1,6 +1,8 @@
 import api from "../../../services/api";
 
-
+// ==========================================================
+// BUILD ATTACHMENT FORMDATA
+// ==========================================================
 
 const buildAttachmentFormData = ({
   attachment_field,
@@ -12,20 +14,27 @@ const buildAttachmentFormData = ({
 
   formData.append("attachment_field", attachment_field || "");
   formData.append("label", label || "");
-  formData.append(
-    "Type",
-    Type || (fileList.length > 1 ? "multiple-file" : "single-file")
-  );
+  formData.append("Type", Type || "single-file");
 
-  // Key point: same "file" key repeated for each file
-  fileList.forEach((f) => {
-    formData.append("file", f);
-  });
+  // Single file
+  if (fileList.length === 1) {
+    formData.append("file", fileList[0]);
+  }
+
+  // Multiple files -> send as array
+  if (fileList.length > 1) {
+    fileList.forEach((file) => {
+      formData.append("files[]", file);
+    });
+  }
 
   return formData;
 };
 
-
+// ==========================================================
+// SINGLE ATTACHMENT
+// POST /user/upload-attachment/{recordId}
+// ==========================================================
 
 export const addSingleAttachment = async ({
   record_id,
@@ -40,7 +49,8 @@ export const addSingleAttachment = async ({
   }
 
   const targetFile =
-    file || (Array.isArray(files) && files.length > 0 ? files[0] : null);
+    file ||
+    (Array.isArray(files) && files.length > 0 ? files[0] : null);
 
   if (!targetFile) {
     throw new Error("File is required for attachment upload.");
@@ -49,18 +59,25 @@ export const addSingleAttachment = async ({
   const formData = buildAttachmentFormData({
     attachment_field,
     label,
-    Type: Type || "single-file",
+    Type: "single-file",
     fileList: [targetFile],
   });
 
-  return api.post(`/user/upload-attachment/${record_id}`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  return api.post(
+    `/user/upload-attachment/${record_id}`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
 };
 
-
+// ==========================================================
+// MULTIPLE ATTACHMENTS
+// POST /user/upload-attachment/{recordId}
+// ==========================================================
 
 export const addMultipleAttachments = async ({
   record_id,
@@ -75,31 +92,35 @@ export const addMultipleAttachments = async ({
   }
 
   const fileListToUpload =
-    Array.isArray(files) && files.length > 0 ? files : file ? [file] : [];
+    Array.isArray(files) && files.length > 0
+      ? files
+      : file
+      ? [file]
+      : [];
 
   if (!fileListToUpload.length) {
     throw new Error("At least one file is required.");
   }
 
-  const isMultiple = fileListToUpload.length > 1;
-  const attachmentType = Type
-    ? Type === "multiple-file" && !isMultiple
-      ? "single-file"
-      : Type
-    : isMultiple
-    ? "multiple-file"
-    : "single-file";
+  const attachmentType =
+    fileListToUpload.length > 1
+      ? "multiple-file"
+      : "single-file";
 
   const formData = buildAttachmentFormData({
     attachment_field,
     label,
-    Type: attachmentType,
+    Type: Type || attachmentType,
     fileList: fileListToUpload,
   });
 
-  return api.post(`/user/upload-attachment/${record_id}`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  return api.post(
+    `/user/upload-attachment/${record_id}`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
 };

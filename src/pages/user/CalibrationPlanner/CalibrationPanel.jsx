@@ -77,15 +77,16 @@ const buildProcessData = (values, systemFields) => [
   { key: "block", label: "Block", value: values?.block || "" },
   { key: "area", label: "Area", value: values?.area || "" },
   { key: "comment", label: "Comments", value: values?.comments || "" },
-  { key: "attachment", label: "Attachment", value: values?.attachment || [] },
+  // { key: "attachment", label: "Attachment", value: values?.attachment || [] },
+  { key: "attachment", label: "Attachment", value:[] },
   { key: "hod_review_comments", label: "HOD / Designee Review Comments", value: values?.hodReviewComments || "" },
-  { key: "hod_review_attachment", label: "HOD / Designee Review Attachment", value: values?.hodReviewAttachment || [] },
+  { key: "hod_review_attachment", label: "HOD / Designee Review Attachment", value: [] },
   { key: "user_dept_review_comments", label: "User Dept Review Comments", value: values?.userDeptReviewComments || "" },
   { key: "user_dept_review_attachment", label: "User Dept Review Attachment", value: values?.userDeptReviewAttachment || [] },
   { key: "qa_review_comments", label: "QA Review Comments", value: values?.qaReviewComments || "" },
-  { key: "qa_review_attachment", label: "QA Review Attachment", value: values?.qaReviewAttachment || [] },
+  { key: "qa_review_attachment", label: "QA Review Attachment", value:  [] },
   { key: "cancellation_remark", label: "Cancellation Remark", value: values?.cancellationRemark || "" },
-  { key: "cancellation_attachment", label: "Cancellation Attachment", value: values?.cancellationAttachment || [] },
+  { key: "cancellation_attachment", label: "Cancellation Attachment", value:[]},
 ];
 
 const validateCalibrationForm = (form, storedRequired) => {
@@ -593,7 +594,7 @@ const CreateCalibrationPanel = () => {
             className="!mb-4 md:col-span-2"
           >
             <FormAttachment
-              multiple={true  }
+              multiple={true}
               recordId={recordId}
               attachmentField="attachment"
               label="Attachment"

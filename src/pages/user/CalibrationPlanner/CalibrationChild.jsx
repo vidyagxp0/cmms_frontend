@@ -319,7 +319,7 @@ const CalibrationChild = () => {
 
       const payload = {
         process_id: Number(processId),
-        stage_id: 19,
+        stage_id: 18,
         is_child: true,
         parent_id: Number(parentId),
         department_id: Number(departmentId),

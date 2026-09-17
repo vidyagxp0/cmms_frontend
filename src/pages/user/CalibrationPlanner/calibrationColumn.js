@@ -1,31 +1,31 @@
 const CALIBRATED_BY_COLUMNS = [
   {
-    key: "parameter",
+    key: "masterInstrumentReadings",
     title: "Master Instrument Readings in",
     type: "text",
-    placeholder: "Enter name",
+    placeholder: "Enter Master Instrument Readings",
     required: true,
     minWidth: 180,
     toggleable: true,
     splitFields: [
-      { key: "reading1", placeholder: "Reading 1" },
-      { key: "reading2", placeholder: "Reading 2" }
+      { key: "masterInstrumentReadings1", placeholder: "Master Instrument Readings 1" },
+      { key: "masterInstrumentReadings2", placeholder: "Master Instrument Readings 2" }
     ]
   },
   {
-    key: "result",
-    title: "Unit under calibration Readings in",
+    key: "unitUnderCalibrationReading",
+    title: "Unit Under Calibration Readings in",
     type: "text",
-    placeholder: "Enter result",
+    placeholder: "Enter Unit Under Calibration Readings",
     minWidth: 160,
     toggleable: true,
     splitFields: [
-      { key: "result1", placeholder: "Result 1" },
-      { key: "result2", placeholder: "Result 2" }
+      { key: "unitUnderCalibrationReading1", placeholder: "Unit Under Calibration Readings 1" },
+      { key: "unitUnderCalibrationReading2", placeholder: "Unit Under Calibration Readings 2" }
     ]
   },
   {
-    key: "error",
+    key: "errorIn",
     title: "Error in",
     type: "text",
     placeholder: "Enter error",
@@ -35,7 +35,7 @@ const CALIBRATED_BY_COLUMNS = [
 
 const CALIBRATION_RESULT_GRID = [
   {
-    key: "parameter",
+    key: "name",
     title: "Name",
     type: "text",
     placeholder: "Enter name",
@@ -43,10 +43,10 @@ const CALIBRATION_RESULT_GRID = [
     minWidth: 180,
   },
   {
-    key: "result",
+    key: "IdNo",
     title: "ID NO.",
     type: "text",
-    placeholder: "Enter result",
+    placeholder: "Enter ID No.",
     minWidth: 160,
   },
   {
@@ -75,9 +75,9 @@ const CALIBRATION_RESULT_GRID = [
   },
   {
     key: "calibrationdoneDATE",
-    title: "Calibration DONE DATE",
+    title: "Calibration Done Date",
     type: "date",
-    placeholder: "Enter Calibration DONE DATE",
+    placeholder: "Enter Calibration Done Date",
     minWidth: 160,
     disabled: true,
   },

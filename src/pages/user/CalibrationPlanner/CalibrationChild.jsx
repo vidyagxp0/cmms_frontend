@@ -309,7 +309,7 @@ const CalibrationChild = () => {
           rows: normalizedCalibrationRows,
         },
         {
-          name: "testResults",
+          name: "masterInstrumentsDetails",
           rows: normalizedTestRows,
         },
       ];

@@ -180,7 +180,11 @@ const FormAttachment = ({
     try {
       isUploadingRef.current = true;
       setUploading(true);
-      const attachmentType = cleanFiles.length > 1 ? "multiple-file" : "single-file";
+      // const attachmentType = cleanFiles.length > 1 ? "multiple-file" : "single-file";
+      const attachmentType = multiple
+  ? "multiple-file"
+  : "single-file";
+  
       if (!multiple) {
         const file = cleanFiles[0];
         const response = await uploadApi({

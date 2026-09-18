@@ -1,8 +1,31 @@
 import api from "../../../services/api";
 
-// ==========================================================
-// BUILD ATTACHMENT FORMDATA
-// ==========================================================
+
+
+// const buildAttachmentFormData = ({
+//   attachment_field,
+//   label,
+//   Type,
+//   fileList,
+// }) => {
+//   const formData = new FormData();
+
+//   formData.append("attachment_field", attachment_field || "");
+//   formData.append("label", label || "");
+//   // formData.append(
+//   //   "Type",
+//   //   Type || (fileList.length > 1 ? "multiple-file" : "single-file")
+//   // );
+
+//   formData.append("Type", Type || "");
+
+//   // Key point: same "file" key repeated for each file
+//   fileList.forEach((f) => {
+//     formData.append("file", f);
+//   });
+
+//   return formData;
+// };
 
 const buildAttachmentFormData = ({
   attachment_field,
@@ -14,15 +37,13 @@ const buildAttachmentFormData = ({
 
   formData.append("attachment_field", attachment_field || "");
   formData.append("label", label || "");
-  formData.append("Type", Type || "single-file");
+  formData.append("Type", Type || "");
 
-  // Single file
-  if (fileList.length === 1) {
+  if (Type === "single-file") {
     formData.append("file", fileList[0]);
   }
 
-  // Multiple files -> send as array
-  if (fileList.length > 1) {
+  if (Type === "multiple-file") {
     fileList.forEach((file) => {
       formData.append("files[]", file);
     });
@@ -31,10 +52,6 @@ const buildAttachmentFormData = ({
   return formData;
 };
 
-// ==========================================================
-// SINGLE ATTACHMENT
-// POST /user/upload-attachment/{recordId}
-// ==========================================================
 
 export const addSingleAttachment = async ({
   record_id,
@@ -42,7 +59,6 @@ export const addSingleAttachment = async ({
   label,
   file,
   files,
-  Type,
 }) => {
   if (!record_id) {
     throw new Error("record_id is required for attachment upload.");
@@ -74,10 +90,6 @@ export const addSingleAttachment = async ({
   );
 };
 
-// ==========================================================
-// MULTIPLE ATTACHMENTS
-// POST /user/upload-attachment/{recordId}
-// ==========================================================
 
 export const addMultipleAttachments = async ({
   record_id,
@@ -85,7 +97,6 @@ export const addMultipleAttachments = async ({
   label,
   file,
   files = [],
-  Type,
 }) => {
   if (!record_id) {
     throw new Error("record_id is required for attachment upload.");
@@ -102,15 +113,10 @@ export const addMultipleAttachments = async ({
     throw new Error("At least one file is required.");
   }
 
-  const attachmentType =
-    fileListToUpload.length > 1
-      ? "multiple-file"
-      : "single-file";
-
   const formData = buildAttachmentFormData({
     attachment_field,
     label,
-    Type: Type || attachmentType,
+    Type: "multiple-file",
     fileList: fileListToUpload,
   });
 

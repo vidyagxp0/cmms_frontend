@@ -11,12 +11,11 @@ import {
   Eye,
   GripVertical,
   Check,
-  Sparkles,
-  Info,
   ArrowRight,
   ArrowLeft,
+  CalendarClock,
 } from "lucide-react";
-import { Input, Select, Switch, Tooltip } from "antd";
+import { Input, Select, Switch, Tooltip, Checkbox } from "antd";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 
 /* ─────────────────────────────── Constants ─────────────────────────────── */
@@ -45,29 +44,13 @@ const STEPS = [
 const createId = (prefix) =>
   `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-const buildDefaultColumns = () => ({
-  question_columns: [
-    { id: createId("question-column"), column_header: "Question" },
-  ],
-  data_columns: [
-    {
-      id: createId("data-column"),
-      column_header: "Status",
-      field_type: "single_select",
-      options: [
-        { id: createId("option"), value: "Pass" },
-        { id: createId("option"), value: "Fail" },
-        { id: createId("option"), value: "N/A" },
-      ],
-    },
-    {
-      id: createId("data-column"),
-      column_header: "Remarks",
-      field_type: "textarea",
-      options: [],
-    },
-  ],
-});
+const FREQUENCY_OPTIONS = [
+  "Monthly",
+  "Quarterly",
+  "Half Yearly",
+  "Yearly",
+  "Two Yearly",
+];
 
 /* ─────────────────────────── Main component ─────────────────────────── */
 
@@ -220,7 +203,12 @@ const ChecklistConfiguration = ({
     updateChecklist({
       questions: [
         ...checklist.questions,
-        { id: createId("question"), values: {} },
+        {
+          id: createId("question"),
+          values: {},
+          frequency_enabled: true,
+          frequency: "",
+        },
       ],
     });
     if (activeStep !== 2) setActiveStep(2);
@@ -236,14 +224,18 @@ const ChecklistConfiguration = ({
     });
   };
 
+  const updateQuestionFrequencyValue = (questionId, freqValue) => {
+    updateChecklist({
+      questions: checklist.questions.map((q) =>
+        q.id === questionId ? { ...q, frequency: freqValue } : q
+      ),
+    });
+  };
+
   const deleteQuestion = (questionId) => {
     updateChecklist({
       questions: checklist.questions.filter((q) => q.id !== questionId),
     });
-  };
-
-  const applyQuickStart = () => {
-    updateChecklist(buildDefaultColumns());
   };
 
   /* ── Derived / preview helpers ── */
@@ -256,6 +248,7 @@ const ChecklistConfiguration = ({
   const validQuestions = checklist.questions.filter((q) =>
     Object.values(q.values || {}).some((v) => v?.trim())
   );
+  const hasAnyFrequency = checklist.questions.some((q) => q.frequency_enabled);
 
   const stepCompletion = {
     basic: !!checklist.checklist_name?.trim(),
@@ -454,26 +447,8 @@ const ChecklistConfiguration = ({
             <section>
               <SectionHeading
                 title="Column Configuration"
-                subtitle="A standard Question / Status / Remarks layout is set up for you — customize it or add your own fields."
+                subtitle="Configure the question and response columns of your checklist."
               />
-
-              <div className="mb-4 flex items-start gap-2.5 rounded-[10px] border border-[#DCEBE3] bg-[#F3F9F5] px-3.5 py-3">
-                <Info size={14} className="mt-0.5 shrink-0 text-[#4C7A63]" />
-                <p className="text-[9.5px] font-medium leading-5 text-[#3F6B58]">
-                  Most checklists only need one question column plus a Status
-                  and Remarks field. Add more columns only if this checklist
-                  needs extra questions per row or extra data to capture.
-                </p>
-                <button
-                  type="button"
-                  onClick={applyQuickStart}
-                  disabled={disabled}
-                  className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-[7px] border border-[#BEDBCB] bg-white px-2.5 py-1.5 text-[9px] font-bold text-[#3F6B58] transition-all hover:bg-[#EAF5EE] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Sparkles size={11} />
-                  Reset to Standard Layout
-                </button>
-              </div>
 
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {/* ── Question Columns card ── */}
@@ -816,6 +791,35 @@ const ChecklistConfiguration = ({
                             </div>
                           ))}
                         </div>
+
+                        {/* Frequency provision for this question */}
+                        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-[9px] border border-[#DCE4E0] bg-[#FAFBF9] px-3 py-2.5">
+                          <Tooltip title="Frequency is required on every question and can't be unchecked.">
+                            <span className="cursor-not-allowed">
+                              <Checkbox checked disabled>
+                                <span className="text-[10px] font-bold text-[var(--color-text-primary)]">
+                                  Frequency
+                                </span>
+                              </Checkbox>
+                            </span>
+                          </Tooltip>
+
+                          <Select
+                            value={question.frequency || undefined}
+                            onChange={(val) =>
+                              updateQuestionFrequencyValue(question.id, val)
+                            }
+                            placeholder="Select frequency"
+                            options={FREQUENCY_OPTIONS.map((v) => ({
+                              value: v,
+                              label: v,
+                            }))}
+                            disabled={disabled}
+                            size="middle"
+                            className="min-w-[170px]"
+                            popupMatchSelectWidth={false}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -962,6 +966,79 @@ const ChecklistConfiguration = ({
                   </div>
                 )}
               </div>
+
+              {hasAnyFrequency && (
+                <div className="mt-4 overflow-hidden rounded-[12px] border border-[#D5DFDB] bg-white shadow-[0_3px_12px_rgba(36,50,56,0.035)]">
+                  <div className="flex items-center gap-2.5 border-b border-[#E1E7E4] bg-[#F7F9F7] px-4 py-3">
+                    <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[8px] bg-[#E8F0ED] text-[#56766D]">
+                      <CalendarClock size={15} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10.5px] font-bold text-[var(--color-text-primary)]">
+                        Frequency
+                      </p>
+                      <p className="text-[8.5px] font-medium text-[#8A9591]">
+                        Frequency selected for each question that has it
+                        enabled.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="w-full overflow-x-auto">
+                    <table className="w-full min-w-[400px] border-collapse">
+                      <thead>
+                        <tr className="bg-[#F8FAF8]">
+                          {checklist.include_serial_number && (
+                            <th className="w-[55px] border-b border-r border-[#E1E7E4] px-3 py-3 text-center text-[8.5px] font-bold uppercase tracking-[0.06em] text-[#73817C]">
+                              S/N
+                            </th>
+                          )}
+                          <th className="min-w-[220px] border-b border-r border-[#E1E7E4] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.06em] text-[#596B64]">
+                            {validQuestionColumns[0]?.column_header?.trim() ||
+                              "Question"}
+                          </th>
+                          <th className="min-w-[150px] border-b border-[#E1E7E4] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.06em] text-[#596B64]">
+                            Frequency
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {validQuestions
+                          .map((question, qIndex) => ({ question, qIndex }))
+                          .filter(({ question }) => question.frequency_enabled)
+                          .map(({ question, qIndex }, rowIdx) => (
+                            <tr
+                              key={question.id}
+                              className={`transition-colors hover:bg-[#FAFCFA] ${
+                                rowIdx % 2 === 1 ? "bg-[#FCFDFC]" : ""
+                              }`}
+                            >
+                              {checklist.include_serial_number && (
+                                <td className="border-b border-r border-[#E7ECE9] px-3 py-3 text-center text-[9px] font-bold text-[#70817A]">
+                                  {String(qIndex + 1).padStart(2, "0")}
+                                </td>
+                              )}
+                              <td className="border-b border-r border-[#E7ECE9] px-3 py-3 text-[10px] font-medium leading-5 text-[#35453F]">
+                                {(validQuestionColumns[0] &&
+                                  question.values?.[
+                                    validQuestionColumns[0].id
+                                  ]?.trim()) ||
+                                  "—"}
+                              </td>
+                              <td className="border-b border-[#E7ECE9] px-3 py-3 text-[10px] font-semibold text-[#3F6B58]">
+                                {question.frequency || (
+                                  <span className="font-medium text-[#9AA5A1]">
+                                    Not selected
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               <StepFooter onBack={goBack} disabled={disabled} />
             </section>

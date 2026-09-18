@@ -100,7 +100,13 @@ const CreateEquipment = () => {
         if (!hasAny) return null;
 
         questionCounter += 1;
-        return { id: questionCounter, values };
+        // return { id: questionCounter, values };
+        return {
+  id: questionCounter,
+  values,
+  frequency_enabled: row.frequency_enabled !== false,
+  frequency: row.frequency || "",
+};
       })
       .filter(Boolean);
 

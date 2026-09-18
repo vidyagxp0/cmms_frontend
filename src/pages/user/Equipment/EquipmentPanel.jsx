@@ -77,6 +77,8 @@ const normalizeIncomingChecklist = (raw) => {
         ? raw.questions.map((q, i) => ({
             id: q.id ?? `q-${i}`,
             values: q.values || {},
+            frequency_enabled: q.frequency_enabled !== false,
+            frequency: q.frequency || "",
           }))
         : [],
     };

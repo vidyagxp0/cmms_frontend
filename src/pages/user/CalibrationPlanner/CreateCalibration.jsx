@@ -1435,7 +1435,9 @@ const CreateCalibration = () => {
                                 }
                                 className="!mb-0"
                             >
-                                <FormAttachment />
+                            <FormAttachment
+                            disabled
+                            />
                             </Form.Item>
                         </div>
                     </section>
@@ -1487,7 +1489,7 @@ const CreateCalibration = () => {
                                 }
                                 className="!mb-0"
                             >
-                                <FormAttachment />
+                                <FormAttachment disabled />
                             </Form.Item>
                         </div>
                     </section>
@@ -1539,7 +1541,7 @@ const CreateCalibration = () => {
                                 }
                                 className="!mb-0"
                             >
-                                <FormAttachment />
+                                <FormAttachment disabled />
                             </Form.Item>
                         </div>
                     </section>

@@ -507,7 +507,7 @@ const CalibrationChild = () => {
                 getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment />
+                <FormAttachment disabled  />
               </Form.Item>
             </div>
           </section>
@@ -527,7 +527,7 @@ const CalibrationChild = () => {
                 getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment />
+                <FormAttachment  disabled/>
               </Form.Item>
             </div>
           </section>
@@ -547,7 +547,7 @@ const CalibrationChild = () => {
                 getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment />
+                <FormAttachment disabled />
               </Form.Item>
             </div>
           </section>

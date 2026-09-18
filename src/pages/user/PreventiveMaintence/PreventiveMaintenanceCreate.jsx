@@ -510,10 +510,7 @@ const PreventiveMaintenanceCreate = () => {
               className="!mb-4 md:col-span-2"
             >
               <FormAttachment
-                multiple={true}
-                attachmentField="attachment"
-                label="Attachment"
-                uploadApi={addMultipleAttachments}
+                  disabled
               />
             </Form.Item>
           </section>
@@ -539,10 +536,7 @@ const PreventiveMaintenanceCreate = () => {
                 className="!mb-4 md:col-span-2"
               >
                 <FormAttachment
-                  multiple={true}
-                  attachmentField="engineer_review_attachment"
-                  label="Review By Engineer Dept Attachment"
-                  uploadApi={addMultipleAttachments}
+                    disabled
                 />
               </Form.Item>
             </div>
@@ -569,10 +563,7 @@ const PreventiveMaintenanceCreate = () => {
                 className="!mb-4 md:col-span-2"
               >
                 <FormAttachment
-                  multiple={true}
-                  attachmentField="qa_approval_attachment"
-                  label="QA Approval Attachment"
-                  uploadApi={addMultipleAttachments}
+                  disabled
                 />
               </Form.Item>
             </div>

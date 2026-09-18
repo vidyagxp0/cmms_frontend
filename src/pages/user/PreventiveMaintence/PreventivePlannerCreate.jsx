@@ -471,7 +471,7 @@ const PreventivePlannerCreate = () => {
                 valuePropName="value"
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment />
+                <FormAttachment disabled/>
               </Form.Item>
             </div>
           </section>
@@ -496,7 +496,7 @@ const PreventivePlannerCreate = () => {
                 valuePropName="value"
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment />
+                <FormAttachment disabled />
               </Form.Item>
             </div>
           </section>
@@ -521,7 +521,7 @@ const PreventivePlannerCreate = () => {
                 valuePropName="value"
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment />
+                <FormAttachment disabled />
               </Form.Item>
             </div>
           </section>

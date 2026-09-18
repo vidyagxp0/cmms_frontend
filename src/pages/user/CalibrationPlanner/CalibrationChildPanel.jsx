@@ -144,7 +144,12 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
   };
   otherFields.forEach((key) => {
     let value = values[key] !== undefined && values[key] !== null ? values[key] : "";
-    if (dayjs.isDayjs(value)) value = value.format("DD/MM/YYYY");
+    // if (dayjs.isDayjs(value)) value = value.format("DD/MM/YYYY");
+       if (ATTACHMENT_KEYS.includes(key)) {
+      value = [];
+    } else if (dayjs.isDayjs(value)) {
+      value = value.format("DD/MM/YYYY");
+    }
     baseData.push({ key, label: labelMap[key] || key, value });
   });
   return baseData;

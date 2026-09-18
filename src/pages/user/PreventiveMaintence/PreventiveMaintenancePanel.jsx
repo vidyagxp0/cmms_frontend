@@ -106,7 +106,8 @@ const buildProcessData = (values, systemFields) => [
   {
     key: "attachment",
     label: "Attachment",
-    value: values?.attachment || [],
+    // value: values?.attachment || [],
+    value:  [],
   },
   {
     key: "engineer_review_comments",
@@ -116,7 +117,7 @@ const buildProcessData = (values, systemFields) => [
   {
     key: "engineer_review_attachment",
     label: "Review By Engineer Dept Attachment",
-    value: values?.engineerReviewAttachment || [],
+    value:  [],
   },
   {
     key: "qa_approval_comments",
@@ -126,7 +127,7 @@ const buildProcessData = (values, systemFields) => [
   {
     key: "qa_approval_attachment",
     label: "QA Approval Attachment",
-    value: values?.qaApprovalAttachment || [],
+    value:  [],
   },
   {
     key: "cancellation_remark",
@@ -136,7 +137,7 @@ const buildProcessData = (values, systemFields) => [
   {
     key: "cancellation_attachment",
     label: "Cancellation Attachment",
-    value: values?.cancellationAttachment || [],
+    value:  [],
   },
 ];
 

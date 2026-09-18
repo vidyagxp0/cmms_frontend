@@ -95,7 +95,8 @@ const buildProcessData = (values, systemFields) => [
   })),
   { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
   { key: "comment", label: "Comments", value: values?.comments || "" },
-  { key: "attachment", label: "Attachment", value: values?.attachment || [] },
+  // { key: "attachment", label: "Attachment", value: values?.attachment || [] },
+  { key: "attachment", label: "Attachment", value:  [] },
   {
     key: "hod_review_comments",
     label: "HOD / Designee Review Comments",
@@ -104,7 +105,7 @@ const buildProcessData = (values, systemFields) => [
   {
     key: "hod_review_attachment",
     label: "HOD / Designee Review Attachment",
-    value: values?.hodReviewAttachment || [],
+    value:  [],
   },
   {
     key: "user_dept_review_comments",
@@ -124,7 +125,7 @@ const buildProcessData = (values, systemFields) => [
   {
     key: "qa_review_attachment",
     label: "QA Review Attachment",
-    value: values?.qaReviewAttachment || [],
+    value:  [],
   },
   {
     key: "cancellation_remark",
@@ -134,7 +135,7 @@ const buildProcessData = (values, systemFields) => [
   {
     key: "cancellation_attachment",
     label: "Cancellation Attachment",
-    value: values?.cancellationAttachment || [],
+    value:  [],
   },
 ];
 

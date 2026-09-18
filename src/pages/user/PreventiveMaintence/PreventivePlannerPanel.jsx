@@ -809,11 +809,11 @@ const PreventivePlannerPanel = () => {
               className="!mb-4 md:col-span-2"
             >
               <FormAttachment
-                multiple={false}
+                multiple={true}
                 recordId={recordId}
                 attachmentField="hod_review_attachment"
                 label="HOD / Designee Review Attachment"
-                uploadApi={addSingleAttachment}
+                uploadApi={addMultipleAttachments}
                 disabled={!isHodEditable}
               />
             </Form.Item>
@@ -911,11 +911,11 @@ const PreventivePlannerPanel = () => {
               className="!mb-4 md:col-span-2"
             >
               <FormAttachment
-                multiple={false}
+                multiple={true}
                 recordId={recordId}
                 attachmentField="cancellation_attachment"
                 label="Cancellation Attachment"
-                uploadApi={addSingleAttachment}
+                uploadApi={addMultipleAttachments}
                 disabled={!isCancellationEditable}
               />
             </Form.Item>

@@ -780,11 +780,11 @@ const CalibrationChildPanel = () => {
               className="!mb-4 md:col-span-2"
             >
               <FormAttachment
-                multiple={false}
+                multiple={true}
                 recordId={recordId}
                 attachmentField="implementorAttachment"
                 label="HOD / Designee Review Attachment"
-                uploadApi={addSingleAttachment}
+                uploadApi={addMultipleAttachments}
                 disabled={!isImplementorEditable}
               />
             </Form.Item>

@@ -913,11 +913,11 @@ const PreventiveMaintenancePanel = () => {
               className="!mb-4 md:col-span-2"
             >
               <FormAttachment
-                multiple={false}
+                multiple={true}
                 recordId={recordId}
                 attachmentField="cancellation_attachment"
                 label="Cancellation Attachment"
-                uploadApi={addSingleAttachment}
+                uploadApi={addMultipleAttachments}
                 disabled={!isCancellationEditable}
               />
             </Form.Item>

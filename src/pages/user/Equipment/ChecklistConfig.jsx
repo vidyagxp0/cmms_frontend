@@ -13,7 +13,6 @@ import {
   Check,
   ArrowRight,
   ArrowLeft,
-  CalendarClock,
 } from "lucide-react";
 import { Input, Select, Switch, Tooltip, Checkbox } from "antd";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
@@ -30,9 +29,16 @@ const FIELD_TYPES = [
   { value: "checkbox", label: "Checkbox" },
   { value: "single_select", label: "Single Selection" },
   { value: "multi_select", label: "Multiple Selection" },
+  { value: "single_select_checkbox", label: "Single Selection Checkbox" },
+  { value: "multi_select_checkbox", label: "Multiple Selection Checkbox" },
 ];
 
-const SELECTION_TYPES = ["single_select", "multi_select"];
+const SELECTION_TYPES = [
+  "single_select",
+  "multi_select",
+  "single_select_checkbox",
+  "multi_select_checkbox",
+];
 
 const STEPS = [
   { key: "basic", label: "Basic Info", icon: Hash },
@@ -51,6 +57,14 @@ const FREQUENCY_OPTIONS = [
   "Yearly",
   "Two Yearly",
 ];
+
+/** Every question × data-column intersection is its own cell, so each row can
+ * pick a completely different field type (and its own options, for
+ * selection types) for the same data column. */
+const createDefaultCell = () => ({
+  field_type: "text",
+  options: [],
+});
 
 /* ─────────────────────────── Main component ─────────────────────────── */
 
@@ -109,103 +123,149 @@ const ChecklistConfiguration = ({
       question_columns: checklist.question_columns.filter(
         (c) => c.id !== columnId
       ),
+      questions: checklist.questions.map((q) => {
+        if (!q.values || !(columnId in q.values)) return q;
+        const values = { ...q.values };
+        delete values[columnId];
+        return { ...q, values };
+      }),
     });
   };
 
-  /* ── Data columns ── */
+  
   const addDataColumn = () => {
-    const newCol = {
-      id: createId("data-column"),
-      column_header: "",
-      field_type: "text",
-      options: [],
-    };
-    updateChecklist({ data_columns: [...checklist.data_columns, newCol] });
+    const newCol = { id: createId("data-column"), column_header: "" };
+    updateChecklist({
+      data_columns: [...checklist.data_columns, newCol],
+      questions: checklist.questions.map((q) => ({
+        ...q,
+        data_cells: {
+          ...(q.data_cells || {}),
+          [newCol.id]: createDefaultCell(),
+        },
+      })),
+    });
   };
 
-  const updateDataColumn = (columnId, field, fieldValue) => {
+  const updateDataColumn = (columnId, columnHeader) => {
     updateChecklist({
       data_columns: checklist.data_columns.map((c) =>
-        c.id === columnId ? { ...c, [field]: fieldValue } : c
+        c.id === columnId ? { ...c, column_header: columnHeader } : c
       ),
-    });
-  };
-
-  /** Update field_type and manage options automatically */
-  const updateDataColumnType = (columnId, fieldType) => {
-    updateChecklist({
-      data_columns: checklist.data_columns.map((c) => {
-        if (c.id !== columnId) return c;
-        const isSelection = SELECTION_TYPES.includes(fieldType);
-        let options = c.options || [];
-        if (isSelection && options.length === 0) {
-          options = [{ id: createId("option"), value: "" }];
-        }
-        if (!isSelection) options = [];
-        return { ...c, field_type: fieldType, options };
-      }),
     });
   };
 
   const deleteDataColumn = (columnId) => {
     updateChecklist({
       data_columns: checklist.data_columns.filter((c) => c.id !== columnId),
+      questions: checklist.questions.map((q) => {
+        if (!q.data_cells || !(columnId in q.data_cells)) return q;
+        const data_cells = { ...q.data_cells };
+        delete data_cells[columnId];
+        return { ...q, data_cells };
+      }),
     });
   };
 
-  /* ── Data column options (single/multi select) ── */
-  const addOption = (columnId) => {
+  /* ── Per-row data cell config (field type + options) ── */
+  const getCell = (question, columnId) =>
+    question.data_cells?.[columnId] || createDefaultCell();
+
+  const updateDataCellType = (questionId, columnId, fieldType) => {
     updateChecklist({
-      data_columns: checklist.data_columns.map((c) =>
-        c.id === columnId
-          ? {
-              ...c,
-              options: [
-                ...(c.options || []),
-                { id: createId("option"), value: "" },
-              ],
-            }
-          : c
-      ),
+      questions: checklist.questions.map((q) => {
+        if (q.id !== questionId) return q;
+        const prevCell = getCell(q, columnId);
+        const isSelection = SELECTION_TYPES.includes(fieldType);
+        let options = prevCell.options || [];
+        if (isSelection && options.length === 0) {
+          options = [{ id: createId("option"), value: "" }];
+        }
+        if (!isSelection) options = [];
+        return {
+          ...q,
+          data_cells: {
+            ...(q.data_cells || {}),
+            [columnId]: { field_type: fieldType, options },
+          },
+        };
+      }),
     });
   };
 
-  const updateOption = (columnId, optionId, value) => {
+  const addDataCellOption = (questionId, columnId) => {
     updateChecklist({
-      data_columns: checklist.data_columns.map((c) =>
-        c.id === columnId
-          ? {
-              ...c,
-              options: (c.options || []).map((o) =>
+      questions: checklist.questions.map((q) => {
+        if (q.id !== questionId) return q;
+        const cell = getCell(q, columnId);
+        return {
+          ...q,
+          data_cells: {
+            ...(q.data_cells || {}),
+            [columnId]: {
+              ...cell,
+              options: [...(cell.options || []), { id: createId("option"), value: "" }],
+            },
+          },
+        };
+      }),
+    });
+  };
+
+  const updateDataCellOption = (questionId, columnId, optionId, value) => {
+    updateChecklist({
+      questions: checklist.questions.map((q) => {
+        if (q.id !== questionId) return q;
+        const cell = getCell(q, columnId);
+        return {
+          ...q,
+          data_cells: {
+            ...(q.data_cells || {}),
+            [columnId]: {
+              ...cell,
+              options: (cell.options || []).map((o) =>
                 o.id === optionId ? { ...o, value } : o
               ),
-            }
-          : c
-      ),
+            },
+          },
+        };
+      }),
     });
   };
 
-  const deleteOption = (columnId, optionId) => {
+  const deleteDataCellOption = (questionId, columnId, optionId) => {
     updateChecklist({
-      data_columns: checklist.data_columns.map((c) =>
-        c.id === columnId
-          ? {
-              ...c,
-              options: (c.options || []).filter((o) => o.id !== optionId),
-            }
-          : c
-      ),
+      questions: checklist.questions.map((q) => {
+        if (q.id !== questionId) return q;
+        const cell = getCell(q, columnId);
+        return {
+          ...q,
+          data_cells: {
+            ...(q.data_cells || {}),
+            [columnId]: {
+              ...cell,
+              options: (cell.options || []).filter((o) => o.id !== optionId),
+            },
+          },
+        };
+      }),
     });
   };
 
-  /* ── Questions (rows × question columns) ── */
+  /* ── Questions (rows × question columns, each with its own data-cell config) ── */
   const addQuestion = () => {
+    const data_cells = checklist.data_columns.reduce((acc, col) => {
+      acc[col.id] = createDefaultCell();
+      return acc;
+    }, {});
+
     updateChecklist({
       questions: [
         ...checklist.questions,
         {
           id: createId("question"),
           values: {},
+          data_cells,
           frequency_enabled: true,
           frequency: "",
         },
@@ -268,11 +328,9 @@ const ChecklistConfiguration = ({
     preview: null,
   };
 
-  const getFieldPreview = (column) => {
-    const opts = (column.options || [])
-      .map((o) => o.value)
-      .filter(Boolean);
-    switch (column.field_type) {
+  const getFieldPreview = (cell) => {
+    const opts = (cell.options || []).map((o) => o.value).filter(Boolean);
+    switch (cell.field_type) {
       case "textarea":
         return "Enter remarks…";
       case "number":
@@ -289,6 +347,12 @@ const ChecklistConfiguration = ({
         return opts.length ? `Select: ${opts.join(" · ")}` : "Select…";
       case "multi_select":
         return opts.length ? `Multi: ${opts.join(" · ")}` : "Select…";
+      case "single_select_checkbox":
+        return opts.length ? `Radio: ${opts.join(" · ")}` : "Select one…";
+      case "multi_select_checkbox":
+        return opts.length
+          ? `Checkboxes: ${opts.join(" · ")}`
+          : "Select multiple…";
       case "text":
       default:
         return "Enter value…";
@@ -447,7 +511,7 @@ const ChecklistConfiguration = ({
             <section>
               <SectionHeading
                 title="Column Configuration"
-                subtitle="Configure the question and response columns of your checklist."
+                subtitle="Add the question and data-field headers. You'll choose each data field's input type per question in the next step, so the same column can be text for one question and a dropdown for another."
               />
 
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -456,8 +520,8 @@ const ChecklistConfiguration = ({
                   <ColumnHeader
                     icon={<HelpCircle size={15} strokeWidth={1.8} />}
                     title="Question Column"
-                    tooltip="This column is used to display your inspection questions."
-                    subtitle="Configure the column where questions will appear."
+                    tooltip="This column is used to display your inspection questions. Add more than one if each row needs several question fields (e.g. Question + Reference SOP)."
+                    subtitle="Configure the column(s) where questions will appear."
                     buttonLabel="Add Question Column"
                     onAdd={addQuestionColumn}
                     disabled={disabled}
@@ -514,13 +578,15 @@ const ChecklistConfiguration = ({
                   </div>
                 </div>
 
-                {/* ── Data Columns card ── */}
+                {/* ── Data Columns card ──
+                    Just headers here — the field type for each column is
+                    chosen per question row in the next step. */}
                 <div className="overflow-hidden rounded-[12px] border border-[#DCE4E0] bg-[#FAFBF9]">
                   <ColumnHeader
                     icon={<Database size={15} strokeWidth={1.8} />}
                     title="Data Column"
-                    tooltip="Use this column to configure the data field that engineers will fill in."
-                    subtitle="Configure the response field for each question."
+                    tooltip="This is a response field header (e.g. Remarks, Status). Its input type is set per question in the Questions step — so Row 1 could be a Text field under this header while Row 2 is a Dropdown."
+                    subtitle="Add the response field headers engineers will fill in."
                     buttonLabel="Add Data Column"
                     onAdd={addDataColumn}
                     disabled={disabled}
@@ -535,155 +601,43 @@ const ChecklistConfiguration = ({
                       />
                     ) : (
                       <div className="space-y-2">
-                        {checklist.data_columns.map((column, index) => {
-                          const isSelection = SELECTION_TYPES.includes(
-                            column.field_type
-                          );
-                          return (
-                            <div
-                              key={column.id}
-                              className="rounded-[9px] border border-[#DDE5E1] bg-white p-3"
-                            >
-                              <div className="mb-2 flex items-center gap-2">
-                                <GripVertical
-                                  size={13}
-                                  className="shrink-0 text-[#A8B2AE]"
-                                />
-                                <span className="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full bg-[#EAF0ED] text-[8.5px] font-bold text-[#56766D]">
-                                  {index + 1}
-                                </span>
-                                <p className="flex-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#8A9591]">
-                                  Data Field
-                                </p>
-                                <span className="rounded-full bg-[#EEF4F1] px-2 py-0.5 text-[7.5px] font-bold uppercase tracking-[0.06em] text-[#56766D]">
-                                  {FIELD_TYPES.find(
-                                    (t) => t.value === column.field_type
-                                  )?.label || "Text"}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => deleteDataColumn(column.id)}
-                                  disabled={disabled}
-                                  className="flex h-[28px] w-[28px] items-center justify-center rounded-[7px] text-[#929E99] transition-all hover:bg-[#FCF1F1] hover:text-[#B54A4A] disabled:cursor-not-allowed disabled:opacity-40"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-
-                              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <div>
-                                  <label className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-[0.07em] text-[#8A9591]">
-                                    Column Header{" "}
-                                    <span className="ml-1 text-red-500">*</span>
-                                  </label>
-                                  <Input
-                                    value={column.column_header}
-                                    onChange={(e) =>
-                                      updateDataColumn(
-                                        column.id,
-                                        "column_header",
-                                        e.target.value
-                                      )
-                                    }
-                                    disabled={disabled}
-                                    placeholder="e.g. Remarks"
-                                    size="middle"
-                                    className="!rounded-[8px] !text-[10.5px]"
-                                  />
-                                </div>
-
-                                <div>
-                                  <label className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-[0.07em] text-[#8A9591]">
-                                    Field Type{" "}
-                                    <span className="ml-1 text-red-500">*</span>
-                                  </label>
-                                  <Select
-                                    value={column.field_type || "text"}
-                                    onChange={(val) =>
-                                      updateDataColumnType(column.id, val)
-                                    }
-                                    disabled={disabled}
-                                    options={FIELD_TYPES}
-                                    className="w-full"
-                                    size="middle"
-                                    popupMatchSelectWidth={false}
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Options editor for single/multi select */}
-                              {isSelection && (
-                                <div className="mt-3 rounded-[10px] border border-[#DCE4E0] bg-[#F8FAF8] p-3">
-                                  <div className="mb-2 flex items-center justify-between">
-                                    <label className="text-[8.5px] font-bold uppercase tracking-[0.07em] text-[#8A9591]">
-                                      Options{" "}
-                                      <span className="text-red-500">*</span>
-                                    </label>
-                                    <button
-                                      type="button"
-                                      onClick={() => addOption(column.id)}
-                                      disabled={disabled}
-                                      className="inline-flex h-[24px] items-center gap-1 rounded-[6px] bg-[var(--color-primary)] px-2 text-[9px] font-bold text-white transition-all hover:bg-[var(--color-primary-hover)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                      <Plus size={10} /> Add Option
-                                    </button>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    {(column.options || []).length === 0 ? (
-                                      <p className="py-1 text-center text-[9px] font-medium italic text-[#9AA5A1]">
-                                        Add at least one option for this field.
-                                      </p>
-                                    ) : (
-                                      (column.options || []).map(
-                                        (option, optIdx) => (
-                                          <div
-                                            key={option.id}
-                                            className="flex items-center gap-2"
-                                          >
-                                            <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#EAF0ED] text-[8.5px] font-bold text-[#56766D]">
-                                              {optIdx + 1}
-                                            </span>
-                                            <Input
-                                              value={option.value}
-                                              onChange={(e) =>
-                                                updateOption(
-                                                  column.id,
-                                                  option.id,
-                                                  e.target.value
-                                                )
-                                              }
-                                              disabled={disabled}
-                                              placeholder={`Option ${optIdx + 1}`}
-                                              size="middle"
-                                              className="!rounded-[7px] !text-[10.5px]"
-                                            />
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                deleteOption(
-                                                  column.id,
-                                                  option.id
-                                                )
-                                              }
-                                              disabled={
-                                                disabled ||
-                                                (column.options || []).length <= 1
-                                              }
-                                              className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[7px] text-[#929E99] transition-all hover:bg-[#FCF1F1] hover:text-[#B54A4A] disabled:cursor-not-allowed disabled:opacity-40"
-                                            >
-                                              <X size={13} />
-                                            </button>
-                                          </div>
-                                        )
-                                      )
-                                    )}
-                                  </div>
-                                </div>
-                              )}
+                        {checklist.data_columns.map((column, index) => (
+                          <div
+                            key={column.id}
+                            className="flex items-center gap-2 rounded-[9px] border border-[#DDE5E1] bg-white p-2"
+                          >
+                            <GripVertical
+                              size={13}
+                              className="shrink-0 text-[#A8B2AE]"
+                            />
+                            <span className="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full bg-[#EAF0ED] text-[8.5px] font-bold text-[#56766D]">
+                              {index + 1}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="mb-1 text-[8px] font-bold uppercase tracking-[0.08em] text-[#8A9591]">
+                                Column Header
+                              </p>
+                              <input
+                                type="text"
+                                value={column.column_header}
+                                onChange={(e) =>
+                                  updateDataColumn(column.id, e.target.value)
+                                }
+                                disabled={disabled}
+                                placeholder="e.g. Remarks"
+                                className="w-full border-none bg-transparent p-0 text-[11px] font-semibold text-[var(--color-text-primary)] outline-none placeholder:text-[#A3ADA9] focus:ring-0"
+                              />
                             </div>
-                          );
-                        })}
+                            <button
+                              type="button"
+                              onClick={() => deleteDataColumn(column.id)}
+                              disabled={disabled}
+                              className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[7px] text-[#929E99] transition-all hover:bg-[#FCF1F1] hover:text-[#B54A4A] disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -706,7 +660,7 @@ const ChecklistConfiguration = ({
               <div className="mb-3 flex items-center justify-between gap-3">
                 <SectionHeading
                   title="Add Questions"
-                  subtitle="Add the inspection questions that engineers need to answer."
+                  subtitle="Add each inspection question, then pick the response field type per data column for that row — every row can be configured differently."
                   noMargin
                 />
                 <button
@@ -792,6 +746,126 @@ const ChecklistConfiguration = ({
                           ))}
                         </div>
 
+                        {checklist.data_columns.length > 0 && (
+                          <div className="mt-3 rounded-[9px] border border-[#DCE4E0] bg-[#FAFBF9] p-2.5">
+                            <p className="mb-2 flex items-center gap-1.5 text-[8.5px] font-bold uppercase tracking-[0.07em] text-[#8A9591]">
+                              <Database size={11} />
+                              Response Fields for this Question
+                            </p>
+                            <div
+                              className={`grid gap-2.5 ${
+                                checklist.data_columns.length === 1
+                                  ? "grid-cols-1"
+                                  : "grid-cols-1 md:grid-cols-2"
+                              }`}
+                            >
+                              {checklist.data_columns.map((col) => {
+                                const cell = getCell(question, col.id);
+                                const isSelection = SELECTION_TYPES.includes(
+                                  cell.field_type
+                                );
+                                return (
+                                  <div
+                                    key={col.id}
+                                    className="rounded-[8px] border border-[#DDE5E1] bg-white p-2.5"
+                                  >
+                                    <div className="mb-2 flex items-center justify-between gap-2">
+                                      <span className="truncate text-[9.5px] font-bold text-[var(--color-text-primary)]">
+                                        {col.column_header?.trim() ||
+                                          "Untitled field"}
+                                      </span>
+                                      <Select
+                                        value={cell.field_type}
+                                        onChange={(val) =>
+                                          updateDataCellType(
+                                            question.id,
+                                            col.id,
+                                            val
+                                          )
+                                        }
+                                        disabled={disabled}
+                                        options={FIELD_TYPES}
+                                        size="small"
+                                        className="min-w-[132px]"
+                                        popupMatchSelectWidth={false}
+                                      />
+                                    </div>
+
+                                    {isSelection ? (
+                                      <div className="space-y-1.5">
+                                        {(cell.options || []).length === 0 ? (
+                                          <p className="py-1 text-center text-[8.5px] font-medium italic text-[#9AA5A1]">
+                                            Add at least one option.
+                                          </p>
+                                        ) : (
+                                          (cell.options || []).map(
+                                            (option, optIdx) => (
+                                              <div
+                                                key={option.id}
+                                                className="flex items-center gap-1.5"
+                                              >
+                                                <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-[#EAF0ED] text-[7.5px] font-bold text-[#56766D]">
+                                                  {optIdx + 1}
+                                                </span>
+                                                <Input
+                                                  value={option.value}
+                                                  onChange={(e) =>
+                                                    updateDataCellOption(
+                                                      question.id,
+                                                      col.id,
+                                                      option.id,
+                                                      e.target.value
+                                                    )
+                                                  }
+                                                  disabled={disabled}
+                                                  placeholder={`Option ${optIdx + 1}`}
+                                                  size="small"
+                                                  className="!rounded-[6px] !text-[10px]"
+                                                />
+                                                <button
+                                                  type="button"
+                                                  onClick={() =>
+                                                    deleteDataCellOption(
+                                                      question.id,
+                                                      col.id,
+                                                      option.id
+                                                    )
+                                                  }
+                                                  disabled={
+                                                    disabled ||
+                                                    (cell.options || []).length <= 1
+                                                  }
+                                                  className="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[6px] text-[#929E99] transition-all hover:bg-[#FCF1F1] hover:text-[#B54A4A] disabled:cursor-not-allowed disabled:opacity-40"
+                                                >
+                                                  <X size={12} />
+                                                </button>
+                                              </div>
+                                            )
+                                          )
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            addDataCellOption(question.id, col.id)
+                                          }
+                                          disabled={disabled}
+                                          className="inline-flex h-[22px] items-center gap-1 rounded-[6px] bg-[var(--color-primary)] px-2 text-[8.5px] font-bold text-white transition-all hover:bg-[var(--color-primary-hover)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                          <Plus size={9} /> Add Option
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <p className="rounded-[6px] border border-dashed border-[#E0E6E3] bg-[#FAFBFA] px-2 py-1.5 text-[9px] font-medium text-[#9AA5A1]">
+                                        {getFieldPreview(cell)}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Frequency provision for this question */}
                         <div className="mt-3 flex flex-wrap items-center gap-3 rounded-[9px] border border-[#DCE4E0] bg-[#FAFBF9] px-3 py-2.5">
                           <Tooltip title="Frequency is required on every question and can't be unchecked.">
@@ -841,7 +915,7 @@ const ChecklistConfiguration = ({
             <section>
               <SectionHeading
                 title="Checklist Preview"
-                subtitle="This is exactly how the checklist will appear to the field engineer."
+                subtitle="This is exactly how the checklist will appear to the field engineer — each response field shows the input type configured for that specific row."
               />
 
               <div className="overflow-hidden rounded-[12px] border border-[#D5DFDB] bg-white shadow-[0_3px_12px_rgba(36,50,56,0.035)]">
@@ -897,17 +971,17 @@ const ChecklistConfiguration = ({
                               {column.column_header.trim()}
                             </th>
                           ))}
+                          {hasAnyFrequency && (
+                            <th className="min-w-[130px] border-b border-r border-[#E1E7E4] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.06em] text-[#596B64]">
+                              Frequency
+                            </th>
+                          )}
                           {validDataColumns.map((column) => (
                             <th
                               key={column.id}
-                              className="min-w-[140px] border-b border-r border-[#E1E7E4] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.06em] text-[#596B64]"
+                              className="min-w-[160px] border-b border-r border-[#E1E7E4] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.06em] text-[#596B64]"
                             >
-                              <div>{column.column_header.trim()}</div>
-                              <div className="mt-0.5 text-[7.5px] font-medium normal-case tracking-normal text-[#9AA5A1]">
-                                {FIELD_TYPES.find(
-                                  (t) => t.value === column.field_type
-                                )?.label || "Text"}
-                              </div>
+                              {column.column_header.trim()}
                             </th>
                           ))}
                         </tr>
@@ -920,6 +994,7 @@ const ChecklistConfiguration = ({
                               colSpan={
                                 (checklist.include_serial_number ? 1 : 0) +
                                 validQuestionColumns.length +
+                                (hasAnyFrequency ? 1 : 0) +
                                 validDataColumns.length
                               }
                               className="px-5 py-10 text-center text-[9.5px] font-medium text-[#929D99]"
@@ -948,16 +1023,37 @@ const ChecklistConfiguration = ({
                                   {question.values?.[column.id]?.trim() || "—"}
                                 </td>
                               ))}
-                              {validDataColumns.map((column) => (
-                                <td
-                                  key={column.id}
-                                  className="border-b border-r border-[#E7ECE9] px-3 py-3"
-                                >
-                                  <div className="rounded-[7px] border border-[#E0E6E3] bg-[#FAFBFA] px-2.5 py-2 text-[8.5px] font-medium text-[#9AA5A1]">
-                                    {getFieldPreview(column)}
-                                  </div>
+                              {hasAnyFrequency && (
+                                <td className="border-b border-r border-[#E7ECE9] px-3 py-3 text-[10px] font-semibold text-[#3F6B58]">
+                                  {question.frequency_enabled ? (
+                                    question.frequency || (
+                                      <span className="font-medium text-[#9AA5A1]">
+                                        Not selected
+                                      </span>
+                                    )
+                                  ) : (
+                                    <span className="font-medium text-[#9AA5A1]">—</span>
+                                  )}
                                 </td>
-                              ))}
+                              )}
+                              {validDataColumns.map((column) => {
+                                const cell = getCell(question, column.id);
+                                return (
+                                  <td
+                                    key={column.id}
+                                    className="border-b border-r border-[#E7ECE9] px-3 py-3"
+                                  >
+                                    <div className="rounded-[7px] border border-[#E0E6E3] bg-[#FAFBFA] px-2.5 py-2 text-[8.5px] font-medium text-[#9AA5A1]">
+                                      {getFieldPreview(cell)}
+                                    </div>
+                                    <div className="mt-1 text-[7.5px] font-bold uppercase tracking-[0.05em] text-[#B2BCB7]">
+                                      {FIELD_TYPES.find(
+                                        (t) => t.value === cell.field_type
+                                      )?.label || "Text"}
+                                    </div>
+                                  </td>
+                                );
+                              })}
                             </tr>
                           ))
                         )}
@@ -966,79 +1062,6 @@ const ChecklistConfiguration = ({
                   </div>
                 )}
               </div>
-
-              {hasAnyFrequency && (
-                <div className="mt-4 overflow-hidden rounded-[12px] border border-[#D5DFDB] bg-white shadow-[0_3px_12px_rgba(36,50,56,0.035)]">
-                  <div className="flex items-center gap-2.5 border-b border-[#E1E7E4] bg-[#F7F9F7] px-4 py-3">
-                    <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[8px] bg-[#E8F0ED] text-[#56766D]">
-                      <CalendarClock size={15} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10.5px] font-bold text-[var(--color-text-primary)]">
-                        Frequency
-                      </p>
-                      <p className="text-[8.5px] font-medium text-[#8A9591]">
-                        Frequency selected for each question that has it
-                        enabled.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="w-full overflow-x-auto">
-                    <table className="w-full min-w-[400px] border-collapse">
-                      <thead>
-                        <tr className="bg-[#F8FAF8]">
-                          {checklist.include_serial_number && (
-                            <th className="w-[55px] border-b border-r border-[#E1E7E4] px-3 py-3 text-center text-[8.5px] font-bold uppercase tracking-[0.06em] text-[#73817C]">
-                              S/N
-                            </th>
-                          )}
-                          <th className="min-w-[220px] border-b border-r border-[#E1E7E4] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.06em] text-[#596B64]">
-                            {validQuestionColumns[0]?.column_header?.trim() ||
-                              "Question"}
-                          </th>
-                          <th className="min-w-[150px] border-b border-[#E1E7E4] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.06em] text-[#596B64]">
-                            Frequency
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {validQuestions
-                          .map((question, qIndex) => ({ question, qIndex }))
-                          .filter(({ question }) => question.frequency_enabled)
-                          .map(({ question, qIndex }, rowIdx) => (
-                            <tr
-                              key={question.id}
-                              className={`transition-colors hover:bg-[#FAFCFA] ${
-                                rowIdx % 2 === 1 ? "bg-[#FCFDFC]" : ""
-                              }`}
-                            >
-                              {checklist.include_serial_number && (
-                                <td className="border-b border-r border-[#E7ECE9] px-3 py-3 text-center text-[9px] font-bold text-[#70817A]">
-                                  {String(qIndex + 1).padStart(2, "0")}
-                                </td>
-                              )}
-                              <td className="border-b border-r border-[#E7ECE9] px-3 py-3 text-[10px] font-medium leading-5 text-[#35453F]">
-                                {(validQuestionColumns[0] &&
-                                  question.values?.[
-                                    validQuestionColumns[0].id
-                                  ]?.trim()) ||
-                                  "—"}
-                              </td>
-                              <td className="border-b border-[#E7ECE9] px-3 py-3 text-[10px] font-semibold text-[#3F6B58]">
-                                {question.frequency || (
-                                  <span className="font-medium text-[#9AA5A1]">
-                                    Not selected
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
 
               <StepFooter onBack={goBack} disabled={disabled} />
             </section>

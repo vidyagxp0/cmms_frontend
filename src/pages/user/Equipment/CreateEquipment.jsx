@@ -26,6 +26,13 @@ const EMPTY_CHECKLIST = {
   questions: [],
 };
 
+const SELECTION_TYPES = [
+  "single_select",
+  "multi_select",
+  "single_select_checkbox",
+  "multi_select_checkbox",
+];
+
 /* ───────────────────────── Component ───────────────────────── */
 
 const CreateEquipment = () => {
@@ -44,11 +51,8 @@ const CreateEquipment = () => {
   /* ───────── Submit ───────── */
   const handleSubmit = async (values) => {
     if (isSaving) return;
-
-    /* ── Clean + reindex checklist (ids become 1, 2, 3, 4…) ── */
-    const SELECTION_TYPES = ["single_select", "multi_select"];
-
     const questionColumnIdMap = {};
+    const dataColumnIdMap = {};
 
     const cleanedQuestionColumns = checklistConfig.question_columns
       .filter((column) => column?.column_header?.trim() !== "")
@@ -64,19 +68,11 @@ const CreateEquipment = () => {
     const cleanedDataColumns = checklistConfig.data_columns
       .filter((column) => column?.column_header?.trim() !== "")
       .map((column, idx) => {
-        const isSelection = SELECTION_TYPES.includes(column.field_type);
+        const newId = idx + 1;
+        dataColumnIdMap[column.id] = newId;
         return {
-          id: idx + 1,
+          id: newId,
           column_header: column.column_header.trim(),
-          field_type: column.field_type || "text",
-          options: isSelection
-            ? (column.options || [])
-                .filter((o) => o?.value?.trim())
-                .map((o, optIdx) => ({
-                  id: optIdx + 1,
-                  value: o.value.trim(),
-                }))
-            : [],
         };
       });
 
@@ -99,14 +95,35 @@ const CreateEquipment = () => {
 
         if (!hasAny) return null;
 
+        const data_cells = {};
+        checklistConfig.data_columns.forEach((col) => {
+          const newColId = dataColumnIdMap[col.id];
+          if (!newColId) return;
+
+          const cell = row.data_cells?.[col.id] || { field_type: "text", options: [] };
+          const isSelection = SELECTION_TYPES.includes(cell.field_type);
+
+          data_cells[newColId] = {
+            field_type: cell.field_type || "text",
+            options: isSelection
+              ? (cell.options || [])
+                  .filter((o) => o?.value?.trim())
+                  .map((o, optIdx) => ({
+                    id: optIdx + 1,
+                    value: o.value.trim(),
+                  }))
+              : [],
+          };
+        });
+
         questionCounter += 1;
-        // return { id: questionCounter, values };
         return {
-  id: questionCounter,
-  values,
-  frequency_enabled: row.frequency_enabled !== false,
-  frequency: row.frequency || "",
-};
+          id: questionCounter,
+          values,
+          data_cells,
+          frequency_enabled: row.frequency_enabled !== false,
+          frequency: row.frequency || "",
+        };
       })
       .filter(Boolean);
 

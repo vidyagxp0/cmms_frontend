@@ -675,6 +675,31 @@ const PreventiveMaintenancePanel = () => {
       setActiveTab("general");
       return;
     }
+
+      // 2) Checklist required-field validation
+  if (checklistData) {
+    const missingChecklist = getEmptyChecklistFields(
+      checklistData,
+      checklistAnswers
+    );
+
+    if (missingChecklist.length > 0) {
+      const first = missingChecklist[0];
+      const remaining = missingChecklist.length - 1;
+
+      toast.error(
+        `Checklist field "${first.columnName}" is required for: ${first.questionText}` +
+          (remaining > 0
+            ? ` (+${remaining} more required field${
+                remaining === 1 ? "" : "s"
+              } missing)`
+            : "")
+      );
+
+      setActiveTab("checklist");
+      return;
+    }
+  }
     form.submit();
   };
 
@@ -769,6 +794,51 @@ const PreventiveMaintenancePanel = () => {
   const visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")
     : TABS.filter((tab) => tab.id !== "cancellation");
+
+    const getEmptyChecklistFields = (structure, answers) => {
+  if (!structure?.questions?.length) return [];
+
+  const missing = [];
+
+  structure.questions.forEach((question) => {
+    const cells = question.data_cells || {};
+
+    Object.keys(cells).forEach((colId) => {
+      const cell = cells[colId];
+      if (cell?.required !== true) return;
+
+      const val = answers?.[question.id]?.[colId];
+
+      const isEmpty =
+        val === undefined ||
+        val === null ||
+        val === "" ||
+        val === false ||
+        (Array.isArray(val) && val.length === 0) ||
+        (typeof val === "object" &&
+          !Array.isArray(val) &&
+          val.checked !== true);
+
+      if (!isEmpty) return;
+
+      const col = (structure.data_columns || []).find(
+        (c) => String(c.id) === String(colId)
+      );
+
+      const questionText =
+        Object.values(question.values || {})
+          .filter(Boolean)
+          .join(" ") || `Question ${question.id}`;
+
+      missing.push({
+        columnName: col?.column_header || `Column ${colId}`,
+        questionText,
+      });
+    });
+  });
+
+  return missing;
+};
 
   return (
     <div className="w-full">

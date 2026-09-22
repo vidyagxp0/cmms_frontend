@@ -81,6 +81,7 @@ const normalizeIncomingChecklist = (raw) => {
                     Object.entries(q.data_cells).map(([colId, cell], ci) => {
                       const base = {
                         field_type: cell?.field_type || "text",
+                        required: cell?.required === true,
                         options: Array.isArray(cell?.options)
                           ? cell.options.map((o, oi) =>
                               typeof o === "string"
@@ -265,6 +266,7 @@ const EquipmentPanel = () => {
 
           const nextCell = {
             field_type: cell.field_type || "text",
+            required: cell.required === true,
             options: isSelection
               ? (cell.options || [])
                   .filter((o) => o?.value?.trim())

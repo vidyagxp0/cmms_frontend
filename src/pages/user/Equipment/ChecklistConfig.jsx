@@ -86,6 +86,7 @@ const createDefaultCell = () => ({
   options: [],
   checkbox_variant: "normal",
   esign_type: "simple",
+  required: false,
 });
 
 /* ─────────────────────────── Main component ─────────────────────────── */
@@ -222,6 +223,25 @@ const ChecklistConfiguration = ({
           data_cells: {
             ...(q.data_cells || {}),
             [columnId]: nextCell,
+          },
+        };
+      }),
+    });
+  };
+
+  const updateDataCellRequired = (questionId, columnId, required) => {
+    updateChecklist({
+      questions: checklist.questions.map((q) => {
+        if (q.id !== questionId) return q;
+        const cell = getCell(q, columnId);
+        return {
+          ...q,
+          data_cells: {
+            ...(q.data_cells || {}),
+            [columnId]: {
+              ...cell,
+              required: !!required,
+            },
           },
         };
       }),
@@ -666,9 +686,7 @@ const ChecklistConfiguration = ({
                   </div>
                 </div>
 
-                {/* ── Data Columns card ──
-                    Just headers here — the field type for each column is
-                    chosen per question row in the next step. */}
+                {/* ── Data Columns card ── */}
                 <div className="overflow-hidden rounded-[12px] border border-[#DCE4E0] bg-[#FAFBF9]">
                   <ColumnHeader
                     icon={<Database size={15} strokeWidth={1.8} />}
@@ -852,6 +870,7 @@ const ChecklistConfiguration = ({
                                 const isSelection = SELECTION_TYPES.includes(
                                   cell.field_type
                                 );
+                                const isRequired = cell.required === true;
                                 return (
                                   <div
                                     key={col.id}
@@ -862,21 +881,53 @@ const ChecklistConfiguration = ({
                                         {col.column_header?.trim() ||
                                           "Untitled field"}
                                       </span>
-                                      <Select
-                                        value={cell.field_type}
-                                        onChange={(val) =>
-                                          updateDataCellType(
-                                            question.id,
-                                            col.id,
-                                            val
-                                          )
-                                        }
-                                        disabled={disabled}
-                                        options={FIELD_TYPES}
-                                        size="small"
-                                        className="min-w-[132px]"
-                                        popupMatchSelectWidth={false}
-                                      />
+
+                                      <div className="flex shrink-0 items-center gap-2">
+                                        <Tooltip title="Mark this response field as required">
+                                          <label
+                                            className={`flex cursor-pointer items-center gap-1 rounded-[6px] border px-1.5 py-[3px] text-[9px] font-bold transition-colors ${
+                                              isRequired
+                                                ? "border-[#F4B7B7] bg-[#FDF1F1] text-[#B54A4A]"
+                                                : "border-[#DCE4E0] bg-white text-[#8A9591] hover:bg-[#F5F7F5]"
+                                            } ${
+                                              disabled
+                                                ? "cursor-not-allowed opacity-60"
+                                                : ""
+                                            }`}
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={isRequired}
+                                              onChange={(e) =>
+                                                updateDataCellRequired(
+                                                  question.id,
+                                                  col.id,
+                                                  e.target.checked
+                                                )
+                                              }
+                                              disabled={disabled}
+                                              className="h-[10px] w-[10px] cursor-pointer accent-[#B54A4A]"
+                                            />
+                                            Required Field
+                                          </label>
+                                        </Tooltip>
+
+                                        <Select
+                                          value={cell.field_type}
+                                          onChange={(val) =>
+                                            updateDataCellType(
+                                              question.id,
+                                              col.id,
+                                              val
+                                            )
+                                          }
+                                          disabled={disabled}
+                                          options={FIELD_TYPES}
+                                          size="small"
+                                          className="min-w-[132px]"
+                                          popupMatchSelectWidth={false}
+                                        />
+                                      </div>
                                     </div>
 
                                     {isSelection ? (
@@ -1144,7 +1195,9 @@ const ChecklistConfiguration = ({
                               key={column.id}
                               className="min-w-[160px] border-b border-r border-[#E1E7E4] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.06em] text-[#596B64]"
                             >
-                              {column.column_header.trim()}
+                              <span className="inline-flex items-center gap-1">
+                                {column.column_header.trim()}
+                              </span>
                             </th>
                           ))}
                         </tr>
@@ -1201,6 +1254,7 @@ const ChecklistConfiguration = ({
                               )}
                               {validDataColumns.map((column) => {
                                 const cell = getCell(question, column.id);
+                                const isRequired = cell.required === true;
                                 return (
                                   <td
                                     key={column.id}
@@ -1209,10 +1263,17 @@ const ChecklistConfiguration = ({
                                     <div className="rounded-[7px] border border-[#E0E6E3] bg-[#FAFBFA] px-2.5 py-2 text-[8.5px] font-medium text-[#9AA5A1]">
                                       {getFieldPreview(cell)}
                                     </div>
-                                    <div className="mt-1 text-[7.5px] font-bold uppercase tracking-[0.05em] text-[#B2BCB7]">
-                                      {FIELD_TYPES.find(
-                                        (t) => t.value === cell.field_type
-                                      )?.label || "Text"}
+                                    <div className="mt-1 flex items-center gap-1.5 text-[7.5px] font-bold uppercase tracking-[0.05em] text-[#B2BCB7]">
+                                      <span>
+                                        {FIELD_TYPES.find(
+                                          (t) => t.value === cell.field_type
+                                        )?.label || "Text"}
+                                      </span>
+                                      {isRequired && (
+                                        <span className="rounded-[4px] bg-[#FDF1F1] px-1 py-[1px] text-[7px] font-bold text-[#B54A4A]">
+                                          REQ
+                                        </span>
+                                      )}
                                     </div>
                                   </td>
                                 );

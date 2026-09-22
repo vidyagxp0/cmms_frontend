@@ -108,6 +108,7 @@ const CreateEquipment = () => {
 
           const nextCell = {
             field_type: cell.field_type || "text",
+            required: cell.required === true,
             options: isSelection
               ? (cell.options || [])
                   .filter((o) => o?.value?.trim())

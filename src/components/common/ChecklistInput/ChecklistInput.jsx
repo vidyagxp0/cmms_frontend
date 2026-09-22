@@ -139,7 +139,7 @@ const ChecklistInput = ({
 }) => {
   const user = useAuthStore((s) => s.user);
 
-  // { questionId, columnId, esignType } when modal is open
+  // { questionId, columnId } when modal is open
   const [esignModal, setEsignModal] = useState(null);
 
   if (!data) return null;
@@ -456,6 +456,7 @@ const ChecklistInput = ({
                     Sr. No
                   </th>
                 )}
+
                 {question_columns.map((col) => (
                   <th
                     key={col.id}
@@ -481,6 +482,7 @@ const ChecklistInput = ({
                 ))}
               </tr>
             </thead>
+
             <tbody>
               {questions.length === 0 ? (
                 <tr>
@@ -504,6 +506,7 @@ const ChecklistInput = ({
                         {idx + 1}
                       </td>
                     )}
+
                     {question_columns.map((col) => (
                       <td
                         key={col.id}
@@ -531,14 +534,28 @@ const ChecklistInput = ({
                       </td>
                     )}
 
-                    {data_columns.map((col) => (
-                      <td
-                        key={col.id}
-                        className="border-b border-r border-[#E0E7E4] px-3 py-3 align-top"
-                      >
-                        {renderCell(q.id, col.id, pick(q.data_cells, col.id))}
-                      </td>
-                    ))}
+                    {data_columns.map((col) => {
+                      const cell = pick(q.data_cells, col.id);
+                      const isRequired = cell?.required === true;
+                      return (
+                        <td
+                          key={col.id}
+                          className="border-b border-r border-[#E0E7E4] px-3 py-3 align-top"
+                        >
+                          {isRequired && (
+                            <div className="mb-1 flex items-center gap-1">
+                              <span className="text-[12px] font-bold leading-none text-red-500">
+                                *
+                              </span>
+                              <span className="text-[9px] font-bold uppercase tracking-[0.05em] text-[#B54A4A]">
+                                Required
+                              </span>
+                            </div>
+                          )}
+                          {renderCell(q.id, col.id, cell)}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))
               )}

@@ -681,19 +681,39 @@ const CalibrationChildPanel = () => {
               <FormInput placeholder="e.g. 87V" disabled={!isManagementEditable} />
             </Form.Item>
             <Form.Item name="instrumentRange" label="Instrument Range" className="!mb-4">
-              <FormInput placeholder="e.g. 0-1000 V" disabled={!isManagementEditable} />
+              <SymbolicInput
+                placeholder="e.g. 0-1000 V"
+                defaultDiscipline="Range"
+                disabled={!isManagementEditable}
+              />
             </Form.Item>
             <Form.Item name="leastCount" label="Least Count" className="!mb-4">
-              <FormInput placeholder="e.g. 0.01" disabled={!isManagementEditable} />
+              <SymbolicInput
+                placeholder="e.g. 0.01"
+                defaultDiscipline="Least Count"
+                disabled={!isManagementEditable}
+              />
             </Form.Item>
             <Form.Item name="accuracy" label="Accuracy" className="!mb-4">
-              <FormInput placeholder="e.g. ±0.5%" disabled={!isManagementEditable} />
+              <SymbolicInput
+                placeholder="e.g. ±0.5%"
+                defaultDiscipline="Accuracy"
+                disabled={!isManagementEditable}
+              />
             </Form.Item>
             <Form.Item name="calibrationTestPoints" label="Calibration test points" className="!mb-4">
-              <FormInput placeholder="e.g. 0, 50, 100" disabled={!isManagementEditable} />
+              <SymbolicInput
+                placeholder="e.g. 0, 50, 100"
+                defaultDiscipline="Test Points"
+                disabled={!isManagementEditable}
+              />
             </Form.Item>
             <Form.Item name="operatingRange" label="Operating Range" className="!mb-4">
-              <FormInput placeholder="e.g. 0-500 V" disabled={!isManagementEditable} />
+              <SymbolicInput
+                placeholder="e.g. 0-500 V"
+                defaultDiscipline="Operating Range"
+                disabled={!isManagementEditable}
+              />
             </Form.Item>
             <Form.Item name="envTemperature" label="Environmental Condition Temperature" className="!mb-4">
               <SymbolicInput

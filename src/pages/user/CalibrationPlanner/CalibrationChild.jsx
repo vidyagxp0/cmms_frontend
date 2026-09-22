@@ -427,33 +427,47 @@ const CalibrationChild = () => {
                 <FormInput placeholder="e.g. 87V" />
               </Form.Item>
               <Form.Item name="instrumentRange" label="Instrument Range" className="!mb-4">
-                <FormInput placeholder="e.g. 0-1000 V" />
+                <SymbolicInput
+                  placeholder="e.g. 0-1000 V"
+                  defaultDiscipline="Range"
+                />
               </Form.Item>
               <Form.Item name="leastCount" label="Least Count" className="!mb-4">
-                <FormInput placeholder="e.g. 0.01" />
+                <SymbolicInput
+                  placeholder="e.g. 0.01"
+                  defaultDiscipline="Least Count"
+                />
               </Form.Item>
               <Form.Item name="accuracy" label="Accuracy" className="!mb-4">
-                <FormInput placeholder="e.g. ±0.5%" />
+                <SymbolicInput
+                  placeholder="e.g. ±0.5%"
+                  defaultDiscipline="Accuracy"
+                />
               </Form.Item>
               <Form.Item name="calibrationTestPoints" label="Calibration test points" className="!mb-4">
-                <FormInput placeholder="e.g. 0, 50, 100" />
+                <SymbolicInput
+                  placeholder="e.g. 0, 50, 100"
+                  defaultDiscipline="Test Points"
+                />
               </Form.Item>
               <Form.Item name="operatingRange" label="Operating Range" className="!mb-4">
-                <FormInput placeholder="e.g. 0-500 V" />
+                <SymbolicInput
+                  placeholder="e.g. 0-500 V"
+                  defaultDiscipline="Operating Range"
+                />
               </Form.Item>
-<Form.Item
-  name="envTemperature"
-  label="Environmental Condition Temperature"
-  className="!mb-4"
->
-  <SymbolicInput
-    placeholder="e.g. 25"
-    defaultDiscipline="Temperature"
-  />
-</Form.Item>
+              <Form.Item
+                name="envTemperature"
+                label="Environmental Condition Temperature"
+                className="!mb-4"
+              >
+                <SymbolicInput
+                  placeholder="e.g. 25"
+                  defaultDiscipline="Temperature"
+                />
+              </Form.Item>
               <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
-                {/* <FormInput placeholder="e.g. 45% RH ± 5%" /> */}
-                  <SymbolicInput
+                <SymbolicInput
                   placeholder="e.g. 45% RH ± 5%"
                   defaultDiscipline="Humidity"
                 />

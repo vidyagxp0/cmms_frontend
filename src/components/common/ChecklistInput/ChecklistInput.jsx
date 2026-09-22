@@ -22,7 +22,7 @@ const { TextArea } = Input;
 const DATE_FORMAT = "DD/MM/YYYY";
 const TIME_FORMAT = "HH:mm";
 const DATETIME_FORMAT = "DD/MM/YYYY HH:mm";
-const SIGN_FORMAT = "DD/MM/YYYY HH:mm";
+const SIGN_FORMAT = "DD/MM/YYYY HH:mm:ss";
 
 const inputClass =
   "!w-full !rounded-lg !border-[#D1DBD7] !bg-white !text-[12px] !text-[#263B35] !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585] disabled:!bg-[#F3F6F4]";

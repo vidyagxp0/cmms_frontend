@@ -158,6 +158,98 @@ const validatePreventiveMaintenceForm = (form, storedRequired) => {
   });
 };
 
+/* ─────────────── Required-field validation for checklist ─────────────── */
+
+const getEmptyChecklistFields = (structure, answers) => {
+  if (!structure?.questions?.length) return [];
+
+  const missing = [];
+
+  structure.questions.forEach((question) => {
+    const cells = question.data_cells || {};
+
+    Object.keys(cells).forEach((colId) => {
+      const cell = cells[colId];
+      if (cell?.required !== true) return;
+
+      const val = answers?.[question.id]?.[colId];
+
+      const isEmpty =
+        val === undefined ||
+        val === null ||
+        val === "" ||
+        val === false ||
+        (Array.isArray(val) && val.length === 0) ||
+        (typeof val === "object" &&
+          !Array.isArray(val) &&
+          val.checked !== true);
+
+      if (!isEmpty) return;
+
+      const col = (structure.data_columns || []).find(
+        (c) => String(c.id) === String(colId)
+      );
+
+      const questionText =
+        Object.values(question.values || {})
+          .filter(Boolean)
+          .join(" ") || `Question ${question.id}`;
+
+      missing.push({
+        columnName: col?.column_header || `Column ${colId}`,
+        questionText,
+      });
+    });
+  });
+
+  return missing;
+};
+
+/* ─────────────── Saved answers → ChecklistInput answer shape ─────────────── */
+const hydrateChecklistAnswers = (savedChecklist, masterChecklist) => {
+  if (!savedChecklist?.questions?.length) return {};
+
+  const getMasterCell = (questionId, columnId) => {
+    const q = masterChecklist?.questions?.find(
+      (mq) => mq.id === questionId || String(mq.id) === String(questionId)
+    );
+    if (!q) return null;
+    return (
+      q.data_cells?.[columnId] ?? q.data_cells?.[String(columnId)] ?? null
+    );
+  };
+
+  const resolveLabelToId = (cell, labelOrLabels) => {
+    const options = cell?.options || [];
+    const toId = (label) => {
+      const opt = options.find((o) => o.value === label);
+      return opt ? opt.id : label;
+    };
+    if (Array.isArray(labelOrLabels)) return labelOrLabels.map(toId);
+    return toId(labelOrLabels);
+  };
+
+  const out = {};
+
+  savedChecklist.questions.forEach((savedQ) => {
+    const qId = savedQ.question_id;
+    out[qId] = {};
+
+    (savedQ.values || []).forEach(({ column_id, value }) => {
+      const cell = getMasterCell(qId, column_id);
+      const fieldType = cell?.field_type;
+
+      if (SELECTION_TYPES.includes(fieldType)) {
+        out[qId][column_id] = resolveLabelToId(cell, value);
+      } else {
+        out[qId][column_id] = value;
+      }
+    });
+  });
+
+  return out;
+};
+
 /* ───────────────────────── Checklist payload builder ───────────────────── */
 
 const buildChecklistPayload = (structure, answers) => {
@@ -166,6 +258,7 @@ const buildChecklistPayload = (structure, answers) => {
       checklist_name: "",
       include_serial_number: false,
       questions: [],
+      notes: { heading: "", include_serial_number: true, items: [] },
     };
   }
 
@@ -175,6 +268,7 @@ const buildChecklistPayload = (structure, answers) => {
     question_columns = [],
     data_columns = [],
     questions = [],
+    notes = null,
   } = structure;
 
   const getCell = (question, columnId) =>
@@ -244,8 +338,21 @@ const buildChecklistPayload = (structure, answers) => {
         values,
       };
     }),
+
+    // note travels inside checklist_config, under `notes`
+    notes: {
+      heading: notes?.heading?.trim() || "",
+      include_serial_number: notes?.include_serial_number !== false,
+      items: (notes?.items || [])
+        .filter((it) => (it?.value || "").trim())
+        .map((it, idx) => ({
+          id: idx + 1,
+          value: it.value.trim(),
+        })),
+    },
   };
 };
+
 /* ───────────────────────── Main component ───────────────────────── */
 
 const PreventiveMaintenancePanel = () => {
@@ -280,12 +387,14 @@ const PreventiveMaintenancePanel = () => {
   const [checklistData, setChecklistData] = useState(null);
   const [checklistAnswers, setChecklistAnswers] = useState({});
   const [checklistLoading, setChecklistLoading] = useState(false);
+  const [savedChecklistRaw, setSavedChecklistRaw] = useState(null);
 
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { recordId } = useParams();
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "" });
+  const hasHydratedChecklistRef = useRef(false);
 
   const equipmentId = Form.useWatch("equipmentInstrumentName", form);
   const preventiveFrequency = Form.useWatch("preventiveFrequency", form);
@@ -319,7 +428,7 @@ const PreventiveMaintenancePanel = () => {
     fetchProfile();
   }, []);
 
-  // ── Fetch equipment checklist when the Checklist tab opens ──
+  // ── Fetch equipment master checklist when the Checklist tab opens ──
   useEffect(() => {
     if (activeTab !== "checklist") return;
     if (!equipmentId || !preventiveFrequency) {
@@ -338,7 +447,8 @@ const PreventiveMaintenancePanel = () => {
         );
         if (cancelled) return;
         setChecklistData(response?.data?.data || null);
-        setChecklistAnswers({});
+        // note: no longer resets checklistAnswers to {} — the hydration
+        // effect below decides whether to prefill or keep current edits
       } catch (error) {
         if (cancelled) return;
         console.error("Failed to fetch equipment checklist:", error);
@@ -356,6 +466,21 @@ const PreventiveMaintenancePanel = () => {
       cancelled = true;
     };
   }, [activeTab, equipmentId, preventiveFrequency]);
+
+  // ── Once master is loaded AND saved answers exist, hydrate once ──
+  useEffect(() => {
+    if (!checklistData) return;
+    if (hasHydratedChecklistRef.current) return;
+    if (!savedChecklistRaw) {
+      hasHydratedChecklistRef.current = true;
+      return;
+    }
+
+    setChecklistAnswers(
+      hydrateChecklistAnswers(savedChecklistRaw, checklistData)
+    );
+    hasHydratedChecklistRef.current = true;
+  }, [checklistData, savedChecklistRaw]);
 
   const fetchPreventiveMaintenceDetail = useCallback(
     async (isInitial = false) => {
@@ -434,7 +559,7 @@ const PreventiveMaintenancePanel = () => {
           processData,
           "cancellation_attachment"
         );
-        const preventiveFrequency = getProcessValue(
+        const preventiveFrequencyVal = getProcessValue(
           processData,
           "preventive_frequency"
         );
@@ -457,6 +582,12 @@ const PreventiveMaintenancePanel = () => {
         setDateOfInitiation(
           processDateOfInitiation || responseData?.initiation_date || ""
         );
+
+        // ── saved checklist from the API response ──
+        const savedChecklist =
+          responseData?.checklist_records?.[0]?.checklist_data || null;
+        setSavedChecklistRaw(savedChecklist);
+        hasHydratedChecklistRef.current = false;
 
         requiredValuesRef.current = {
           shortDescription: shortDescription || "",
@@ -500,7 +631,7 @@ const PreventiveMaintenancePanel = () => {
           qaApprovalAttachment: qaApprovalAttachment || [],
           cancellationRemark: cancellationRemark || "",
           cancellationAttachment: cancellationAttachment || [],
-          preventiveFrequency: preventiveFrequency || "",
+          preventiveFrequency: preventiveFrequencyVal || "",
         });
       } catch (error) {
         console.error("Failed to fetch preventive maintenance detail:", error);
@@ -657,6 +788,8 @@ const PreventiveMaintenancePanel = () => {
 
   const handleSave = async () => {
     if (isSaving || isLoading) return;
+
+    // 1) Standard form validation
     const missingFields = validatePreventiveMaintenceForm(
       form,
       requiredValuesRef.current
@@ -676,30 +809,32 @@ const PreventiveMaintenancePanel = () => {
       return;
     }
 
-      // 2) Checklist required-field validation
-  if (checklistData) {
-    const missingChecklist = getEmptyChecklistFields(
-      checklistData,
-      checklistAnswers
-    );
-
-    if (missingChecklist.length > 0) {
-      const first = missingChecklist[0];
-      const remaining = missingChecklist.length - 1;
-
-      toast.error(
-        `Checklist field "${first.columnName}" is required for: ${first.questionText}` +
-          (remaining > 0
-            ? ` (+${remaining} more required field${
-                remaining === 1 ? "" : "s"
-              } missing)`
-            : "")
+    // 2) Checklist required-field validation
+    if (checklistData) {
+      const missingChecklist = getEmptyChecklistFields(
+        checklistData,
+        checklistAnswers
       );
 
-      setActiveTab("checklist");
-      return;
+      if (missingChecklist.length > 0) {
+        const first = missingChecklist[0];
+        const remaining = missingChecklist.length - 1;
+
+        toast.error(
+          `Checklist field "${first.columnName}" is required for: ${first.questionText}` +
+            (remaining > 0
+              ? ` (+${remaining} more required field${
+                  remaining === 1 ? "" : "s"
+                } missing)`
+              : "")
+        );
+
+        setActiveTab("checklist");
+        return;
+      }
     }
-  }
+
+    // 3) All good — submit
     form.submit();
   };
 
@@ -794,51 +929,6 @@ const PreventiveMaintenancePanel = () => {
   const visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")
     : TABS.filter((tab) => tab.id !== "cancellation");
-
-    const getEmptyChecklistFields = (structure, answers) => {
-  if (!structure?.questions?.length) return [];
-
-  const missing = [];
-
-  structure.questions.forEach((question) => {
-    const cells = question.data_cells || {};
-
-    Object.keys(cells).forEach((colId) => {
-      const cell = cells[colId];
-      if (cell?.required !== true) return;
-
-      const val = answers?.[question.id]?.[colId];
-
-      const isEmpty =
-        val === undefined ||
-        val === null ||
-        val === "" ||
-        val === false ||
-        (Array.isArray(val) && val.length === 0) ||
-        (typeof val === "object" &&
-          !Array.isArray(val) &&
-          val.checked !== true);
-
-      if (!isEmpty) return;
-
-      const col = (structure.data_columns || []).find(
-        (c) => String(c.id) === String(colId)
-      );
-
-      const questionText =
-        Object.values(question.values || {})
-          .filter(Boolean)
-          .join(" ") || `Question ${question.id}`;
-
-      missing.push({
-        columnName: col?.column_header || `Column ${colId}`,
-        questionText,
-      });
-    });
-  });
-
-  return missing;
-};
 
   return (
     <div className="w-full">

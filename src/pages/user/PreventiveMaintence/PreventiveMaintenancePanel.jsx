@@ -23,6 +23,7 @@ import { getProfile } from "../../../services/authApi";
 import { getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
 import {
   executePreventiveMaintenceActivity,
+  getEquipmentMasterChecklist,
   getPreventiveMaintenceDetail,
   updatePreventiveMaintence,
 } from "../../../services/usersApi/preventive";
@@ -36,6 +37,7 @@ import {
   getAllPermissions,
   getAllStages,
 } from "../../../services/usersApi/workflowCommonApi";
+import ChecklistInput from "../../../components/common/ChecklistInput/ChecklistInput";
 
 dayjs.extend(customParseFormat);
 
@@ -43,12 +45,20 @@ const TABS = [
   { id: "general", label: "General Information", stageId: 13 },
   { id: "engineer-review", label: "Review By Engineer Dept", stageId: 14 },
   { id: "qa-approval", label: "QA Approval", stageId: 15 },
+  { id: "checklist", label: "Checklist" },
   { id: "activity", label: "Activity Log", stageId: 16 },
   { id: "cancellation", label: "Cancellation", stageId: 17 },
 ];
 
 const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
+];
+
+const SELECTION_TYPES = [
+  "single_select",
+  "multi_select",
+  "single_select_checkbox",
+  "multi_select_checkbox",
 ];
 
 const getProcessValue = (processData = [], key) => {
@@ -102,13 +112,13 @@ const buildProcessData = (values, systemFields) => [
       ? dayjs(values.nextPreventiveDate).format("DD/MM/YYYY")
       : "",
   },
-  { key: "remark", label: "Remark", value: values?.remark || "" },
   {
-    key: "attachment",
-    label: "Attachment",
-    // value: values?.attachment || [],
-    value:  [],
+    key: "preventive_frequency",
+    label: "Preventive Frequency",
+    value: values?.preventiveFrequency || "",
   },
+  { key: "remark", label: "Remark", value: values?.remark || "" },
+  { key: "attachment", label: "Attachment", value: [] },
   {
     key: "engineer_review_comments",
     label: "Review By Engineer Dept Comments",
@@ -117,18 +127,14 @@ const buildProcessData = (values, systemFields) => [
   {
     key: "engineer_review_attachment",
     label: "Review By Engineer Dept Attachment",
-    value:  [],
+    value: [],
   },
   {
     key: "qa_approval_comments",
     label: "QA Approval Comments",
     value: values?.qaApprovalComments || "",
   },
-  {
-    key: "qa_approval_attachment",
-    label: "QA Approval Attachment",
-    value:  [],
-  },
+  { key: "qa_approval_attachment", label: "QA Approval Attachment", value: [] },
   {
     key: "cancellation_remark",
     label: "Cancellation Remark",
@@ -137,7 +143,7 @@ const buildProcessData = (values, systemFields) => [
   {
     key: "cancellation_attachment",
     label: "Cancellation Attachment",
-    value:  [],
+    value: [],
   },
 ];
 
@@ -151,6 +157,96 @@ const validatePreventiveMaintenceForm = (form, storedRequired) => {
     return value === undefined || value === null || value === "";
   });
 };
+
+/* ───────────────────────── Checklist payload builder ───────────────────── */
+
+const buildChecklistPayload = (structure, answers) => {
+  if (!structure) {
+    return {
+      checklist_name: "",
+      include_serial_number: false,
+      questions: [],
+    };
+  }
+
+  const {
+    checklist_name = "",
+    include_serial_number = false,
+    question_columns = [],
+    data_columns = [],
+    questions = [],
+  } = structure;
+
+  const getCell = (question, columnId) =>
+    question.data_cells?.[columnId] ??
+    question.data_cells?.[String(columnId)] ??
+    null;
+
+  // Find the data column header by id (data_columns are the response fields)
+  const getColumnName = (columnId) => {
+    const col = data_columns.find(
+      (c) => c.id === columnId || String(c.id) === String(columnId)
+    );
+    return col?.column_header || "";
+  };
+
+  // Turn an option id (or array of ids) into its display label(s)
+  const resolveOptionValue = (question, columnId, rawValue) => {
+    const cell = getCell(question, columnId);
+    const options = cell?.options || [];
+    const toLabel = (id) => {
+      const opt = options.find((o) => o.id === id);
+      return opt ? opt.value : id;
+    };
+    if (Array.isArray(rawValue)) return rawValue.map(toLabel);
+    return toLabel(rawValue);
+  };
+
+  return {
+    checklist_name,
+    include_serial_number,
+    questions: questions.map((question) => {
+      // question text keyed by question column id (supports multiple columns)
+      const questionObj = {};
+      question_columns.forEach((col) => {
+        const v =
+          question.values?.[col.id] ?? question.values?.[String(col.id)];
+        if (v !== undefined && v !== null && v !== "") {
+          questionObj[col.id] = v;
+        }
+      });
+
+      const qAnswers = answers?.[question.id] || {};
+
+      const values = Object.entries(qAnswers)
+        .filter(([, v]) => {
+          if (v === undefined || v === null || v === "") return false;
+          if (Array.isArray(v) && v.length === 0) return false;
+          return true;
+        })
+        .map(([columnId, rawValue]) => {
+          const cell = getCell(question, columnId);
+          const fieldType = cell?.field_type;
+          const value = SELECTION_TYPES.includes(fieldType)
+            ? resolveOptionValue(question, columnId, rawValue)
+            : rawValue;
+
+          return {
+            column_id: Number(columnId),
+            column_name: getColumnName(columnId),
+            value,
+          };
+        });
+
+      return {
+        question_id: question.id,
+        question: questionObj,
+        values,
+      };
+    }),
+  };
+};
+/* ───────────────────────── Main component ───────────────────────── */
 
 const PreventiveMaintenancePanel = () => {
   const [activeTab, setActiveTab] = useState("general");
@@ -179,11 +275,20 @@ const PreventiveMaintenancePanel = () => {
   const [siteLocationCode, setSiteLocationCode] = useState("");
   const [processName, setProcessName] = useState("");
   const [userRoles, setUserRoles] = useState([]);
+
+  // checklist state
+  const [checklistData, setChecklistData] = useState(null);
+  const [checklistAnswers, setChecklistAnswers] = useState({});
+  const [checklistLoading, setChecklistLoading] = useState(false);
+
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { recordId } = useParams();
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "" });
+
+  const equipmentId = Form.useWatch("equipmentInstrumentName", form);
+  const preventiveFrequency = Form.useWatch("preventiveFrequency", form);
 
   useEffect(() => {
     equipmentMapRef.current = equipmentMap;
@@ -214,28 +319,43 @@ const PreventiveMaintenancePanel = () => {
     fetchProfile();
   }, []);
 
+  // ── Fetch equipment checklist when the Checklist tab opens ──
   useEffect(() => {
-    const fetchEquipment = async () => {
+    if (activeTab !== "checklist") return;
+    if (!equipmentId || !preventiveFrequency) {
+      setChecklistData(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchChecklist = async () => {
       try {
-        setEquipmentLoading(true);
-        const response = await getAllEquipmentData();
-        const data = response?.data?.data || [];
-        const options = data.map((item) => ({ value: item.id, label: item.name }));
-        const map = {};
-        data.forEach((item) => {
-          map[item.id] = item;
-        });
-        setEquipmentOptions(options);
-        setEquipmentMap(map);
+        setChecklistLoading(true);
+        const response = await getEquipmentMasterChecklist(
+          equipmentId,
+          preventiveFrequency
+        );
+        if (cancelled) return;
+        setChecklistData(response?.data?.data || null);
+        setChecklistAnswers({});
       } catch (error) {
-        console.error("Failed to fetch equipment:", error);
-        toast.error("Could not load equipment list.");
+        if (cancelled) return;
+        console.error("Failed to fetch equipment checklist:", error);
+        toast.error(
+          error?.response?.data?.message || "Failed to load checklist."
+        );
+        setChecklistData(null);
       } finally {
-        setEquipmentLoading(false);
+        if (!cancelled) setChecklistLoading(false);
       }
     };
-    fetchEquipment();
-  }, []);
+
+    fetchChecklist();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, equipmentId, preventiveFrequency]);
 
   const fetchPreventiveMaintenceDetail = useCallback(
     async (isInitial = false) => {
@@ -314,6 +434,10 @@ const PreventiveMaintenancePanel = () => {
           processData,
           "cancellation_attachment"
         );
+        const preventiveFrequency = getProcessValue(
+          processData,
+          "preventive_frequency"
+        );
 
         setSiteLocationCode(locationCode || "");
 
@@ -364,7 +488,9 @@ const PreventiveMaintenancePanel = () => {
           block: block || "",
           department: department || "",
           location: locationVal || "",
-          previousPreventiveDate: prevDate ? dayjs(prevDate, "DD/MM/YYYY") : null,
+          previousPreventiveDate: prevDate
+            ? dayjs(prevDate, "DD/MM/YYYY")
+            : null,
           nextPreventiveDate: nextDate ? dayjs(nextDate, "DD/MM/YYYY") : null,
           remark: remark || "",
           attachment: attachment || [],
@@ -374,6 +500,7 @@ const PreventiveMaintenancePanel = () => {
           qaApprovalAttachment: qaApprovalAttachment || [],
           cancellationRemark: cancellationRemark || "",
           cancellationAttachment: cancellationAttachment || [],
+          preventiveFrequency: preventiveFrequency || "",
         });
       } catch (error) {
         console.error("Failed to fetch preventive maintenance detail:", error);
@@ -563,6 +690,10 @@ const PreventiveMaintenancePanel = () => {
       });
 
       const processData = buildProcessData(mergedValues, systemFields);
+      const checklistPayload = buildChecklistPayload(
+        checklistData,
+        checklistAnswers
+      );
 
       const payload = {
         process_id: Number(processId),
@@ -575,7 +706,7 @@ const PreventiveMaintenancePanel = () => {
           mergedValues?.dateOfInitiation || dateOfInitiation || "",
         process_data: processData,
         gridData: [],
-        checklistData: [],
+        checklistData: checklistPayload,
       };
 
       const response = await updatePreventiveMaintence(recordId, payload);
@@ -792,9 +923,30 @@ const PreventiveMaintenancePanel = () => {
                 disabled={!isGeneralEditable}
               />
             </Form.Item>
+
+            <Form.Item
+              name="preventiveFrequency"
+              label="Preventive Frequency"
+              className="!mb-4"
+            >
+              <FormSelect
+                placeholder="—"
+                options={[
+                  { value: "monthly", label: "Monthly" },
+                  { value: "quarterly", label: "Quarterly" },
+                  { value: "half-yearly", label: "Half Yearly" },
+                  { value: "yearly", label: "Yearly" },
+                ]}
+                disabled
+              />
+            </Form.Item>
           </div>
 
-          <Form.Item name="remark" label="Remark" className="!mb-4 md:col-span-2">
+          <Form.Item
+            name="remark"
+            label="Remark"
+            className="!mb-4 md:col-span-2"
+          >
             <FormTextArea
               rows={4}
               placeholder="Enter remark..."
@@ -821,7 +973,9 @@ const PreventiveMaintenancePanel = () => {
 
         {/* Review By Engineer Dept */}
         <section
-          style={{ display: activeTab === "engineer-review" ? "block" : "none" }}
+          style={{
+            display: activeTab === "engineer-review" ? "block" : "none",
+          }}
         >
           <SectionHeader title="REVIEW BY ENGINEER DEPT" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -888,6 +1042,34 @@ const PreventiveMaintenancePanel = () => {
                 disabled={!isQaApprovalEditable}
               />
             </Form.Item>
+          </div>
+        </section>
+
+        {/* Checklist */}
+        <section
+          style={{ display: activeTab === "checklist" ? "block" : "none" }}
+        >
+          <SectionHeader title="CHECKLIST" />
+
+          <div className="mt-5">
+            {checklistLoading ? (
+              <Skeleton variant="form" fields={5} />
+            ) : !checklistData ? (
+              <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
+                {!equipmentId
+                  ? "No equipment associated with this record."
+                  : !preventiveFrequency
+                  ? "No frequency was saved on this record."
+                  : "No checklist found for this equipment and frequency."}
+              </div>
+            ) : (
+              <ChecklistInput
+                data={checklistData}
+                value={checklistAnswers}
+                onChange={setChecklistAnswers}
+                disabled={!isGeneralEditable}
+              />
+            )}
           </div>
         </section>
 

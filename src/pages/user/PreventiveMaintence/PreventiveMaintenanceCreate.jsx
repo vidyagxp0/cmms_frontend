@@ -53,6 +53,7 @@ const PreventiveMaintenanceCreate = () => {
   const routeParentId =
     params.parentId || params.recordId || stateParentId || null;
 
+    console.log(rowData,"rowData>>>>")
   const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState("general");
   const [isLoading, setIsLoading] = useState(true);
@@ -76,6 +77,7 @@ const PreventiveMaintenanceCreate = () => {
   const rowPrevDate = rowData?.previousPreventiveDate || "";
   const rowNextDate = rowData?.nextPreventiveDate || "";
   const rowRemark = rowData?.remark || "";
+  const rowPreventiveFrequency = rowData?.preventiveFrequency || "";
 
   useEffect(() => {
     let isMounted = true;
@@ -161,6 +163,7 @@ const PreventiveMaintenanceCreate = () => {
           engineerReviewAttachment: [],
           qaApprovalComments: "",
           qaApprovalAttachment: [],
+          preventiveFrequency: rowPreventiveFrequency || "",
         });
       } catch (error) {
         console.error("Error loading initial data:", error);
@@ -252,6 +255,11 @@ const PreventiveMaintenanceCreate = () => {
       label: "QA Approval Attachment",
       value: values?.qaApprovalAttachment || [],
     },
+    {
+  key: "preventive_frequency",
+  label: "Preventive Frequency",
+  value: values?.preventiveFrequency || "",
+},
   ];
 
   const validateCalibrationForm = (formInstance) => {
@@ -497,6 +505,23 @@ const PreventiveMaintenanceCreate = () => {
                   placeholder="Select date"
                 />
               </Form.Item>
+
+              <Form.Item
+              name="preventiveFrequency"
+              label="Preventive Frequency"
+              className="!mb-4"
+            >
+              <FormSelect
+                placeholder="—"
+                options={[
+                  { value: "monthly", label: "Monthly" },
+                  { value: "quarterly", label: "Quarterly" },
+                  { value: "half-yearly", label: "Half Yearly" },
+                  { value: "yearly", label: "Yearly" },
+                ]}
+                disabled
+              />
+            </Form.Item>
             </div>
 
             <Form.Item name="remark" label="Remark" className="!mb-4 md:col-span-2">

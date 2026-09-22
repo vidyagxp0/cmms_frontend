@@ -35,3 +35,8 @@ export const updatePreventiveMaintence = (id, payload) =>
 export const executePreventiveMaintenceActivity = (id, payload) =>
     api.post(`/user/preventive-maintenance-record-stage/${id}`, payload);
 
+export const getEquipmentMasterChecklist = (equipmentId, frequency) => {
+  return api.get(
+    `/user/equipment-master-checklist/${equipmentId}/${(frequency)}`
+  );
+};

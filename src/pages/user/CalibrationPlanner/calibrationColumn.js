@@ -82,10 +82,10 @@ const CALIBRATION_RESULT_GRID = [
     disabled: true,
   },
   {
-    key: "calibrationNewDueDate",
-    title: "Calibration New Due Date",
+    key: "calibrationNextDueDate",
+    title: "Calibration Next Due Date",
     type: "date",
-    placeholder: "Enter Calibration New Due Date",
+    placeholder: "Enter Calibration Next Due Date",
     minWidth: 160,
   },
 ];

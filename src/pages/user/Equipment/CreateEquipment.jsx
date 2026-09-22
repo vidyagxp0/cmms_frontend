@@ -24,6 +24,11 @@ const EMPTY_CHECKLIST = {
   question_columns: [],
   data_columns: [],
   questions: [],
+  note: {
+    heading: "Note:",
+    include_serial_number: true,
+    items: [],
+  },
 };
 
 const SELECTION_TYPES = [
@@ -146,6 +151,19 @@ const CreateEquipment = () => {
       question_columns: cleanedQuestionColumns,
       data_columns: cleanedDataColumns,
       questions: cleanedQuestions,
+
+      // note travels inside checklist_config, under `notes`
+      notes: {
+        heading: checklistConfig.note?.heading?.trim() || "",
+        include_serial_number:
+          checklistConfig.note?.include_serial_number !== false,
+        items: (checklistConfig.note?.items || [])
+          .filter((it) => it?.value?.trim())
+          .map((it, idx) => ({
+            id: idx + 1,
+            value: it.value.trim(),
+          })),
+      },
     };
 
     /* ── Validation ── */

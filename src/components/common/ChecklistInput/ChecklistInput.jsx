@@ -150,6 +150,7 @@ const ChecklistInput = ({
     question_columns = [],
     data_columns = [],
     questions = [],
+    notes = null,
   } = data;
 
   const answers = value || {};
@@ -170,6 +171,13 @@ const ChecklistInput = ({
     obj?.[id] !== undefined ? obj[id] : obj?.[String(id)];
 
   const hasAnyFrequency = questions.some((q) => q.frequency_enabled);
+
+  // Normalize notes for read-only rendering
+  const noteHeading = notes?.heading?.trim() || "";
+  const noteItems = Array.isArray(notes?.items)
+    ? notes.items.filter((it) => (it?.value || "").trim())
+    : [];
+  const noteNumbered = notes?.include_serial_number !== false;
 
   /* ── eSign helpers ── */
   const buildSignPayload = (authenticated) => ({
@@ -562,6 +570,36 @@ const ChecklistInput = ({
             </tbody>
           </table>
         </div>
+
+        {/* Notes — read-only, shown below the checklist */}
+        {noteItems.length > 0 && (
+          <div className="border-t border-[#E1E7E4] bg-[#FCFDFC] px-5 py-4">
+            {noteHeading && (
+              <p className="mb-2 text-[12px] font-bold text-[#263B35]">
+                {noteHeading}
+              </p>
+            )}
+
+            <ol
+              className={
+                noteNumbered
+                  ? "list-decimal space-y-1 pl-5"
+                  : "space-y-1 pl-0"
+              }
+            >
+              {noteItems.map((note, idx) => (
+                <li
+                  key={note.id ?? idx}
+                  className={`text-[11.5px] font-medium leading-5 text-[#35453F] ${
+                    noteNumbered ? "list-decimal" : "list-none"
+                  }`}
+                >
+                  {note.value.trim()}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
       </div>
 
       {/* Authenticated eSign Modal */}

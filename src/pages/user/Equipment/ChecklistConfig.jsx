@@ -13,6 +13,7 @@ import {
   Check,
   ArrowRight,
   ArrowLeft,
+  FileText,
 } from "lucide-react";
 import { Input, Select, Switch, Tooltip, Checkbox, Radio } from "antd";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
@@ -64,6 +65,7 @@ const STEPS = [
   { key: "basic", label: "Basic Info", icon: Hash },
   { key: "columns", label: "Columns", icon: Database },
   { key: "questions", label: "Questions", icon: ListChecks },
+  { key: "note", label: "Note", icon: FileText },
   { key: "preview", label: "Preview", icon: Eye },
 ];
 
@@ -77,6 +79,12 @@ const FREQUENCY_OPTIONS = [
   "Yearly",
   "Two Yearly",
 ];
+
+const DEFAULT_NOTE = {
+  heading: "Note:",
+  include_serial_number: true,
+  items: [{ id: createId("note"), value: "" }],
+};
 
 /** Every question × data-column intersection is its own cell, so each row can
  * pick a completely different field type (and its own options, for
@@ -112,6 +120,23 @@ const ChecklistConfiguration = ({
         ? value.data_columns
         : [],
       questions: Array.isArray(value?.questions) ? value.questions : [],
+      note: {
+        heading: value?.note?.heading ?? DEFAULT_NOTE.heading,
+        include_serial_number:
+          value?.note?.include_serial_number !== false,
+        items: Array.isArray(value?.note?.items)
+          ? value.note.items.map((it, i) =>
+              typeof it === "string"
+                ? { id: `note-${i}`, value: it }
+                : {
+                    id: it.id ?? `note-${i}`,
+                    value: it.value || "",
+                  }
+            )
+          : value?.note?.items === undefined
+          ? DEFAULT_NOTE.items
+          : [],
+      },
     }),
     [value]
   );
@@ -398,6 +423,51 @@ const ChecklistConfiguration = ({
     });
   };
 
+  /* ── Note configuration ── */
+  const updateNoteHeading = (heading) => {
+    updateChecklist({
+      note: { ...checklist.note, heading },
+    });
+  };
+
+  const updateNoteSerialNumber = (v) => {
+    updateChecklist({
+      note: { ...checklist.note, include_serial_number: v },
+    });
+  };
+
+  const addNoteItem = () => {
+    updateChecklist({
+      note: {
+        ...checklist.note,
+        items: [
+          ...(checklist.note.items || []),
+          { id: createId("note"), value: "" },
+        ],
+      },
+    });
+  };
+
+  const updateNoteItem = (id, value) => {
+    updateChecklist({
+      note: {
+        ...checklist.note,
+        items: (checklist.note.items || []).map((it) =>
+          it.id === id ? { ...it, value } : it
+        ),
+      },
+    });
+  };
+
+  const deleteNoteItem = (id) => {
+    updateChecklist({
+      note: {
+        ...checklist.note,
+        items: (checklist.note.items || []).filter((it) => it.id !== id),
+      },
+    });
+  };
+
   /* ── Derived / preview helpers ── */
   const validQuestionColumns = checklist.question_columns.filter((c) =>
     c.column_header?.trim()
@@ -410,10 +480,15 @@ const ChecklistConfiguration = ({
   );
   const hasAnyFrequency = checklist.questions.some((q) => q.frequency_enabled);
 
+  const validNoteItems = (checklist.note.items || []).filter((it) =>
+    it.value?.trim()
+  );
+
   const stepCompletion = {
     basic: !!checklist.checklist_name?.trim(),
     columns: validQuestionColumns.length > 0,
     questions: validQuestions.length > 0,
+    note: true,
     preview: validQuestionColumns.length > 0 && validQuestions.length > 0,
   };
 
@@ -424,6 +499,9 @@ const ChecklistConfiguration = ({
     }`,
     questions: `${validQuestions.length} row${
       validQuestions.length === 1 ? "" : "s"
+    }`,
+    note: `${validNoteItems.length} note${
+      validNoteItems.length === 1 ? "" : "s"
     }`,
     preview: null,
   };
@@ -1117,15 +1195,135 @@ const ChecklistConfiguration = ({
               <StepFooter
                 onBack={goBack}
                 onNext={goNext}
-                nextLabel="Review Preview"
+                nextLabel="Continue to Note"
                 nextDisabled={validQuestions.length === 0}
                 disabled={disabled}
               />
             </section>
           )}
 
-          {/* ═══════════════ STEP 4 · PREVIEW ═══════════════ */}
+          {/* ═══════════════ STEP 4 · NOTE ═══════════════ */}
           {activeStep === 3 && (
+            <section>
+              <SectionHeading
+                title="Notes"
+                subtitle="Add any instructions or remarks that will appear below the checklist. This section is optional."
+              />
+
+              <div className="rounded-[12px] border border-[#DCE4E0] bg-[#FAFBF9] p-4">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-[1fr_auto] md:items-end">
+                  <div>
+                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.07em] text-[#65736E]">
+                      Note Heading
+                    </label>
+                    <Input
+                      value={checklist.note.heading}
+                      onChange={(e) => updateNoteHeading(e.target.value)}
+                      disabled={disabled}
+                      placeholder="e.g. Note:"
+                      size="large"
+                      className="!rounded-[9px] !text-[11.5px]"
+                    />
+                    <p className="mt-1.5 text-[9px] font-medium text-[#929D99]">
+                      Appears above the note list in the checklist.
+                    </p>
+                  </div>
+
+                  <div className="flex min-h-[40px] items-center gap-3 rounded-[10px] border border-[#DCE4E0] bg-white px-3 py-2.5">
+                    <div className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[7px] bg-[#EEF4F1] text-[#56766D]">
+                      <Hash size={14} strokeWidth={2} />
+                    </div>
+                    <div className="min-w-[120px]">
+                      <p className="text-[10.5px] font-bold text-[var(--color-text-primary)]">
+                        Serial Number
+                      </p>
+                      <p className="text-[8.5px] font-medium text-[#8B9692]">
+                        Include S/N in notes
+                      </p>
+                    </div>
+                    <Switch
+                      checked={checklist.note.include_serial_number}
+                      onChange={updateNoteSerialNumber}
+                      disabled={disabled}
+                      size="small"
+                    />
+                  </div>
+                </div>
+
+                {/* Note items */}
+                <div className="mt-5">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="flex items-center gap-1.5 text-[8.5px] font-bold uppercase tracking-[0.07em] text-[#8A9591]">
+                      <FileText size={11} />
+                      Notes
+                    </p>
+                    <button
+                      type="button"
+                      onClick={addNoteItem}
+                      disabled={disabled}
+                      className="inline-flex h-[28px] shrink-0 items-center gap-1.5 rounded-[7px] bg-[var(--color-primary)] px-2.5 text-[9.5px] font-bold text-white transition-all hover:bg-[var(--color-primary-hover)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Plus size={11} />
+                      Add Note
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {checklist.note.items.length === 0 ? (
+                      <EmptyState
+                        icon={<FileText size={20} />}
+                        title="No notes added"
+                        subtitle='Click "Add Note" to add instructions below the checklist.'
+                      />
+                    ) : (
+                      checklist.note.items.map((note, idx) => (
+                        <div
+                          key={note.id}
+                          className="flex items-start gap-2 rounded-[9px] border border-[#DDE5E1] bg-white p-2"
+                        >
+                          {checklist.note.include_serial_number && (
+                            <span className="mt-[6px] flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#EAF0ED] text-[8.5px] font-bold text-[#56766D]">
+                              {idx + 1}
+                            </span>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <input
+                              type="text"
+                              value={note.value}
+                              onChange={(e) =>
+                                updateNoteItem(note.id, e.target.value)
+                              }
+                              disabled={disabled}
+                              placeholder={`Note ${idx + 1}`}
+                              className="w-full border-none bg-transparent p-1 text-[11px] font-medium text-[var(--color-text-primary)] outline-none placeholder:text-[#A3ADA9] focus:ring-0"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => deleteNoteItem(note.id)}
+                            disabled={disabled}
+                            className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[7px] text-[#929E99] transition-all hover:bg-[#FCF1F1] hover:text-[#B54A4A] disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <StepFooter
+                onBack={goBack}
+                onNext={goNext}
+                nextLabel="Review Preview"
+                disabled={disabled}
+              />
+            </section>
+          )}
+
+          {/* ═══════════════ STEP 5 · PREVIEW ═══════════════ */}
+          {activeStep === 4 && (
             <section>
               <SectionHeading
                 title="Checklist Preview"
@@ -1283,6 +1481,37 @@ const ChecklistConfiguration = ({
                         )}
                       </tbody>
                     </table>
+                  </div>
+                )}
+
+                {/* Notes below the checklist */}
+                {validNoteItems.length > 0 && (
+                  <div className="border-t border-[#E1E7E4] bg-[#FCFDFC] px-5 py-4">
+                    {checklist.note.heading?.trim() && (
+                      <p className="mb-2 text-[10.5px] font-bold text-[var(--color-text-primary)]">
+                        {checklist.note.heading.trim()}
+                      </p>
+                    )}
+                    <ol
+                      className={
+                        checklist.note.include_serial_number
+                          ? "list-decimal space-y-1 pl-5"
+                          : "space-y-1 pl-0"
+                      }
+                    >
+                      {validNoteItems.map((note) => (
+                        <li
+                          key={note.id}
+                          className={`text-[10px] font-medium leading-5 text-[#35453F] ${
+                            checklist.note.include_serial_number
+                              ? "list-decimal"
+                              : "list-none"
+                          }`}
+                        >
+                          {note.value.trim()}
+                        </li>
+                      ))}
+                    </ol>
                   </div>
                 )}
               </div>

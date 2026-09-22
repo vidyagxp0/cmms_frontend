@@ -36,6 +36,11 @@ const EMPTY_CHECKLIST = {
   question_columns: [],
   data_columns: [],
   questions: [],
+  note: {
+    heading: "Note:",
+    include_serial_number: true,
+    items: [],
+  },
 };
 
 const SELECTION_TYPES = [
@@ -110,6 +115,28 @@ const normalizeIncomingChecklist = (raw) => {
             frequency: q.frequency || "",
           }))
         : [],
+
+      // note is read from `raw.notes`, with a fallback to `raw.note` for old data
+      note: (() => {
+        const rawNotes = raw?.notes ?? raw?.note ?? null;
+        const heading =
+          typeof rawNotes?.heading === "string" && rawNotes.heading.trim()
+            ? rawNotes.heading
+            : "Note:";
+        const items = Array.isArray(rawNotes?.items)
+          ? rawNotes.items.map((it, i) =>
+              typeof it === "string"
+                ? { id: `note-${i}`, value: it }
+                : { id: it.id ?? `note-${i}`, value: it.value || "" }
+            )
+          : [];
+
+        return {
+          heading,
+          include_serial_number: rawNotes?.include_serial_number !== false,
+          items,
+        };
+      })(),
     };
   }
 
@@ -138,6 +165,11 @@ const normalizeIncomingChecklist = (raw) => {
       question_columns: questionColumns,
       data_columns: [],
       questions,
+      note: {
+        heading: "Note:",
+        include_serial_number: true,
+        items: [],
+      },
     };
   }
 
@@ -304,6 +336,19 @@ const EquipmentPanel = () => {
       question_columns: cleanedQuestionColumns,
       data_columns: cleanedDataColumns,
       questions: cleanedQuestions,
+
+      // note travels inside checklist_config, under `notes`
+      notes: {
+        heading: checklistConfig.note?.heading?.trim() || "",
+        include_serial_number:
+          checklistConfig.note?.include_serial_number !== false,
+        items: (checklistConfig.note?.items || [])
+          .filter((it) => it?.value?.trim())
+          .map((it, idx) => ({
+            id: idx + 1,
+            value: it.value.trim(),
+          })),
+      },
     };
 
     /* ── Submit ── */

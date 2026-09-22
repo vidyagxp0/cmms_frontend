@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Checkbox,
   DatePicker,
@@ -10,6 +10,10 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import { ShieldCheck, CheckCircle2 } from "lucide-react";
+import { useAuthStore } from "../../../store/authStore";
+import ESignModal from "../ESignModal/ESignModal";
+import CheckboxEsignModal from "../ESignModal/CheckboxEsignModal";
 
 dayjs.extend(customParseFormat);
 
@@ -18,6 +22,7 @@ const { TextArea } = Input;
 const DATE_FORMAT = "DD/MM/YYYY";
 const TIME_FORMAT = "HH:mm";
 const DATETIME_FORMAT = "DD/MM/YYYY HH:mm";
+const SIGN_FORMAT = "DD/MM/YYYY HH:mm";
 
 const inputClass =
   "!w-full !rounded-lg !border-[#D1DBD7] !bg-white !text-[12px] !text-[#263B35] !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585] disabled:!bg-[#F3F6F4]";
@@ -91,12 +96,52 @@ const CheckOptionRow = ({ checked, disabled, onClick, label }) => (
   </button>
 );
 
+/* ── Signed display for eSign cells ── */
+const SignedDisplay = ({ signedBy, signedAt, authenticated, disabled, onClear }) => (
+  <div className="flex flex-col gap-2 rounded-lg border border-[#B7D8C4] bg-[#F0F8F2] p-2.5">
+    <div className="flex items-start gap-2">
+      <CheckCircle2
+        size={16}
+        strokeWidth={2}
+        className="mt-[1px] shrink-0 text-[#3F8B5C]"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-bold text-[#2F6B46]">
+          {authenticated ? "Authenticated eSign" : "Signed"}
+        </p>
+        <p className="mt-0.5 truncate text-[11.5px] font-semibold text-[#1F3B2C]">
+          {signedBy}
+        </p>
+        <p className="mt-0.5 text-[10.5px] font-medium text-[#5C7A69]">
+          {signedAt}
+        </p>
+      </div>
+    </div>
+    {!disabled && (
+      <button
+        type="button"
+        onClick={onClear}
+        className="self-start rounded-md border border-[#B7D8C4] bg-white px-2 py-1 text-[10px] font-semibold text-[#3F8B5C] transition-colors hover:bg-[#E5F3EA]"
+      >
+        Clear sign
+      </button>
+    )}
+  </div>
+);
+
+/* ───────────────────────── Main component ───────────────────────── */
+
 const ChecklistInput = ({
   data,
   value = {},
   onChange,
   disabled = false,
 }) => {
+  const user = useAuthStore((s) => s.user);
+
+  // { questionId, columnId, esignType } when modal is open
+  const [esignModal, setEsignModal] = useState(null);
+
   if (!data) return null;
 
   const {
@@ -124,9 +169,37 @@ const ChecklistInput = ({
   const pick = (obj, id) =>
     obj?.[id] !== undefined ? obj[id] : obj?.[String(id)];
 
-  // Show the frequency column only if at least one question has it enabled
   const hasAnyFrequency = questions.some((q) => q.frequency_enabled);
 
+  /* ── eSign helpers ── */
+  const buildSignPayload = (authenticated) => ({
+    checked: true,
+    authenticated,
+    signed_by: user?.name || user?.email || "Unknown User",
+    signed_at: dayjs().format(SIGN_FORMAT),
+  });
+
+  const openAuthenticatedSign = (questionId, columnId) => {
+    setEsignModal({ questionId, columnId });
+  };
+
+  const handleEsignVerified = ({ signed_by, signed_at }) => {
+    if (!esignModal) return;
+    const { questionId, columnId } = esignModal;
+    setAnswer(questionId, columnId, {
+      checked: true,
+      authenticated: true,
+      signed_by,
+      signed_at: dayjs(signed_at).format(SIGN_FORMAT),
+    });
+    setEsignModal(null);
+  };
+
+  const clearSign = (questionId, columnId) => {
+    setAnswer(questionId, columnId, null);
+  };
+
+  /* ── Cell renderer ── */
   const renderCell = (questionId, columnId, cell) => {
     const fieldType = cell?.field_type || "text";
     const options = cell?.options || [];
@@ -205,14 +278,64 @@ const ChecklistInput = ({
           />
         );
 
-      case "checkbox":
+      case "checkbox": {
+        const variant = cell?.checkbox_variant || "normal";
+
+        /* Normal checkbox — original behaviour */
+        if (variant !== "esign") {
+          return (
+            <Checkbox
+              checked={!!current}
+              onChange={(e) => update(e.target.checked)}
+              disabled={disabled}
+            />
+          );
+        }
+
+        const esignType = cell?.esign_type || "simple";
+        const isAuthenticated = esignType === "authenticated";
+        const signed = current && typeof current === "object" && current.checked;
+
+        /* Already signed — show the badge */
+        if (signed) {
+          return (
+            <SignedDisplay
+              signedBy={current.signed_by}
+              signedAt={current.signed_at}
+              authenticated={isAuthenticated}
+              disabled={disabled}
+              onClear={() => clearSign(questionId, columnId)}
+            />
+          );
+        }
+
+        /* Not yet signed — button */
         return (
-          <Checkbox
-            checked={!!current}
-            onChange={(e) => update(e.target.checked)}
+          <button
+            type="button"
             disabled={disabled}
-          />
+            onClick={() => {
+              if (disabled) return;
+              if (isAuthenticated) {
+                openAuthenticatedSign(questionId, columnId);
+              } else {
+                update(buildSignPayload(false));
+              }
+            }}
+            className={`flex w-full items-center gap-2.5 rounded-lg border border-[#D1DBD7] bg-white px-3 py-2.5 text-left transition-all ${
+              disabled
+                ? "cursor-not-allowed opacity-60"
+                : "cursor-pointer hover:border-[#4E7585] hover:bg-[#F5F8F6]"
+            }`}
+          >
+            <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border border-[#B9C4BF] bg-white" />
+            <span className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[#263B35]">
+              <ShieldCheck size={13} strokeWidth={1.9} className="text-[#4E7585]" />
+              {isAuthenticated ? "Authenticate & Sign" : "Sign"}
+            </span>
+          </button>
         );
+      }
 
       case "single_select":
         return (
@@ -314,114 +437,123 @@ const ChecklistInput = ({
   };
 
   return (
-    <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
-      {/* Header */}
-      <div className="border-b border-[#D7E0DC] bg-[#F7F9F8] px-5 py-3">
-        <h3 className="text-[13px] font-bold tracking-[0.02em] text-[#263B35]">
-          {checklist_name || "Checklist"}
-        </h3>
-      </div>
+    <>
+      <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
+        {/* Header */}
+        <div className="border-b border-[#D7E0DC] bg-[#F7F9F8] px-5 py-3">
+          <h3 className="text-[13px] font-bold tracking-[0.02em] text-[#263B35]">
+            {checklist_name || "Checklist"}
+          </h3>
+        </div>
 
-      {/* Table */}
-      <div className="w-full overflow-x-auto">
-        <table className="w-full min-w-[800px] border-collapse">
-          <thead>
-            <tr className="bg-[#EEF3F1]">
-              {include_serial_number && (
-                <th className="w-[60px] border-b border-r border-[#D5DFDB] px-3 py-3 text-center text-[11px] font-bold tracking-[0.01em] text-[#43564F]">
-                  Sr. No
-                </th>
-              )}
-              {question_columns.map((col) => (
-                <th
-                  key={col.id}
-                  className="border-b border-r border-[#D5DFDB] px-3 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
-                >
-                  {col.column_header}
-                </th>
-              ))}
+        {/* Table */}
+        <div className="w-full overflow-x-auto">
+          <table className="w-full min-w-[800px] border-collapse">
+            <thead>
+              <tr className="bg-[#EEF3F1]">
+                {include_serial_number && (
+                  <th className="w-[60px] border-b border-r border-[#D5DFDB] px-3 py-3 text-center text-[11px] font-bold tracking-[0.01em] text-[#43564F]">
+                    Sr. No
+                  </th>
+                )}
+                {question_columns.map((col) => (
+                  <th
+                    key={col.id}
+                    className="border-b border-r border-[#D5DFDB] px-3 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
+                  >
+                    {col.column_header}
+                  </th>
+                ))}
 
-              {hasAnyFrequency && (
-                <th className="w-[130px] border-b border-r border-[#D5DFDB] px-3 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]">
-                  Frequency
-                </th>
-              )}
+                {hasAnyFrequency && (
+                  <th className="w-[130px] border-b border-r border-[#D5DFDB] px-3 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]">
+                    Frequency
+                  </th>
+                )}
 
-              {data_columns.map((col) => (
-                <th
-                  key={col.id}
-                  className="border-b border-r border-[#D5DFDB] px-3 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
-                >
-                  {col.column_header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {questions.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={
-                    (include_serial_number ? 1 : 0) +
-                    question_columns.length +
-                    (hasAnyFrequency ? 1 : 0) +
-                    data_columns.length
-                  }
-                  className="h-[80px] px-5 text-center text-[11px] font-medium text-[#899690]"
-                >
-                  No checklist items.
-                </td>
+                {data_columns.map((col) => (
+                  <th
+                    key={col.id}
+                    className="border-b border-r border-[#D5DFDB] px-3 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
+                  >
+                    {col.column_header}
+                  </th>
+                ))}
               </tr>
-            ) : (
-              questions.map((q, idx) => (
-                <tr key={q.id} className="bg-white align-top">
-                  {include_serial_number && (
-                    <td className="border-b border-r border-[#E0E7E4] px-3 py-3 text-center text-[11px] font-semibold text-[#60716A]">
-                      {idx + 1}
-                    </td>
-                  )}
-                  {question_columns.map((col) => (
-                    <td
-                      key={col.id}
-                      className="border-b border-r border-[#E0E7E4] px-3 py-3 text-[12px] leading-5 text-[#263B35]"
-                    >
-                      {pick(q.values, col.id) || ""}
-                    </td>
-                  ))}
-
-                  {hasAnyFrequency && (
-                    <td className="border-b border-r border-[#E0E7E4] px-3 py-3 align-top">
-                      {q.frequency_enabled ? (
-                        q.frequency ? (
-                          <span className="inline-flex items-center rounded-md bg-[#EEF4F1] px-2 py-1 text-[11.5px] font-semibold text-[#3F6B58]">
-                            {q.frequency}
-                          </span>
-                        ) : (
-                          <span className="text-[11.5px] font-medium italic text-[#9AA5A1]">
-                            Not selected
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-[11.5px] text-[#9AA5A1]">—</span>
-                      )}
-                    </td>
-                  )}
-
-                  {data_columns.map((col) => (
-                    <td
-                      key={col.id}
-                      className="border-b border-r border-[#E0E7E4] px-3 py-3 align-top"
-                    >
-                      {renderCell(q.id, col.id, pick(q.data_cells, col.id))}
-                    </td>
-                  ))}
+            </thead>
+            <tbody>
+              {questions.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={
+                      (include_serial_number ? 1 : 0) +
+                      question_columns.length +
+                      (hasAnyFrequency ? 1 : 0) +
+                      data_columns.length
+                    }
+                    className="h-[80px] px-5 text-center text-[11px] font-medium text-[#899690]"
+                  >
+                    No checklist items.
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                questions.map((q, idx) => (
+                  <tr key={q.id} className="bg-white align-top">
+                    {include_serial_number && (
+                      <td className="border-b border-r border-[#E0E7E4] px-3 py-3 text-center text-[11px] font-semibold text-[#60716A]">
+                        {idx + 1}
+                      </td>
+                    )}
+                    {question_columns.map((col) => (
+                      <td
+                        key={col.id}
+                        className="border-b border-r border-[#E0E7E4] px-3 py-3 text-[12px] leading-5 text-[#263B35]"
+                      >
+                        {pick(q.values, col.id) || ""}
+                      </td>
+                    ))}
+
+                    {hasAnyFrequency && (
+                      <td className="border-b border-r border-[#E0E7E4] px-3 py-3 align-top">
+                        {q.frequency_enabled ? (
+                          q.frequency ? (
+                            <span className="inline-flex items-center rounded-md bg-[#EEF4F1] px-2 py-1 text-[11.5px] font-semibold text-[#3F6B58]">
+                              {q.frequency}
+                            </span>
+                          ) : (
+                            <span className="text-[11.5px] font-medium italic text-[#9AA5A1]">
+                              Not selected
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-[11.5px] text-[#9AA5A1]">—</span>
+                        )}
+                      </td>
+                    )}
+
+                    {data_columns.map((col) => (
+                      <td
+                        key={col.id}
+                        className="border-b border-r border-[#E0E7E4] px-3 py-3 align-top"
+                      >
+                        {renderCell(q.id, col.id, pick(q.data_cells, col.id))}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      {/* Authenticated eSign Modal */}
+      <CheckboxEsignModal
+        isOpen={!!esignModal}
+        onClose={() => setEsignModal(null)}
+        onSuccess={handleEsignVerified}
+      />
+    </>
   );
 };
 

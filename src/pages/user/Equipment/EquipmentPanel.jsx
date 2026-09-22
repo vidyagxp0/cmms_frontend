@@ -78,9 +78,8 @@ const normalizeIncomingChecklist = (raw) => {
             data_cells:
               q.data_cells && typeof q.data_cells === "object"
                 ? Object.fromEntries(
-                    Object.entries(q.data_cells).map(([colId, cell], ci) => [
-                      colId,
-                      {
+                    Object.entries(q.data_cells).map(([colId, cell], ci) => {
+                      const base = {
                         field_type: cell?.field_type || "text",
                         options: Array.isArray(cell?.options)
                           ? cell.options.map((o, oi) =>
@@ -92,8 +91,18 @@ const normalizeIncomingChecklist = (raw) => {
                                   }
                             )
                           : [],
-                      },
-                    ])
+                      };
+
+                      if (base.field_type === "checkbox") {
+                        base.checkbox_variant =
+                          cell?.checkbox_variant || "normal";
+                        if (base.checkbox_variant === "esign") {
+                          base.esign_type = cell?.esign_type || "simple";
+                        }
+                      }
+
+                      return [colId, base];
+                    })
                   )
                 : {},
             frequency_enabled: q.frequency_enabled !== false,
@@ -112,8 +121,7 @@ const normalizeIncomingChecklist = (raw) => {
     const questions = [];
     raw.forEach((cat, catIdx) => {
       (cat.checkpoints || []).forEach((cp, cpIdx) => {
-        const text =
-          typeof cp === "string" ? cp : cp?.text || "";
+        const text = typeof cp === "string" ? cp : cp?.text || "";
         if (!text.trim()) return;
         questions.push({
           id: `q-${catIdx}-${cpIdx}`,
@@ -146,8 +154,7 @@ const EquipmentPanel = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("equipment");
 
-  const [checklistConfig, setChecklistConfig] =
-    useState(EMPTY_CHECKLIST);
+  const [checklistConfig, setChecklistConfig] = useState(EMPTY_CHECKLIST);
 
   /* ───────── Fetch detail ───────── */
   useEffect(() => {
@@ -178,14 +185,11 @@ const EquipmentPanel = () => {
           equipment_type: data.equipment_type || "",
         });
 
-        setChecklistConfig(
-          normalizeIncomingChecklist(data.checklist_config)
-        );
+        setChecklistConfig(normalizeIncomingChecklist(data.checklist_config));
       } catch (error) {
         console.error("Failed to fetch equipment detail:", error);
         toast.error(
-          error?.response?.data?.message ||
-            "Failed to load equipment details."
+          error?.response?.data?.message || "Failed to load equipment details."
         );
         navigate(-1);
       } finally {
@@ -207,17 +211,16 @@ const EquipmentPanel = () => {
     const questionColumnIdMap = {};
     const dataColumnIdMap = {};
 
-    const cleanedQuestionColumns =
-      checklistConfig.question_columns
-        .filter((column) => column?.column_header?.trim() !== "")
-        .map((column, idx) => {
-          const newId = idx + 1;
-          questionColumnIdMap[column.id] = newId;
-          return {
-            id: newId,
-            column_header: column.column_header.trim(),
-          };
-        });
+    const cleanedQuestionColumns = checklistConfig.question_columns
+      .filter((column) => column?.column_header?.trim() !== "")
+      .map((column, idx) => {
+        const newId = idx + 1;
+        questionColumnIdMap[column.id] = newId;
+        return {
+          id: newId,
+          column_header: column.column_header.trim(),
+        };
+      });
 
     const cleanedDataColumns = checklistConfig.data_columns
       .filter((column) => column?.column_header?.trim() !== "")
@@ -260,7 +263,7 @@ const EquipmentPanel = () => {
           };
           const isSelection = SELECTION_TYPES.includes(cell.field_type);
 
-          data_cells[newColId] = {
+          const nextCell = {
             field_type: cell.field_type || "text",
             options: isSelection
               ? (cell.options || [])
@@ -271,6 +274,15 @@ const EquipmentPanel = () => {
                   }))
               : [],
           };
+
+          if (cell.field_type === "checkbox") {
+            nextCell.checkbox_variant = cell.checkbox_variant || "normal";
+            if (nextCell.checkbox_variant === "esign") {
+              nextCell.esign_type = cell.esign_type || "simple";
+            }
+          }
+
+          data_cells[newColId] = nextCell;
         });
 
         questionCounter += 1;
@@ -285,10 +297,8 @@ const EquipmentPanel = () => {
       .filter(Boolean);
 
     const cleanedChecklistConfig = {
-      checklist_name:
-        checklistConfig.checklist_name?.trim() || "",
-      include_serial_number:
-        checklistConfig.include_serial_number !== false,
+      checklist_name: checklistConfig.checklist_name?.trim() || "",
+      include_serial_number: checklistConfig.include_serial_number !== false,
       question_columns: cleanedQuestionColumns,
       data_columns: cleanedDataColumns,
       questions: cleanedQuestions,

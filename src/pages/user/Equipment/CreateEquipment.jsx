@@ -100,10 +100,13 @@ const CreateEquipment = () => {
           const newColId = dataColumnIdMap[col.id];
           if (!newColId) return;
 
-          const cell = row.data_cells?.[col.id] || { field_type: "text", options: [] };
+          const cell = row.data_cells?.[col.id] || {
+            field_type: "text",
+            options: [],
+          };
           const isSelection = SELECTION_TYPES.includes(cell.field_type);
 
-          data_cells[newColId] = {
+          const nextCell = {
             field_type: cell.field_type || "text",
             options: isSelection
               ? (cell.options || [])
@@ -114,6 +117,15 @@ const CreateEquipment = () => {
                   }))
               : [],
           };
+
+          if (cell.field_type === "checkbox") {
+            nextCell.checkbox_variant = cell.checkbox_variant || "normal";
+            if (nextCell.checkbox_variant === "esign") {
+              nextCell.esign_type = cell.esign_type || "simple";
+            }
+          }
+
+          data_cells[newColId] = nextCell;
         });
 
         questionCounter += 1;

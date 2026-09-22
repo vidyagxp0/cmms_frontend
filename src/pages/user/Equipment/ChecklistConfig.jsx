@@ -14,7 +14,7 @@ import {
   ArrowRight,
   ArrowLeft,
 } from "lucide-react";
-import { Input, Select, Switch, Tooltip, Checkbox } from "antd";
+import { Input, Select, Switch, Tooltip, Checkbox, Radio } from "antd";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 
 /* ─────────────────────────────── Constants ─────────────────────────────── */
@@ -38,6 +38,26 @@ const SELECTION_TYPES = [
   "multi_select",
   "single_select_checkbox",
   "multi_select_checkbox",
+];
+
+const CHECKBOX_VARIANTS = [
+  { value: "normal", label: "Normal Checkbox" },
+  { value: "esign", label: "eSign Checkbox" },
+];
+
+const ESIGN_TYPES = [
+  {
+    value: "authenticated",
+    label: "Authentication eSign",
+    tooltip:
+      "This is authenticated eSign. You must enter your username and password for verification before the sign is accepted.",
+  },
+  {
+    value: "simple",
+    label: "Simple eSign",
+    tooltip:
+      "Simple eSign: when checked, the field records the eSign username, current date and time.",
+  },
 ];
 
 const STEPS = [
@@ -64,6 +84,8 @@ const FREQUENCY_OPTIONS = [
 const createDefaultCell = () => ({
   field_type: "text",
   options: [],
+  checkbox_variant: "normal",
+  esign_type: "simple",
 });
 
 /* ─────────────────────────── Main component ─────────────────────────── */
@@ -132,7 +154,6 @@ const ChecklistConfiguration = ({
     });
   };
 
-  
   const addDataColumn = () => {
     const newCol = { id: createId("data-column"), column_header: "" };
     updateChecklist({
@@ -182,11 +203,67 @@ const ChecklistConfiguration = ({
           options = [{ id: createId("option"), value: "" }];
         }
         if (!isSelection) options = [];
+
+        const nextCell = { ...prevCell, field_type: fieldType, options };
+
+        if (fieldType === "checkbox") {
+          nextCell.checkbox_variant =
+            prevCell.checkbox_variant || "normal";
+          if (nextCell.checkbox_variant === "esign") {
+            nextCell.esign_type = prevCell.esign_type || "simple";
+          }
+        } else {
+          delete nextCell.checkbox_variant;
+          delete nextCell.esign_type;
+        }
+
         return {
           ...q,
           data_cells: {
             ...(q.data_cells || {}),
-            [columnId]: { field_type: fieldType, options },
+            [columnId]: nextCell,
+          },
+        };
+      }),
+    });
+  };
+
+  const updateDataCellCheckboxVariant = (questionId, columnId, variant) => {
+    updateChecklist({
+      questions: checklist.questions.map((q) => {
+        if (q.id !== questionId) return q;
+        const cell = getCell(q, columnId);
+        return {
+          ...q,
+          data_cells: {
+            ...(q.data_cells || {}),
+            [columnId]: {
+              ...cell,
+              checkbox_variant: variant,
+              esign_type:
+                variant === "esign"
+                  ? cell.esign_type || "simple"
+                  : cell.esign_type,
+            },
+          },
+        };
+      }),
+    });
+  };
+
+  const updateDataCellEsignType = (questionId, columnId, esignType) => {
+    updateChecklist({
+      questions: checklist.questions.map((q) => {
+        if (q.id !== questionId) return q;
+        const cell = getCell(q, columnId);
+        return {
+          ...q,
+          data_cells: {
+            ...(q.data_cells || {}),
+            [columnId]: {
+              ...cell,
+              esign_type: esignType,
+            },
           },
         };
       }),
@@ -204,7 +281,10 @@ const ChecklistConfiguration = ({
             ...(q.data_cells || {}),
             [columnId]: {
               ...cell,
-              options: [...(cell.options || []), { id: createId("option"), value: "" }],
+              options: [
+                ...(cell.options || []),
+                { id: createId("option"), value: "" },
+              ],
             },
           },
         };
@@ -341,8 +421,16 @@ const ChecklistConfiguration = ({
         return "HH : MM";
       case "datetime":
         return "DD / MM / YYYY  HH : MM";
-      case "checkbox":
+      case "checkbox": {
+        const variant = cell.checkbox_variant || "normal";
+        if (variant === "esign") {
+          const esignType = cell.esign_type || "simple";
+          return esignType === "authenticated"
+            ? "☐ eSign (Authentication)"
+            : "☐ eSign (Simple)";
+        }
         return "☐ Checkbox";
+      }
       case "single_select":
         return opts.length ? `Select: ${opts.join(" · ")}` : "Select…";
       case "multi_select":
@@ -853,6 +941,81 @@ const ChecklistConfiguration = ({
                                         >
                                           <Plus size={9} /> Add Option
                                         </button>
+                                      </div>
+                                    ) : cell.field_type === "checkbox" ? (
+                                      <div className="space-y-2">
+                                        <div>
+                                          <p className="mb-1 text-[8.5px] font-bold uppercase tracking-[0.07em] text-[#8A9591]">
+                                            Checkbox Type
+                                          </p>
+                                          <Radio.Group
+                                            value={
+                                              cell.checkbox_variant || "normal"
+                                            }
+                                            onChange={(e) =>
+                                              updateDataCellCheckboxVariant(
+                                                question.id,
+                                                col.id,
+                                                e.target.value
+                                              )
+                                            }
+                                            disabled={disabled}
+                                            size="small"
+                                            className="flex flex-col gap-1"
+                                          >
+                                            {CHECKBOX_VARIANTS.map((v) => (
+                                              <Radio
+                                                key={v.value}
+                                                value={v.value}
+                                                className="!text-[10.5px]"
+                                              >
+                                                {v.label}
+                                              </Radio>
+                                            ))}
+                                          </Radio.Group>
+                                        </div>
+
+                                        {(cell.checkbox_variant ||
+                                          "normal") === "esign" && (
+                                          <div>
+                                            <p className="mb-1 text-[8.5px] font-bold uppercase tracking-[0.07em] text-[#8A9591]">
+                                              eSign Type
+                                            </p>
+                                            <Radio.Group
+                                              value={
+                                                cell.esign_type || "simple"
+                                              }
+                                              onChange={(e) =>
+                                                updateDataCellEsignType(
+                                                  question.id,
+                                                  col.id,
+                                                  e.target.value
+                                                )
+                                              }
+                                              disabled={disabled}
+                                              size="small"
+                                              className="flex flex-col gap-1"
+                                            >
+                                              {ESIGN_TYPES.map((t) => (
+                                                <Tooltip
+                                                  key={t.value}
+                                                  title={t.tooltip}
+                                                  placement="right"
+                                                  overlayStyle={{
+                                                    maxWidth: 260,
+                                                  }}
+                                                >
+                                                  <Radio
+                                                    value={t.value}
+                                                    className="!text-[10.5px]"
+                                                  >
+                                                    {t.label}
+                                                  </Radio>
+                                                </Tooltip>
+                                              ))}
+                                            </Radio.Group>
+                                          </div>
+                                        )}
                                       </div>
                                     ) : (
                                       <p className="rounded-[6px] border border-dashed border-[#E0E6E3] bg-[#FAFBFA] px-2 py-1.5 text-[9px] font-medium text-[#9AA5A1]">

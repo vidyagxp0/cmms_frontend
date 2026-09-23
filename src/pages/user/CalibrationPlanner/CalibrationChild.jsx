@@ -44,7 +44,7 @@ const FIELD_LABELS = {
   instrumentId: "Instrument ID No.",
   location: "Location",
   make: "Make",
-  model: "Model",
+  model: "Sr.No/ Model No.",
   instrumentRange: "Instrument Range",
   leastCount: "Least Count",
   accuracy: "Accuracy",

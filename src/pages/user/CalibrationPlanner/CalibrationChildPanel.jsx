@@ -125,7 +125,7 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
     instrumentId: "Instrument ID No.",
     location: "Location",
     make: "Make",
-    model: "Model",
+    model: "Sr.No/ Model No.",
     instrumentRange: "Instrument Range",
     leastCount: "Least Count",
     accuracy: "Accuracy",
@@ -677,7 +677,7 @@ const CalibrationChildPanel = () => {
             <Form.Item name="make" label="Make" className="!mb-4">
               <FormInput placeholder="e.g. Fluke" disabled={!isManagementEditable} />
             </Form.Item>
-            <Form.Item name="model" label="Model" className="!mb-4">
+            <Form.Item name="model" label="Sr.No/ Model No." className="!mb-4">
               <FormInput placeholder="e.g. 87V" disabled={!isManagementEditable} />
             </Form.Item>
             <Form.Item name="instrumentRange" label="Instrument Range" className="!mb-4">

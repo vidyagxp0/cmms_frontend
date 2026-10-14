@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import FormInput from "../../../components/common/Form/FormInput";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
-import { addEquipment } from "../../../services/usersApi/equipmentApi";
+import { addFieldInstrument } from "../../../services/usersApi/equipmentApi";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import ChecklistConfigField from "./ChecklistConfigField";
@@ -201,7 +201,7 @@ const CreateFieldInstruments = () => {
 
             console.log("Create Field Instrument Payload:", payload);
 
-            await addEquipment(payload);
+            await addFieldInstrument(payload);
 
             toast.success("Field instrument created successfully.");
 
@@ -288,23 +288,19 @@ const CreateFieldInstruments = () => {
 
                         <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
                             {/* EQUIPMENT NAME */}
-
                             <Form.Item
                                 name="equipment_name"
                                 label={
                                     <span>
                                         Equipment Name{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
+                                        <span className="text-red-500">*</span>
                                     </span>
                                 }
                                 rules={[
                                     {
                                         required: true,
                                         whitespace: true,
-                                        message:
-                                            "Please enter equipment name",
+                                        message: "Please enter equipment name",
                                     },
                                 ]}
                                 className="!mb-4"
@@ -313,23 +309,19 @@ const CreateFieldInstruments = () => {
                             </Form.Item>
 
                             {/* INSTRUMENT NAME */}
-
                             <Form.Item
                                 name="instrument_name"
                                 label={
                                     <span>
                                         Instrument Name{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
+                                        <span className="text-red-500">*</span>
                                     </span>
                                 }
                                 rules={[
                                     {
                                         required: true,
                                         whitespace: true,
-                                        message:
-                                            "Please enter instrument name",
+                                        message: "Please enter instrument name",
                                     },
                                 ]}
                                 className="!mb-4"
@@ -338,23 +330,19 @@ const CreateFieldInstruments = () => {
                             </Form.Item>
 
                             {/* INSTRUMENT ID NO. */}
-
                             <Form.Item
                                 name="instrument_id_no"
                                 label={
                                     <span>
                                         Instrument ID No.{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
+                                        <span className="text-red-500">*</span>
                                     </span>
                                 }
                                 rules={[
                                     {
                                         required: true,
                                         whitespace: true,
-                                        message:
-                                            "Please enter instrument ID No.",
+                                        message: "Please enter instrument ID No.",
                                     },
                                 ]}
                                 className="!mb-4"
@@ -363,15 +351,12 @@ const CreateFieldInstruments = () => {
                             </Form.Item>
 
                             {/* MAKE */}
-
                             <Form.Item
                                 name="make"
                                 label={
                                     <span>
                                         Make{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
+                                        <span className="text-red-500">*</span>
                                     </span>
                                 }
                                 rules={[
@@ -387,15 +372,12 @@ const CreateFieldInstruments = () => {
                             </Form.Item>
 
                             {/* SR. NO. / MODEL NO. */}
-
                             <Form.Item
                                 name="sr_no_model_no"
                                 label={
                                     <span>
                                         Sr. No. / Model No.{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
+                                        <span className="text-red-500">*</span>
                                     </span>
                                 }
                                 rules={[
@@ -412,15 +394,12 @@ const CreateFieldInstruments = () => {
                             </Form.Item>
 
                             {/* LEAST COUNT */}
-
                             <Form.Item
                                 name="least_count"
                                 label={
                                     <span>
                                         Least Count{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
+                                        <span className="text-red-500">*</span>
                                     </span>
                                 }
                                 rules={[
@@ -436,15 +415,12 @@ const CreateFieldInstruments = () => {
                             </Form.Item>
 
                             {/* LOCATION */}
-
                             <Form.Item
                                 name="location"
                                 label={
                                     <span>
                                         Location{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
+                                        <span className="text-red-500">*</span>
                                     </span>
                                 }
                                 rules={[
@@ -460,15 +436,12 @@ const CreateFieldInstruments = () => {
                             </Form.Item>
 
                             {/* ACCURACY */}
-
                             <Form.Item
                                 name="accuracy"
                                 label={
                                     <span>
                                         Accuracy{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
+                                        <span className="text-red-500">*</span>
                                     </span>
                                 }
                                 rules={[
@@ -484,15 +457,12 @@ const CreateFieldInstruments = () => {
                             </Form.Item>
 
                             {/* INSTRUMENT RANGE */}
-
                             <Form.Item
                                 name="instrument_range"
                                 label={
                                     <span>
                                         Instrument Range{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
+                                        <span className="text-red-500">*</span>
                                     </span>
                                 }
                                 rules={[
@@ -509,15 +479,12 @@ const CreateFieldInstruments = () => {
                             </Form.Item>
 
                             {/* OPERATING RANGE */}
-
                             <Form.Item
                                 name="operating_range"
                                 label={
                                     <span>
                                         Operating Range{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
+                                        <span className="text-red-500">*</span>
                                     </span>
                                 }
                                 rules={[
@@ -534,15 +501,12 @@ const CreateFieldInstruments = () => {
                             </Form.Item>
 
                             {/* CALIBRATION TEST POINTS */}
-
                             <Form.Item
                                 name="calibration_test_points"
                                 label={
                                     <span>
                                         Calibration Test Points{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
+                                        <span className="text-red-500">*</span>
                                     </span>
                                 }
                                 rules={[
@@ -559,15 +523,12 @@ const CreateFieldInstruments = () => {
                             </Form.Item>
 
                             {/* CATEGORY */}
-
                             <Form.Item
                                 name="category"
                                 label={
                                     <span>
                                         Category{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
+                                        <span className="text-red-500">*</span>
                                     </span>
                                 }
                                 rules={[

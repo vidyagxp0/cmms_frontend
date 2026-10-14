@@ -4,14 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { Eye, Wrench, ArrowUpRight } from "lucide-react";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
-// import CreateEquipmentModal from "./CreateEquipmentModal";
-import { getAllEquipment } from "../../../services/usersApi/equipmentApi";
+import { getAllFieldInstruments } from "../../../services/usersApi/equipmentApi";
 import DataTable from "../../../components/common/DataTable/DataTable";
 
 const FieldInstrumetsDashboard = () => {
     const navigate = useNavigate();
 
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [equipment, setEquipment] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -26,13 +24,13 @@ const FieldInstrumetsDashboard = () => {
     });
 
     // ================================================================
-    // FETCH EQUIPMENT
+    // FETCH FIELD INSTRUMENTS
     // ================================================================
-    const fetchEquipment = async (page = 1, perPage = 10) => {
+    const fetchFieldInstruments = async (page = 1, perPage = 10) => {
         try {
             setLoading(true);
 
-            const response = await getAllEquipment({
+            const response = await getAllFieldInstruments({
                 page,
                 per_page: perPage,
             });
@@ -49,7 +47,7 @@ const FieldInstrumetsDashboard = () => {
                 total: paginationData?.total || 0,
             });
         } catch (error) {
-            console.error("Failed to fetch instruments:", error);
+            console.error("Failed to fetch field instruments:", error);
             setEquipment([]);
             setPagination({
                 currentPage: 1,
@@ -66,7 +64,7 @@ const FieldInstrumetsDashboard = () => {
     // INITIAL LOAD
     // ================================================================
     useEffect(() => {
-        fetchEquipment(1, 10);
+        fetchFieldInstruments(1, 10);
     }, []);
 
     // ================================================================
@@ -74,9 +72,7 @@ const FieldInstrumetsDashboard = () => {
     // ================================================================
     const columns = useMemo(
         () => [
-            // ========================================================
             // INSTRUMENT ID NO.
-            // ========================================================
             {
                 accessorKey: "instrument_id_no",
                 header: "Instrument ID",
@@ -88,7 +84,7 @@ const FieldInstrumetsDashboard = () => {
                             onClick={() => {
                                 if (!row.original?.id) return;
                                 navigate(
-                                    `/user/equipment-panel/${row.original.id}`
+                                    `/user/field-instruments-panel/${row.original.id}`
                                 );
                             }}
                             className="
@@ -120,7 +116,7 @@ const FieldInstrumetsDashboard = () => {
                                 focus-visible:ring-[var(--color-primary-muted)]
                                 focus-visible:ring-offset-1
                             "
-                            title="View instrument details"
+                            title="View field instrument details"
                         >
                             <span>{value || "-"}</span>
                             <ArrowUpRight
@@ -138,14 +134,12 @@ const FieldInstrumetsDashboard = () => {
                 },
             },
 
-            // ========================================================
-            // INSTRUMENT NAME
-            // ========================================================
+            // EQUIPMENT NAME
             {
-                accessorKey: "instrument_name",
-                header: "Instrument",
+                accessorKey: "equipment_name",
+                header: "Equipment",
                 cell: ({ row }) => {
-                    const name = row.original?.instrument_name || "-";
+                    const name = row.original?.equipment_name || "-";
                     return (
                         <div className="flex min-w-0 items-center gap-3">
                             <div
@@ -184,9 +178,18 @@ const FieldInstrumetsDashboard = () => {
                 },
             },
 
-            // ========================================================
+            // INSTRUMENT NAME
+            {
+                accessorKey: "instrument_name",
+                header: "Instrument",
+                cell: ({ getValue }) => (
+                    <span className="text-[11.5px] font-semibold text-[#566560]">
+                        {getValue() || "-"}
+                    </span>
+                ),
+            },
+
             // CATEGORY
-            // ========================================================
             {
                 accessorKey: "category",
                 header: "Category",
@@ -217,9 +220,7 @@ const FieldInstrumetsDashboard = () => {
                 },
             },
 
-            // ========================================================
             // MAKE
-            // ========================================================
             {
                 accessorKey: "make",
                 header: "Make",
@@ -230,9 +231,7 @@ const FieldInstrumetsDashboard = () => {
                 ),
             },
 
-            // ========================================================
             // SR. NO. / MODEL NO.
-            // ========================================================
             {
                 accessorKey: "sr_no_model_no",
                 header: "Sr. No. / Model No.",
@@ -256,9 +255,7 @@ const FieldInstrumetsDashboard = () => {
                 ),
             },
 
-            // ========================================================
             // CREATED
-            // ========================================================
             {
                 accessorKey: "created_at",
                 header: "Created",
@@ -301,9 +298,7 @@ const FieldInstrumetsDashboard = () => {
                 },
             },
 
-            // ========================================================
             // ACTION
-            // ========================================================
             {
                 id: "actions",
                 header: "Action",
@@ -341,7 +336,7 @@ const FieldInstrumetsDashboard = () => {
                             focus-visible:ring-[var(--color-primary-muted)]
                             focus-visible:ring-offset-1
                         "
-                        title="View instrument report"
+                        title="View field instrument report"
                     >
                         <Eye size={14} strokeWidth={1.9} />
                         <span>View Report</span>
@@ -354,20 +349,16 @@ const FieldInstrumetsDashboard = () => {
 
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
-            {/* =====================================================
-                SECONDARY ACTION BAR
-            ====================================================== */}
+            {/* ACTION BAR */}
             <DashboardActionBar
-                title="Instrument Dashboard"
+                title="Field Instruments Dashboard"
                 buttonName="Create Record"
                 navigationRoute="/user/create-field-instruments"
                 sourceRoute="/user/field-instruments-dashboard"
                 sourceType="equipment"
             />
 
-            {/* =====================================================
-                MAIN CONTENT
-            ====================================================== */}
+            {/* MAIN CONTENT */}
             <main className="min-h-0 flex-1 overflow-hidden px-0 pb-0 pt-[58px]">
                 <section className="h-full min-h-0 overflow-hidden bg-transparent">
                     <div className="h-full min-h-0 overflow-hidden">
@@ -376,36 +367,26 @@ const FieldInstrumetsDashboard = () => {
                             columns={columns}
                             loading={loading}
                             searchable
-                            searchPlaceholder="Search instruments..."
+                            searchPlaceholder="Search field instruments..."
                             pagination
                             pageSize={pagination.perPage}
                             pageSizeOptions={[10, 20, 50]}
                             sortable
                             showColumnVisibility
                             hoverable
-                            /* Backend pagination */
                             manualPagination
                             pageCount={pagination.lastPage}
                             totalRows={pagination.total}
                             onPaginationChange={({ pageIndex, pageSize }) => {
                                 const nextPage = pageIndex + 1;
-                                fetchEquipment(nextPage, pageSize);
+                                fetchFieldInstruments(nextPage, pageSize);
                             }}
-                            emptyTitle="No instruments found"
-                            emptyDescription="Instrument records will appear here once they are created."
+                            emptyTitle="No field instruments found"
+                            emptyDescription="Field instrument records will appear here once they are created."
                         />
                     </div>
                 </section>
             </main>
-
-            {/* =====================================================
-                CREATE EQUIPMENT MODAL
-            ====================================================== */}
-            {/* <CreateEquipmentModal
-                open={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onSuccess={fetchEquipment}
-            /> */}
         </div>
     );
 };

@@ -24,8 +24,8 @@ import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 
 import {
-  getEquipmentDetail,
-  updateEquipment,
+  getFieldInstrumentDetail,
+  updateFieldInstrument,
 } from "../../../services/usersApi/equipmentApi";
 import ChecklistConfigField from "./ChecklistConfigField";
 
@@ -61,7 +61,6 @@ const SELECTION_TYPES = [
 const normalizeIncomingChecklist = (raw) => {
   if (!raw) return { ...EMPTY_CHECKLIST };
 
-  /* New shape already */
   if (
     typeof raw === "object" &&
     !Array.isArray(raw) &&
@@ -122,7 +121,6 @@ const normalizeIncomingChecklist = (raw) => {
           }))
         : [],
 
-      // note is read from `raw.notes`, with a fallback to `raw.note` for old data
       note: (() => {
         const rawNotes = raw?.notes ?? raw?.note ?? null;
         const heading =
@@ -146,10 +144,8 @@ const normalizeIncomingChecklist = (raw) => {
     };
   }
 
-  /* Legacy shape: [{ category, checkpoints: [string, ...] }, ...] */
   if (Array.isArray(raw)) {
     const questionColumns = [{ id: "qc-1", column_header: "Question" }];
-
     const questions = [];
     raw.forEach((cat, catIdx) => {
       (cat.checkpoints || []).forEach((cp, cpIdx) => {
@@ -205,7 +201,7 @@ const FIeldInstrumentsPanel = () => {
       try {
         setIsLoading(true);
 
-        const response = await getEquipmentDetail(id);
+        const response = await getFieldInstrumentDetail(id);
         const data = response?.data?.data;
 
         if (!data) {
@@ -352,7 +348,6 @@ const FIeldInstrumentsPanel = () => {
       data_columns: cleanedDataColumns,
       questions: cleanedQuestions,
 
-      // note travels inside checklist_config, under `notes`
       notes: {
         heading: checklistConfig.note?.heading?.trim() || "",
         include_serial_number:
@@ -387,9 +382,11 @@ const FIeldInstrumentsPanel = () => {
         checklist_config: cleanedChecklistConfig,
       };
 
-      await updateEquipment(id, payload);
+      await updateFieldInstrument(id, payload);
 
       toast.success("Field instrument updated successfully.");
+
+      navigate("/user/field-instruments-dashboard");
     } catch (error) {
       console.error("Failed to update field instrument:", error);
       toast.error(
@@ -480,7 +477,6 @@ const FIeldInstrumentsPanel = () => {
             <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
               <div className="h-[3px] w-full bg-[var(--color-primary)]" />
 
-              {/* SECTION HEADER */}
               <div className="border-b border-[var(--color-border-soft)] px-5 py-4 sm:px-6">
                 <div className="flex items-center gap-3">
                   <div className="flex h-[36px] w-[36px] items-center justify-center rounded-[9px] border border-[#C9D9D3] bg-[#E8F0ED] text-[#56766D]">
@@ -500,7 +496,6 @@ const FIeldInstrumentsPanel = () => {
                 </div>
               </div>
 
-              {/* FORM */}
               <div className="px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
                 <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2">
                   {/* EQUIPMENT NAME */}
@@ -508,20 +503,12 @@ const FIeldInstrumentsPanel = () => {
                     name="equipment_name"
                     label={
                       <span className="flex items-center gap-1.5">
-                        <Wrench
-                          size={12}
-                          strokeWidth={1.9}
-                          className="text-[#56766D]"
-                        />
+                        <Wrench size={12} strokeWidth={1.9} className="text-[#56766D]" />
                         Equipment Name
                       </span>
                     }
                     rules={[
-                      {
-                        required: true,
-                        whitespace: true,
-                        message: "Please enter equipment name",
-                      },
+                      { required: true, whitespace: true, message: "Please enter equipment name" },
                     ]}
                     className="!mb-4"
                   >
@@ -533,20 +520,12 @@ const FIeldInstrumentsPanel = () => {
                     name="instrument_name"
                     label={
                       <span className="flex items-center gap-1.5">
-                        <Wrench
-                          size={12}
-                          strokeWidth={1.9}
-                          className="text-[#56766D]"
-                        />
+                        <Wrench size={12} strokeWidth={1.9} className="text-[#56766D]" />
                         Instrument Name
                       </span>
                     }
                     rules={[
-                      {
-                        required: true,
-                        whitespace: true,
-                        message: "Please enter instrument name",
-                      },
+                      { required: true, whitespace: true, message: "Please enter instrument name" },
                     ]}
                     className="!mb-4"
                   >
@@ -558,20 +537,12 @@ const FIeldInstrumentsPanel = () => {
                     name="instrument_id_no"
                     label={
                       <span className="flex items-center gap-1.5">
-                        <Hash
-                          size={12}
-                          strokeWidth={1.9}
-                          className="text-[#56766D]"
-                        />
+                        <Hash size={12} strokeWidth={1.9} className="text-[#56766D]" />
                         Instrument ID No.
                       </span>
                     }
                     rules={[
-                      {
-                        required: true,
-                        whitespace: true,
-                        message: "Please enter instrument ID No.",
-                      },
+                      { required: true, whitespace: true, message: "Please enter instrument ID No." },
                     ]}
                     className="!mb-4"
                   >
@@ -583,20 +554,12 @@ const FIeldInstrumentsPanel = () => {
                     name="make"
                     label={
                       <span className="flex items-center gap-1.5">
-                        <Factory
-                          size={12}
-                          strokeWidth={1.9}
-                          className="text-[#56766D]"
-                        />
+                        <Factory size={12} strokeWidth={1.9} className="text-[#56766D]" />
                         Make
                       </span>
                     }
                     rules={[
-                      {
-                        required: true,
-                        whitespace: true,
-                        message: "Please enter make",
-                      },
+                      { required: true, whitespace: true, message: "Please enter make" },
                     ]}
                     className="!mb-4"
                   >
@@ -608,20 +571,12 @@ const FIeldInstrumentsPanel = () => {
                     name="sr_no_model_no"
                     label={
                       <span className="flex items-center gap-1.5">
-                        <Cpu
-                          size={12}
-                          strokeWidth={1.9}
-                          className="text-[#56766D]"
-                        />
+                        <Cpu size={12} strokeWidth={1.9} className="text-[#56766D]" />
                         Sr. No. / Model No.
                       </span>
                     }
                     rules={[
-                      {
-                        required: true,
-                        whitespace: true,
-                        message: "Please enter Sr. No. / Model No.",
-                      },
+                      { required: true, whitespace: true, message: "Please enter Sr. No. / Model No." },
                     ]}
                     className="!mb-4"
                   >
@@ -633,20 +588,12 @@ const FIeldInstrumentsPanel = () => {
                     name="least_count"
                     label={
                       <span className="flex items-center gap-1.5">
-                        <Ruler
-                          size={12}
-                          strokeWidth={1.9}
-                          className="text-[#56766D]"
-                        />
+                        <Ruler size={12} strokeWidth={1.9} className="text-[#56766D]" />
                         Least Count
                       </span>
                     }
                     rules={[
-                      {
-                        required: true,
-                        whitespace: true,
-                        message: "Please enter least count",
-                      },
+                      { required: true, whitespace: true, message: "Please enter least count" },
                     ]}
                     className="!mb-4"
                   >
@@ -658,20 +605,12 @@ const FIeldInstrumentsPanel = () => {
                     name="location"
                     label={
                       <span className="flex items-center gap-1.5">
-                        <MapPin
-                          size={12}
-                          strokeWidth={1.9}
-                          className="text-[#56766D]"
-                        />
+                        <MapPin size={12} strokeWidth={1.9} className="text-[#56766D]" />
                         Location
                       </span>
                     }
                     rules={[
-                      {
-                        required: true,
-                        whitespace: true,
-                        message: "Please enter location",
-                      },
+                      { required: true, whitespace: true, message: "Please enter location" },
                     ]}
                     className="!mb-4"
                   >
@@ -683,20 +622,12 @@ const FIeldInstrumentsPanel = () => {
                     name="accuracy"
                     label={
                       <span className="flex items-center gap-1.5">
-                        <Target
-                          size={12}
-                          strokeWidth={1.9}
-                          className="text-[#56766D]"
-                        />
+                        <Target size={12} strokeWidth={1.9} className="text-[#56766D]" />
                         Accuracy
                       </span>
                     }
                     rules={[
-                      {
-                        required: true,
-                        whitespace: true,
-                        message: "Please enter accuracy",
-                      },
+                      { required: true, whitespace: true, message: "Please enter accuracy" },
                     ]}
                     className="!mb-4"
                   >
@@ -708,20 +639,12 @@ const FIeldInstrumentsPanel = () => {
                     name="instrument_range"
                     label={
                       <span className="flex items-center gap-1.5">
-                        <Gauge
-                          size={12}
-                          strokeWidth={1.9}
-                          className="text-[#56766D]"
-                        />
+                        <Gauge size={12} strokeWidth={1.9} className="text-[#56766D]" />
                         Instrument Range
                       </span>
                     }
                     rules={[
-                      {
-                        required: true,
-                        whitespace: true,
-                        message: "Please enter instrument range",
-                      },
+                      { required: true, whitespace: true, message: "Please enter instrument range" },
                     ]}
                     className="!mb-4"
                   >
@@ -733,20 +656,12 @@ const FIeldInstrumentsPanel = () => {
                     name="operating_range"
                     label={
                       <span className="flex items-center gap-1.5">
-                        <SlidersHorizontal
-                          size={12}
-                          strokeWidth={1.9}
-                          className="text-[#56766D]"
-                        />
+                        <SlidersHorizontal size={12} strokeWidth={1.9} className="text-[#56766D]" />
                         Operating Range
                       </span>
                     }
                     rules={[
-                      {
-                        required: true,
-                        whitespace: true,
-                        message: "Please enter operating range",
-                      },
+                      { required: true, whitespace: true, message: "Please enter operating range" },
                     ]}
                     className="!mb-4"
                   >
@@ -758,20 +673,12 @@ const FIeldInstrumentsPanel = () => {
                     name="calibration_test_points"
                     label={
                       <span className="flex items-center gap-1.5">
-                        <ClipboardList
-                          size={12}
-                          strokeWidth={1.9}
-                          className="text-[#56766D]"
-                        />
+                        <ClipboardList size={12} strokeWidth={1.9} className="text-[#56766D]" />
                         Calibration Test Points
                       </span>
                     }
                     rules={[
-                      {
-                        required: true,
-                        whitespace: true,
-                        message: "Please enter calibration test points",
-                      },
+                      { required: true, whitespace: true, message: "Please enter calibration test points" },
                     ]}
                     className="!mb-4"
                   >
@@ -783,20 +690,12 @@ const FIeldInstrumentsPanel = () => {
                     name="category"
                     label={
                       <span className="flex items-center gap-1.5">
-                        <Layers3
-                          size={12}
-                          strokeWidth={1.9}
-                          className="text-[#56766D]"
-                        />
+                        <Layers3 size={12} strokeWidth={1.9} className="text-[#56766D]" />
                         Category
                       </span>
                     }
                     rules={[
-                      {
-                        required: true,
-                        whitespace: true,
-                        message: "Please enter category",
-                      },
+                      { required: true, whitespace: true, message: "Please enter category" },
                     ]}
                     className="!mb-0 md:col-span-2"
                   >

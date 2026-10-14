@@ -22,6 +22,9 @@ import PreventivePlannerPanel from "../pages/user/PreventiveMaintence/Preventive
 import PreventiveMaintenanceCreate from "../pages/user/PreventiveMaintence/PreventiveMaintenanceCreate";
 import PreventiveMaintenancePanel from "../pages/user/PreventiveMaintence/PreventiveMaintenancePanel";
 import CalibrationManagmentAudit from "../pages/user/Audit/CalibrationManagmentAudit";
+import FieldInstrumetsDashboard from "../pages/user/FieldInstruments/FieldInstrumetsDashboard";
+import CreateFieldInstruments from "../pages/user/FieldInstruments/CreateFieldInstruments";
+import FIeldInstrumentsPanel from "../pages/user/FieldInstruments/FIeldInstrumentsPanel";
 
 function UserRoutes() {
   return (
@@ -40,6 +43,12 @@ function UserRoutes() {
         <Route path="equipment-dashboard" element={<EquipDashboard />} />
         <Route path="create-equipment" element={<CreateEquipment />} />
         <Route path="equipment-panel/:id" element={<EquipmentPanel/>} />
+
+
+        {/* Instruments Routes*/}
+        <Route path="field-instruments-dashboard" element={<FieldInstrumetsDashboard />} />
+        <Route path="create-field-instruments" element={<CreateFieldInstruments />} />
+        <Route path="field-instruments-panel/:id" element={<FIeldInstrumentsPanel />} />
 
         {/* Engineering and Calibration Routes*/}
         <Route path="engineering-dashboard" element={<EngineeringDashboard />} />

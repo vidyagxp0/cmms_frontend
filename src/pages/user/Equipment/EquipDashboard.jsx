@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Eye, Wrench, ArrowUpRight } from "lucide-react";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
-import CreateEquipmentModal from "./CreateEquipmentModal";
+// import CreateEquipmentModal from "./CreateEquipmentModal";
 import { getAllEquipment } from "../../../services/usersApi/equipmentApi";
 import DataTable from "../../../components/common/DataTable/DataTable";
 
@@ -401,11 +401,11 @@ const EquipDashboard = () => {
             {/* =====================================================
                 CREATE EQUIPMENT MODAL
             ====================================================== */}
-            <CreateEquipmentModal
+            {/* <CreateEquipmentModal
                 open={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onSuccess={fetchEquipment}
-            />
+            /> */}
         </div>
     );
 };

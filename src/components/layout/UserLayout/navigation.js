@@ -5,6 +5,8 @@ import {
   ClipboardCheck,
   CalendarClock,
   ClipboardList,
+  Gauge,
+  Compass,
 } from "lucide-react";
 
 export const DASHBOARD_NAV_ITEMS = [
@@ -15,13 +17,38 @@ export const DASHBOARD_NAV_ITEMS = [
     icon: LayoutDashboard,
     group: "root",
   },
+
+  // ─── Master Dashboard group ─────────────────────────────────────
+  // Parent (visible in sidebar)
   {
     id: "equipment",
-    label: "Equipment Dashboard",
+    label: "Master Dashboard",
     path: "/user/equipment-dashboard",
     icon: Wrench,
     group: "equipment",
   },
+
+  // Child pill #1 (hidden from sidebar, shown in ActionBar)
+  {
+    id: "instrument-dashboard",
+    label: "Instrument Dashboard",
+    path: "/user/equipment-dashboard",
+    icon: Gauge,
+    hiddenFromNav: true,
+    group: "equipment",
+  },
+
+  // Child pill #2 (hidden from sidebar, shown in ActionBar)
+  {
+    id: "field-instruments-dashboard",
+    label: "Field Instruments Dashboard",
+    path: "/user/field-instruments-dashboard",
+    icon: Compass,
+    hiddenFromNav: true,
+    group: "equipment",
+  },
+
+  // ─── Engineering group ──────────────────────────────────────────
   {
     id: "engineering",
     label: "Calibration Planner",
@@ -41,14 +68,14 @@ export const DASHBOARD_NAV_ITEMS = [
   // ─── Preventive Maintenance group ───────────────────────────────
   {
     id: "maintenance",
-    label: "Preventive Maintenance",           // 👈 UserNav item
-    path: "/user/preventive-planner-dashboard", // shared with the first pill
+    label: "Preventive Maintenance",
+    path: "/user/preventive-planner-dashboard",
     icon: CalendarClock,
     group: "maintenance",
   },
   {
     id: "preventive-planner",
-    label: "Preventive Planner",               // 👈 ActionBar pill #1
+    label: "Preventive Planner",
     path: "/user/preventive-planner-dashboard",
     icon: CalendarClock,
     hiddenFromNav: true,
@@ -56,7 +83,7 @@ export const DASHBOARD_NAV_ITEMS = [
   },
   {
     id: "preventive-maintenance",
-    label: "Preventive Maintenance", // 👈 ActionBar pill #2
+    label: "Preventive Maintenance",
     path: "/user/preventive-maintenance-dashboard",
     icon: ClipboardList,
     hiddenFromNav: true,

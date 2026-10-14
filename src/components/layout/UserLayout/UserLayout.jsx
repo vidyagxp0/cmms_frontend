@@ -15,7 +15,8 @@ function UserLayout() {
         location.pathname ===
             "/user/preventive-planner-dashboard" ||
         location.pathname ===
-            "/user/preventive-maintenance-dashboard";
+            "/user/preventive-maintenance-dashboard" || 
+            location.pathname === "/user/field-instruments-dashboard";
 
     return (
         <div

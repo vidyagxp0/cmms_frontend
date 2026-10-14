@@ -1,0 +1,839 @@
+import React, { useEffect, useState } from "react";
+import {
+  Activity,
+  Wrench,
+  Hash,
+  Factory,
+  Cpu,
+  Layers3,
+  MapPin,
+  Ruler,
+  Target,
+  Gauge,
+  SlidersHorizontal,
+  ClipboardList,
+} from "lucide-react";
+import { Form } from "antd";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
+
+import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
+import FormInput from "../../../components/common/Form/FormInput";
+import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
+import Skeleton from "../../../components/common/Skeleton/Skeleton";
+import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
+
+import {
+  getEquipmentDetail,
+  updateEquipment,
+} from "../../../services/usersApi/equipmentApi";
+import ChecklistConfigField from "./ChecklistConfigField";
+
+/* ───────────────────────── Tabs config ───────────────────────── */
+
+const TABS = [
+  { id: "instrument", label: "Field Instrument Information" },
+  { id: "checklist", label: "Checklist Configuration" },
+];
+
+const EMPTY_CHECKLIST = {
+  checklist_name: "",
+  include_serial_number: true,
+  question_columns: [],
+  data_columns: [],
+  questions: [],
+  note: {
+    heading: "Note:",
+    include_serial_number: true,
+    items: [],
+  },
+};
+
+const SELECTION_TYPES = [
+  "single_select",
+  "multi_select",
+  "single_select_checkbox",
+  "multi_select_checkbox",
+];
+
+/* ───────────────────────── Helpers ───────────────────────── */
+
+const normalizeIncomingChecklist = (raw) => {
+  if (!raw) return { ...EMPTY_CHECKLIST };
+
+  /* New shape already */
+  if (
+    typeof raw === "object" &&
+    !Array.isArray(raw) &&
+    (raw.question_columns || raw.data_columns || raw.questions)
+  ) {
+    return {
+      checklist_name: raw.checklist_name || "",
+      include_serial_number: raw.include_serial_number !== false,
+      question_columns: Array.isArray(raw.question_columns)
+        ? raw.question_columns.map((c, i) => ({
+            id: c.id ?? `qc-${i}`,
+            column_header: c.column_header || "",
+          }))
+        : [],
+      data_columns: Array.isArray(raw.data_columns)
+        ? raw.data_columns.map((c, i) => ({
+            id: c.id ?? `dc-${i}`,
+            column_header: c.column_header || "",
+          }))
+        : [],
+      questions: Array.isArray(raw.questions)
+        ? raw.questions.map((q, i) => ({
+            id: q.id ?? `q-${i}`,
+            values: q.values || {},
+            data_cells:
+              q.data_cells && typeof q.data_cells === "object"
+                ? Object.fromEntries(
+                    Object.entries(q.data_cells).map(([colId, cell], ci) => {
+                      const base = {
+                        field_type: cell?.field_type || "text",
+                        required: cell?.required === true,
+                        options: Array.isArray(cell?.options)
+                          ? cell.options.map((o, oi) =>
+                              typeof o === "string"
+                                ? { id: `opt-${i}-${ci}-${oi}`, value: o }
+                                : {
+                                    id: o.id ?? `opt-${i}-${ci}-${oi}`,
+                                    value: o.value || "",
+                                  }
+                            )
+                          : [],
+                      };
+
+                      if (base.field_type === "checkbox") {
+                        base.checkbox_variant =
+                          cell?.checkbox_variant || "normal";
+                        if (base.checkbox_variant === "esign") {
+                          base.esign_type = cell?.esign_type || "simple";
+                        }
+                      }
+
+                      return [colId, base];
+                    })
+                  )
+                : {},
+            frequency_enabled: q.frequency_enabled !== false,
+            frequency: q.frequency || "",
+          }))
+        : [],
+
+      // note is read from `raw.notes`, with a fallback to `raw.note` for old data
+      note: (() => {
+        const rawNotes = raw?.notes ?? raw?.note ?? null;
+        const heading =
+          typeof rawNotes?.heading === "string" && rawNotes.heading.trim()
+            ? rawNotes.heading
+            : "Note:";
+        const items = Array.isArray(rawNotes?.items)
+          ? rawNotes.items.map((it, i) =>
+              typeof it === "string"
+                ? { id: `note-${i}`, value: it }
+                : { id: it.id ?? `note-${i}`, value: it.value || "" }
+            )
+          : [];
+
+        return {
+          heading,
+          include_serial_number: rawNotes?.include_serial_number !== false,
+          items,
+        };
+      })(),
+    };
+  }
+
+  /* Legacy shape: [{ category, checkpoints: [string, ...] }, ...] */
+  if (Array.isArray(raw)) {
+    const questionColumns = [{ id: "qc-1", column_header: "Question" }];
+
+    const questions = [];
+    raw.forEach((cat, catIdx) => {
+      (cat.checkpoints || []).forEach((cp, cpIdx) => {
+        const text = typeof cp === "string" ? cp : cp?.text || "";
+        if (!text.trim()) return;
+        questions.push({
+          id: `q-${catIdx}-${cpIdx}`,
+          values: { "qc-1": text },
+          data_cells: {},
+        });
+      });
+    });
+
+    return {
+      checklist_name: "",
+      include_serial_number: true,
+      question_columns: questionColumns,
+      data_columns: [],
+      questions,
+      note: {
+        heading: "Note:",
+        include_serial_number: true,
+        items: [],
+      },
+    };
+  }
+
+  return { ...EMPTY_CHECKLIST };
+};
+
+/* ───────────────────────── Component ───────────────────────── */
+
+const FIeldInstrumentsPanel = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [form] = Form.useForm();
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("instrument");
+
+  const [checklistConfig, setChecklistConfig] = useState(EMPTY_CHECKLIST);
+
+  /* ───────── Fetch detail ───────── */
+  useEffect(() => {
+    const fetchDetail = async () => {
+      if (!id) {
+        toast.error("Field instrument ID is missing.");
+        navigate(-1);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+
+        const response = await getEquipmentDetail(id);
+        const data = response?.data?.data;
+
+        if (!data) {
+          toast.error("Field instrument not found.");
+          navigate(-1);
+          return;
+        }
+
+        form.setFieldsValue({
+          equipment_name:
+            data.equipment_name || data.name || data.instrument_name || "",
+          instrument_name: data.instrument_name || "",
+          instrument_id_no:
+            data.instrument_id_no || data.equipment_id || "",
+          make: data.make || "",
+          sr_no_model_no: data.sr_no_model_no || data.model || "",
+          least_count: data.least_count || "",
+          location: data.location || "",
+          accuracy: data.accuracy || "",
+          instrument_range: data.instrument_range || "",
+          operating_range: data.operating_range || "",
+          calibration_test_points: data.calibration_test_points || "",
+          category: data.category || data.equipment_type || "",
+        });
+
+        setChecklistConfig(normalizeIncomingChecklist(data.checklist_config));
+      } catch (error) {
+        console.error("Failed to fetch field instrument detail:", error);
+        toast.error(
+          error?.response?.data?.message ||
+            "Failed to load field instrument details."
+        );
+        navigate(-1);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDetail();
+  }, [id, form, navigate]);
+
+  /* ───────── Tab switch (free navigation) ───────── */
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+  };
+
+  /* ───────── Submit ───────── */
+  const handleSubmit = async (values) => {
+    if (isSaving) return;
+
+    const questionColumnIdMap = {};
+    const dataColumnIdMap = {};
+
+    const cleanedQuestionColumns = checklistConfig.question_columns
+      .filter((column) => column?.column_header?.trim() !== "")
+      .map((column, idx) => {
+        const newId = idx + 1;
+        questionColumnIdMap[column.id] = newId;
+        return {
+          id: newId,
+          column_header: column.column_header.trim(),
+        };
+      });
+
+    const cleanedDataColumns = checklistConfig.data_columns
+      .filter((column) => column?.column_header?.trim() !== "")
+      .map((column, idx) => {
+        const newId = idx + 1;
+        dataColumnIdMap[column.id] = newId;
+        return {
+          id: newId,
+          column_header: column.column_header.trim(),
+        };
+      });
+
+    let questionCounter = 0;
+
+    const cleanedQuestions = checklistConfig.questions
+      .map((row) => {
+        const questionValues = {};
+        let hasAny = false;
+
+        checklistConfig.question_columns.forEach((col) => {
+          const newColId = questionColumnIdMap[col.id];
+          if (!newColId) return;
+
+          const v = row.values?.[col.id]?.trim() || "";
+          if (v) hasAny = true;
+
+          questionValues[newColId] = v;
+        });
+
+        if (!hasAny) return null;
+
+        const data_cells = {};
+        checklistConfig.data_columns.forEach((col) => {
+          const newColId = dataColumnIdMap[col.id];
+          if (!newColId) return;
+
+          const cell = row.data_cells?.[col.id] || {
+            field_type: "text",
+            options: [],
+          };
+          const isSelection = SELECTION_TYPES.includes(cell.field_type);
+
+          const nextCell = {
+            field_type: cell.field_type || "text",
+            required: cell.required === true,
+            options: isSelection
+              ? (cell.options || [])
+                  .filter((o) => o?.value?.trim())
+                  .map((o, optIdx) => ({
+                    id: optIdx + 1,
+                    value: o.value.trim(),
+                  }))
+              : [],
+          };
+
+          if (cell.field_type === "checkbox") {
+            nextCell.checkbox_variant = cell.checkbox_variant || "normal";
+            if (nextCell.checkbox_variant === "esign") {
+              nextCell.esign_type = cell.esign_type || "simple";
+            }
+          }
+
+          data_cells[newColId] = nextCell;
+        });
+
+        questionCounter += 1;
+        return {
+          id: questionCounter,
+          values: questionValues,
+          data_cells,
+          frequency_enabled: row.frequency_enabled !== false,
+          frequency: row.frequency || "",
+        };
+      })
+      .filter(Boolean);
+
+    const cleanedChecklistConfig = {
+      checklist_name: checklistConfig.checklist_name?.trim() || "",
+      include_serial_number: checklistConfig.include_serial_number !== false,
+      question_columns: cleanedQuestionColumns,
+      data_columns: cleanedDataColumns,
+      questions: cleanedQuestions,
+
+      // note travels inside checklist_config, under `notes`
+      notes: {
+        heading: checklistConfig.note?.heading?.trim() || "",
+        include_serial_number:
+          checklistConfig.note?.include_serial_number !== false,
+        items: (checklistConfig.note?.items || [])
+          .filter((it) => it?.value?.trim())
+          .map((it, idx) => ({
+            id: idx + 1,
+            value: it.value.trim(),
+          })),
+      },
+    };
+
+    /* ── Submit ── */
+    try {
+      setIsSaving(true);
+
+      const payload = {
+        equipment_name: values.equipment_name?.trim() || "",
+        instrument_name: values.instrument_name?.trim() || "",
+        instrument_id_no: values.instrument_id_no?.trim() || "",
+        make: values.make?.trim() || "",
+        sr_no_model_no: values.sr_no_model_no?.trim() || "",
+        least_count: values.least_count?.trim() || "",
+        location: values.location?.trim() || "",
+        accuracy: values.accuracy?.trim() || "",
+        instrument_range: values.instrument_range?.trim() || "",
+        operating_range: values.operating_range?.trim() || "",
+        calibration_test_points:
+          values.calibration_test_points?.trim() || "",
+        category: values.category?.trim() || "",
+        checklist_config: cleanedChecklistConfig,
+      };
+
+      await updateEquipment(id, payload);
+
+      toast.success("Field instrument updated successfully.");
+    } catch (error) {
+      console.error("Failed to update field instrument:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to update field instrument. Please try again."
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (isSaving) return;
+    navigate("/user/field-instruments-dashboard");
+  };
+
+  /* ───────── Loading state ───────── */
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-full bg-[var(--color-background)] px-4 pb-10 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-7xl space-y-5">
+          <Skeleton variant="title" className="w-full" />
+          <Skeleton variant="form" fields={6} />
+        </div>
+      </div>
+    );
+  }
+
+  /* ───────── Render ───────── */
+  return (
+    <div className="min-h-full w-full bg-[var(--color-background)] px-4 pb-12 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl">
+        {/* ═══════════════ HEADER ═══════════════ */}
+        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[12px] border border-[#C7D8D2] bg-[#E8F0ED] text-[#56766D] shadow-[0_2px_8px_rgba(86,118,109,0.06)]">
+              <Wrench size={19} strokeWidth={1.9} />
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="truncate text-[22px] font-bold tracking-[-0.035em] text-[var(--color-text-primary)]">
+                  Field Instrument Details
+                </h1>
+                <span className="hidden h-[5px] w-[5px] shrink-0 rounded-full bg-[var(--color-secondary)] sm:block" />
+              </div>
+              <p className="mt-0.5 text-[10.5px] font-medium text-[var(--color-text-secondary)]">
+                Review and maintain the configuration of this field instrument asset.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ═══════════════ TABS ═══════════════ */}
+        <div className="mb-5">
+          <ProcessTabs
+            tabs={TABS}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+          />
+        </div>
+
+        {/* ═══════════════ TAB 1: FIELD INSTRUMENT INFORMATION ═══════════════ */}
+        <Form
+          form={form}
+          layout="vertical"
+          requiredMark={false}
+          onFinish={handleSubmit}
+          className="
+            w-full
+
+            [&_.ant-form-item-label>label]:!text-[10.5px]
+            [&_.ant-form-item-label>label]:!font-bold
+            [&_.ant-form-item-label>label]:!uppercase
+            [&_.ant-form-item-label>label]:!tracking-[0.07em]
+            [&_.ant-form-item-label]:!pb-1.5
+
+            [&_.ant-form-item-explain-error]:!text-[10.5px]
+            [&_.ant-form-item-required::before]:!text-[#B54A4A]
+            [&_.ant-input]:!rounded-[10px]
+          "
+        >
+          <div
+            style={{
+              display: activeTab === "instrument" ? "block" : "none",
+            }}
+          >
+            <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
+              <div className="h-[3px] w-full bg-[var(--color-primary)]" />
+
+              {/* SECTION HEADER */}
+              <div className="border-b border-[var(--color-border-soft)] px-5 py-4 sm:px-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-[36px] w-[36px] items-center justify-center rounded-[9px] border border-[#C9D9D3] bg-[#E8F0ED] text-[#56766D]">
+                    <Activity size={16} strokeWidth={1.9} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-[14px] font-bold tracking-[-0.015em] text-[var(--color-text-primary)]">
+                        Field Instrument Information
+                      </h2>
+                      <span className="h-[5px] w-[5px] rounded-full bg-[var(--color-secondary)]" />
+                    </div>
+                    <p className="mt-0.5 text-[10px] font-medium text-[var(--color-text-muted)]">
+                      Core identification and field instrument specifications.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* FORM */}
+              <div className="px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+                <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2">
+                  {/* EQUIPMENT NAME */}
+                  <Form.Item
+                    name="equipment_name"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <Wrench
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Equipment Name
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter equipment name",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter equipment name" />
+                  </Form.Item>
+
+                  {/* INSTRUMENT NAME */}
+                  <Form.Item
+                    name="instrument_name"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <Wrench
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Instrument Name
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter instrument name",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter instrument name" />
+                  </Form.Item>
+
+                  {/* INSTRUMENT ID NO. */}
+                  <Form.Item
+                    name="instrument_id_no"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <Hash
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Instrument ID No.
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter instrument ID No.",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter instrument ID No." />
+                  </Form.Item>
+
+                  {/* MAKE */}
+                  <Form.Item
+                    name="make"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <Factory
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Make
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter make",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter make" />
+                  </Form.Item>
+
+                  {/* SR. NO. / MODEL NO. */}
+                  <Form.Item
+                    name="sr_no_model_no"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <Cpu
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Sr. No. / Model No.
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter Sr. No. / Model No.",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter Sr. No. / Model No." />
+                  </Form.Item>
+
+                  {/* LEAST COUNT */}
+                  <Form.Item
+                    name="least_count"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <Ruler
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Least Count
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter least count",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter least count" />
+                  </Form.Item>
+
+                  {/* LOCATION */}
+                  <Form.Item
+                    name="location"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <MapPin
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Location
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter location",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter location" />
+                  </Form.Item>
+
+                  {/* ACCURACY */}
+                  <Form.Item
+                    name="accuracy"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <Target
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Accuracy
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter accuracy",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter accuracy" />
+                  </Form.Item>
+
+                  {/* INSTRUMENT RANGE */}
+                  <Form.Item
+                    name="instrument_range"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <Gauge
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Instrument Range
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter instrument range",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter instrument range" />
+                  </Form.Item>
+
+                  {/* OPERATING RANGE */}
+                  <Form.Item
+                    name="operating_range"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <SlidersHorizontal
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Operating Range
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter operating range",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter operating range" />
+                  </Form.Item>
+
+                  {/* CALIBRATION TEST POINTS */}
+                  <Form.Item
+                    name="calibration_test_points"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <ClipboardList
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Calibration Test Points
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter calibration test points",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter calibration test points" />
+                  </Form.Item>
+
+                  {/* CATEGORY */}
+                  <Form.Item
+                    name="category"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <Layers3
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Category
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter category",
+                      },
+                    ]}
+                    className="!mb-0 md:col-span-2"
+                  >
+                    <FormInput placeholder="Enter category" />
+                  </Form.Item>
+                </div>
+              </div>
+            </section>
+          </div>
+        </Form>
+
+        {/* ═══════════════ TAB 2: CHECKLIST CONFIGURATION ═══════════════ */}
+        {activeTab === "checklist" && (
+          <section className="mt-2 overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
+            <div className="h-[2px] w-full bg-[var(--color-secondary)]" />
+
+            <div className="p-5 sm:p-6">
+              <ChecklistConfigField
+                value={checklistConfig}
+                onChange={setChecklistConfig}
+                description="Define categorical inspection checkpoints for the field engineers."
+              />
+            </div>
+          </section>
+        )}
+      </div>
+
+      {/* ═══════════════ FLOATING ACTIONS ═══════════════ */}
+      <FloatingActionButtons
+        onSave={() => form.submit()}
+        onCancel={handleCancel}
+        isSaving={isSaving}
+        saveLabel="Update"
+        cancelLabel="Cancel"
+      />
+    </div>
+  );
+};
+
+export default FIeldInstrumentsPanel;

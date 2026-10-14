@@ -43,6 +43,12 @@ const TABS = [
 
 const REQUIRED_FIELDS = [];
 
+const ATTACHMENT_KEYS = [
+    "attachment",
+    "implementorAttachment",
+    "qaReviewAttachment",
+];
+
 const getProcessValue = (processData = [], key) => {
   if (Array.isArray(processData)) {
     const field = processData.find((item) => item?.key === key);

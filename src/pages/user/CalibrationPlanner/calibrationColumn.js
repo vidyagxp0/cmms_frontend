@@ -6,6 +6,7 @@ const CALIBRATED_BY_COLUMNS = [
     placeholder: "Enter Master Instrument Readings",
     required: true,
     minWidth: 180,
+    symbolic: true,
     toggleable: true,
     splitFields: [
       { key: "masterInstrumentReadings1", placeholder: "Master Instrument Readings 1" },
@@ -18,6 +19,7 @@ const CALIBRATED_BY_COLUMNS = [
     type: "text",
     placeholder: "Enter Unit Under Calibration Readings",
     minWidth: 160,
+    symbolic: true,
     toggleable: true,
     splitFields: [
       { key: "unitUnderCalibrationReading1", placeholder: "Unit Under Calibration Readings 1" },

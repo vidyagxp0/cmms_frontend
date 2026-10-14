@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Input, Switch, Tree } from "antd";
 import { DownOutlined } from "@ant-design/icons";
 
@@ -55,6 +55,7 @@ const SymbolicInput = ({
   placeholder = "Enter value",
   disabled = false,
   className = "",
+  compact = false, // hides the "Symbol" text label — handy inside grid cells
 }) => {
   const initial = useMemo(() => parseValueAndUnit(value), [value]);
   const [rawValue, setRawValue] = useState(initial.rawValue);
@@ -63,13 +64,24 @@ const SymbolicInput = ({
   const [symbolEnabled, setSymbolEnabled] = useState(Boolean(initial.unit));
   const [showSelector, setShowSelector] = useState(false);
 
+  // Keep the last value we emitted so we never echo the same value back to the parent.
+  const lastEmittedRef = useRef(normalizeValue(value));
+
+  // Sync local state when the prop changes (e.g. data loaded from backend).
   useEffect(() => {
     const parsed = parseValueAndUnit(value);
     setRawValue(parsed.rawValue);
-    if (parsed.unit) { setUnit(parsed.unit); setDiscipline(parsed.discipline); setSymbolEnabled(true); }
-    else if (!value) setRawValue("");
+    if (parsed.unit) {
+      setUnit(parsed.unit);
+      setDiscipline(parsed.discipline);
+      setSymbolEnabled(true);
+    } else if (!value) {
+      setRawValue("");
+    }
+    lastEmittedRef.current = normalizeValue(value);
   }, [value]);
 
+  // Auto-select the only unit when a discipline has exactly one.
   useEffect(() => {
     if (!unit && discipline) {
       const disciplineData = UNIT_MASTER.find((item) => item.discipline === discipline);
@@ -84,8 +96,19 @@ const SymbolicInput = ({
     return cleanValue;
   }, [rawValue, symbolEnabled, unit]);
 
+  // ------------------------------------------------------------------
+  // CRITICAL FIX
+  // Only notify the parent when combinedValue actually differs from the
+  // last value we emitted. This stops:
+  //   1. The mount-time onChange("") that was collapsing split views.
+  //   2. Re-emitting the prop value on every parent re-render (loop).
+  // ------------------------------------------------------------------
   useEffect(() => {
-    if (typeof onChange === "function") onChange(combinedValue);
+    if (typeof onChange !== "function") return;
+    const next = combinedValue;
+    if (next === lastEmittedRef.current) return;
+    lastEmittedRef.current = next;
+    onChange(next);
   }, [combinedValue, onChange]);
 
   const treeData = UNIT_MASTER.map((item) => ({
@@ -100,6 +123,7 @@ const SymbolicInput = ({
   }));
 
   const handleValueChange = (event) => setRawValue(event.target.value);
+
   const handleToggle = (checked) => {
     setSymbolEnabled(checked);
     if (checked) {
@@ -112,6 +136,7 @@ const SymbolicInput = ({
       setShowSelector(false);
     }
   };
+
   const handleTreeSelect = (selectedKeys, info) => {
     if (!info?.node?.isLeaf) return;
     const selectedKey = selectedKeys?.[0];
@@ -125,6 +150,7 @@ const SymbolicInput = ({
     setSymbolEnabled(true);
     setShowSelector(false);
   };
+
   const selectedTreeKeys = discipline && unit ? [`${discipline}__${unit}`] : [];
 
   return (
@@ -140,7 +166,7 @@ const SymbolicInput = ({
           />
           {symbolEnabled && unit && rawValue && (
             <span
-              className="pointer-events-none absolute left-[12px] top-1/2 -translate-y-1/2 text-sm font-medium text-[#263B35]"
+              className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-sm font-medium text-[#263B35]"
               style={{ left: `${Math.max(12, rawValue.length * 8 + 16)}px` }}
             >
               {unit}
@@ -148,7 +174,9 @@ const SymbolicInput = ({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="text-sm font-medium text-[#263B35]">Symbol</span>
+          {!compact && (
+            <span className="text-sm font-medium text-[#263B35]">Symbol</span>
+          )}
           <Switch size="small" checked={symbolEnabled} onChange={handleToggle} disabled={disabled} />
         </div>
       </div>

@@ -1,13 +1,33 @@
-import React, { useCallback, useMemo, useState, useEffect } from "react";
+import React, { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import { Plus, Trash2, Table2 } from "lucide-react";
 import { Input, InputNumber, Select, DatePicker, Switch } from "antd";
 import { useParams } from "react-router-dom";
 import dayjs from "dayjs";
 import UserModal from "../UserModal/UserModal";
 import CustomScrollContainer from "../CustomScrollbar/CustomScrollContainer";
+import SymbolicInput from "../SymbolicInput/SymbolicInput";
 import { getAllPermissions } from "../../../services/usersApi/workflowCommonApi";
 
 const { TextArea } = Input;
+
+const GridSymbolicInput = ({ value, onCommit, ...rest }) => {
+    const onCommitRef = useRef(onCommit);
+    useEffect(() => {
+        onCommitRef.current = onCommit;
+    }, [onCommit]);
+
+    const stableOnChange = useCallback((next) => {
+        onCommitRef.current?.(next);
+    }, []);
+
+    return (
+        <SymbolicInput
+            value={value ?? ""}
+            onChange={stableOnChange}
+            {...rest}
+        />
+    );
+};
 
 const UserDynamicGrid = ({
     name = "Grid",
@@ -24,7 +44,6 @@ const UserDynamicGrid = ({
     emptyTitle = "No data added yet",
     rowKey = "_rowId",
     className = "",
-    // Optional: disable permission check when grid is used outside a record context
     checkPermission = true,
     disabled = false,
 }) => {
@@ -41,7 +60,6 @@ const UserDynamicGrid = ({
         let isMounted = true;
 
         const fetchPermissions = async () => {
-            // No permission check or no record context — allow by default
             if (!checkPermission || !recordId) {
                 if (isMounted) {
                     setCanPerformAction(true);
@@ -49,7 +67,6 @@ const UserDynamicGrid = ({
                 }
                 return;
             }
-
             try {
                 setPermissionsLoading(true);
                 const response = await getAllPermissions(recordId);
@@ -65,13 +82,11 @@ const UserDynamicGrid = ({
         };
 
         fetchPermissions();
-
         return () => {
             isMounted = false;
         };
     }, [recordId, checkPermission]);
 
-    // Whether the grid should be interactive
     const isReadOnly = disabled || permissionsLoading || !canPerformAction;
     const effectiveAllowAdd = allowAdd && !isReadOnly;
     const effectiveAllowDelete = allowDelete && !isReadOnly;
@@ -92,7 +107,6 @@ const UserDynamicGrid = ({
         return initial;
     });
 
-    // ---- Sync toggle state when rows change ----
     useEffect(() => {
         setColumnToggles(prev => {
             const newToggles = { ...prev };
@@ -112,10 +126,8 @@ const UserDynamicGrid = ({
         });
     }, [rows, columns]);
 
-    // ---- Modal state for toggle OFF confirmation ----
+    // ---- Modal state ----
     const [toggleModalState, setToggleModalState] = useState({ open: false, columnKey: null });
-
-    // ---- Delete row state ----
     const [deleteRowIndex, setDeleteRowIndex] = useState(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -231,7 +243,6 @@ const UserDynamicGrid = ({
     };
 
     const isColumnDisabled = (column, row, rowIndex) => {
-        // Permission-level read-only takes priority
         if (isReadOnly) return true;
         if (typeof column.disabled === "function") {
             return column.disabled({ row, rowIndex });
@@ -245,12 +256,34 @@ const UserDynamicGrid = ({
         const disabled = isColumnDisabled(column, row, rowIndex);
         const toggleOn = column.toggleable && columnToggles[column.key];
 
-        // ---- Toggle ON: render two inputs ----
+        // ---- Toggle ON: render two inputs (each can be symbolic) ----
         if (toggleOn && column.splitFields) {
             return (
                 <div className="flex gap-2">
                     {column.splitFields.map((field) => {
                         const val = row[field.key] ?? "";
+                        // Field-level flag wins; falls back to column-level.
+                        const useSymbolic = field.symbolic ?? column.symbolic;
+
+                        if (useSymbolic) {
+                            return (
+                                <GridSymbolicInput
+                                    key={field.key}
+                                    value={val}
+                                    disabled={disabled}
+                                    placeholder={field.placeholder || `Enter ${field.key}`}
+                                    defaultDiscipline={
+                                        field.defaultDiscipline ||
+                                        column.defaultDiscipline ||
+                                        ""
+                                    }
+                                    onCommit={(next) =>
+                                        handleSplitChange(rowIndex, field.key, next)
+                                    }
+                                />
+                            );
+                        }
+
                         return (
                             <Input
                                 key={field.key}
@@ -258,7 +291,9 @@ const UserDynamicGrid = ({
                                 disabled={disabled}
                                 readOnly={column.readOnly}
                                 placeholder={field.placeholder || `Enter ${field.key}`}
-                                onChange={(e) => handleSplitChange(rowIndex, field.key, e.target.value)}
+                                onChange={(e) =>
+                                    handleSplitChange(rowIndex, field.key, e.target.value)
+                                }
                                 className="!h-10 !w-full !rounded-lg !border-[#D1DBD7] !bg-white !px-3 !text-[12px] !font-medium !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!shadow-[0_0_0_2px_rgba(78,117,133,0.08)] disabled:!cursor-not-allowed disabled:!bg-[#F3F6F4] disabled:!text-[#65746E]"
                             />
                         );
@@ -280,6 +315,19 @@ const UserDynamicGrid = ({
                 disabled,
                 onChange: handleChange,
             });
+        }
+
+        // ---- Symbolic single field ----
+        if (column.symbolic) {
+            return (
+                <GridSymbolicInput
+                    value={fieldValue ?? ""}
+                    disabled={disabled}
+                    placeholder={column.placeholder || `Enter ${column.title.toLowerCase()}`}
+                    defaultDiscipline={column.defaultDiscipline || ""}
+                    onCommit={handleChange}
+                />
+            );
         }
 
         if (column.type === "text" || !column.type) {
@@ -455,7 +503,6 @@ const UserDynamicGrid = ({
                                                 />
                                             );
                                         }
-
                                         return (
                                             <td
                                                 key={column.key}
@@ -497,7 +544,6 @@ const UserDynamicGrid = ({
                 </table>
             </CustomScrollContainer>
 
-            {/* Footer */}
             <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">
                 <span className="text-[10px] font-medium text-[#899690]">
                     {rows.length} {rows.length === 1 ? "row" : "rows"}

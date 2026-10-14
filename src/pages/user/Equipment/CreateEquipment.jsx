@@ -12,9 +12,10 @@ import SectionHeader from "../../../components/common/SectionHeader/SectionHeade
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
+/* id must match the label: "Instrument Information" → "instrument" */
 
 const TABS = [
-    { id: "equipment", label: "Instrument Information" },
+    { id: "instrument", label: "Instrument Information" },
     { id: "checklist", label: "Checklist Configuration" },
 ];
 
@@ -46,7 +47,7 @@ const CreateEquipment = () => {
 
     const [isSaving, setIsSaving] = useState(false);
     const [checklistConfig, setChecklistConfig] = useState(EMPTY_CHECKLIST);
-    const [activeTab, setActiveTab] = useState("equipment");
+    const [activeTab, setActiveTab] = useState("instrument");
 
     /* ───────── Tab switch (free navigation) ───────── */
 
@@ -92,7 +93,7 @@ const CreateEquipment = () => {
 
         const cleanedQuestions = checklistConfig.questions
             .map((row) => {
-                const values = {};
+                const questionValues = {};
                 let hasAny = false;
 
                 checklistConfig.question_columns.forEach((col) => {
@@ -104,7 +105,7 @@ const CreateEquipment = () => {
 
                     if (v) hasAny = true;
 
-                    values[newColId] = v;
+                    questionValues[newColId] = v;
                 });
 
                 if (!hasAny) return null;
@@ -155,7 +156,7 @@ const CreateEquipment = () => {
 
                 return {
                     id: questionCounter,
-                    values,
+                    values: questionValues,
                     data_cells,
                     frequency_enabled: row.frequency_enabled !== false,
                     frequency: row.frequency || "",
@@ -234,7 +235,7 @@ const CreateEquipment = () => {
 
             form.resetFields();
             setChecklistConfig({ ...EMPTY_CHECKLIST });
-            setActiveTab("equipment");
+            setActiveTab("instrument");
 
             navigate("/user/equipment-dashboard");
         } catch (error) {
@@ -256,7 +257,7 @@ const CreateEquipment = () => {
 
         form.resetFields();
         setChecklistConfig({ ...EMPTY_CHECKLIST });
-        setActiveTab("equipment");
+        setActiveTab("instrument");
 
         navigate("/user/equipment-dashboard");
     };
@@ -307,7 +308,7 @@ const CreateEquipment = () => {
                 <div
                     style={{
                         display:
-                            activeTab === "equipment" ? "block" : "none",
+                            activeTab === "instrument" ? "block" : "none",
                     }}
                 >
                     <section>

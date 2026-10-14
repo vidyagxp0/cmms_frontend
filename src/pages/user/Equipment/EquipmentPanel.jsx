@@ -6,6 +6,12 @@ import {
   Factory,
   Cpu,
   Layers3,
+  MapPin,
+  Ruler,
+  Target,
+  Gauge,
+  SlidersHorizontal,
+  ClipboardList,
 } from "lucide-react";
 import { Form } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
@@ -26,7 +32,7 @@ import {
 /* ───────────────────────── Tabs config ───────────────────────── */
 
 const TABS = [
-  { id: "equipment", label: "Equipment Information" },
+  { id: "instrument", label: "Instrument Information" },
   { id: "checklist", label: "Checklist Configuration" },
 ];
 
@@ -142,9 +148,7 @@ const normalizeIncomingChecklist = (raw) => {
 
   /* Legacy shape: [{ category, checkpoints: [string, ...] }, ...] */
   if (Array.isArray(raw)) {
-    const questionColumns = [
-      { id: "qc-1", column_header: "Question" },
-    ];
+    const questionColumns = [{ id: "qc-1", column_header: "Question" }];
 
     const questions = [];
     raw.forEach((cat, catIdx) => {
@@ -185,7 +189,7 @@ const EquipmentPanel = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("equipment");
+  const [activeTab, setActiveTab] = useState("instrument");
 
   const [checklistConfig, setChecklistConfig] = useState(EMPTY_CHECKLIST);
 
@@ -193,7 +197,7 @@ const EquipmentPanel = () => {
   useEffect(() => {
     const fetchDetail = async () => {
       if (!id) {
-        toast.error("Equipment ID is missing.");
+        toast.error("Instrument ID is missing.");
         navigate(-1);
         return;
       }
@@ -205,24 +209,30 @@ const EquipmentPanel = () => {
         const data = response?.data?.data;
 
         if (!data) {
-          toast.error("Equipment not found.");
+          toast.error("Instrument not found.");
           navigate(-1);
           return;
         }
 
         form.setFieldsValue({
-          name: data.name || "",
-          equipment_id: data.equipment_id || "",
+          instrument_name: data.instrument_name || data.name || "",
+          instrument_id_no: data.instrument_id_no || data.equipment_id || "",
           make: data.make || "",
-          model: data.model || "",
-          equipment_type: data.equipment_type || "",
+          sr_no_model_no: data.sr_no_model_no || data.model || "",
+          location: data.location || "",
+          least_count: data.least_count || "",
+          accuracy: data.accuracy || "",
+          instrument_range: data.instrument_range || "",
+          operating_range: data.operating_range || "",
+          calibration_test_points: data.calibration_test_points || "",
+          category: data.category || data.equipment_type || "",
         });
 
         setChecklistConfig(normalizeIncomingChecklist(data.checklist_config));
       } catch (error) {
-        console.error("Failed to fetch equipment detail:", error);
+        console.error("Failed to fetch instrument detail:", error);
         toast.error(
-          error?.response?.data?.message || "Failed to load equipment details."
+          error?.response?.data?.message || "Failed to load instrument details."
         );
         navigate(-1);
       } finally {
@@ -241,6 +251,7 @@ const EquipmentPanel = () => {
   /* ───────── Submit ───────── */
   const handleSubmit = async (values) => {
     if (isSaving) return;
+
     const questionColumnIdMap = {};
     const dataColumnIdMap = {};
 
@@ -270,7 +281,7 @@ const EquipmentPanel = () => {
 
     const cleanedQuestions = checklistConfig.questions
       .map((row) => {
-        const values = {};
+        const questionValues = {};
         let hasAny = false;
 
         checklistConfig.question_columns.forEach((col) => {
@@ -280,7 +291,7 @@ const EquipmentPanel = () => {
           const v = row.values?.[col.id]?.trim() || "";
           if (v) hasAny = true;
 
-          values[newColId] = v;
+          questionValues[newColId] = v;
         });
 
         if (!hasAny) return null;
@@ -322,7 +333,7 @@ const EquipmentPanel = () => {
         questionCounter += 1;
         return {
           id: questionCounter,
-          values,
+          values: questionValues,
           data_cells,
           frequency_enabled: row.frequency_enabled !== false,
           frequency: row.frequency || "",
@@ -356,22 +367,29 @@ const EquipmentPanel = () => {
       setIsSaving(true);
 
       const payload = {
-        name: values.name.trim(),
-        equipment_id: values.equipment_id.trim(),
-        make: values.make.trim(),
-        model: values.model.trim(),
-        equipment_type: values.equipment_type.trim(),
+        instrument_name: values.instrument_name?.trim() || "",
+        instrument_id_no: values.instrument_id_no?.trim() || "",
+        make: values.make?.trim() || "",
+        sr_no_model_no: values.sr_no_model_no?.trim() || "",
+        location: values.location?.trim() || "",
+        least_count: values.least_count?.trim() || "",
+        accuracy: values.accuracy?.trim() || "",
+        instrument_range: values.instrument_range?.trim() || "",
+        operating_range: values.operating_range?.trim() || "",
+        calibration_test_points:
+          values.calibration_test_points?.trim() || "",
+        category: values.category?.trim() || "",
         checklist_config: cleanedChecklistConfig,
       };
 
       await updateEquipment(id, payload);
 
-      toast.success("Equipment updated successfully.");
+      toast.success("Instrument updated successfully.");
     } catch (error) {
-      console.error("Failed to update equipment:", error);
+      console.error("Failed to update instrument:", error);
       toast.error(
         error?.response?.data?.message ||
-          "Failed to update equipment. Please try again."
+          "Failed to update instrument. Please try again."
       );
     } finally {
       setIsSaving(false);
@@ -409,12 +427,12 @@ const EquipmentPanel = () => {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="truncate text-[22px] font-bold tracking-[-0.035em] text-[var(--color-text-primary)]">
-                  Equipment Details
+                  Master Instrument Details
                 </h1>
                 <span className="hidden h-[5px] w-[5px] shrink-0 rounded-full bg-[var(--color-secondary)] sm:block" />
               </div>
               <p className="mt-0.5 text-[10.5px] font-medium text-[var(--color-text-secondary)]">
-                Review and maintain the configuration of this equipment asset.
+                Review and maintain the configuration of this master instrument asset.
               </p>
             </div>
           </div>
@@ -429,7 +447,7 @@ const EquipmentPanel = () => {
           />
         </div>
 
-        {/* ═══════════════ TAB 1: EQUIPMENT INFORMATION ═══════════════ */}
+        {/* ═══════════════ TAB 1: INSTRUMENT INFORMATION ═══════════════ */}
         <Form
           form={form}
           layout="vertical"
@@ -451,7 +469,7 @@ const EquipmentPanel = () => {
         >
           <div
             style={{
-              display: activeTab === "equipment" ? "block" : "none",
+              display: activeTab === "instrument" ? "block" : "none",
             }}
           >
             <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
@@ -466,12 +484,12 @@ const EquipmentPanel = () => {
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="text-[14px] font-bold tracking-[-0.015em] text-[var(--color-text-primary)]">
-                        Equipment Information
+                        Instrument Information
                       </h2>
                       <span className="h-[5px] w-[5px] rounded-full bg-[var(--color-secondary)]" />
                     </div>
                     <p className="mt-0.5 text-[10px] font-medium text-[var(--color-text-muted)]">
-                      Core identification and equipment specifications.
+                      Core identification and instrument specifications.
                     </p>
                   </div>
                 </div>
@@ -480,9 +498,9 @@ const EquipmentPanel = () => {
               {/* FORM */}
               <div className="px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
                 <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2">
-                  {/* EQUIPMENT NAME */}
+                  {/* INSTRUMENT NAME */}
                   <Form.Item
-                    name="name"
+                    name="instrument_name"
                     label={
                       <span className="flex items-center gap-1.5">
                         <Wrench
@@ -490,24 +508,24 @@ const EquipmentPanel = () => {
                           strokeWidth={1.9}
                           className="text-[#56766D]"
                         />
-                        Equipment Name
+                        Instrument Name
                       </span>
                     }
                     rules={[
                       {
                         required: true,
                         whitespace: true,
-                        message: "Please enter equipment name",
+                        message: "Please enter instrument name",
                       },
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="Enter equipment name" />
+                    <FormInput placeholder="Enter instrument name" />
                   </Form.Item>
 
-                  {/* EQUIPMENT ID */}
+                  {/* INSTRUMENT ID NO. */}
                   <Form.Item
-                    name="equipment_id"
+                    name="instrument_id_no"
                     label={
                       <span className="flex items-center gap-1.5">
                         <Hash
@@ -515,19 +533,19 @@ const EquipmentPanel = () => {
                           strokeWidth={1.9}
                           className="text-[#56766D]"
                         />
-                        Equipment ID
+                        Instrument ID No.
                       </span>
                     }
                     rules={[
                       {
                         required: true,
                         whitespace: true,
-                        message: "Please enter equipment ID",
+                        message: "Please enter instrument ID No.",
                       },
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="e.g. EQ-001" />
+                    <FormInput placeholder="Enter instrument ID No." />
                   </Form.Item>
 
                   {/* MAKE */}
@@ -547,17 +565,17 @@ const EquipmentPanel = () => {
                       {
                         required: true,
                         whitespace: true,
-                        message: "Please enter manufacturer",
+                        message: "Please enter make",
                       },
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="Enter manufacturer" />
+                    <FormInput placeholder="Enter make" />
                   </Form.Item>
 
-                  {/* MODEL */}
+                  {/* SR. NO. / MODEL NO. */}
                   <Form.Item
-                    name="model"
+                    name="sr_no_model_no"
                     label={
                       <span className="flex items-center gap-1.5">
                         <Cpu
@@ -565,24 +583,174 @@ const EquipmentPanel = () => {
                           strokeWidth={1.9}
                           className="text-[#56766D]"
                         />
-                        Model
+                        Sr. No. / Model No.
                       </span>
                     }
                     rules={[
                       {
                         required: true,
                         whitespace: true,
-                        message: "Please enter equipment model",
+                        message: "Please enter Sr. No. / Model No.",
                       },
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="Enter equipment model" />
+                    <FormInput placeholder="Enter Sr. No. / Model No." />
                   </Form.Item>
 
-                  {/* EQUIPMENT TYPE */}
+                  {/* LOCATION */}
                   <Form.Item
-                    name="equipment_type"
+                    name="location"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <MapPin
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Location
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter location",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter location" />
+                  </Form.Item>
+
+                  {/* LEAST COUNT */}
+                  <Form.Item
+                    name="least_count"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <Ruler
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Least Count
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter least count",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter least count" />
+                  </Form.Item>
+
+                  {/* ACCURACY */}
+                  <Form.Item
+                    name="accuracy"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <Target
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Accuracy
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter accuracy",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter accuracy" />
+                  </Form.Item>
+
+                  {/* INSTRUMENT RANGE */}
+                  <Form.Item
+                    name="instrument_range"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <Gauge
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Instrument Range
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter instrument range",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter instrument range" />
+                  </Form.Item>
+
+                  {/* OPERATING RANGE */}
+                  <Form.Item
+                    name="operating_range"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <SlidersHorizontal
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Operating Range
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter operating range",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter operating range" />
+                  </Form.Item>
+
+                  {/* CALIBRATION TEST POINTS */}
+                  <Form.Item
+                    name="calibration_test_points"
+                    label={
+                      <span className="flex items-center gap-1.5">
+                        <ClipboardList
+                          size={12}
+                          strokeWidth={1.9}
+                          className="text-[#56766D]"
+                        />
+                        Calibration Test Points
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: "Please enter calibration test points",
+                      },
+                    ]}
+                    className="!mb-4"
+                  >
+                    <FormInput placeholder="Enter calibration test points" />
+                  </Form.Item>
+
+                  {/* CATEGORY */}
+                  <Form.Item
+                    name="category"
                     label={
                       <span className="flex items-center gap-1.5">
                         <Layers3
@@ -590,19 +758,19 @@ const EquipmentPanel = () => {
                           strokeWidth={1.9}
                           className="text-[#56766D]"
                         />
-                        Equipment Type
+                        Category
                       </span>
                     }
                     rules={[
                       {
                         required: true,
                         whitespace: true,
-                        message: "Please enter equipment type",
+                        message: "Please enter category",
                       },
                     ]}
                     className="!mb-0 md:col-span-2"
                   >
-                    <FormInput placeholder="Enter equipment type" />
+                    <FormInput placeholder="Enter category" />
                   </Form.Item>
                 </div>
               </div>

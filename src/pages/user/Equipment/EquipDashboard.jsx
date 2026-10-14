@@ -1,48 +1,24 @@
-import React, {
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import {
-    Eye,
-    Wrench,
-    ArrowUpRight,
-} from "lucide-react";
+import { Eye, Wrench, ArrowUpRight } from "lucide-react";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
 import CreateEquipmentModal from "./CreateEquipmentModal";
-import {
-    getAllEquipment,
-} from "../../../services/usersApi/equipmentApi";
+import { getAllEquipment } from "../../../services/usersApi/equipmentApi";
 import DataTable from "../../../components/common/DataTable/DataTable";
 
 const EquipDashboard = () => {
     const navigate = useNavigate();
 
-    const [
-        isCreateModalOpen,
-        setIsCreateModalOpen,
-    ] = useState(false);
-
-    const [
-        equipment,
-        setEquipment,
-    ] = useState([]);
-
-    const [
-        loading,
-        setLoading,
-    ] = useState(true);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [equipment, setEquipment] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     // ================================================================
     // BACKEND PAGINATION
     // ================================================================
-    const [
-        pagination,
-        setPagination,
-    ] = useState({
+    const [pagination, setPagination] = useState({
         currentPage: 1,
         lastPage: 1,
         perPage: 10,
@@ -52,58 +28,29 @@ const EquipDashboard = () => {
     // ================================================================
     // FETCH EQUIPMENT
     // ================================================================
-    const fetchEquipment = async (
-        page = 1,
-        perPage = 10
-    ) => {
+    const fetchEquipment = async (page = 1, perPage = 10) => {
         try {
             setLoading(true);
 
-            const response =
-                await getAllEquipment({
-                    page,
-                    per_page: perPage,
-                });
+            const response = await getAllEquipment({
+                page,
+                per_page: perPage,
+            });
 
-            const paginationData =
-                response?.data?.data;
+            const paginationData = response?.data?.data;
+            const equipmentData = paginationData?.data || [];
 
-            const equipmentData =
-                paginationData?.data || [];
-
-            setEquipment(
-                Array.isArray(
-                    equipmentData
-                )
-                    ? equipmentData
-                    : []
-            );
+            setEquipment(Array.isArray(equipmentData) ? equipmentData : []);
 
             setPagination({
-                currentPage:
-                    paginationData?.current_page ||
-                    page,
-
-                lastPage:
-                    paginationData?.last_page ||
-                    1,
-
-                perPage:
-                    paginationData?.per_page ||
-                    perPage,
-
-                total:
-                    paginationData?.total ||
-                    0,
+                currentPage: paginationData?.current_page || page,
+                lastPage: paginationData?.last_page || 1,
+                perPage: paginationData?.per_page || perPage,
+                total: paginationData?.total || 0,
             });
         } catch (error) {
-            console.error(
-                "Failed to fetch equipment:",
-                error
-            );
-
+            console.error("Failed to fetch instruments:", error);
             setEquipment([]);
-
             setPagination({
                 currentPage: 1,
                 lastPage: 1,
@@ -128,34 +75,18 @@ const EquipDashboard = () => {
     const columns = useMemo(
         () => [
             // ========================================================
-            // EQUIPMENT ID
+            // INSTRUMENT ID NO.
             // ========================================================
             {
-                accessorKey:
-                    "equipment_id",
-
-                header:
-                    "Equipment ID",
-
-                cell: ({
-                    row,
-                    getValue,
-                }) => {
-                    const value =
-                        getValue();
-
+                accessorKey: "instrument_id_no",
+                header: "Instrument ID",
+                cell: ({ row, getValue }) => {
+                    const value = getValue();
                     return (
                         <button
                             type="button"
                             onClick={() => {
-                                if (
-                                    !row
-                                        .original
-                                        ?.id
-                                ) {
-                                    return;
-                                }
-
+                                if (!row.original?.id) return;
                                 navigate(
                                     `/user/equipment-panel/${row.original.id}`
                                 );
@@ -189,12 +120,9 @@ const EquipDashboard = () => {
                                 focus-visible:ring-[var(--color-primary-muted)]
                                 focus-visible:ring-offset-1
                             "
-                            title="View equipment details"
+                            title="View instrument details"
                         >
-                            <span>
-                                {value || "-"}
-                            </span>
-
+                            <span>{value || "-"}</span>
                             <ArrowUpRight
                                 size={11}
                                 strokeWidth={2}
@@ -211,26 +139,15 @@ const EquipDashboard = () => {
             },
 
             // ========================================================
-            // EQUIPMENT
+            // INSTRUMENT NAME
             // ========================================================
             {
-                accessorKey: "name",
-                header: "Equipment",
-
+                accessorKey: "instrument_name",
+                header: "Instrument",
                 cell: ({ row }) => {
-                    const name =
-                        row.original
-                            ?.name || "-";
-
+                    const name = row.original?.instrument_name || "-";
                     return (
-                        <div
-                            className="
-                                flex
-                                min-w-0
-                                items-center
-                                gap-3
-                            "
-                        >
+                        <div className="flex min-w-0 items-center gap-3">
                             <div
                                 className="
                                     flex
@@ -246,14 +163,8 @@ const EquipDashboard = () => {
                                     text-[#56766D]
                                 "
                             >
-                                <Wrench
-                                    size={14}
-                                    strokeWidth={
-                                        1.9
-                                    }
-                                />
+                                <Wrench size={14} strokeWidth={1.9} />
                             </div>
-
                             <div className="min-w-0">
                                 <p
                                     className="
@@ -263,9 +174,7 @@ const EquipDashboard = () => {
                                         tracking-[-0.01em]
                                         text-[var(--color-text-primary)]
                                     "
-                                    title={
-                                        name
-                                    }
+                                    title={name}
                                 >
                                     {name}
                                 </p>
@@ -276,20 +185,13 @@ const EquipDashboard = () => {
             },
 
             // ========================================================
-            // TYPE
+            // CATEGORY
             // ========================================================
             {
-                accessorKey:
-                    "equipment_type",
-
-                header: "Type",
-
-                cell: ({
-                    getValue,
-                }) => {
-                    const value =
-                        getValue();
-
+                accessorKey: "category",
+                header: "Category",
+                cell: ({ getValue }) => {
+                    const value = getValue();
                     return (
                         <span
                             className="
@@ -307,9 +209,7 @@ const EquipDashboard = () => {
                                 tracking-[0.025em]
                                 text-[#61716C]
                             "
-                            title={
-                                value || "-"
-                            }
+                            title={value || "-"}
                         >
                             {value || "-"}
                         </span>
@@ -323,33 +223,20 @@ const EquipDashboard = () => {
             {
                 accessorKey: "make",
                 header: "Make",
-
-                cell: ({
-                    getValue,
-                }) => (
-                    <span
-                        className="
-                            text-[11.5px]
-                            font-semibold
-                            text-[#566560]
-                        "
-                    >
-                        {getValue() ||
-                            "-"}
+                cell: ({ getValue }) => (
+                    <span className="text-[11.5px] font-semibold text-[#566560]">
+                        {getValue() || "-"}
                     </span>
                 ),
             },
 
             // ========================================================
-            // MODEL
+            // SR. NO. / MODEL NO.
             // ========================================================
             {
-                accessorKey: "model",
-                header: "Model",
-
-                cell: ({
-                    getValue,
-                }) => (
+                accessorKey: "sr_no_model_no",
+                header: "Sr. No. / Model No.",
+                cell: ({ getValue }) => (
                     <span
                         className="
                             inline-flex
@@ -364,8 +251,7 @@ const EquipDashboard = () => {
                             text-[#52625E]
                         "
                     >
-                        {getValue() ||
-                            "-"}
+                        {getValue() || "-"}
                     </span>
                 ),
             },
@@ -374,96 +260,41 @@ const EquipDashboard = () => {
             // CREATED
             // ========================================================
             {
-                accessorKey:
-                    "created_at",
-
+                accessorKey: "created_at",
                 header: "Created",
-
-                cell: ({
-                    getValue,
-                }) => {
-                    const value =
-                        getValue();
-
+                cell: ({ getValue }) => {
+                    const value = getValue();
                     if (!value) {
                         return (
-                            <span
-                                className="
-                                    text-[11px]
-                                    text-[#98A19E]
-                                "
-                            >
+                            <span className="text-[11px] text-[#98A19E]">
                                 -
                             </span>
                         );
                     }
-
-                    const date =
-                        new Date(
-                            value
-                        );
-
-                    if (
-                        Number.isNaN(
-                            date.getTime()
-                        )
-                    ) {
+                    const date = new Date(value);
+                    if (Number.isNaN(date.getTime())) {
                         return (
-                            <span
-                                className="
-                                    text-[11px]
-                                    text-[#687571]
-                                "
-                            >
+                            <span className="text-[11px] text-[#687571]">
                                 {value}
                             </span>
                         );
                     }
-
                     return (
-                        <div
-                            className="
-                                flex
-                                flex-col
-                                gap-0.5
-                            "
-                        >
-                            <span
-                                className="
-                                    whitespace-nowrap
-                                    text-[10.5px]
-                                    font-bold
-                                    text-[#4D625B]
-                                "
-                            >
-                                {date.toLocaleDateString(
-                                    "en-IN",
-                                    {
-                                        day: "2-digit",
-                                        month: "short",
-                                        year: "numeric",
-                                    }
-                                )}
+                        <div className="flex flex-col gap-0.5">
+                            <span className="whitespace-nowrap text-[10.5px] font-bold text-[#4D625B]">
+                                {date.toLocaleDateString("en-IN", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                })}
                             </span>
-
-                            <span
-                                className="
-                                    whitespace-nowrap
-                                    font-mono
-                                    text-[9.5px]
-                                    font-medium
-                                    text-[#8A9691]
-                                "
-                            >
-                                {date.toLocaleTimeString(
-                                    "en-IN",
-                                    {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                        second: "2-digit",
-                                        hour12: false,
-                                    }
-                                )}
+                            <span className="whitespace-nowrap font-mono text-[9.5px] font-medium text-[#8A9691]">
+                                {date.toLocaleTimeString("en-IN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit",
+                                    hour12: false,
+                                })}
                             </span>
                         </div>
                     );
@@ -475,25 +306,14 @@ const EquipDashboard = () => {
             // ========================================================
             {
                 id: "actions",
-
                 header: "Action",
-
-                enableSorting:
-                    false,
-
-                cell: ({
-                    row,
-                }) => (
+                enableSorting: false,
+                cell: ({ row }) => (
                     <button
                         type="button"
-                        onClick={(
-                            event
-                        ) => {
+                        onClick={(event) => {
                             event.stopPropagation();
-
-                            alert(
-                                "Report coming soon"
-                            );
+                            alert("Report coming soon");
                         }}
                         className="
                             inline-flex
@@ -521,16 +341,10 @@ const EquipDashboard = () => {
                             focus-visible:ring-[var(--color-primary-muted)]
                             focus-visible:ring-offset-1
                         "
-                        title="View equipment report"
+                        title="View instrument report"
                     >
-                        <Eye
-                            size={14}
-                            strokeWidth={1.9}
-                        />
-
-                        <span>
-                            View Report
-                        </span>
+                        <Eye size={14} strokeWidth={1.9} />
+                        <span>View Report</span>
                     </button>
                 ),
             },
@@ -539,20 +353,12 @@ const EquipDashboard = () => {
     );
 
     return (
-        <div
-            className="
-                flex
-                h-full
-                min-h-0
-                flex-col
-                overflow-hidden
-            "
-        >
+        <div className="flex h-full min-h-0 flex-col overflow-hidden">
             {/* =====================================================
                 SECONDARY ACTION BAR
             ====================================================== */}
             <DashboardActionBar
-                title="Equipment Dashboard"
+                title="Instrument Dashboard"
                 buttonName="Create Record"
                 navigationRoute="/user/create-equipment"
                 sourceRoute="/user/equipment-dashboard"
@@ -562,83 +368,31 @@ const EquipDashboard = () => {
             {/* =====================================================
                 MAIN CONTENT
             ====================================================== */}
-            <main
-                className="
-                    min-h-0
-                    flex-1
-                    overflow-hidden
-                    px-0
-                    pb-0
-                    pt-[58px]
-                "
-            >
-                {/* =================================================
-                    TABLE SURFACE
-                    DataTable is now the only visual boundary.
-                ================================================== */}
-                <section
-                    className="
-                        h-full
-                        min-h-0
-                        overflow-hidden
-                        bg-transparent
-                    "
-                >
-                    <div
-                        className="
-                            h-full
-                            min-h-0
-                            overflow-hidden
-                        "
-                    >
+            <main className="min-h-0 flex-1 overflow-hidden px-0 pb-0 pt-[58px]">
+                <section className="h-full min-h-0 overflow-hidden bg-transparent">
+                    <div className="h-full min-h-0 overflow-hidden">
                         <DataTable
                             data={equipment}
                             columns={columns}
                             loading={loading}
                             searchable
-                            searchPlaceholder="Search equipment..."
+                            searchPlaceholder="Search instruments..."
                             pagination
-                            pageSize={
-                                pagination.perPage
-                            }
-                            pageSizeOptions={[
-                                10,
-                                20,
-                                50,
-                            ]}
+                            pageSize={pagination.perPage}
+                            pageSizeOptions={[10, 20, 50]}
                             sortable
                             showColumnVisibility
                             hoverable
-
                             /* Backend pagination */
                             manualPagination
-                            pageCount={
-                                pagination.lastPage
-                            }
-                            totalRows={
-                                pagination.total
-                            }
-
-                            onPaginationChange={({
-                                pageIndex,
-                                pageSize,
-                            }) => {
-                                const nextPage =
-                                    pageIndex +
-                                    1;
-
-                                fetchEquipment(
-                                    nextPage,
-                                    pageSize
-                                );
+                            pageCount={pagination.lastPage}
+                            totalRows={pagination.total}
+                            onPaginationChange={({ pageIndex, pageSize }) => {
+                                const nextPage = pageIndex + 1;
+                                fetchEquipment(nextPage, pageSize);
                             }}
-
-                            emptyTitle="No equipment found"
-
-                            emptyDescription="
-                                Equipment records will appear here
-                                once they are created.
-                            "
+                            emptyTitle="No instruments found"
+                            emptyDescription="Instrument records will appear here once they are created."
                         />
                     </div>
                 </section>
@@ -648,17 +402,9 @@ const EquipDashboard = () => {
                 CREATE EQUIPMENT MODAL
             ====================================================== */}
             <CreateEquipmentModal
-                open={
-                    isCreateModalOpen
-                }
-                onClose={() =>
-                    setIsCreateModalOpen(
-                        false
-                    )
-                }
-                onSuccess={
-                    fetchEquipment
-                }
+                open={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSuccess={fetchEquipment}
             />
         </div>
     );

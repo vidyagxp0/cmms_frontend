@@ -24,6 +24,16 @@ export const executeCalibrationActivity = (id, payload) =>
     api.post(`/user/instrument-master-record-stage/${id}`, payload);
 
 
+
+export const getInstrumentAuditTrail = (id) =>
+    api.get(`/user/instruments/audit-trail/${id}`);
+
+export const getInstrumentReport = (id) => {
+    return api.get(`/user/instrument-singleReport/${id}`, {
+        responseType: "blob",
+    });
+};
+
 // All FIeld Instruments API
 
 export const getAllFieldInstruments = (params = {}) => {

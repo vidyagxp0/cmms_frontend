@@ -50,5 +50,14 @@ export const addFieldInstrument = (payload) =>
 export const updateFieldInstrument = (id, payload) =>
     api.put(`/user/update-master-fields-instrument/${id}`, payload);
 
+
+export const getAllPermissionsFieldInstrument = (recordId) => {
+    return api.get(`/user/field-instrument-record-permission/${recordId}`);
+};
+
+export const executeFieldInstrumentActivity = (id, payload) =>
+    api.post(`/user/fields-instrument-record-stage/${id}`, payload);
+
+
 // export const deleteRole = (id) =>
 //     api.delete(`/admin/delete-role/${id}`);

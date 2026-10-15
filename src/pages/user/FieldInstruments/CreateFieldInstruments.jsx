@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import FormInput from "../../../components/common/Form/FormInput";
+import FormTextArea from "../../../components/common/Form/FormTextArea";
+import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import { addFieldInstrument } from "../../../services/usersApi/equipmentApi";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
@@ -16,6 +18,25 @@ import ChecklistConfigField from "./ChecklistConfigField";
 const TABS = [
     { id: "instrument", label: "Field Instrument Information" },
     { id: "checklist", label: "Checklist Configuration" },
+    { id: "hod", label: "HOD / Designee Review (Engineering Dept)" },
+    { id: "qa-review", label: "QA Approval Review" },
+];
+
+/* ───────────────────────── Required fields for tab validation ───────────────────────── */
+
+const REQUIRED_FIELDS = [
+    { name: "equipment_name", label: "Equipment Name" },
+    { name: "instrument_name", label: "Instrument Name" },
+    { name: "instrument_id_no", label: "Instrument ID No." },
+    { name: "make", label: "Make" },
+    { name: "sr_no_model_no", label: "Sr. No. / Model No." },
+    { name: "least_count", label: "Least Count" },
+    { name: "location", label: "Location" },
+    { name: "accuracy", label: "Accuracy" },
+    { name: "instrument_range", label: "Instrument Range" },
+    { name: "operating_range", label: "Operating Range" },
+    { name: "calibration_test_points", label: "Calibration Test Points" },
+    { name: "category", label: "Category" },
 ];
 
 const EMPTY_CHECKLIST = {
@@ -38,6 +59,22 @@ const SELECTION_TYPES = [
     "multi_select_checkbox",
 ];
 
+/* ───────────────────────── Validation helper ───────────────────────── */
+
+const validateInstrumentForm = (form) => {
+    const values = form.getFieldsValue();
+
+    return REQUIRED_FIELDS.filter((field) => {
+        const value = values?.[field.name];
+
+        if (typeof value === "string") {
+            return !value.trim();
+        }
+
+        return value === undefined || value === null || value === "";
+    });
+};
+
 /* ───────────────────────── Component ───────────────────────── */
 
 const CreateFieldInstruments = () => {
@@ -48,9 +85,24 @@ const CreateFieldInstruments = () => {
     const [checklistConfig, setChecklistConfig] = useState(EMPTY_CHECKLIST);
     const [activeTab, setActiveTab] = useState("instrument");
 
-    /* ───────── Tab switch (free navigation) ───────── */
+    /* ───────── Tab switch with validation ───────── */
 
     const handleTabChange = (tabId) => {
+        const RESTRICTED_TABS = ["hod", "qa-review"];
+
+        if (RESTRICTED_TABS.includes(tabId)) {
+            const missingFields = validateInstrumentForm(form);
+
+            if (missingFields.length > 0) {
+                toast.warning(
+                    "Please complete all mandatory fields in Field Instrument Information before accessing the other tabs."
+                );
+
+                setActiveTab("instrument");
+                return;
+            }
+        }
+
         setActiveTab(tabId);
     };
 
@@ -197,6 +249,14 @@ const CreateFieldInstruments = () => {
                     values.calibration_test_points.trim(),
                 category: values.category.trim(),
                 checklist_config: cleanedChecklistConfig,
+                stage_id: 82 || null,
+                process_id: 22 || null,
+
+                /* Review fields */
+                hod_review_comments: values.hodReviewComments || "",
+                hod_review_attachment: values.hodReviewAttachment || [],
+                qa_review_comments: values.qaReviewComments || "",
+                qa_review_attachment: values.qaReviewAttachment || [],
             };
 
             console.log("Create Field Instrument Payload:", payload);
@@ -262,7 +322,7 @@ const CreateFieldInstruments = () => {
                 />
             </div>
 
-            {/* ═══════════════ TAB 1: FIELD INSTRUMENT INFORMATION ═══════════════ */}
+            {/* ═══════════════ FORM (wraps instrument, HOD, QA tabs) ═══════════════ */}
 
             <Form
                 form={form}
@@ -277,12 +337,9 @@ const CreateFieldInstruments = () => {
                     [&_.ant-form-item-explain-error]:!text-[11px]
                 "
             >
-                <div
-                    style={{
-                        display:
-                            activeTab === "instrument" ? "block" : "none",
-                    }}
-                >
+                {/* ─────────── TAB 1: FIELD INSTRUMENT INFORMATION ─────────── */}
+
+                {activeTab === "instrument" && (
                     <section>
                         <SectionHeader title="FIELD INSTRUMENT INFORMATION" />
 
@@ -342,7 +399,8 @@ const CreateFieldInstruments = () => {
                                     {
                                         required: true,
                                         whitespace: true,
-                                        message: "Please enter instrument ID No.",
+                                        message:
+                                            "Please enter instrument ID No.",
                                     },
                                 ]}
                                 className="!mb-4"
@@ -544,10 +602,80 @@ const CreateFieldInstruments = () => {
                             </Form.Item>
                         </div>
                     </section>
-                </div>
+                )}
+
+                {/* ─────────── TAB 3: HOD REVIEW ─────────── */}
+
+                {activeTab === "hod" && (
+                    <section>
+                        <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
+
+                        <div className="px-1 pb-1 pt-4">
+                            <Form.Item
+                                name="hodReviewComments"
+                                label="Comments"
+                                className="!mb-4"
+                            >
+                                <FormTextArea
+                                    rows={4}
+                                    placeholder="Enter comments..."
+                                />
+                            </Form.Item>
+
+                            <Form.Item
+                                name="hodReviewAttachment"
+                                label="Attachment"
+                                valuePropName="fileList"
+                                getValueFromEvent={(event) =>
+                                    Array.isArray(event)
+                                        ? event
+                                        : event?.fileList
+                                }
+                                className="!mb-0"
+                            >
+                                <FormAttachment disabled />
+                            </Form.Item>
+                        </div>
+                    </section>
+                )}
+
+                {/* ─────────── TAB 4: QA REVIEW ─────────── */}
+
+                {activeTab === "qa-review" && (
+                    <section>
+                        <SectionHeader title="QA APPROVAL REVIEW" />
+
+                        <div className="px-1 pb-1 pt-4">
+                            <Form.Item
+                                name="qaReviewComments"
+                                label="Comments"
+                                className="!mb-4"
+                            >
+                                <FormTextArea
+                                    rows={4}
+                                    placeholder="Enter comments..."
+                                />
+                            </Form.Item>
+
+                            <Form.Item
+                                name="qaReviewAttachment"
+                                label="Attachment"
+                                valuePropName="fileList"
+                                getValueFromEvent={(event) =>
+                                    Array.isArray(event)
+                                        ? event
+                                        : event?.fileList
+                                }
+                                className="!mb-0"
+                            >
+                                <FormAttachment disabled />
+                            </Form.Item>
+                        </div>
+                    </section>
+                )}
             </Form>
 
-            {/* ═══════════════ TAB 2: CHECKLIST CONFIGURATION ═══════════════ */}
+            {/* ═══════════════ TAB 2: CHECKLIST CONFIGURATION (outside Form) ═══════════════ */}
 
             {activeTab === "checklist" && (
                 <ChecklistConfigField

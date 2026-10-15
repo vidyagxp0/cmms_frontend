@@ -490,7 +490,7 @@ const PreventivePlannerPanel = () => {
     }
     try {
       setActivityLogsLoading(true);
-      const response = await getAllActivityLogs(recordId);
+      const response = await getAllActivityLogs(recordId, processId);
       setActivityLogs(response?.data?.data || []);
     } catch (error) {
       console.error("Failed to fetch activity history:", error);
@@ -501,7 +501,7 @@ const PreventivePlannerPanel = () => {
     } finally {
       setActivityLogsLoading(false);
     }
-  }, [recordId]);
+  }, [recordId, processId]);
 
   useEffect(() => {
     fetchActivityLogs();

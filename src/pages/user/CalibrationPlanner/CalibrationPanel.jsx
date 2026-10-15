@@ -139,12 +139,12 @@ const CreateCalibrationPanel = () => {
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
 
   const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
-  const isGeneralEditable = isStageEditable(1);
-  const isHodEditable = isStageEditable(2);
-  const isUserDeptEditable = isStageEditable(3);
-  const isQaReviewEditable = isStageEditable(4);
-  const isCancellationEditable = isStageEditable(6);
-  const canCreateChild = Number(activeStageId) === 5 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
+  const isGeneralEditable = isStageEditable(55);
+  const isHodEditable = isStageEditable(56);
+  const isUserDeptEditable = isStageEditable(57);
+  const isQaReviewEditable = isStageEditable(58);
+  const isCancellationEditable = isStageEditable(60);
+  const canCreateChild = Number(activeStageId) === 59 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -381,16 +381,20 @@ const CreateCalibrationPanel = () => {
     if (!recordId) { setActivityLogs([]); return; }
     try {
       setActivityLogsLoading(true);
-      const response = await getAllActivityLogs(recordId);
+      const response = await getAllActivityLogs(recordId, processId);
       setActivityLogs(response?.data?.data || []);
     } catch (error) {
       console.error("Failed to fetch activity history:", error);
       toast.error(error?.response?.data?.message || "Failed to load activity history.");
       setActivityLogs([]);
     } finally { setActivityLogsLoading(false); }
-  }, [recordId]);
+  }, [recordId, processId]);
 
-  useEffect(() => { fetchActivityLogs(); }, [fetchActivityLogs]);
+  // useEffect(() => { fetchActivityLogs(); }, [fetchActivityLogs]);
+  useEffect(() => {
+  if (!processId) return;
+  fetchActivityLogs();
+}, [processId, fetchActivityLogs]);
 
   useEffect(() => {
     if (!activeStageId) return;

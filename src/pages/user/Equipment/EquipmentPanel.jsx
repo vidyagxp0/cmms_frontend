@@ -663,6 +663,7 @@ const EquipmentPanel = () => {
                 onActivitySuccess={handleActivitySuccess}
                 canPerformActivity={canPerformActivity}
                 permissionsLoading={permissionsLoading}
+                auditRoute={"/user/instrument-master-audit"}
                 onExit={() => navigate("/user/equipment-dashboard")}
               />
             </div>

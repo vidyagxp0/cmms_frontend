@@ -14,6 +14,10 @@ export const addEquipment = (payload) =>
 export const updateEquipment = (id, payload) =>
     api.put(`/user/update-master-equipment/${id}`, payload);
 
+
+export const getInstrumentAuditTrail = (id) =>
+    api.get(`/user/instruments/audit-trail/${id}`);
+
 // All FIeld Instruments API
 
 export const getAllFieldInstruments = (params = {}) => {

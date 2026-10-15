@@ -225,6 +225,8 @@ const CreateEquipment = () => {
                     values.calibration_test_points.trim(),
                 category: values.category.trim(),
                 checklist_config: cleanedChecklistConfig,
+                stage_id:77,
+                process_id:19
             };
 
             console.log("Create Instrument Payload:", payload);

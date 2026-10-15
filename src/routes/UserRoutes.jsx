@@ -26,6 +26,7 @@ import FieldInstrumetsDashboard from "../pages/user/FieldInstruments/FieldInstru
 import CreateFieldInstruments from "../pages/user/FieldInstruments/CreateFieldInstruments";
 import FIeldInstrumentsPanel from "../pages/user/FieldInstruments/FIeldInstrumentsPanel";
 import EquipmentAudit from "../pages/user/Equipment/EquipmentAudit";
+import FieldInstrumentAudit from "../pages/user/FieldInstruments/FieldInstrumentAudit";
 
 function UserRoutes() {
   return (
@@ -51,6 +52,7 @@ function UserRoutes() {
         <Route path="field-instruments-dashboard" element={<FieldInstrumetsDashboard />} />
         <Route path="create-field-instruments" element={<CreateFieldInstruments />} />
         <Route path="field-instruments-panel/:id" element={<FIeldInstrumentsPanel />} />
+        <Route path="field-instruments-audit/:id" element={<FieldInstrumentAudit />} />
 
         {/* Engineering and Calibration Routes*/}
         <Route path="engineering-dashboard" element={<EngineeringDashboard />} />

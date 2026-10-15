@@ -23,10 +23,23 @@ export const getAllPermissions = (recordId) => {
 export const executeCalibrationActivity = (id, payload) =>
     api.post(`/user/instrument-master-record-stage/${id}`, payload);
 
-
-
-export const getInstrumentAuditTrail = (id) =>
-    api.get(`/user/instruments/audit-trail/${id}`);
+export const getInstrumentAuditTrail = (id, params = {}) => {
+  return api.get(`/user/instruments/audit-trail/${id}`, {
+    params: {
+      page: params.page ?? 1,
+      per_page: params.per_page ?? 10,
+      ...(params.search?.trim()
+        ? { search: params.search.trim() }
+        : {}),
+      ...(params.from_date
+        ? { from_date: params.from_date }
+        : {}),
+      ...(params.to_date
+        ? { to_date: params.to_date }
+        : {}),
+    },
+  });
+};
 
 export const getInstrumentReport = (id) => {
     return api.get(`/user/instrument-singleReport/${id}`, {
@@ -59,5 +72,17 @@ export const executeFieldInstrumentActivity = (id, payload) =>
     api.post(`/user/fields-instrument-record-stage/${id}`, payload);
 
 
-// export const deleteRole = (id) =>
-//     api.delete(`/admin/delete-role/${id}`);
+export const getFieldInstrumentAuditTrail = (id, params = {}) => {
+  return api.get(
+    `/user/fields-instruments/audit-trail/${id}`,
+    {
+      params: {
+        page: params.page ?? 1,
+        per_page: params.per_page ?? 10,
+        ...(params.search ? { search: params.search } : {}),
+        ...(params.from_date ? { from_date: params.from_date } : {}),
+        ...(params.to_date ? { to_date: params.to_date } : {}),
+      },
+    }
+  );
+};

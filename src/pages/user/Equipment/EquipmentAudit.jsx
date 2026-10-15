@@ -117,44 +117,63 @@ const EquipmentAudit = () => {
   }, [searchInput]);
 
   const fetchAuditTrail = useCallback(async () => {
-    if (!id) return;
+    if (!id) {
+      setRows([]);
+      setMeta(null);
+      setPagination(EMPTY_PAGINATION);
+      setIsLoading(false);
+      return;
+    }
 
     const requestId = ++requestRef.current;
 
     try {
       setIsLoading(true);
 
-      const params = { page, per_page: PER_PAGE };
-      if (search) params.search = search;
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
+      const response = await getInstrumentAuditTrail(id, {
+        page,
+        per_page: PER_PAGE,
+        search: search.trim(),
+        from_date: fromDate,
+        to_date: toDate,
+      });
 
-      const response = await getInstrumentAuditTrail(id, params);
-
-      /* ignore stale responses */
       if (requestId !== requestRef.current) return;
 
-      const payload = response?.data?.data || {};
-      const serverPagination = { ...EMPTY_PAGINATION, ...(payload.pagination || {}) };
+      const payload = response?.data?.data;
+
+      if (!payload) {
+        throw new Error("Invalid audit trail response.");
+      }
+
+      const serverPagination = {
+        ...EMPTY_PAGINATION,
+        ...(payload.pagination || {}),
+      };
 
       setRows(Array.isArray(payload.items) ? payload.items : []);
       setMeta(payload.meta || null);
       setPagination(serverPagination);
 
-      /* only step back when the page no longer exists (e.g. after filtering) */
       if (page > serverPagination.last_page) {
         setPage(serverPagination.last_page);
       }
     } catch (error) {
       if (requestId !== requestRef.current) return;
+
       console.error("Failed to fetch audit trail:", error);
+
       toast.error(
-        error?.response?.data?.message || "Failed to load audit history."
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to load audit history."
       );
-      /* keep existing pagination so the pager does not reset to page 1 */
+
       setRows([]);
     } finally {
-      if (requestId === requestRef.current) setIsLoading(false);
+      if (requestId === requestRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [id, page, search, fromDate, toDate]);
 

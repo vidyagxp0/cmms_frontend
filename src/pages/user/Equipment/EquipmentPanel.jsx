@@ -19,6 +19,8 @@ import { toast } from "sonner";
 
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import FormInput from "../../../components/common/Form/FormInput";
+import FormTextArea from "../../../components/common/Form/FormTextArea";
+import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import ChecklistConfiguration from "./ChecklistConfig";
@@ -28,29 +30,31 @@ import ProcessActivities from "../../../components/common/ProcesStageTabs/Proces
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 
 import {
+  executeCalibrationActivity,
+  getAllPermissions,
   getEquipmentDetail,
   updateEquipment,
 } from "../../../services/usersApi/equipmentApi";
+import { addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
 import { getProfile } from "../../../services/authApi";
-import { executeCalibrationActivity } from "../../../services/usersApi/calibrationApi";
 import {
   getAllActivites,
   getAllActivityLogs,
-  getAllPermissions,
   getAllStages,
 } from "../../../services/usersApi/workflowCommonApi";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
 const TABS = [
-  { id: "instrument", label: "Instrument Information" },
+  { id: "instrument", label: "Instrument Information", stageId: 77 },
   { id: "checklist", label: "Checklist Configuration" },
-  { id: "activity", label: "Activity Log" },
+  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 78 },
+  { id: "qa-review", label: "QA Approval Review", stageId: 79 },
+  { id: "activity", label: "Activity Log", stageId: 80 },
+  { id: "cancellation", label: "Cancellation", stageId: 81 },
 ];
 
-/* Process ID used for the Master Instrument workflow.
-   Update this if your backend exposes a different process for
-   the master-instrument lifecycle (e.g. from a config endpoint). */
+/* Process ID used for the Master Instrument workflow. */
 const MASTER_INSTRUMENT_PROCESS_ID = 19;
 
 const EMPTY_CHECKLIST = {
@@ -228,6 +232,17 @@ const EquipmentPanel = () => {
 
   const isFetchingRef = useRef(false);
 
+  /* ───────── Stage-based editability ───────── */
+  const isStageEditable = (stageId) =>
+    Number(activeStageId) === Number(stageId) &&
+    canPerformActivity === true &&
+    permissionsLoading === false;
+
+  const isInstrumentEditable = isStageEditable(77);
+  const isHodEditable = isStageEditable(78);
+  const isQaReviewEditable = isStageEditable(79);
+  const isCancellationEditable = isStageEditable(81);
+
   /* ───────── Profile ───────── */
   useEffect(() => {
     const fetchProfile = async () => {
@@ -260,7 +275,6 @@ const EquipmentPanel = () => {
 
         const response = await getEquipmentDetail(id);
         const data = response?.data?.data;
-        console.log(data,"this is data")
 
         if (!data) {
           toast.error("Instrument not found.");
@@ -280,18 +294,25 @@ const EquipmentPanel = () => {
           operating_range: data.operating_range || "",
           calibration_test_points: data.calibration_test_points || "",
           category: data.category || data.equipment_type || "",
-          stage_id:77,
-          process_id:19
+          stage_id: data.stage_id?.id || data.stage_id || null,
+          process_id: data.process_id || null,
+
+          /* Review + cancellation fields (may come from backend later) */
+          hodReviewComments: data.hod_review_comments || "",
+          hodReviewAttachment: data.hod_review_attachment || [],
+          qaReviewComments: data.qa_review_comments || "",
+          qaReviewAttachment: data.qa_review_attachment || [],
+          cancellationRemark: data.cancellation_remark || "",
+          cancellationAttachment: data.cancellation_attachment || [],
         });
 
         setChecklistConfig(normalizeIncomingChecklist(data.checklist_config));
 
-        /* Workflow bits from detail response (with fallback) */
         if (data.process_id) setProcessId(data.process_id);
         setProcessName(data?.process?.name || "Master Instrument");
 
         const backendStageId =
-          data?.stage?.id ?? data?.stage_id ?? null;
+          data?.stage_id?.id ?? data?.stage_id ?? null;
         setActiveStageId(backendStageId);
       } catch (error) {
         console.error("Failed to fetch instrument detail:", error);
@@ -417,6 +438,15 @@ const EquipmentPanel = () => {
   useEffect(() => {
     fetchActivityLogs();
   }, [fetchActivityLogs]);
+
+  /* ───────── Auto-switch tab based on active stage ───────── */
+  useEffect(() => {
+    if (!activeStageId) return;
+    const matchingTab = TABS.find(
+      (tab) => Number(tab.stageId) === Number(activeStageId)
+    );
+    if (matchingTab) setActiveTab(matchingTab.id);
+  }, [activeStageId]);
 
   /* ───────── Tab switch ───────── */
   const handleTabChange = (tabId) => {
@@ -553,13 +583,20 @@ const EquipmentPanel = () => {
           values.calibration_test_points?.trim() || "",
         category: values.category?.trim() || "",
         checklist_config: cleanedChecklistConfig,
+
+        /* Review + cancellation fields */
+        hod_review_comments: values.hodReviewComments || "",
+        hod_review_attachment: values.hodReviewAttachment || [],
+        qa_review_comments: values.qaReviewComments || "",
+        qa_review_attachment: values.qaReviewAttachment || [],
+        cancellation_remark: values.cancellationRemark || "",
+        cancellation_attachment: values.cancellationAttachment || [],
       };
 
       await updateEquipment(id, payload);
 
       toast.success("Instrument updated successfully.");
 
-      /* Refresh workflow-related data */
       await fetchDetail(false);
       await fetchPermissions();
       await fetchActivityLogs();
@@ -594,6 +631,12 @@ const EquipmentPanel = () => {
     if (isSaving) return;
     navigate("/user/equipment-dashboard");
   };
+
+  /* ───────── Visible tabs (hide cancellation unless on its stage) ───────── */
+  const isCancellationStageActive = Number(activeStageId) === 81;
+  const visibleTabs = isCancellationStageActive
+    ? TABS.filter((tab) => tab.id === "cancellation")
+    : TABS.filter((tab) => tab.id !== "cancellation");
 
   /* ───────── Loading state ───────── */
   if (isLoading) {
@@ -638,6 +681,7 @@ const EquipmentPanel = () => {
             stages={workflowStages}
             activeStageId={activeStageId}
             loading={workflowLoading}
+            cancelledStageId={81}  
           />
 
           <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
@@ -672,13 +716,13 @@ const EquipmentPanel = () => {
         {/* ═══════════════ TABS ═══════════════ */}
         <div className="mb-5">
           <ProcessTabs
-            tabs={TABS}
+            tabs={visibleTabs}
             activeTab={activeTab}
             onTabChange={handleTabChange}
           />
         </div>
 
-        {/* ═══════════════ TAB 1: INSTRUMENT INFORMATION ═══════════════ */}
+        {/* ═══════════════ FORM (all sections always mounted) ═══════════════ */}
         <Form
           form={form}
           preserve={true}
@@ -699,11 +743,8 @@ const EquipmentPanel = () => {
             [&_.ant-input]:!rounded-[10px]
           "
         >
-          <div
-            style={{
-              display: activeTab === "instrument" ? "block" : "none",
-            }}
-          >
+          {/* ─── TAB 1: INSTRUMENT INFORMATION ─── */}
+          <div style={{ display: activeTab === "instrument" ? "block" : "none" }}>
             <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
               <div className="h-[3px] w-full bg-[var(--color-primary)]" />
 
@@ -728,7 +769,6 @@ const EquipmentPanel = () => {
 
               <div className="px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
                 <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2">
-                  {/* INSTRUMENT NAME */}
                   <Form.Item
                     name="instrument_name"
                     label={
@@ -742,10 +782,9 @@ const EquipmentPanel = () => {
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="Enter instrument name" />
+                    <FormInput placeholder="Enter instrument name" disabled={!isInstrumentEditable} />
                   </Form.Item>
 
-                  {/* INSTRUMENT ID NO. */}
                   <Form.Item
                     name="instrument_id_no"
                     label={
@@ -759,10 +798,9 @@ const EquipmentPanel = () => {
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="Enter instrument ID No." />
+                    <FormInput placeholder="Enter instrument ID No." disabled={!isInstrumentEditable} />
                   </Form.Item>
 
-                  {/* MAKE */}
                   <Form.Item
                     name="make"
                     label={
@@ -776,10 +814,9 @@ const EquipmentPanel = () => {
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="Enter make" />
+                    <FormInput placeholder="Enter make" disabled={!isInstrumentEditable} />
                   </Form.Item>
 
-                  {/* SR. NO. / MODEL NO. */}
                   <Form.Item
                     name="sr_no_model_no"
                     label={
@@ -793,10 +830,9 @@ const EquipmentPanel = () => {
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="Enter Sr. No. / Model No." />
+                    <FormInput placeholder="Enter Sr. No. / Model No." disabled={!isInstrumentEditable} />
                   </Form.Item>
 
-                  {/* LOCATION */}
                   <Form.Item
                     name="location"
                     label={
@@ -810,10 +846,9 @@ const EquipmentPanel = () => {
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="Enter location" />
+                    <FormInput placeholder="Enter location" disabled={!isInstrumentEditable} />
                   </Form.Item>
 
-                  {/* LEAST COUNT */}
                   <Form.Item
                     name="least_count"
                     label={
@@ -827,10 +862,9 @@ const EquipmentPanel = () => {
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="Enter least count" />
+                    <FormInput placeholder="Enter least count" disabled={!isInstrumentEditable} />
                   </Form.Item>
 
-                  {/* ACCURACY */}
                   <Form.Item
                     name="accuracy"
                     label={
@@ -844,10 +878,9 @@ const EquipmentPanel = () => {
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="Enter accuracy" />
+                    <FormInput placeholder="Enter accuracy" disabled={!isInstrumentEditable} />
                   </Form.Item>
 
-                  {/* INSTRUMENT RANGE */}
                   <Form.Item
                     name="instrument_range"
                     label={
@@ -861,10 +894,9 @@ const EquipmentPanel = () => {
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="Enter instrument range" />
+                    <FormInput placeholder="Enter instrument range" disabled={!isInstrumentEditable} />
                   </Form.Item>
 
-                  {/* OPERATING RANGE */}
                   <Form.Item
                     name="operating_range"
                     label={
@@ -878,10 +910,9 @@ const EquipmentPanel = () => {
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="Enter operating range" />
+                    <FormInput placeholder="Enter operating range" disabled={!isInstrumentEditable} />
                   </Form.Item>
 
-                  {/* CALIBRATION TEST POINTS */}
                   <Form.Item
                     name="calibration_test_points"
                     label={
@@ -895,10 +926,9 @@ const EquipmentPanel = () => {
                     ]}
                     className="!mb-4"
                   >
-                    <FormInput placeholder="Enter calibration test points" />
+                    <FormInput placeholder="Enter calibration test points" disabled={!isInstrumentEditable} />
                   </Form.Item>
 
-                  {/* CATEGORY */}
                   <Form.Item
                     name="category"
                     label={
@@ -912,100 +942,221 @@ const EquipmentPanel = () => {
                     ]}
                     className="!mb-0 md:col-span-2"
                   >
-                    <FormInput placeholder="Enter category" />
+                    <FormInput placeholder="Enter category" disabled={!isInstrumentEditable} />
                   </Form.Item>
                 </div>
               </div>
             </section>
           </div>
-        </Form>
 
-        {/* ═══════════════ TAB 2: CHECKLIST CONFIGURATION ═══════════════ */}
-        {activeTab === "checklist" && (
-          <section className="mt-2 overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
-            <div className="h-[2px] w-full bg-[var(--color-secondary)]" />
+          {/* ─── TAB 2: HOD REVIEW ─── */}
+          <div style={{ display: activeTab === "hod" ? "block" : "none" }}>
+            <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
+              <div className="h-[3px] w-full bg-[var(--color-primary)]" />
 
-            <div className="p-5 sm:p-6">
-              <ChecklistConfiguration
-                value={checklistConfig}
-                onChange={setChecklistConfig}
-                description="Define categorical inspection checkpoints for the field engineers."
-              />
-            </div>
-          </section>
-        )}
-
-        {/* ═══════════════ TAB 3: ACTIVITY LOG ═══════════════ */}
-        {activeTab === "activity" && (
-          <section className="mt-2 overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
-            <div className="h-[2px] w-full bg-[var(--color-secondary)]" />
-
-            <div className="p-5 sm:p-6">
-              <SectionHeader title="ACTIVITY LOG" />
-
-              <div className="mt-5 space-y-4">
-                {activityLogsLoading ? (
-                  <Skeleton variant="activityLog" />
-                ) : activityLogs.length === 0 ? (
-                  <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
-                    No activity history found.
-                  </div>
-                ) : (
-                  activityLogs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
-                    >
-                      <div className="mb-5">
-                        <p className="text-[13px] font-semibold text-[#3E4A5C]">
-                          Activity Name
-                        </p>
-                        <p className="mt-1 text-[14px] font-semibold text-[#182234]">
-                          {log.activity_name || "—"}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <div>
-                          <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
-                            Performed By
-                          </p>
-                          <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                            <span className="text-[14px] text-[#526071]">
-                              {log.performed_by || "—"}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
-                            Date Performed
-                          </p>
-                          <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                            <span className="text-[14px] text-[#526071]">
-                              {log.performed_at || "—"}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
-                            Comments
-                          </p>
-                          <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
-                            <p className="break-words text-[14px] leading-5 text-[#526071]">
-                              {log.comment || "—"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
+              <div className="border-b border-[var(--color-border-soft)] px-5 py-4 sm:px-6">
+                <h2 className="text-[14px] font-bold tracking-[-0.015em] text-[var(--color-text-primary)]">
+                  HOD / DESIGNEE REVIEW (ENGINEERING DEPT)
+                </h2>
               </div>
-            </div>
-          </section>
-        )}
+
+              <div className="px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+                <Form.Item name="hodReviewComments" label="Comments" className="!mb-4">
+                  <FormTextArea
+                    rows={5}
+                    placeholder="Enter comments..."
+                    disabled={!isHodEditable}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  name="hodReviewAttachment"
+                  label="Attachment"
+                  valuePropName="value"
+                  className="!mb-0"
+                >
+                  <FormAttachment
+                    multiple={true}
+                    recordId={id}
+                    attachmentField="hod_review_attachment"
+                    label="HOD / Designee Review Attachment"
+                    uploadApi={addMultipleAttachments}
+                    disabled={!isHodEditable}
+                  />
+                </Form.Item>
+              </div>
+            </section>
+          </div>
+
+          {/* ─── TAB 3: QA REVIEW ─── */}
+          <div style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
+            <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
+              <div className="h-[3px] w-full bg-[var(--color-primary)]" />
+
+              <div className="border-b border-[var(--color-border-soft)] px-5 py-4 sm:px-6">
+                <h2 className="text-[14px] font-bold tracking-[-0.015em] text-[var(--color-text-primary)]">
+                  QA APPROVAL REVIEW
+                </h2>
+              </div>
+
+              <div className="px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+                <Form.Item name="qaReviewComments" label="Comments" className="!mb-4">
+                  <FormTextArea
+                    rows={5}
+                    placeholder="Enter comments..."
+                    disabled={!isQaReviewEditable}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  name="qaReviewAttachment"
+                  label="Attachment"
+                  valuePropName="value"
+                  className="!mb-0"
+                >
+                  <FormAttachment
+                    multiple={true}
+                    recordId={id}
+                    attachmentField="qa_review_attachment"
+                    label="QA Review Attachment"
+                    uploadApi={addMultipleAttachments}
+                    disabled={!isQaReviewEditable}
+                  />
+                </Form.Item>
+              </div>
+            </section>
+          </div>
+
+          {/* ─── TAB 4: CHECKLIST CONFIGURATION ─── */}
+          <div style={{ display: activeTab === "checklist" ? "block" : "none" }}>
+            <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
+              <div className="h-[2px] w-full bg-[var(--color-secondary)]" />
+
+              <div className="p-5 sm:p-6">
+                <ChecklistConfiguration
+                  value={checklistConfig}
+                  onChange={setChecklistConfig}
+                  description="Define categorical inspection checkpoints for the field engineers."
+                />
+              </div>
+            </section>
+          </div>
+
+          {/* ─── TAB 5: ACTIVITY LOG ─── */}
+          <div style={{ display: activeTab === "activity" ? "block" : "none" }}>
+            <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
+              <div className="h-[2px] w-full bg-[var(--color-secondary)]" />
+
+              <div className="p-5 sm:p-6">
+                <SectionHeader title="ACTIVITY LOG" />
+
+                <div className="mt-5 space-y-4">
+                  {activityLogsLoading ? (
+                    <Skeleton variant="activityLog" />
+                  ) : activityLogs.length === 0 ? (
+                    <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
+                      No activity history found.
+                    </div>
+                  ) : (
+                    activityLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
+                      >
+                        <div className="mb-5">
+                          <p className="text-[13px] font-semibold text-[#3E4A5C]">
+                            Activity Name
+                          </p>
+                          <p className="mt-1 text-[14px] font-semibold text-[#182234]">
+                            {log.activity_name || "—"}
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                          <div>
+                            <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
+                              Performed By
+                            </p>
+                            <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                              <span className="text-[14px] text-[#526071]">
+                                {log.performed_by || "—"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
+                              Date Performed
+                            </p>
+                            <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                              <span className="text-[14px] text-[#526071]">
+                                {log.performed_at || "—"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
+                              Comments
+                            </p>
+                            <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
+                              <p className="break-words text-[14px] leading-5 text-[#526071]">
+                                {log.comment || "—"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* ─── TAB 6: CANCELLATION ─── */}
+          <div style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
+            <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
+              <div className="h-[3px] w-full bg-[var(--color-primary)]" />
+
+              <div className="border-b border-[var(--color-border-soft)] px-5 py-4 sm:px-6">
+                <h2 className="text-[14px] font-bold tracking-[-0.015em] text-[var(--color-text-primary)]">
+                  CANCELLATION
+                </h2>
+              </div>
+
+              <div className="px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+                <Form.Item
+                  name="cancellationRemark"
+                  label="Remark"
+                  className="!mb-4"
+                >
+                  <FormTextArea
+                    rows={5}
+                    placeholder="Enter cancellation remark..."
+                    disabled={!isCancellationEditable}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  name="cancellationAttachment"
+                  label="Attachment"
+                  valuePropName="value"
+                  className="!mb-0"
+                >
+                  <FormAttachment
+                    multiple={true}
+                    recordId={id}
+                    attachmentField="cancellation_attachment"
+                    label="Cancellation Attachment"
+                    uploadApi={addMultipleAttachments}
+                    disabled={!isCancellationEditable}
+                  />
+                </Form.Item>
+              </div>
+            </section>
+          </div>
+        </Form>
       </div>
 
       {/* ═══════════════ FLOATING ACTIONS ═══════════════ */}

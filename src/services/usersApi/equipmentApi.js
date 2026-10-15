@@ -14,6 +14,16 @@ export const addEquipment = (payload) =>
 export const updateEquipment = (id, payload) =>
     api.put(`/user/update-master-equipment/${id}`, payload);
 
+//Equipment instrument master flow api
+
+export const getAllPermissions = (recordId) => {
+    return api.get(`/user/instrument-record-permission/${recordId}`);
+};
+
+export const executeCalibrationActivity = (id, payload) =>
+    api.post(`/user/instrument-master-record-stage/${id}`, payload);
+
+
 // All FIeld Instruments API
 
 export const getAllFieldInstruments = (params = {}) => {

@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import FormInput from "../../../components/common/Form/FormInput";
+import FormTextArea from "../../../components/common/Form/FormTextArea";
+import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import { addEquipment } from "../../../services/usersApi/equipmentApi";
 import ChecklistConfiguration from "./ChecklistConfig";
@@ -12,11 +14,28 @@ import SectionHeader from "../../../components/common/SectionHeader/SectionHeade
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
-/* id must match the label: "Instrument Information" → "instrument" */
 
 const TABS = [
     { id: "instrument", label: "Instrument Information" },
     { id: "checklist", label: "Checklist Configuration" },
+    { id: "hod", label: "HOD / Designee Review (Engineering Dept)" },
+    { id: "qa-review", label: "QA Approval Review" },
+];
+
+/* ───────────────────────── Required fields for tab validation ───────────────────────── */
+
+const REQUIRED_FIELDS = [
+    { name: "instrument_name", label: "Instrument Name" },
+    { name: "instrument_id_no", label: "Instrument ID No." },
+    { name: "make", label: "Make" },
+    { name: "sr_no_model_no", label: "Sr. No. / Model No." },
+    { name: "location", label: "Location" },
+    { name: "least_count", label: "Least Count" },
+    { name: "accuracy", label: "Accuracy" },
+    { name: "instrument_range", label: "Instrument Range" },
+    { name: "operating_range", label: "Operating Range" },
+    { name: "calibration_test_points", label: "Calibration Test Points" },
+    { name: "category", label: "Category" },
 ];
 
 const EMPTY_CHECKLIST = {
@@ -39,6 +58,22 @@ const SELECTION_TYPES = [
     "multi_select_checkbox",
 ];
 
+/* ───────────────────────── Validation helper ───────────────────────── */
+
+const validateInstrumentForm = (form) => {
+    const values = form.getFieldsValue();
+
+    return REQUIRED_FIELDS.filter((field) => {
+        const value = values?.[field.name];
+
+        if (typeof value === "string") {
+            return !value.trim();
+        }
+
+        return value === undefined || value === null || value === "";
+    });
+};
+
 /* ───────────────────────── Component ───────────────────────── */
 
 const CreateEquipment = () => {
@@ -49,11 +84,27 @@ const CreateEquipment = () => {
     const [checklistConfig, setChecklistConfig] = useState(EMPTY_CHECKLIST);
     const [activeTab, setActiveTab] = useState("instrument");
 
-    /* ───────── Tab switch (free navigation) ───────── */
+    /* ───────── Tab switch with validation ───────── */
 
-    const handleTabChange = (tabId) => {
-        setActiveTab(tabId);
-    };
+
+const handleTabChange = (tabId) => {
+    const RESTRICTED_TABS = ["hod", "qa-review"];
+
+    if (RESTRICTED_TABS.includes(tabId)) {
+        const missingFields = validateInstrumentForm(form);
+
+        if (missingFields.length > 0) {
+            toast.warning(
+                "Please complete all mandatory fields in Instrument Information and save the record before accessing the other tabs."
+            );
+
+            setActiveTab("instrument");
+            return;
+        }
+    }
+
+    setActiveTab(tabId);
+};
 
     /* ───────── Submit ───────── */
 
@@ -186,26 +237,6 @@ const CreateEquipment = () => {
             },
         };
 
-        /* ───────── Validation ───────── */
-
-        // if (checklistConfig.checklist_name?.trim() === "") {
-        //     toast.error("Please enter checklist name.");
-        //     setActiveTab("checklist");
-        //     return;
-        // }
-
-        // if (cleanedQuestionColumns.length === 0) {
-        //     toast.error("Please add at least one Question Column.");
-        //     setActiveTab("checklist");
-        //     return;
-        // }
-
-        // if (cleanedQuestions.length === 0) {
-        //     toast.error("Please add at least one checklist question.");
-        //     setActiveTab("checklist");
-        //     return;
-        // }
-
         /* ───────── Submit ───────── */
 
         try {
@@ -225,8 +256,14 @@ const CreateEquipment = () => {
                     values.calibration_test_points.trim(),
                 category: values.category.trim(),
                 checklist_config: cleanedChecklistConfig,
-                stage_id:77,
-                process_id:19
+                stage_id: 77 || null,
+                process_id: 19 || null,
+
+                // New review fields
+                hod_review_comments: values.hodReviewComments || "",
+                hod_review_attachment: values.hodReviewAttachment || [],
+                qa_review_comments: values.qaReviewComments || "",
+                qa_review_attachment: values.qaReviewAttachment || [],
             };
 
             console.log("Create Instrument Payload:", payload);
@@ -292,7 +329,7 @@ const CreateEquipment = () => {
                 />
             </div>
 
-            {/* ═══════════════ TAB 1: INSTRUMENT INFORMATION ═══════════════ */}
+            {/* ═══════════════ FORM (wraps instrument, HOD, QA tabs) ═══════════════ */}
 
             <Form
                 form={form}
@@ -307,18 +344,14 @@ const CreateEquipment = () => {
                     [&_.ant-form-item-explain-error]:!text-[11px]
                 "
             >
-                <div
-                    style={{
-                        display:
-                            activeTab === "instrument" ? "block" : "none",
-                    }}
-                >
+                {/* ─────────── TAB 1: INSTRUMENT INFORMATION ─────────── */}
+
+                {activeTab === "instrument" && (
                     <section>
                         <SectionHeader title="INSTRUMENT INFORMATION" />
 
                         <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
                             {/* INSTRUMENT NAME */}
-
                             <Form.Item
                                 name="instrument_name"
                                 label={
@@ -343,7 +376,6 @@ const CreateEquipment = () => {
                             </Form.Item>
 
                             {/* INSTRUMENT ID NO. */}
-
                             <Form.Item
                                 name="instrument_id_no"
                                 label={
@@ -368,7 +400,6 @@ const CreateEquipment = () => {
                             </Form.Item>
 
                             {/* MAKE */}
-
                             <Form.Item
                                 name="make"
                                 label={
@@ -392,7 +423,6 @@ const CreateEquipment = () => {
                             </Form.Item>
 
                             {/* SR. NO. / MODEL NO. */}
-
                             <Form.Item
                                 name="sr_no_model_no"
                                 label={
@@ -417,7 +447,6 @@ const CreateEquipment = () => {
                             </Form.Item>
 
                             {/* LOCATION */}
-
                             <Form.Item
                                 name="location"
                                 label={
@@ -441,7 +470,6 @@ const CreateEquipment = () => {
                             </Form.Item>
 
                             {/* LEAST COUNT */}
-
                             <Form.Item
                                 name="least_count"
                                 label={
@@ -465,7 +493,6 @@ const CreateEquipment = () => {
                             </Form.Item>
 
                             {/* ACCURACY */}
-
                             <Form.Item
                                 name="accuracy"
                                 label={
@@ -489,7 +516,6 @@ const CreateEquipment = () => {
                             </Form.Item>
 
                             {/* INSTRUMENT RANGE */}
-
                             <Form.Item
                                 name="instrument_range"
                                 label={
@@ -514,7 +540,6 @@ const CreateEquipment = () => {
                             </Form.Item>
 
                             {/* OPERATING RANGE */}
-
                             <Form.Item
                                 name="operating_range"
                                 label={
@@ -539,7 +564,6 @@ const CreateEquipment = () => {
                             </Form.Item>
 
                             {/* CALIBRATION TEST POINTS */}
-
                             <Form.Item
                                 name="calibration_test_points"
                                 label={
@@ -564,7 +588,6 @@ const CreateEquipment = () => {
                             </Form.Item>
 
                             {/* CATEGORY */}
-
                             <Form.Item
                                 name="category"
                                 label={
@@ -588,10 +611,80 @@ const CreateEquipment = () => {
                             </Form.Item>
                         </div>
                     </section>
-                </div>
+                )}
+
+                {/* ─────────── TAB 3: HOD REVIEW ─────────── */}
+
+                {activeTab === "hod" && (
+                    <section>
+                        <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
+
+                        <div className="px-1 pb-1 pt-4">
+                            <Form.Item
+                                name="hodReviewComments"
+                                label="Comments"
+                                className="!mb-4"
+                            >
+                                <FormTextArea
+                                    rows={4}
+                                    placeholder="Enter comments..."
+                                />
+                            </Form.Item>
+
+                            <Form.Item
+                                name="hodReviewAttachment"
+                                label="Attachment"
+                                valuePropName="fileList"
+                                getValueFromEvent={(event) =>
+                                    Array.isArray(event)
+                                        ? event
+                                        : event?.fileList
+                                }
+                                className="!mb-0"
+                            >
+                                <FormAttachment disabled />
+                            </Form.Item>
+                        </div>
+                    </section>
+                )}
+
+                {/* ─────────── TAB 4: QA REVIEW ─────────── */}
+
+                {activeTab === "qa-review" && (
+                    <section>
+                        <SectionHeader title="QA APPROVAL REVIEW" />
+
+                        <div className="px-1 pb-1 pt-4">
+                            <Form.Item
+                                name="qaReviewComments"
+                                label="Comments"
+                                className="!mb-4"
+                            >
+                                <FormTextArea
+                                    rows={4}
+                                    placeholder="Enter comments..."
+                                />
+                            </Form.Item>
+
+                            <Form.Item
+                                name="qaReviewAttachment"
+                                label="Attachment"
+                                valuePropName="fileList"
+                                getValueFromEvent={(event) =>
+                                    Array.isArray(event)
+                                        ? event
+                                        : event?.fileList
+                                }
+                                className="!mb-0"
+                            >
+                                <FormAttachment disabled />
+                            </Form.Item>
+                        </div>
+                    </section>
+                )}
             </Form>
 
-            {/* ═══════════════ TAB 2: CHECKLIST CONFIGURATION ═══════════════ */}
+            {/* ═══════════════ TAB 2: CHECKLIST CONFIGURATION (outside Form) ═══════════════ */}
 
             {activeTab === "checklist" && (
                 <ChecklistConfiguration

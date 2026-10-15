@@ -4,6 +4,11 @@ const ProcessStage = ({
     stages = [],
     activeStageId,
     loading = false,
+
+    /* ─── Dynamic cancelled-stage config ─── */
+    /* Default 6 keeps the Calibration Panel working without change. */
+    cancelledStageId = 6,
+    cancelledStageName = "close - cancelled",
 }) => {
     if (loading) {
         return (
@@ -58,23 +63,51 @@ const ProcessStage = ({
     }
 
     const normalizedActiveStageId = Number(activeStageId);
+    const normalizedCancelledStageId =
+        cancelledStageId !== null && cancelledStageId !== undefined
+            ? Number(cancelledStageId)
+            : null;
+    const normalizedCancelledName = (cancelledStageName || "")
+        .trim()
+        .toLowerCase();
 
     const activeStage = stages.find(
         (stage) => Number(stage?.id) === normalizedActiveStageId
     );
 
+    /* Helper — is a given stage the cancelled stage? (by id OR name) */
+    const isCancelledStage = (stage) => {
+        if (!stage) return false;
+
+        const byId =
+            normalizedCancelledStageId !== null &&
+            Number(stage?.id) === normalizedCancelledStageId;
+
+        const byName =
+            normalizedCancelledName !== "" &&
+            String(stage?.name || "").trim().toLowerCase() ===
+                normalizedCancelledName;
+
+        return byId || byName;
+    };
+
+    /* ★ If cancelled stage is active → show ONLY it.
+       ★ Otherwise → hide it from the bar. */
     const isCancelledStageActive =
-        normalizedActiveStageId === 6 ||
-        activeStage?.name?.trim().toLowerCase() === "close - cancelled";
+        isCancelledStage(activeStage) ||
+        (normalizedCancelledStageId !== null &&
+            normalizedActiveStageId === normalizedCancelledStageId);
 
     const visibleStages = isCancelledStageActive
         ? activeStage
             ? [activeStage]
-            : [{ id: 6, name: "Close - Cancelled" }]
-        : stages.filter(
-              (stage) =>
-                  stage?.name?.trim().toLowerCase() !== "close - cancelled"
-          );
+            : [
+                  {
+                      id: normalizedCancelledStageId ?? "cancelled",
+                      name: cancelledStageName || "Close - Cancelled",
+                  },
+              ]
+        : stages.filter((stage) => !isCancelledStage(stage));
 
     const activeStageIndex = stages.findIndex(
         (stage) => Number(stage?.id) === normalizedActiveStageId
@@ -137,9 +170,9 @@ const ProcessStage = ({
                             const isClosedDone =
                                 normalizedName === "closed - done";
 
-                            const isCancelled =
-                                normalizedName === "close - cancelled";
+                            const isCancelled = isCancelledStage(stage);
 
+                            /* RED pill — cancelled stage */
                             if (isCancelled) {
                                 return (
                                     <div
@@ -205,6 +238,7 @@ const ProcessStage = ({
                                 );
                             }
 
+                            /* RED pill — closed & done active */
                             if (isClosedDone && isActive) {
                                 return (
                                     <div
@@ -277,6 +311,7 @@ const ProcessStage = ({
                                 );
                             }
 
+                            /* GREEN pill — completed or active */
                             if (isCompleted || isActive) {
                                 return (
                                     <div
@@ -369,6 +404,7 @@ const ProcessStage = ({
                                 );
                             }
 
+                            /* WHITE pill — pending */
                             return (
                                 <div
                                     key={stage?.id}
@@ -416,21 +452,10 @@ const ProcessStage = ({
                             opacity: 0;
                         }
 
-                        12% {
-                            opacity: 0;
-                        }
-
-                        35% {
-                            opacity: 0.72;
-                        }
-
-                        55% {
-                            opacity: 0.52;
-                        }
-
-                        75% {
-                            opacity: 0.18;
-                        }
+                        12% { opacity: 0; }
+                        35% { opacity: 0.72; }
+                        55% { opacity: 0.52; }
+                        75% { opacity: 0.18; }
 
                         100% {
                             transform: translateX(330%) rotate(8deg);
@@ -439,25 +464,13 @@ const ProcessStage = ({
                     }
 
                     @keyframes stageTextBreathGreen {
-                        0%,
-                        100% {
-                            transform: scale(1);
-                        }
-
-                        50% {
-                            transform: scale(1.06);
-                        }
+                        0%, 100% { transform: scale(1); }
+                        50%      { transform: scale(1.06); }
                     }
 
                     @keyframes stageTextBreathRed {
-                        0%,
-                        100% {
-                            transform: scale(1);
-                        }
-
-                        50% {
-                            transform: scale(1.06);
-                        }
+                        0%, 100% { transform: scale(1); }
+                        50%      { transform: scale(1.06); }
                     }
 
                     @media (prefers-reduced-motion: reduce) {

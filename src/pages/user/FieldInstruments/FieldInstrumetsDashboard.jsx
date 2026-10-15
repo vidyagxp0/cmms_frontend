@@ -4,8 +4,75 @@ import { useNavigate } from "react-router-dom";
 import { Eye, Wrench, ArrowUpRight } from "lucide-react";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
-import { getAllFieldInstruments } from "../../../services/usersApi/equipmentApi";
+import {
+    getAllFieldInstruments,
+    getFieldInstrumentReport,
+} from "../../../services/usersApi/equipmentApi";
 import DataTable from "../../../components/common/DataTable/DataTable";
+
+
+/* report window templates */
+const REPORT_LOADER_HTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Loading Report...</title>
+    <style>
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+        body { overflow: hidden; font-family: Arial, sans-serif; }
+        .loader {
+            position: fixed; inset: 0; z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+            background: white;
+        }
+        .loader-content { display: flex; flex-direction: column; align-items: center; }
+        .logo { margin-bottom: 24px; height: 56px; width: auto; object-fit: contain; }
+        .spinner {
+            width: 32px; height: 32px;
+            border: 2px solid #e2e8f0; border-top-color: #F28C00;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        .text { margin-top: 16px; font-size: 12px; font-weight: 500; color: #94a3b8; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="loader">
+        <div class="loader-content">
+            <img src="/vidyagxp_logo.png" alt="VidyaGxP" class="logo" />
+            <div class="spinner"></div>
+            <p class="text">Loading your workspace...</p>
+        </div>
+    </div>
+</body>
+</html>
+`;
+
+const REPORT_ERROR_HTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Report Error</title>
+    <style>
+        body {
+            margin: 0; height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            font-family: Arial, sans-serif; background: white;
+        }
+        .error { text-align: center; }
+        .error-title { font-size: 16px; font-weight: 600; color: #b91c1c; }
+        .error-message { margin-top: 8px; font-size: 12px; color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div class="error">
+        <div class="error-title">Failed to generate report</div>
+        <div class="error-message">Please close this tab and try again.</div>
+    </div>
+</body>
+</html>
+`;
 
 const FieldInstrumetsDashboard = () => {
     const navigate = useNavigate();
@@ -66,6 +133,44 @@ const FieldInstrumetsDashboard = () => {
     useEffect(() => {
         fetchFieldInstruments(1, 10);
     }, []);
+
+
+    /* view field instrument report */
+    const handleViewReport = async (instrumentId) => {
+        if (!instrumentId) return;
+
+        const reportWindow = window.open("", "_blank");
+
+        if (!reportWindow) {
+            alert("Please allow pop-ups to view the report.");
+            return;
+        }
+
+        try {
+            reportWindow.document.write(REPORT_LOADER_HTML);
+            reportWindow.document.close();
+
+            const response = await getFieldInstrumentReport(instrumentId);
+            const blob = new Blob([response.data], {
+                type: "application/pdf",
+            });
+
+            const pdfUrl = window.URL.createObjectURL(blob);
+            reportWindow.location.href = pdfUrl;
+
+            setTimeout(() => {
+                window.URL.revokeObjectURL(pdfUrl);
+            }, 10000);
+        } catch (error) {
+            console.error("Failed to open field instrument report:", error);
+
+            if (reportWindow && !reportWindow.closed) {
+                reportWindow.document.open();
+                reportWindow.document.write(REPORT_ERROR_HTML);
+                reportWindow.document.close();
+            }
+        }
+    };
 
     // ================================================================
     // TABLE COLUMNS
@@ -308,7 +413,7 @@ const FieldInstrumetsDashboard = () => {
                         type="button"
                         onClick={(event) => {
                             event.stopPropagation();
-                            alert("Report coming soon");
+                            handleViewReport(row.original?.id);
                         }}
                         className="
                             inline-flex

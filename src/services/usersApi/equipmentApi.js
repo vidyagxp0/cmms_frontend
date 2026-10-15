@@ -86,3 +86,9 @@ export const getFieldInstrumentAuditTrail = (id, params = {}) => {
     }
   );
 };
+
+export const getFieldInstrumentReport = (id) => {
+    return api.get(`/user/fieldInstrument-singleReport/${id}`, {
+        responseType: "blob",
+    });
+};

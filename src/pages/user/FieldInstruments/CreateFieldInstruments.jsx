@@ -12,6 +12,7 @@ import { addFieldInstrument } from "../../../services/usersApi/equipmentApi";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import ChecklistConfigField from "./ChecklistConfigField";
+import { getProfile } from "../../../services/authApi";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
@@ -84,6 +85,24 @@ const CreateFieldInstruments = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [checklistConfig, setChecklistConfig] = useState(EMPTY_CHECKLIST);
     const [activeTab, setActiveTab] = useState("instrument");
+
+        const [loginUserId, setLoginUserId] = useState("");
+        
+            useEffect(() => {
+                const fetchProfile = async () => {
+                try {
+                    const response = await getProfile();
+                    const profile = response?.data?.data;
+                    if (!profile) return;
+                    setLoginUserId(profile?.id || "");
+                } catch (error) {
+                    console.error("Failed to fetch profile:", error);
+                }
+                };
+                fetchProfile();
+            }, []);
+    
+    
 
     /* ───────── Tab switch with validation ───────── */
 
@@ -251,6 +270,7 @@ const CreateFieldInstruments = () => {
                 checklist_config: cleanedChecklistConfig,
                 stage_id: 82 || null,
                 process_id: 22 || null,
+                initiator_id: loginUserId || null, 
 
                 /* Review fields */
                 hod_review_comments: values.hodReviewComments || "",

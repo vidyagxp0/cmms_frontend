@@ -205,7 +205,7 @@ const CalibrationGrid = ({
               <th colSpan={2} className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">ENGINEERING / UTILITY</th>
               <th className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">AREA</th>
               <th colSpan={4} className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">CALIBRATION LAB</th>
-              <th colSpan={3} className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">*C-Critical, NC- Non Critical</th>
+              <th colSpan={3} className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">C-Critical, NC- Non Critical</th>
             </tr>
             
             {/* Column Headers */}

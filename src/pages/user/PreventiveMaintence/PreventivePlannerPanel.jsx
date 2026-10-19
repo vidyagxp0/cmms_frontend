@@ -45,7 +45,7 @@ const TABS = [
   { id: "user-dept-review", label: "QA Review", stageId: 9 },
   { id: "qa-review", label: "QA Approval Review", stageId: 10 },
   { id: "activity", label: "Activity Log", stageId: 11 },
-  { id: "cancellation", label: "Cancellation", stageId: 6 },
+  { id: "cancellation", label: "Cancellation", stageId: 12 },
 ];
 
 const REQUIRED_FIELDS = [{ name: "shortDescription", label: "Short Description" }];
@@ -201,7 +201,7 @@ const PreventivePlannerPanel = () => {
   const isHodEditable = isStageEditable(8);
   const isUserDeptEditable = isStageEditable(9);
   const isQaReviewEditable = isStageEditable(10);
-  const isCancellationEditable = isStageEditable(6);
+  const isCancellationEditable = isStageEditable(11);
 
   useEffect(() => {
     const fetchProfile = async () => {

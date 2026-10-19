@@ -46,12 +46,12 @@ import {
 /* ───────────────────────── Tabs config ───────────────────────── */
 
 const TABS = [
-  { id: "instrument", label: "Instrument Information", stageId: 77 },
+  { id: "instrument", label: "Instrument Information", stageId: 23 },
   { id: "checklist", label: "Checklist Configuration" },
-  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 78 },
-  { id: "qa-review", label: "QA Approval Review", stageId: 79 },
-  { id: "activity", label: "Activity Log", stageId: 80 },
-  { id: "cancellation", label: "Cancellation", stageId: 81 },
+  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 24 },
+  { id: "qa-review", label: "QA Approval Review", stageId: 25 },
+  { id: "activity", label: "Activity Log", stageId: 26 },
+  { id: "cancellation", label: "Cancellation", stageId: 27 },
 ];
 
 /* Process ID used for the Master Instrument workflow. */
@@ -238,10 +238,10 @@ const EquipmentPanel = () => {
     canPerformActivity === true &&
     permissionsLoading === false;
 
-  const isInstrumentEditable = isStageEditable(77);
-  const isHodEditable = isStageEditable(78);
-  const isQaReviewEditable = isStageEditable(79);
-  const isCancellationEditable = isStageEditable(81);
+  const isInstrumentEditable = isStageEditable(23);
+  const isHodEditable = isStageEditable(24);
+  const isQaReviewEditable = isStageEditable(25);
+  const isCancellationEditable = isStageEditable(27);
 
   /* ───────── Profile ───────── */
   useEffect(() => {

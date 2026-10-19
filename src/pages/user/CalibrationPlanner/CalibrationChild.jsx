@@ -318,8 +318,9 @@ const CalibrationChild = () => {
       const formattedInitiationDate = dayjs(initiationDate, "DD/MM/YYYY HH:mm").format("DD/MM/YYYY HH:mm");
 
       const payload = {
-        process_id: Number(processId),
-        stage_id: 72,
+        // process_id: Number(processId),
+        process_id: 5,
+        stage_id:18 ,
         is_child: true,
         parent_id: Number(parentId),
         department_id: Number(departmentId),

@@ -268,8 +268,8 @@ const CreateFieldInstruments = () => {
                     values.calibration_test_points.trim(),
                 category: values.category.trim(),
                 checklist_config: cleanedChecklistConfig,
-                stage_id: 82 || null,
-                process_id: 22 || null,
+                stage_id: 28 || null,
+                process_id: 6 || null,
                 initiator_id: loginUserId || null, 
 
                 /* Review fields */

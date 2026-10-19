@@ -275,8 +275,8 @@ const handleTabChange = (tabId) => {
                     values.calibration_test_points.trim(),
                 category: values.category.trim(),
                 checklist_config: cleanedChecklistConfig,
-                stage_id: 77 || null,
-                process_id: 19 || null,
+                stage_id: 23 || null,
+                process_id: 3 || null,
                 initiator_id: loginUserId || null, 
                 // New review fields
                 hod_review_comments: values.hodReviewComments || "",

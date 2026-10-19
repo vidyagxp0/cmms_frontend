@@ -817,7 +817,7 @@ const CreateCalibration = () => {
                             processId
                         ),
 
-                    stage_id: 55,
+                    stage_id: 1,
 
                     department_id:
                         departmentId,

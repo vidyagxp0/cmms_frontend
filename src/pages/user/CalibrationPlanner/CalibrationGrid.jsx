@@ -39,8 +39,7 @@ const CalibrationGrid = ({
     { key: "operatingrange", title: "Operating Range", type: "text", placeholder: "", minWidth: 160, disabled: true },
     { key: "calibrationTestPoints", title: "Calibration test points", type: "text", placeholder: "", minWidth: 160, disabled: true },
     { key: "category", title: "*Category", type: "select", placeholder: "Select", minWidth: 110, options: [{ value: "critical", label: "C" }, { value: "non-critical", label: "NC" }, { value: "indicative", label: "I" }] },
-    { key: "plannedDate", title: "Plan date", type: "date", placeholder: "Select date", minWidth: 150 },
-    { key: "calibrationDoneDate", title: "Calibration Done on", type: "date", placeholder: "Select date", minWidth: 170 },
+    { key: "plannedDate", title: "Planned date / Calibration Done on", type: "dualDate", minWidth: 320 },
     { key: "remark", title: "Remarks", type: "textarea", placeholder: "Enter remarks", minWidth: 200 },
   ];
 
@@ -54,6 +53,7 @@ const CalibrationGrid = ({
     if (maxRows !== undefined && rows.length >= maxRows) return;
     const newRow = {};
     columns.forEach((column) => { newRow[column.key] = ""; });
+    newRow.calibrationDoneDate = "";
     onChange([...rows, newRow]);
   };
 
@@ -94,7 +94,6 @@ const CalibrationGrid = ({
       const equipmentId = newValue;
       if (equipmentId && equipmentMap[equipmentId]) {
         const eq = equipmentMap[equipmentId];
-        // Auto-fill and disable all related fields based on the API payload structure
         row.equipmentInstrumentId = eq.instrument_id_no || eq.equipment_id || "";
         row.make = eq.make || "";
         row.model = eq.sr_no_model_no || eq.model || "";
@@ -105,7 +104,6 @@ const CalibrationGrid = ({
         row.operatingrange = eq.operating_range || "";
         row.calibrationTestPoints = eq.calibration_test_points || "";
       } else {
-        // Clear fields if nothing is selected
         row.equipmentInstrumentId = "";
         row.make = "";
         row.model = "";
@@ -146,6 +144,29 @@ const CalibrationGrid = ({
           filterOption={(input, option) => (option?.label ?? "").toLowerCase().includes(input.toLowerCase())}
           className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1]"
         />
+      );
+    }
+
+    if (type === "dualDate") {
+      return (
+        <div className="flex flex-row gap-1.5 p-1">
+          <DatePicker
+            value={row.plannedDate ? dayjs(row.plannedDate) : null}
+            placeholder="Plan date"
+            onChange={(date) => updateRow(rowIndex, "plannedDate", date ? date.format("YYYY-MM-DD") : "")}
+            format="DD-MM-YYYY"
+            className="!h-8 !w-[140px] !rounded !border-[#D1DBD7] !bg-white !px-2 !text-[10px] !font-medium !text-[#263B35] !shadow-none"
+            disabled={isDisabled}
+          />
+          <DatePicker
+            value={row.calibrationDoneDate ? dayjs(row.calibrationDoneDate) : null}
+            placeholder="Done on"
+            onChange={(date) => updateRow(rowIndex, "calibrationDoneDate", date ? date.format("YYYY-MM-DD") : "")}
+            format="DD-MM-YYYY"
+            className="!h-8 !w-[140px] !rounded !border-[#D1DBD7] !bg-white !px-2 !text-[10px] !font-medium !text-[#263B35] !shadow-none"
+            disabled={isDisabled}
+          />
+        </div>
       );
     }
 
@@ -216,18 +237,6 @@ const CalibrationGrid = ({
       <CustomScrollContainer maxHeight="520px" direction="both" className="w-full rounded-b-xl">
         <table className="w-full min-w-[max-content] border-collapse border border-[#D5DFDB]">
           <thead className="sticky top-0 z-[5]">
-            {/* Top Summary Header */}
-            {/* <tr className="bg-white">
-              <th colSpan={2} className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">YEAR</th>
-              <th className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold text-[#43564F]">{dayjs().year()}</th>
-              <th className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">BLOCK</th>
-              <th colSpan={2} className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">ENGINEERING / UTILITY</th>
-              <th className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">AREA</th>
-              <th colSpan={4} className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">CALIBRATION LAB</th>
-              <th colSpan={showChildColumn ? 5 : 4} className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">C-Critical, NC- Non Critical</th>
-            </tr> */}
-            
-            {/* Column Headers */}
             <tr className="bg-[#EEF3F1]">
               <th className="w-[50px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Sr. No</th>
               {columns.map((column) => (

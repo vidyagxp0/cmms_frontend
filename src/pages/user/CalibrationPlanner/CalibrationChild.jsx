@@ -4,6 +4,7 @@ import { Form, DatePicker } from "antd";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
 
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
@@ -14,13 +15,15 @@ import FormDisabledInput from "../../../components/common/Form/FormDisabledInput
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGrid";
-import  { CALIBRATED_BY_COLUMNS, CALIBRATION_RESULT_GRID } from "./calibrationColumn";
+import { CALIBRATED_BY_COLUMNS, CALIBRATION_RESULT_GRID } from "./calibrationColumn";
 
 import { getProfile } from "../../../services/authApi";
 import { getCalibrationUser, getAllEquipmentData, addCalibrationChild } from "../../../services/usersApi/calibrationApi";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
 import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
+
+dayjs.extend(customParseFormat);
 
 const TABS = [
   { id: "management", label: "General Information" },
@@ -31,8 +34,9 @@ const TABS = [
 const REQUIRED_FIELDS = [];
 
 const SYSTEM_FIELDS = [
+  { key: "documentNumber", label: "Document Number" },
+  { key: "documentType", label: "Document Type" },
   { key: "recordNumber", label: "Record Number" },
-  { key: "siteLocationCode", label: "Site / Location Code" },
   { key: "initiator", label: "Initiator" },
   { key: "dateOfInitiation", label: "Date of Initiation" },
   { key: "initiationDepartment", label: "Initiation Department" },
@@ -40,8 +44,10 @@ const SYSTEM_FIELDS = [
 
 const FIELD_LABELS = {
   shortDescription: "Short Description",
-  instrumentName: "Instrument Name",
-  instrumentId: "Instrument ID No.",
+  previousCalibrationDate: "Calibration Done Date",
+  nextCalibrationDate: "Calibration Next Due Date",
+  instrumentName: "Name",
+  instrumentId: "ID No.",
   location: "Location",
   make: "Make",
   model: "Sr.No/ Model No.",
@@ -52,10 +58,40 @@ const FIELD_LABELS = {
   operatingRange: "Operating Range",
   envTemperature: "Environmental Condition Temperature",
   envHumidity: "Environmental Condition Relative Humidity",
-  previousCalibrationDate: "Previous Calibration Date",
-  nextCalibrationDate: "Next Calibration Date",
-  comments: "Comments",
+  comments: "Remarks",
   attachment: "Attachment",
+};
+
+// ✅ FIXED toDayjs — checks clone method BEFORE isDayjs to handle serialized state
+const toDayjs = (val) => {
+  if (!val) return null;
+  
+  // Serialized dayjs object from navigate() state — has $d but NO clone method
+  if (typeof val === "object" && val.$d !== undefined && typeof val.clone !== "function") {
+    const parsed = dayjs(val.$d);
+    return parsed.isValid() ? parsed : null;
+  }
+  
+  // Real dayjs instance
+  if (dayjs.isDayjs(val) && typeof val.clone === "function") {
+    return val.isValid() ? val.clone() : null;
+  }
+  
+  // String values
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (!trimmed) return null;
+    const strict = dayjs(trimmed, "DD/MM/YYYY", true);
+    if (strict.isValid()) return strict;
+    const iso = dayjs(trimmed, "DD-MM-YYYY", true);
+    if (iso.isValid()) return iso;
+    const generic = dayjs(trimmed);
+    return generic.isValid() ? generic : null;
+  }
+  
+  // Fallback: Date, number, etc.
+  const d = dayjs(val);
+  return d.isValid() ? d : null;
 };
 
 const normalizeGridRows = (rows = []) => {
@@ -114,9 +150,12 @@ const CalibrationChild = () => {
   const [initiationDepartment, setInitiationDepartment] = useState("");
   const [recordNumber, setRecordNumber] = useState("");
   const [dateOfInitiation, setDateOfInitiation] = useState("");
+  const [formInitialValues, setFormInitialValues] = useState({});
 
   useEffect(() => {
     let isMounted = true;
+
+    console.log("🔍 CalibrationChild location.state:", location.state);
 
     if (!rowData) {
       toast.error("No data provided for this calibration item.");
@@ -164,19 +203,17 @@ const CalibrationChild = () => {
           setRecordNumber(recNum);
         } else if (recordNumRes.status === "rejected") {
           console.error("Failed to fetch record number:", recordNumRes.reason);
-          toast.error("Could not load record number.");
         }
 
         if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
           const data = equipmentRes.value.data.data || [];
-          const options = data.map((item) => ({ value: item.id, label: item.name }));
+          const options = data.map((item) => ({ value: item.id, label: item.instrument_name || item.name || "" }));
           const map = {};
           data.forEach((item) => { map[item.id] = item; });
           setEquipmentOptions(options);
           setEquipmentMap(map);
         } else if (equipmentRes.status === "rejected") {
           console.error("Failed to fetch equipment:", equipmentRes.reason);
-          toast.error("Could not load equipment list.");
         }
 
         if (usersRes.status === "fulfilled" && usersRes.value?.data?.data) {
@@ -186,48 +223,41 @@ const CalibrationChild = () => {
           setQaApprovers(data?.qa_approver || []);
         } else if (usersRes.status === "rejected") {
           console.error("Failed to fetch calibration users:", usersRes.reason);
-          toast.error("Failed to load workflow users.");
         }
 
-        const parseDate = (val) => {
-          if (!val) return null;
-          if (dayjs.isDayjs(val)) return val;
-          let d = dayjs(val, "DD/MM/YYYY", true);
-          if (d.isValid()) return d;
-          d = dayjs(val);
-          return d.isValid() ? d : null;
-        };
-
+        // ✅ Build values
         const values = {
+          documentNumber: "SMLJ/ENG/SOP-GEN/005/F08-02",
+          documentType: "Formates",
           recordNumber: recNum,
-          siteLocationCode: rowData.siteLocationCode || "Unit IV",
           initiator: rowData.initiator || profileName,
           dateOfInitiation: rowData.dateOfInitiation || now,
           initiationDepartment: rowData.initiationDepartment || profileDeptName,
           shortDescription: rowData.shortDescription || parentShortDesc || "",
-          instrumentName: rowData.equipmentInstrumentName || "",
-          instrumentId: rowData.equipmentInstrumentId || "",
+          instrumentName: rowData.equipmentInstrumentName || rowData.instrumentName || "",
+          instrumentId: rowData.equipmentInstrumentId || rowData.instrumentId || "",
           location: rowData.location || "",
           make: rowData.make || "",
           model: rowData.model || "",
-          instrumentRange: rowData.instrumentrange || "",
+          instrumentRange: rowData.instrumentrange || rowData.instrumentRange || "",
           leastCount: rowData.leastCount || "",
           accuracy: rowData.accuracy || "",
           calibrationTestPoints: rowData.calibrationTestPoints || "",
-          operatingRange: rowData.operatingrange || "",
+          operatingRange: rowData.operatingrange || rowData.operatingRange || "",
           envTemperature: rowData.envTemperature || "",
           envHumidity: rowData.envHumidity || "",
-          previousCalibrationDate: parseDate(rowData.previousCalibrationDate),
-          nextCalibrationDate: parseDate(rowData.nextCalibrationDate),
+          previousCalibrationDate: toDayjs(rowData.previousCalibrationDate || rowData.plannedDate),
+          nextCalibrationDate: toDayjs(rowData.nextCalibrationDate || rowData.calibrationDoneDate),
           comments: rowData.comments || "",
           attachment: rowData.attachment || [],
         };
 
-        form.setFieldsValue(values);
+        console.log("✅ Built form initial values:", values);
+        setFormInitialValues(values);
         setCalibrationResultRows(rowData.calibrationResultRows || []);
         setCalibrationResultTest(rowData.calibrationResultTest || []);
       } catch (error) {
-        console.error("Failed to load initial data:", error);
+        console.error("❌ Failed to load initial data:", error);
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -242,28 +272,7 @@ const CalibrationChild = () => {
     return () => {
       isMounted = false;
     };
-  }, [rowData, processId, form, parentShortDesc, navigate]);
-
-  const hodOptions = hodUsers.map((user) => ({ value: user.id, label: user.name }));
-  const qaReviewerOptions = qaReviewers.map((user) => ({ value: user.id, label: user.name }));
-  const qaApproverOptions = qaApprovers.map((user) => ({ value: user.id, label: user.name }));
-
-  const getUserPair = (userId, users) => {
-    const user = users.find((u) => String(u.id) === String(userId));
-    return { id: user?.id || userId || "", name: user?.name || "" };
-  };
-
-  const buildFullProcessData = (values) => {
-    const systemValues = {
-      recordNumber: values.recordNumber || recordNumber,
-      siteLocationCode: values.siteLocationCode || "Unit IV",
-      initiator: values.initiator || initiator,
-      dateOfInitiation: values.dateOfInitiation || dateOfInitiation,
-      initiationDepartment: values.initiationDepartment || initiationDepartment,
-    };
-    const baseData = buildChildProcessData(values, systemValues);
-    return baseData;
-  };
+  }, [rowData, processId, parentShortDesc, navigate, location.state]);
 
   const handleTabChange = (tabId) => {
     if (tabId !== "management") {
@@ -284,43 +293,44 @@ const CalibrationChild = () => {
     if (missing.length > 0) {
       const names = missing.map((f) => f.label).join(", ");
       toast.error(`Required fields missing: ${names}`);
-      form.setFields(missing.map((f) => ({ name: f.name, errors: [`${f.label} is required`] })));
       setActiveTab("management");
       return;
     }
     form.submit();
   };
 
-  // ========== UPDATED handleSubmit ==========
+  const buildFullProcessData = (values) => {
+    const systemValues = {
+      documentNumber: values.documentNumber || "SMLJ/ENG/SOP-GEN/005/F08-02",
+      documentType: values.documentType || "Formates",
+      recordNumber: values.recordNumber || recordNumber,
+      initiator: values.initiator || initiator,
+      dateOfInitiation: values.dateOfInitiation || dateOfInitiation,
+      initiationDepartment: values.initiationDepartment || initiationDepartment,
+    };
+    return buildChildProcessData(values, systemValues);
+  };
+
   const handleSubmit = async (values) => {
     if (isSaving) return;
     try {
       setIsSaving(true);
       const processData = buildFullProcessData(values);
 
-      // Normalize both grids
       const normalizedCalibrationRows = normalizeGridRows(calibrationResultRows);
       const normalizedTestRows = normalizeGridRows(calibrationResultTest);
 
-      // Combine into one gridData array
       const gridData = [
-        {
-          name: "calibrationResults",   // or any identifier you prefer
-          rows: normalizedCalibrationRows,
-        },
-        {
-          name: "masterInstrumentsDetails",
-          rows: normalizedTestRows,
-        },
+        { name: "calibrationResults", rows: normalizedCalibrationRows },
+        { name: "masterInstrumentsDetails", rows: normalizedTestRows },
       ];
 
       const initiationDate = values.dateOfInitiation || dateOfInitiation;
       const formattedInitiationDate = dayjs(initiationDate, "DD/MM/YYYY HH:mm").format("DD/MM/YYYY HH:mm");
 
       const payload = {
-        // process_id: Number(processId),
         process_id: 5,
-        stage_id:18 ,
+        stage_id: 18,
         is_child: true,
         parent_id: Number(parentId),
         department_id: Number(departmentId),
@@ -328,8 +338,7 @@ const CalibrationChild = () => {
         short_description: values.shortDescription || "",
         initiation_date: formattedInitiationDate,
         process_data: processData,
-        gridData: gridData,          // single combined array
-        // testGridData removed
+        gridData: gridData,
         checklistData: [],
       };
 
@@ -392,6 +401,7 @@ const CalibrationChild = () => {
 
       <Form
         form={form}
+        initialValues={formInitialValues}
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
@@ -401,85 +411,70 @@ const CalibrationChild = () => {
           <section>
             <SectionHeader title="SYSTEM INFORMATION" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              {/* <Form.Item name="recordNumber" label="Record Number" className="!mb-4"><FormDisabledInput /></Form.Item> */}
               {SYSTEM_FIELDS.map((field) => (
-                <Form.Item key={field.key} name={field.key} label={field.label} className="!mb-4"><FormDisabledInput /></Form.Item>
+                <Form.Item key={field.key} name={field.key} label={field.label} className="!mb-4">
+                  <FormDisabledInput />
+                </Form.Item>
               ))}
               <Form.Item name="shortDescription" label="Short Description" className="!mb-4">
                 <FormInput placeholder="Enter short description" />
               </Form.Item>
             </div>
+
             <div className="my-9 h-px w-full bg-slate-200" />
             <SectionHeader title="INSTRUMENT / EQUIPMENT DETAILS" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="instrumentName" label="Instrument Name" className="!mb-4">
-                <FormSelect placeholder={equipmentLoading ? "Loading..." : "Select Instrument"} options={equipmentOptions} disabled={equipmentLoading} />
+              {/* ✅ EXACT SEQUENCE MATCHING PANEL */}
+              <Form.Item name="previousCalibrationDate" label="Calibration Done Date" className="!mb-4">
+                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
               </Form.Item>
-              <Form.Item name="instrumentId" label="Instrument ID No." className="!mb-4">
+              <Form.Item name="nextCalibrationDate" label="Calibration Next Due Date" className="!mb-4">
+                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
+              </Form.Item>
+              
+              <Form.Item name="instrumentName" label="Name" className="!mb-4">
+                <FormSelect placeholder="Select Instrument" options={equipmentOptions} />
+              </Form.Item>
+              <Form.Item name="instrumentId" label="ID No." className="!mb-4">
                 <FormInput placeholder="e.g. EQ-001" />
+              </Form.Item>
+              
+              <Form.Item name="make" label="Make" className="!mb-4">
+                <FormInput placeholder="e.g. Fluke" />
+              </Form.Item>
+              <Form.Item name="instrumentRange" label="Instrument Range" className="!mb-4">
+                <SymbolicInput placeholder="e.g. 0-1000 V" defaultDiscipline="Range" />
+              </Form.Item>
+              
+              <Form.Item name="model" label="Sr.No/ Model No." className="!mb-4">
+                <FormInput placeholder="e.g. 87V" />
+              </Form.Item>
+              <Form.Item name="operatingRange" label="Operating Range" className="!mb-4">
+                <SymbolicInput placeholder="e.g. 0-500 V" defaultDiscipline="Operating Range" />
+              </Form.Item>
+              
+              <Form.Item name="leastCount" label="Least Count" className="!mb-4">
+                <SymbolicInput placeholder="e.g. 0.01" defaultDiscipline="Least Count" />
+              </Form.Item>
+              <Form.Item name="accuracy" label="Accuracy" className="!mb-4">
+                <SymbolicInput placeholder="e.g. ±0.5%" defaultDiscipline="Accuracy" />
+              </Form.Item>
+              
+              <Form.Item name="calibrationTestPoints" label="Calibration test points" className="!mb-4">
+                <SymbolicInput placeholder="e.g. 0, 50, 100" defaultDiscipline="Test Points" />
               </Form.Item>
               <Form.Item name="location" label="Location" className="!mb-4">
                 <FormInput placeholder="Lab A, Room 101" />
               </Form.Item>
-              <Form.Item name="make" label="Make" className="!mb-4">
-                <FormInput placeholder="e.g. Fluke" />
-              </Form.Item>
-              <Form.Item name="model" label="Model" className="!mb-4">
-                <FormInput placeholder="e.g. 87V" />
-              </Form.Item>
-              <Form.Item name="instrumentRange" label="Instrument Range" className="!mb-4">
-                <SymbolicInput
-                  placeholder="e.g. 0-1000 V"
-                  defaultDiscipline="Range"
-                />
-              </Form.Item>
-              <Form.Item name="leastCount" label="Least Count" className="!mb-4">
-                <SymbolicInput
-                  placeholder="e.g. 0.01"
-                  defaultDiscipline="Least Count"
-                />
-              </Form.Item>
-              <Form.Item name="accuracy" label="Accuracy" className="!mb-4">
-                <SymbolicInput
-                  placeholder="e.g. ±0.5%"
-                  defaultDiscipline="Accuracy"
-                />
-              </Form.Item>
-              <Form.Item name="calibrationTestPoints" label="Calibration test points" className="!mb-4">
-                <SymbolicInput
-                  placeholder="e.g. 0, 50, 100"
-                  defaultDiscipline="Test Points"
-                />
-              </Form.Item>
-              <Form.Item name="operatingRange" label="Operating Range" className="!mb-4">
-                <SymbolicInput
-                  placeholder="e.g. 0-500 V"
-                  defaultDiscipline="Operating Range"
-                />
-              </Form.Item>
-              <Form.Item
-                name="envTemperature"
-                label="Environmental Condition Temperature"
-                className="!mb-4"
-              >
-                <SymbolicInput
-                  placeholder="e.g. 25"
-                  defaultDiscipline="Temperature"
-                />
+              
+              <Form.Item name="envTemperature" label="Environmental Condition Temperature" className="!mb-4">
+                <SymbolicInput placeholder="e.g. 25" defaultDiscipline="Temperature" />
               </Form.Item>
               <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
-                <SymbolicInput
-                  placeholder="e.g. 45% RH ± 5%"
-                  defaultDiscipline="Humidity"
-                />
-              </Form.Item>
-              <Form.Item name="previousCalibrationDate" label="Previous Calibration Date" className="!mb-4">
-                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
-              </Form.Item>
-              <Form.Item name="nextCalibrationDate" label="Next Calibration Date" className="!mb-4">
-                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
+                <SymbolicInput placeholder="e.g. 45% RH ± 5%" defaultDiscipline="Humidity" />
               </Form.Item>
             </div>
+
             <div className="my-9 h-px w-full bg-slate-200" />
             <SectionHeader title="CALIBRATION RESULT" />
             <div className="mt-4">
@@ -499,7 +494,6 @@ const CalibrationChild = () => {
             <div className="mt-4">
               <UserDynamicGrid
                 name="Master Instruments Details"
-                // description="Add parameter-wise calibration results"
                 columns={CALIBRATION_RESULT_GRID}
                 value={calibrationResultTest}
                 onChange={setCalibrationResultTest}
@@ -510,10 +504,11 @@ const CalibrationChild = () => {
                 rowKey="_rowId"
               />
             </div>
+
             <div className="my-9 h-px w-full bg-slate-200" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={4} placeholder="Additional comments..." />
+              <Form.Item name="comments" label="Remarks" className="!mb-4 md:col-span-2">
+                <FormTextArea rows={4} placeholder="Additional remarks..." />
               </Form.Item>
               <Form.Item
                 name="attachment"
@@ -522,7 +517,7 @@ const CalibrationChild = () => {
                 getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment disabled  />
+                <FormAttachment disabled />
               </Form.Item>
             </div>
           </section>
@@ -542,7 +537,7 @@ const CalibrationChild = () => {
                 getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment  disabled/>
+                <FormAttachment disabled />
               </Form.Item>
             </div>
           </section>

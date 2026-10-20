@@ -44,9 +44,9 @@ const TABS = [
 const REQUIRED_FIELDS = [];
 
 const ATTACHMENT_KEYS = [
-    "attachment",
-    "implementorAttachment",
-    "qaReviewAttachment",
+  "attachment",
+  "implementorAttachment",
+  "qaReviewAttachment",
 ];
 
 const getProcessValue = (processData = [], key) => {
@@ -66,13 +66,33 @@ const getProcessValue = (processData = [], key) => {
 const getQaVerifiedDate = (value) => {
   if (!value) return "";
   const raw = String(value).trim();
-  // ISO string e.g. "2026-09-11T05:18:53.000000Z"
   if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
     return dayjs(raw.slice(0, 10)).format("DD/MM/YYYY");
   }
-  // Already formatted
   const parsed = dayjs(raw, "DD/MM/YYYY", true);
   return parsed.isValid() ? parsed.format("DD/MM/YYYY") : "";
+};
+
+// Robust dayjs parser: handles ISO strings, DD/MM/YYYY strings, dayjs, serialized dayjs
+const toDayjs = (val) => {
+  if (!val) return null;
+  if (typeof val === "object" && val.$d !== undefined && typeof val.clone !== "function") {
+    const parsed = dayjs(val.$d);
+    return parsed.isValid() ? parsed : null;
+  }
+  if (dayjs.isDayjs(val) && typeof val.clone === "function") {
+    return val.isValid() ? val.clone() : null;
+  }
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (!trimmed) return null;
+    const generic = dayjs(trimmed);
+    if (generic.isValid()) return generic;
+    const dmy = dayjs(trimmed, "DD/MM/YYYY", true);
+    return dmy.isValid() ? dmy : null;
+  }
+  const d = dayjs(val);
+  return d.isValid() ? d : null;
 };
 
 // Build row payload for a single grid (without wrapping in name)
@@ -89,17 +109,10 @@ const buildGridRows = (rows = []) => {
   });
 };
 
-// Build combined gridData array for the payload
 const buildGridPayload = (calibrationRows, testRows) => {
   return [
-    {
-      name: "calibrationResults",
-      rows: buildGridRows(calibrationRows),
-    },
-    {
-      name: "masterInstrumentsDetails",
-      rows: buildGridRows(testRows),
-    },
+    { name: "calibrationResults", rows: buildGridRows(calibrationRows) },
+    { name: "masterInstrumentsDetails", rows: buildGridRows(testRows) },
   ];
 };
 
@@ -110,8 +123,9 @@ const getUserPair = (userId, users) => {
 
 const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprovers) => {
   const systemFields = [
+    { key: "documentNumber", label: "Document Number" },
+    { key: "documentType", label: "Document Type" },
     { key: "recordNumber", label: "Record Number" },
-    { key: "siteLocationCode", label: "Site / Location Code" },
     { key: "initiator", label: "Initiator" },
     { key: "dateOfInitiation", label: "Date of Initiation" },
     { key: "initiationDepartment", label: "Initiation Department" },
@@ -127,8 +141,8 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
   ];
   const labelMap = {
     shortDescription: "Short Description",
-    instrumentName: "Instrument Name",
-    instrumentId: "Instrument ID No.",
+    instrumentName: "Name",
+    instrumentId: "ID No.",
     location: "Location",
     make: "Make",
     model: "Sr.No/ Model No.",
@@ -141,7 +155,7 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
     envHumidity: "Environmental Condition Relative Humidity",
     previousCalibrationDate: "Previous Calibration Date",
     nextCalibrationDate: "Next Calibration Date",
-    comments: "Comments",
+    comments: "Remarks",
     attachment: "Attachment",
     implementorComments: "HOD / Designee Review Comments",
     implementorAttachment: "HOD / Designee Review Attachment",
@@ -150,8 +164,7 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
   };
   otherFields.forEach((key) => {
     let value = values[key] !== undefined && values[key] !== null ? values[key] : "";
-    // if (dayjs.isDayjs(value)) value = value.format("DD/MM/YYYY");
-       if (ATTACHMENT_KEYS.includes(key)) {
+    if (ATTACHMENT_KEYS.includes(key)) {
       value = [];
     } else if (dayjs.isDayjs(value)) {
       value = value.format("DD/MM/YYYY");
@@ -196,7 +209,6 @@ const CalibrationChildPanel = () => {
   const [departmentId, setDepartmentId] = useState("");
   const [initiationDepartment, setInitiationDepartment] = useState("");
   const [dateOfInitiation, setDateOfInitiation] = useState("");
-  const [siteLocationCode, setSiteLocationCode] = useState("");
   const [processName, setProcessName] = useState("");
   const [recordNumber, setRecordNumber] = useState("");
 
@@ -205,6 +217,9 @@ const CalibrationChildPanel = () => {
   const [calibrationResultTest, setCalibrationResultTest] = useState([]);
   const [parentId, setParentId] = useState(null);
   const [calibrationDoneDate, setCalibrationDoneDate] = useState("");
+
+  const [formInitialValues, setFormInitialValues] = useState({});
+  const [formReady, setFormReady] = useState(false);
 
   const isFetchingRef = useRef(false);
 
@@ -219,20 +234,22 @@ const CalibrationChildPanel = () => {
   const isQaApprovalEditable = isStageEditable(STAGE_IDS.qaApproval);
 
   useEffect(() => {
+    if (!isLoading && formReady && formInitialValues && Object.keys(formInitialValues).length > 0) {
+      form.setFieldsValue(formInitialValues);
+    }
+  }, [isLoading, formReady, formInitialValues, form]);
+
+  useEffect(() => {
     const fetchProfile = async () => {
       try {
         const response = await getProfile();
         const profile = response?.data?.data;
-
         if (!profile) return;
-
-        // Current logged-in user ONLY for e-sign/activity.
         setLoginUserId(profile?.id || "");
       } catch (error) {
         console.error("Failed to fetch profile:", error);
       }
     };
-
     fetchProfile();
   }, []);
 
@@ -242,12 +259,18 @@ const CalibrationChildPanel = () => {
         setEquipmentLoading(true);
         const response = await getAllEquipmentData();
         const data = response?.data?.data || [];
-        const options = data.map((item) => ({ value: item.id, label: item.name }));
+        const options = data.map((item) => ({
+          value: item.id,
+          label: item.instrument_name || item.name || `Instrument ${item.id}`,
+        }));
         const map = {};
         data.forEach((item) => { map[item.id] = item; });
         setEquipmentOptions(options);
         setEquipmentMap(map);
-      } catch (error) { console.error("Failed to fetch equipment:", error); toast.error("Could not load equipment list."); } finally { setEquipmentLoading(false); }
+      } catch (error) {
+        console.error("Failed to fetch equipment:", error);
+        toast.error("Could not load equipment list.");
+      } finally { setEquipmentLoading(false); }
     };
     fetchEquipment();
   }, []);
@@ -276,6 +299,19 @@ const CalibrationChildPanel = () => {
   const qaReviewerOptions = qaReviewers.map((user) => ({ value: user?.id, label: user?.name }));
   const qaApproverOptions = qaApprovers.map((user) => ({ value: user?.id, label: user?.name }));
 
+  const resolveInstrumentId = (val) => {
+    if (val === undefined || val === null || val === "") return "";
+    if (typeof val === "number") return val;
+    if (typeof val === "string") {
+      if (!isNaN(Number(val))) return Number(val);
+      const found = Object.values(equipmentMapRef.current).find(
+        (eq) => eq.instrument_name === val || eq.name === val
+      );
+      if (found) return found.id;
+    }
+    return val;
+  };
+
   const fetchChildDetail = useCallback(async (isInitial = false) => {
     if (!recordId) { toast.error("Child record ID is missing."); return; }
     if (isFetchingRef.current) return;
@@ -285,6 +321,7 @@ const CalibrationChildPanel = () => {
       const response = await getCalibrationChildDetail(recordId);
       const data = response?.data?.data;
       if (!data) { toast.error("Child calibration record not found."); return; }
+
       setProcessId(data?.process_id || null);
       setActiveStageId(data?.stage?.id || data?.stage_id || null);
       setProcessName(data?.process?.name || "");
@@ -292,16 +329,9 @@ const CalibrationChildPanel = () => {
 
       const processData = data?.process_data || [];
       const recNum = getProcessValue(processData, "recordNumber");
-      const locCode = getProcessValue(processData, "siteLocationCode");
       const initiatorName = getProcessValue(processData, "initiator");
-      const backendInitiatorId =
-        data?.initiator?.id ??
-        data?.initiator_id ??
-        "";
-      const backendInitiatorName =
-        data?.initiator?.name ??
-        initiatorName ??
-        "";
+      const backendInitiatorId = data?.initiator?.id ?? data?.initiator_id ?? "";
+      const backendInitiatorName = data?.initiator?.name ?? initiatorName ?? "";
       const initDate = getProcessValue(processData, "dateOfInitiation");
       const dept = getProcessValue(processData, "initiationDepartment");
       const shortDesc = getProcessValue(processData, "shortDescription");
@@ -327,7 +357,6 @@ const CalibrationChildPanel = () => {
       const qaReviewAttachment = getProcessValue(processData, "qaReviewAttachment") || getProcessValue(processData, "qa_review_attachment");
 
       setRecordNumber(recNum || "");
-      setSiteLocationCode(locCode || "");
       setInitiator(backendInitiatorName);
       setInitiatorId(backendInitiatorId);
       setDepartmentId(data?.department?.id || "");
@@ -335,20 +364,15 @@ const CalibrationChildPanel = () => {
       setDateOfInitiation(initDate || data?.initiation_date || "");
       setShortDescription(shortDesc || "");
 
-      const parseDate = (val) => {
-        if (!val) return null;
-        if (dayjs.isDayjs(val)) return val;
-        return dayjs(val, "DD/MM/YYYY", true);
-      };
-
-      form.setFieldsValue({
+      const formData = {
+        documentNumber: "SMLJ/ENG/SOP-GEN/005/F08-02",
+        documentType: "Formates",
         recordNumber: recNum || "",
-        siteLocationCode: locCode || "",
         initiator: backendInitiatorName || "",
         dateOfInitiation: initDate || data?.initiation_date || "",
         initiationDepartment: dept || data?.department?.name || "",
         shortDescription: shortDesc || "",
-        instrumentName: instrumentName || "",
+        instrumentName: resolveInstrumentId(instrumentName),
         instrumentId: instrumentId || "",
         location: location || "",
         make: make || "",
@@ -360,36 +384,33 @@ const CalibrationChildPanel = () => {
         operatingRange: operatingRange || "",
         envTemperature: envTemperature || "",
         envHumidity: envHumidity || "",
-        previousCalibrationDate: parseDate(prevCalDate),
-        nextCalibrationDate: parseDate(nextCalDate),
+        previousCalibrationDate: toDayjs(prevCalDate),
+        nextCalibrationDate: toDayjs(nextCalDate),
         hod: "",
         qaReviewer: "",
         qaApproval: "",
         comments: comments || "",
-        attachment: attachment || [],
+        attachment: Array.isArray(attachment) ? attachment : [],
         implementorComments: implementorComments || "",
-        implementorAttachment: implementorAttachment || [],
+        implementorAttachment: Array.isArray(implementorAttachment) ? implementorAttachment : [],
         qaReviewComments: qaReviewComments || "",
-        qaReviewAttachment: qaReviewAttachment || [],
-      });
+        qaReviewAttachment: Array.isArray(qaReviewAttachment) ? qaReviewAttachment : [],
+      };
 
-      // ---- Calibration DONE DATE (prefilled from qaVerifiedAt, read-only) ----
+      setFormInitialValues(formData);
+      form.setFieldsValue(formData);
+
       const qaVerifiedDate = getQaVerifiedDate(data?.qaVerifiedAt);
       setCalibrationDoneDate(qaVerifiedDate);
 
-      // ---- Parse grid data ----
       const gridRecords = data?.grid_records || [];
-      // Flatten all grid_data objects (they are arrays)
       const allGridData = gridRecords.flatMap((rec) => rec?.grid_data || []);
-      // Separate by name
       const calibrationRows = [];
       const testRows = [];
 
       allGridData.forEach((gridEntry) => {
         if (!gridEntry || !gridEntry.rows) return;
         const { name, rows } = gridEntry;
-        // rows is an array of row objects with row_id and column objects
-        // Convert to plain row objects (value only)
         const plainRows = rows.map((row) => {
           const plainRow = {};
           Object.keys(row).forEach((key) => {
@@ -411,19 +432,21 @@ const CalibrationChildPanel = () => {
       });
 
       setCalibrationResultRows(calibrationRows);
-      // Force the Calibration DONE DATE to the qaVerifiedAt date for every row
       setCalibrationResultTest(
         testRows.map((row) => ({
           ...row,
           calibrationdoneDATE: qaVerifiedDate || row.calibrationdoneDATE || "",
         }))
       );
-      // -------------------------------------
 
+      setFormReady(true);
     } catch (error) {
       console.error("Failed to fetch child detail:", error);
       toast.error(error?.response?.data?.message || "Failed to load child calibration record.");
-    } finally { setIsLoading(false); isFetchingRef.current = false; }
+    } finally {
+      setIsLoading(false);
+      isFetchingRef.current = false;
+    }
   }, [recordId, form]);
 
   useEffect(() => { fetchChildDetail(true); }, [fetchChildDetail]);
@@ -503,7 +526,6 @@ const CalibrationChildPanel = () => {
     setActiveTab(tabId);
   };
 
-  // Keep Calibration DONE DATE locked to qaVerifiedAt whenever the grid changes
   const handleCalibrationTestChange = useCallback(
     (rows = []) => {
       setCalibrationResultTest(
@@ -518,8 +540,9 @@ const CalibrationChildPanel = () => {
   );
 
   const systemValues = {
+    documentNumber: "SMLJ/ENG/SOP-GEN/005/F08-02",
+    documentType: "Formates",
     recordNumber: recordNumber,
-    siteLocationCode: siteLocationCode,
     initiator: initiator,
     dateOfInitiation: dateOfInitiation,
     initiationDepartment: initiationDepartment,
@@ -547,13 +570,9 @@ const CalibrationChildPanel = () => {
     if (isSaving || !recordId) return;
     try {
       setIsSaving(true);
-      // Get ALL form values (including hidden tabs) using getFieldsValue(true)
       const allFormValues = form.getFieldsValue(true);
-      // Merge with values passed from onFinish (they are the same, but safe)
       const mergedValues = { ...allFormValues, ...values };
       const processData = buildProcessData(mergedValues, systemValues, hodUsers, qaReviewers, qaApprovers);
-      
-      // Build combined gridData payload
       const gridData = buildGridPayload(calibrationResultRows, calibrationResultTest);
 
       const payload = {
@@ -565,7 +584,7 @@ const CalibrationChildPanel = () => {
         short_description: mergedValues.shortDescription || "",
         initiation_date: dayjs(mergedValues.dateOfInitiation || dateOfInitiation).format("DD/MM/YYYY HH:mm"),
         process_data: processData,
-        gridData: gridData,       
+        gridData: gridData,
         checklistData: [],
       };
 
@@ -615,7 +634,6 @@ const CalibrationChildPanel = () => {
 
   return (
     <div className="w-full">
-
       <div className="mb-2 space-y-2">
         <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} />
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
@@ -649,18 +667,20 @@ const CalibrationChildPanel = () => {
 
       <Form
         form={form}
+        initialValues={formInitialValues}
         preserve={true}
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
-        {/* Management tab - always mounted, hidden when not active */}
+        {/* Management tab - always mounted */}
         <section style={{ display: activeTab === "management" ? "block" : "none" }}>
           <SectionHeader title="SYSTEM INFORMATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item name="documentNumber" label="Document Number" className="!mb-4"><FormDisabledInput /></Form.Item>
+            <Form.Item name="documentType" label="Document Type" className="!mb-4"><FormDisabledInput /></Form.Item>
             <Form.Item name="recordNumber" label="Record Number" className="!mb-4"><FormDisabledInput /></Form.Item>
-            <Form.Item name="siteLocationCode" label="Site / Location Code" className="!mb-4"><FormDisabledInput /></Form.Item>
             <Form.Item name="initiator" label="Initiator" className="!mb-4"><FormDisabledInput /></Form.Item>
             <Form.Item name="dateOfInitiation" label="Date of Initiation" className="!mb-4"><FormDisabledInput /></Form.Item>
             <Form.Item name="initiationDepartment" label="Initiation Department" className="!mb-4"><FormDisabledInput /></Form.Item>
@@ -668,80 +688,58 @@ const CalibrationChildPanel = () => {
               <FormInput placeholder="Enter short description" disabled={!isManagementEditable} />
             </Form.Item>
           </div>
+          
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="INSTRUMENT / EQUIPMENT DETAILS" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="instrumentName" label="Instrument Name" className="!mb-4">
-              <FormSelect placeholder={equipmentLoading ? "Loading..." : "Select Instrument"} options={equipmentOptions} disabled={equipmentLoading || !isManagementEditable} />
+            <Form.Item name="previousCalibrationDate" label="Calibration Done Date" className="!mb-4">
+              <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
             </Form.Item>
-            <Form.Item name="instrumentId" label="Instrument ID No." className="!mb-4">
+            <Form.Item name="nextCalibrationDate" label="Calibration Next Due Date" className="!mb-4">
+              <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
+            </Form.Item>
+            <Form.Item name="instrumentName" label="Name" className="!mb-4">
+              <FormSelect
+                placeholder={equipmentLoading ? "Loading..." : "Select Instrument"}
+                options={equipmentOptions}
+                disabled={equipmentLoading || !isManagementEditable}
+              />
+            </Form.Item>
+            <Form.Item name="instrumentId" label="ID No." className="!mb-4">
               <FormInput placeholder="e.g. EQ-001" disabled={!isManagementEditable} />
-            </Form.Item>
-            <Form.Item name="location" label="Location" className="!mb-4">
-              <FormInput placeholder="Lab A, Room 101" disabled={!isManagementEditable} />
             </Form.Item>
             <Form.Item name="make" label="Make" className="!mb-4">
               <FormInput placeholder="e.g. Fluke" disabled={!isManagementEditable} />
             </Form.Item>
+            <Form.Item name="instrumentRange" label="Instrument Range" className="!mb-4">
+              <SymbolicInput placeholder="e.g. 0-1000 V" defaultDiscipline="Range" disabled={!isManagementEditable} />
+            </Form.Item>
             <Form.Item name="model" label="Sr.No/ Model No." className="!mb-4">
               <FormInput placeholder="e.g. 87V" disabled={!isManagementEditable} />
             </Form.Item>
-            <Form.Item name="instrumentRange" label="Instrument Range" className="!mb-4">
-              <SymbolicInput
-                placeholder="e.g. 0-1000 V"
-                defaultDiscipline="Range"
-                disabled={!isManagementEditable}
-              />
+            <Form.Item name="operatingRange" label="Operating Range" className="!mb-4">
+              <SymbolicInput placeholder="e.g. 0-500 V" defaultDiscipline="Operating Range" disabled={!isManagementEditable} />
             </Form.Item>
             <Form.Item name="leastCount" label="Least Count" className="!mb-4">
-              <SymbolicInput
-                placeholder="e.g. 0.01"
-                defaultDiscipline="Least Count"
-                disabled={!isManagementEditable}
-              />
+              <SymbolicInput placeholder="e.g. 0.01" defaultDiscipline="Least Count" disabled={!isManagementEditable} />
             </Form.Item>
             <Form.Item name="accuracy" label="Accuracy" className="!mb-4">
-              <SymbolicInput
-                placeholder="e.g. ±0.5%"
-                defaultDiscipline="Accuracy"
-                disabled={!isManagementEditable}
-              />
+              <SymbolicInput placeholder="e.g. ±0.5%" defaultDiscipline="Accuracy" disabled={!isManagementEditable} />
             </Form.Item>
             <Form.Item name="calibrationTestPoints" label="Calibration test points" className="!mb-4">
-              <SymbolicInput
-                placeholder="e.g. 0, 50, 100"
-                defaultDiscipline="Test Points"
-                disabled={!isManagementEditable}
-              />
+              <SymbolicInput placeholder="e.g. 0, 50, 100" defaultDiscipline="Test Points" disabled={!isManagementEditable} />
             </Form.Item>
-            <Form.Item name="operatingRange" label="Operating Range" className="!mb-4">
-              <SymbolicInput
-                placeholder="e.g. 0-500 V"
-                defaultDiscipline="Operating Range"
-                disabled={!isManagementEditable}
-              />
+            <Form.Item name="location" label="Location" className="!mb-4">
+              <FormInput placeholder="Lab A, Room 101" disabled={!isManagementEditable} />
             </Form.Item>
             <Form.Item name="envTemperature" label="Environmental Condition Temperature" className="!mb-4">
-              <SymbolicInput
-                placeholder="e.g. 25"
-                defaultDiscipline="Temperature"
-                disabled={!isManagementEditable}
-              />
+              <SymbolicInput placeholder="e.g. 25" defaultDiscipline="Temperature" disabled={!isManagementEditable} />
             </Form.Item>
             <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
-              <SymbolicInput
-                placeholder="e.g. 45% RH ± 5%"
-                defaultDiscipline="Humidity"
-                disabled={!isManagementEditable}
-              />
-            </Form.Item>
-            <Form.Item name="previousCalibrationDate" label="Previous Calibration Date" className="!mb-4">
-              <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
-            </Form.Item>
-            <Form.Item name="nextCalibrationDate" label="Next Calibration Date" className="!mb-4">
-              <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
+              <SymbolicInput placeholder="e.g. 45% RH ± 5%" defaultDiscipline="Humidity" disabled={!isManagementEditable} />
             </Form.Item>
           </div>
+          
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="CALIBRATION RESULT" />
           <div className="mt-4">
@@ -774,17 +772,13 @@ const CalibrationChildPanel = () => {
               rowKey="_rowId"
             />
           </div>
+          
           <div className="my-9 h-px w-full bg-slate-200" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
+            <Form.Item name="comments" label="Remarks" className="!mb-4 md:col-span-2">
               <FormTextArea rows={4} placeholder="Additional comments..." disabled={!isManagementEditable} />
             </Form.Item>
-            <Form.Item
-              name="attachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
-            >
+            <Form.Item name="attachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
               <FormAttachment
                 multiple={true}
                 recordId={recordId}
@@ -797,19 +791,14 @@ const CalibrationChildPanel = () => {
           </div>
         </section>
 
-        {/* Implementor tab - always mounted, hidden when not active */}
+        {/* Implementor tab */}
         <section style={{ display: activeTab === "implementor" ? "block" : "none" }}>
           <SectionHeader title="HOD / DESIGNEE REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item name="implementorComments" label="Comments" className="!mb-4 md:col-span-2">
               <FormTextArea rows={5} placeholder="Enter HOD / Designee review comments..." disabled={!isImplementorEditable} />
             </Form.Item>
-            <Form.Item
-              name="implementorAttachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
-            >
+            <Form.Item name="implementorAttachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
               <FormAttachment
                 multiple={true}
                 recordId={recordId}
@@ -822,19 +811,14 @@ const CalibrationChildPanel = () => {
           </div>
         </section>
 
-        {/* QA Review tab - always mounted, hidden when not active */}
+        {/* QA Review tab */}
         <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
           <SectionHeader title="QA REVIEW & APPROVAL" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
               <FormTextArea rows={5} placeholder="Enter QA review and approval comments..." disabled={!isQaReviewEditable && !isQaApprovalEditable} />
             </Form.Item>
-            <Form.Item
-              name="qaReviewAttachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
-            >
+            <Form.Item name="qaReviewAttachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
               <FormAttachment
                 multiple={true}
                 recordId={recordId}
@@ -847,7 +831,7 @@ const CalibrationChildPanel = () => {
           </div>
         </section>
 
-        {/* Activity Log tab - no form fields, but we keep it hidden/shown for consistency */}
+        {/* Activity Log tab */}
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
           <SectionHeader title="ACTIVITY LOG" />
           <div className="mt-5 space-y-4">

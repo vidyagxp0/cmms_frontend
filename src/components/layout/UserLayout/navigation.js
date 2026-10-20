@@ -89,6 +89,15 @@ export const DASHBOARD_NAV_ITEMS = [
     hiddenFromNav: true,
     group: "maintenance",
   },
+
+  // ─── Field Instrument Planner group ───────────────────────────────
+  {
+    id: "fieldInstrumentPlanner",
+    label: "Field Instrument Planner",
+    path: "/user/field-instrument-planner-dashboard",
+    icon: CalendarClock,
+    group: "fieldInstrumentPlanner",
+  },
 ];
 
 export const USER_NAV_ITEMS = DASHBOARD_NAV_ITEMS.filter(

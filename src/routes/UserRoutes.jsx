@@ -27,6 +27,9 @@ import CreateFieldInstruments from "../pages/user/FieldInstruments/CreateFieldIn
 import FIeldInstrumentsPanel from "../pages/user/FieldInstruments/FIeldInstrumentsPanel";
 import EquipmentAudit from "../pages/user/Equipment/EquipmentAudit";
 import FieldInstrumentAudit from "../pages/user/FieldInstruments/FieldInstrumentAudit";
+import FieldInstrumentPlannerDashboard from "../pages/user/FieldInstrumentPlanner/FieldInstrumentPlannerDashboard";
+import FieldInstrumentPlannerCreate from "../pages/user/FieldInstrumentPlanner/FieldInstrumentPlannerCreate";
+import FieldInstrumentsPlannerPanel from "../pages/user/FieldInstrumentPlanner/FieldInstrumentsPlannerPanel";
 
 function UserRoutes() {
   return (
@@ -72,6 +75,10 @@ function UserRoutes() {
         <Route path="preventive-maintenance-create/:processId/:recordId" element={<PreventiveMaintenanceCreate  />} />
         <Route path="preventive-maintenance-panel/:processId/:recordId" element={<PreventiveMaintenancePanel  />} />
 
+                {/* Field Instrument Planner Routes*/}
+        <Route path="field-instrument-planner-dashboard" element={<FieldInstrumentPlannerDashboard />} />
+        <Route path="field-instrument-planner-create/7" element={<FieldInstrumentPlannerCreate />} />
+        <Route path="field-instruments-planner-panel/10" element={<FieldInstrumentsPlannerPanel />} /> 
         {/* <Route path="equipment-panel/:id" element={<EquipmentPanel/>} /> */}
       </Route>
     </Routes>

@@ -20,23 +20,27 @@ const CalibrationGrid = ({
   addButtonLabel = "Add Row",
   minRows = 0,
   maxRows,
+  onViewChild,
+  viewChildLabel = "Child",
   recordId,
   disabled = false,
+  canCreateChild = false,
   showAddButton = true,
 }) => {
   const columns = [
     { key: "equipmentInstrumentName", title: "Instrument Name.", type: "select", placeholder: "Select instrument", required: true, minWidth: 180 },
-    { key: "equipmentInstrumentId", title: "Instrument ID No.", type: "text", placeholder: "Enter ID", required: true, minWidth: 150, disabled: true },
-    { key: "make", title: "Make", type: "text", placeholder: "Enter make", minWidth: 120, disabled: true },
-    { key: "model", title: "Sr. No / Model No", type: "text", placeholder: "Enter model", minWidth: 140, disabled: true },
-    { key: "location", title: "Location", type: "text", placeholder: "Enter location", minWidth: 140 },
-    { key: "leastCount", title: "Least Count", type: "text", placeholder: "Enter least count", minWidth: 120 },
-    { key: "accuracy", title: "Accuracy", type: "text", placeholder: "Enter accuracy", minWidth: 120 },
-    { key: "instrumentrange", title: "Instrument Range", type: "text", placeholder: "Enter range", minWidth: 160 },
-    { key: "operatingrange", title: "Operating Range", type: "text", placeholder: "Enter range", minWidth: 160 },
-    { key: "calibrationTestPoints", title: "Calibration test points", type: "text", placeholder: "Enter test points", minWidth: 160 },
+    { key: "equipmentInstrumentId", title: "Instrument ID No.", type: "text", placeholder: "", required: true, minWidth: 150, disabled: true },
+    { key: "make", title: "Make", type: "text", placeholder: "", minWidth: 120, disabled: true },
+    { key: "model", title: "Sr. No / Model No", type: "text", placeholder: "", minWidth: 140, disabled: true },
+    { key: "location", title: "Location", type: "text", placeholder: "", minWidth: 140, disabled: true },
+    { key: "leastCount", title: "Least Count", type: "text", placeholder: "", minWidth: 120, disabled: true },
+    { key: "accuracy", title: "Accuracy", type: "text", placeholder: "", minWidth: 120, disabled: true },
+    { key: "instrumentrange", title: "Instrument Range", type: "text", placeholder: "", minWidth: 160, disabled: true },
+    { key: "operatingrange", title: "Operating Range", type: "text", placeholder: "", minWidth: 160, disabled: true },
+    { key: "calibrationTestPoints", title: "Calibration test points", type: "text", placeholder: "", minWidth: 160, disabled: true },
     { key: "category", title: "*Category", type: "select", placeholder: "Select", minWidth: 110, options: [{ value: "critical", label: "C" }, { value: "non-critical", label: "NC" }, { value: "indicative", label: "I" }] },
-    { key: "previousCalibrationDate", title: "Planned date / Calibration Done on", type: "date", placeholder: "Select date", minWidth: 190 },
+    { key: "plannedDate", title: "Plan date", type: "date", placeholder: "Select date", minWidth: 150 },
+    { key: "calibrationDoneDate", title: "Calibration Done on", type: "date", placeholder: "Select date", minWidth: 170 },
     { key: "remark", title: "Remarks", type: "textarea", placeholder: "Enter remarks", minWidth: 200 },
   ];
 
@@ -89,14 +93,28 @@ const CalibrationGrid = ({
     if (key === "equipmentInstrumentName") {
       const equipmentId = newValue;
       if (equipmentId && equipmentMap[equipmentId]) {
-        const equipment = equipmentMap[equipmentId];
-        row.equipmentInstrumentId = equipment.equipment_id || "";
-        row.make = equipment.make || "";
-        row.model = equipment.model || "";
+        const eq = equipmentMap[equipmentId];
+        // Auto-fill and disable all related fields based on the API payload structure
+        row.equipmentInstrumentId = eq.instrument_id_no || eq.equipment_id || "";
+        row.make = eq.make || "";
+        row.model = eq.sr_no_model_no || eq.model || "";
+        row.location = eq.location || "";
+        row.leastCount = eq.least_count || "";
+        row.accuracy = eq.accuracy || "";
+        row.instrumentrange = eq.instrument_range || "";
+        row.operatingrange = eq.operating_range || "";
+        row.calibrationTestPoints = eq.calibration_test_points || "";
       } else {
+        // Clear fields if nothing is selected
         row.equipmentInstrumentId = "";
         row.make = "";
         row.model = "";
+        row.location = "";
+        row.leastCount = "";
+        row.accuracy = "";
+        row.instrumentrange = "";
+        row.operatingrange = "";
+        row.calibrationTestPoints = "";
       }
     }
 
@@ -110,7 +128,6 @@ const CalibrationGrid = ({
     const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
     const isDisabled = disabled || columnDisabled;
     
-    // Adjusted styles for a more compact spreadsheet look
     const commonProps = {
       disabled: isDisabled,
       className: "!w-full !rounded-none !border-transparent !bg-transparent !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!shadow-none disabled:!cursor-not-allowed disabled:!bg-transparent disabled:!text-[#65746E]",
@@ -169,6 +186,8 @@ const CalibrationGrid = ({
     );
   };
 
+  const showChildColumn = typeof onViewChild === "function";
+
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
       <div className="flex min-h-[68px] items-center justify-between gap-5 border-b border-[#D7E0DC] bg-[#F7F9F8] px-5">
@@ -197,16 +216,16 @@ const CalibrationGrid = ({
       <CustomScrollContainer maxHeight="520px" direction="both" className="w-full rounded-b-xl">
         <table className="w-full min-w-[max-content] border-collapse border border-[#D5DFDB]">
           <thead className="sticky top-0 z-[5]">
-            {/* Top Summary Header (Matching Image) */}
-            <tr className="bg-white">
+            {/* Top Summary Header */}
+            {/* <tr className="bg-white">
               <th colSpan={2} className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">YEAR</th>
               <th className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold text-[#43564F]">{dayjs().year()}</th>
               <th className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">BLOCK</th>
               <th colSpan={2} className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">ENGINEERING / UTILITY</th>
               <th className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">AREA</th>
               <th colSpan={4} className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">CALIBRATION LAB</th>
-              <th colSpan={3} className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">C-Critical, NC- Non Critical</th>
-            </tr>
+              <th colSpan={showChildColumn ? 5 : 4} className="border border-[#D5DFDB] px-2 py-1.5 text-center text-[10px] font-bold uppercase text-[#43564F]">C-Critical, NC- Non Critical</th>
+            </tr> */}
             
             {/* Column Headers */}
             <tr className="bg-[#EEF3F1]">
@@ -220,37 +239,69 @@ const CalibrationGrid = ({
                   <div className="flex items-center gap-1">{column.title}{column.required && <span className="text-red-500">*</span>}</div>
                 </th>
               ))}
+              {showChildColumn && (
+                <th className="w-[70px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">{viewChildLabel}</th>
+              )}
               <th className="w-[60px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Action</th>
             </tr>
           </thead>
           <tbody>
             {rows.length > 0 ? (
-              rows.map((row, rowIndex) => (
-                <tr key={rowIndex} className="group bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                  <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
-                    <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">{rowIndex + 1}.</span>
-                  </td>
-                  {columns.map((column) => (
-                    <td key={column.key} className="border border-[#D5DFDB] p-0 align-top">
-                      {renderField(column, row, rowIndex)}
+              rows.map((row, rowIndex) => {
+                const childButtonEnabled = canCreateChild; 
+
+                return (
+                  <tr key={rowIndex} className="group bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+                    <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
+                      <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">{rowIndex + 1}.</span>
                     </td>
-                  ))}
-                  <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteRow(rowIndex)}
-                      disabled={disabled || rows.length <= minRows}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
-                      aria-label="Delete row"
-                    >
-                      <Trash2 size={14} strokeWidth={1.8} />
-                    </button>
-                  </td>
-                </tr>
-              ))
+                    {columns.map((column) => (
+                      <td key={column.key} className="border border-[#D5DFDB] p-0 align-top">
+                        {renderField(column, row, rowIndex)}
+                      </td>
+                    ))}
+                    {showChildColumn && (
+                      <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!childButtonEnabled) return;
+                            onViewChild(rowIndex, row);
+                          }}
+                          disabled={!childButtonEnabled}
+                          className={`inline-flex h-7 items-center justify-center rounded px-3 text-[11px] font-medium text-white shadow-sm transition-all duration-200 focus:outline-none ${
+                            childButtonEnabled
+                              ? "bg-[#3d606d] hover:bg-[#2B5577] active:scale-95"
+                              : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
+                          }`}
+                          aria-label="Create child calibration"
+                          title={
+                            !canCreateChild
+                              ? "Child creation is available only to Initiator at Close Done stage"
+                              : "Create child calibration"
+                          }
+                        >
+                          Child
+                        </button>
+                      </td>
+                    )}
+                    <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteRow(rowIndex)}
+                        disabled={disabled || rows.length <= minRows}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
+                        aria-label="Delete row"
+                      >
+                        <Trash2 size={14} strokeWidth={1.8} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan={columns.length + 2} className="h-[80px] border border-[#D5DFDB] px-5 text-center text-[11px] font-medium text-[#899690]">
+                <td colSpan={columns.length + 2 + (showChildColumn ? 1 : 0)} className="h-[80px] border border-[#D5DFDB] px-5 text-center text-[11px] font-medium text-[#899690]">
                   No calibration rows added yet.
                 </td>
               </tr>

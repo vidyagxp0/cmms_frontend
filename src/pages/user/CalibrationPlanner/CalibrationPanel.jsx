@@ -63,7 +63,7 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
       if (key === "previousCalibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
       else if (key === "nextCalibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
       else if (key === "calibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
-      if (key === "equipmentInstrumentName" && value && equipmentMap[value]) value = equipmentMap[value]?.name || value;
+if (key === "equipmentInstrumentName" && value && equipmentMap[value]) value = equipmentMap[value]?.instrument_name || value;
       rowData[key] = { key, label: key, value };
     });
     return rowData;
@@ -116,6 +116,7 @@ const CreateCalibrationPanel = () => {
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [calibrationRows, setCalibrationRows] = useState([]);
   const [equipmentOptions, setEquipmentOptions] = useState([]);
+  console.log(equipmentOptions,"equipmentOptions>>>")
   const [equipmentMap, setEquipmentMap] = useState({});
   const equipmentMapRef = useRef(equipmentMap);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
@@ -172,7 +173,8 @@ const CreateCalibrationPanel = () => {
         setEquipmentLoading(true);
         const response = await getAllEquipmentData();
         const data = response?.data?.data || [];
-        const options = data.map((item) => ({ value: item.id, label: item.name }));
+        console.log(data,"this is data>>>>>>")
+        const options = data.map((item) => ({ value: item.id, label: item.instrument_name }));
         const map = {};
         data.forEach((item) => { map[item.id] = item; });
         setEquipmentOptions(options);
@@ -310,10 +312,10 @@ const CreateCalibrationPanel = () => {
         const newRow = { ...row };
         newRow.monthlyCalibration = row.monthlyCalibration && typeof row.monthlyCalibration === "object" ? row.monthlyCalibration : {};
         newRow.calibrationFrequencyStartDate = row.calibrationFrequencyStartDate || "";
-        if (newRow.equipmentInstrumentName && typeof newRow.equipmentInstrumentName === "string") {
-          const found = Object.values(currentEquipmentMap).find((eq) => eq.name === newRow.equipmentInstrumentName);
-          if (found) newRow.equipmentInstrumentName = found.id;
-        }
+       if (newRow.equipmentInstrumentName && typeof newRow.equipmentInstrumentName === "string") {
+  const found = Object.values(currentEquipmentMap).find((eq) => eq.instrument_name === newRow.equipmentInstrumentName);
+  if (found) newRow.equipmentInstrumentName = found.id;
+}
         if (newRow.previousCalibrationDate) newRow.previousCalibrationDate = dayjs(newRow.previousCalibrationDate, "DD/MM/YYYY");
         if (newRow.nextCalibrationDate) newRow.nextCalibrationDate = dayjs(newRow.nextCalibrationDate, "DD/MM/YYYY");
         if (newRow.calibrationDate) newRow.calibrationDate = dayjs(newRow.calibrationDate, "DD/MM/YYYY");

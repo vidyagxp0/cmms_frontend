@@ -125,7 +125,7 @@ const CreateCalibrationPanel = () => {
   const [departmentId, setDepartmentId] = useState("");
   const [initiationDepartment, setInitiationDepartment] = useState("");
   const [dateOfInitiation, setDateOfInitiation] = useState("");
-  const [siteLocationCode, setSiteLocationCode] = useState("");
+  // const [siteLocationCode, setSiteLocationCode] = useState("");
   const [processName, setProcessName] = useState("");
   const [hodUsers, setHodUsers] = useState([]);
   const [qaReviewers, setQaReviewers] = useState([]);
@@ -139,12 +139,12 @@ const CreateCalibrationPanel = () => {
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
 
   const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
-  const isGeneralEditable = isStageEditable(55);
-  const isHodEditable = isStageEditable(56);
-  const isUserDeptEditable = isStageEditable(57);
-  const isQaReviewEditable = isStageEditable(58);
-  const isCancellationEditable = isStageEditable(60);
-  const canCreateChild = Number(activeStageId) === 59 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
+  const isGeneralEditable = isStageEditable(1);
+  const isHodEditable = isStageEditable(2);
+  const isUserDeptEditable = isStageEditable(3);
+  const isQaReviewEditable = isStageEditable(4);
+  const isCancellationEditable = isStageEditable(6);
+  const canCreateChild = Number(activeStageId) === 5 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -218,7 +218,9 @@ const CreateCalibrationPanel = () => {
       setProcessName(responseData?.process?.name || "");
       const processData = responseData?.process_data || [];
       const recordNumber = getProcessValue(processData, "recordNumber");
-      const locationCode = getProcessValue(processData, "siteLocationCode");
+      const documentNumber = getProcessValue(processData, "documentNumber");
+      const documentType = getProcessValue(processData, "documentType");
+      // const locationCode = getProcessValue(processData, "siteLocationCode");
       const processInitiator = getProcessValue(processData, "initiator");
       const processDateOfInitiation = getProcessValue(processData, "dateOfInitiation");
       const dueDate = getProcessValue(processData, "dueDate");
@@ -245,7 +247,7 @@ const CreateCalibrationPanel = () => {
           "cancellation_attachment"
       );
 
-      setSiteLocationCode(locationCode || "");
+      // setSiteLocationCode(locationCode || "");
       // Set initiator from the API response (processData or responseData.initiator)
       const backendInitiatorId =
         responseData?.initiator?.id ??
@@ -267,7 +269,9 @@ const CreateCalibrationPanel = () => {
 
       form.setFieldsValue({
         recordNumber,
-        siteLocationCode: locationCode || "",
+        documentNumber,
+        documentType,
+        // siteLocationCode: locationCode || "",
         initiator: backendInitiatorName,
         dateOfInitiation: processDateOfInitiation || responseData?.initiation_date || "",
         dueDate,
@@ -403,8 +407,10 @@ const CreateCalibrationPanel = () => {
   }, [activeStageId]);
 
   const systemFields = [
+    { name: "documentNumber", label: "Document Number", value: form.getFieldValue("documentNumber") || "" },
+    { name: "documentType", label: "Document Type", value: form.getFieldValue("documentType") || "" },
     { name: "recordNumber", label: "Record Number", value: form.getFieldValue("recordNumber") || "" },
-    { name: "siteLocationCode", label: "Site / Location Code", value: form.getFieldValue("siteLocationCode") || "" },
+    // { name: "siteLocationCode", label: "Site / Location Code", value: form.getFieldValue("siteLocationCode") || "" },
     { name: "initiator", label: "Initiator", value: initiator },
     { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },

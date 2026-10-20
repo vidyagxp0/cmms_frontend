@@ -519,8 +519,14 @@ const CreateCalibration = () => {
 
                         dateOfInitiation,
 
-                        siteLocationCode:
-                            "Unit IV",
+                        documentNumber:
+                            "SMLJ/ENG/SOP-GEN/OOS/FI 9-02",
+
+                        documentType:
+                            "Formats",
+
+                        // siteLocationCode:
+                        //     "Unit IV",
 
                         recordNumber:
                             generatedRecordNumber,
@@ -674,16 +680,26 @@ const CreateCalibration = () => {
 
     const systemFields = [
         {
+            name: "documentNumber",
+            label: "Document Number",
+            value: "SMLJ/ENG/SOP-GEN/OOS/FI 9-02",
+        },
+        {
+            name: "documentType",
+            label: "Document Type",
+            value: "Formats",
+        },
+        {
             name: "recordNumber",
             label: "Record Number",
             value: recordNumber,
         },
 
-        {
-            name: "siteLocationCode",
-            label: "Site / Location Code",
-            value: "Unit IV",
-        },
+        // {
+        //     name: "siteLocationCode",
+        //     label: "Site / Location Code",
+        //     value: "Unit IV",
+        // },
 
         {
             name: "initiator",

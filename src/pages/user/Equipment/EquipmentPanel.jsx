@@ -55,7 +55,7 @@ const TABS = [
 ];
 
 /* Process ID used for the Master Instrument workflow. */
-const MASTER_INSTRUMENT_PROCESS_ID = 19;
+const MASTER_INSTRUMENT_PROCESS_ID = 3;
 
 const EMPTY_CHECKLIST = {
   checklist_name: "",

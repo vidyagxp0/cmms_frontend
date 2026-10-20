@@ -56,7 +56,7 @@ const TABS = [
 ];
 
 /* Process ID used for the Field Instrument workflow. */
-const FIELD_INSTRUMENT_PROCESS_ID = 22;
+const FIELD_INSTRUMENT_PROCESS_ID = 6;
 
 const EMPTY_CHECKLIST = {
   checklist_name: "",

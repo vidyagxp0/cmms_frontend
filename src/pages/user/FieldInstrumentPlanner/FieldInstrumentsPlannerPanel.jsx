@@ -537,6 +537,7 @@ const FieldInstrumentsPlannerPanel = () => {
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
+              auditRoute={"/user/field-instrument-planner-audit"}
               onExit={() => navigate("/user/engineering-dashboard")}
             />
           </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Table2, CalendarDays } from "lucide-react";
+import { Plus, Trash2, Table2 } from "lucide-react";
 import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -12,146 +12,80 @@ dayjs.extend(customParseFormat);
 const { TextArea } = Input;
 
 const MONTHS = [
-  { key: "Jan", label: "Jan" },
-  { key: "Feb", label: "Feb" },
-  { key: "Mar", label: "Mar" },
-  { key: "Apr", label: "Apr" },
-  { key: "May", label: "May" },
-  { key: "Jun", label: "Jun" },
-  { key: "Jul", label: "Jul" },
-  { key: "Aug", label: "Aug" },
-  { key: "Sep", label: "Sep" },
-  { key: "Oct", label: "Oct" },
-  { key: "Nov", label: "Nov" },
-  { key: "Dec", label: "Dec" },
+  { key: "Jan", label: "January", index: 0 },
+  { key: "Feb", label: "February", index: 1 },
+  { key: "Mar", label: "March", index: 2 },
+  { key: "Apr", label: "April", index: 3 },
+  { key: "May", label: "May", index: 4 },
+  { key: "Jun", label: "June", index: 5 },
+  { key: "Jul", label: "July", index: 6 },
+  { key: "Aug", label: "August", index: 7 },
+  { key: "Sep", label: "September", index: 8 },
+  { key: "Oct", label: "October", index: 9 },
+  { key: "Nov", label: "November", index: 10 },
+  { key: "Dec", label: "December", index: 11 },
 ];
 
-const createEmptyMonthlyData = () => {
-  const monthlyData = {};
+const WEEKS_PER_MONTH = 5;
+
+/* -------------------- Weekly data helpers -------------------- */
+// Force every weekly cell value to a string. Booleans / nulls / undefined
+// (from older saved payloads that stored true/false checkboxes) become "".
+const toFieldString = (value) => (typeof value === "string" ? value : "");
+
+const createEmptyWeek = () => ({ planned: "", actual: "" });
+
+const createEmptyWeeklyData = () => {
+  const data = {};
   MONTHS.forEach(({ key }) => {
-    monthlyData[key] = { plannedDate: "", executeDate: "" };
+    data[key] = Array.from({ length: WEEKS_PER_MONTH }, createEmptyWeek);
   });
-  return monthlyData;
+  return data;
 };
 
-const normalizeMonthlyData = (monthlyData) => {
-  const normalized = createEmptyMonthlyData();
-  if (!monthlyData || typeof monthlyData !== "object") return normalized;
+const normalizeWeeklyData = (weeklyData) => {
+  const normalized = createEmptyWeeklyData();
+  if (!weeklyData || typeof weeklyData !== "object") return normalized;
+
   MONTHS.forEach(({ key }) => {
-    normalized[key] = {
-      plannedDate: monthlyData?.[key]?.plannedDate || "",
-      executeDate: monthlyData?.[key]?.executeDate || "",
-    };
+    const monthData = weeklyData[key];
+    if (Array.isArray(monthData)) {
+      for (let i = 0; i < WEEKS_PER_MONTH; i++) {
+        normalized[key][i] = {
+          planned: toFieldString(monthData[i]?.planned),
+          actual: toFieldString(monthData[i]?.actual),
+        };
+      }
+    }
   });
   return normalized;
 };
 
-const FREQUENCY_MONTHS = {
-  monthly: 1,
-  quarterly: 3,
-  "half-yearly": 6,
-  yearly: 12,
-};
-const getFrequencyMonths = (frequency) => FREQUENCY_MONTHS[frequency] || 0;
-
-const getPlannedDates = (monthlyPreventive) => {
-  if (!monthlyPreventive || typeof monthlyPreventive !== "object") return [];
-  return MONTHS.map(({ key }) => {
-    const value = monthlyPreventive?.[key]?.plannedDate;
-    if (!value) return null;
-    const date = dayjs(value);
-    if (!date.isValid()) return null;
-    return { monthKey: key, date };
-  })
-    .filter(Boolean)
-    .sort((a, b) => a.date.valueOf() - b.date.valueOf());
-};
-
-const isSameOrBefore = (dateA, dateB, unit = "millisecond") =>
-  dateA.isSame(dateB, unit) || dateA.isBefore(dateB, unit);
-
-const calculatePreventiveDates = (
-  frequency,
-  monthlyPreventive,
-  existingPreviousDate = "",
-  existingNextDate = ""
-) => {
-  const frequencyMonths = getFrequencyMonths(frequency);
-  if (!frequencyMonths)
-    return {
-      previousPreventiveDate: existingPreviousDate || "",
-      nextPreventiveDate: existingNextDate || "",
-    };
-  const plannedDates = getPlannedDates(monthlyPreventive);
-  if (plannedDates.length === 0)
-    return { previousPreventiveDate: "", nextPreventiveDate: "" };
-  const baseDate = plannedDates[0].date;
-  if (!baseDate.isValid())
-    return { previousPreventiveDate: "", nextPreventiveDate: "" };
-  const today = dayjs().startOf("day");
-  if (today.isBefore(baseDate, "day")) {
-    const nextDate = baseDate.add(frequencyMonths, "month");
-    return {
-      previousPreventiveDate: baseDate.format("YYYY-MM-DD"),
-      nextPreventiveDate: nextDate.format("YYYY-MM-DD"),
-    };
+/* -------------------- Header date helpers -------------------- */
+const getSundayDates = (year, monthIndex) => {
+  const first = dayjs(new Date(year, monthIndex, 1));
+  const days = first.daysInMonth();
+  const dates = [];
+  for (let d = 1; d <= days; d++) {
+    const date = dayjs(new Date(year, monthIndex, d));
+    if (date.day() === 0) dates.push(date.format("YYYY-MM-DD"));
   }
-  let currentDate = baseDate;
-  let safetyCounter = 0;
-  while (
-    isSameOrBefore(currentDate.add(frequencyMonths, "month"), today, "day") &&
-    safetyCounter < 120
-  ) {
-    currentDate = currentDate.add(frequencyMonths, "month");
-    safetyCounter += 1;
-  }
-  const nextDate = currentDate.add(frequencyMonths, "month");
-  return {
-    previousPreventiveDate: currentDate.format("YYYY-MM-DD"),
-    nextPreventiveDate: nextDate.format("YYYY-MM-DD"),
-  };
+  return dates;
 };
 
-const updateCalculatedPreventiveDates = (row) => {
-  if (!row || !row.preventiveFrequency) return row;
-  const result = calculatePreventiveDates(
-    row.preventiveFrequency,
-    row.monthlyPreventive,
-    row.previousPreventiveDate,
-    row.nextPreventiveDate
-  );
-  const previousChanged =
-    (row.previousPreventiveDate || "") !==
-    (result.previousPreventiveDate || "");
-  const nextChanged =
-    (row.nextPreventiveDate || "") !== (result.nextPreventiveDate || "");
-  if (!previousChanged && !nextChanged) return row;
-  return {
-    ...row,
-    previousPreventiveDate: result.previousPreventiveDate,
-    nextPreventiveDate: result.nextPreventiveDate,
-  };
+const generateDefaultWeekDates = (year) => {
+  const result = {};
+  MONTHS.forEach(({ key, index }) => {
+    const sundays = getSundayDates(year, index);
+    result[key] = Array.from(
+      { length: WEEKS_PER_MONTH },
+      (_, i) => sundays[i] || ""
+    );
+  });
+  return result;
 };
 
-const CHILD_WINDOW_DAYS = 7;
-
-const isWithinChildWindow = (dateValue) => {
-  if (!dateValue) return false;
-  const target = dayjs(dateValue).startOf("day");
-  if (!target.isValid()) return false;
-  const today = dayjs().startOf("day");
-  const diffDays = Math.abs(today.diff(target, "day"));
-  return diffDays <= CHILD_WINDOW_DAYS;
-};
-
-const isChildDateWindowOpen = (row) => {
-  if (!row) return false;
-  return (
-    isWithinChildWindow(row.previousPreventiveDate) ||
-    isWithinChildWindow(row.nextPreventiveDate)
-  );
-};
-
+/* -------------------- Main component -------------------- */
 const PreventiveGrid = ({
   value = [],
   onChange,
@@ -169,8 +103,25 @@ const PreventiveGrid = ({
   disabled = false,
   canCreateChild = false,
   showAddButton = true,
+  year = dayjs().year(),
+  weekDates: initialWeekDates,
+  onWeekDatesChange,
 }) => {
   const columns = [
+    {
+      key: "block",
+      title: "Block",
+      type: "text",
+      placeholder: "Enter block",
+      minWidth: 140,
+    },
+    {
+      key: "department",
+      title: "Department",
+      type: "text",
+      placeholder: "Enter department",
+      minWidth: 160,
+    },
     {
       key: "equipmentInstrumentName",
       title: "Equipment Name",
@@ -187,21 +138,12 @@ const PreventiveGrid = ({
       minWidth: 180,
       disabled: true,
     },
-    { key: "block", title: "Block", type: "text", placeholder: "Enter block", minWidth: 160 },
-    { key: "department", title: "Department", type: "text", placeholder: "Enter department", minWidth: 180 },
-    { key: "location", title: "Location", type: "text", placeholder: "Enter location", minWidth: 180 },
     {
-      key: "preventiveFrequency",
-      title: "Preventive Frequency",
-      type: "select",
-      placeholder: "Select frequency",
-      minWidth: 190,
-      options: [
-        { value: "monthly", label: "Monthly" },
-        { value: "quarterly", label: "Quarterly" },
-        { value: "half-yearly", label: "Half Yearly" },
-        { value: "yearly", label: "Yearly" },
-      ],
+      key: "location",
+      title: "Location",
+      type: "text",
+      placeholder: "Enter location",
+      minWidth: 180,
     },
   ];
 
@@ -210,33 +152,29 @@ const PreventiveGrid = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
-  const showMonthlyCalendar = true;
+  const [headerWeekDates, setHeaderWeekDates] = useState(
+    () => initialWeekDates || generateDefaultWeekDates(year)
+  );
 
-  const isMonthEnabled = (frequency, monthKey, frequencyStartDate) => {
-    if (!frequency) return false;
-    const startDate = frequencyStartDate ? dayjs(frequencyStartDate) : dayjs();
-    if (!startDate.isValid()) return false;
-    const monthIndex = MONTHS.findIndex(({ key }) => key === monthKey);
-    if (monthIndex < 0) return false;
-    const startYear = startDate.year();
-    const currentYear = dayjs().year();
-    if (startYear < currentYear) return true;
-    if (startYear > currentYear) return false;
-    return monthIndex >= startDate.month();
-  };
+  useEffect(() => {
+    if (initialWeekDates) {
+      setHeaderWeekDates(initialWeekDates);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialWeekDates]);
 
+  /* -------------------- Row actions -------------------- */
   const addRow = () => {
     if (disabled) return;
     if (maxRows !== undefined && rows.length >= maxRows) return;
+
     const newRow = {};
     columns.forEach((column) => {
       newRow[column.key] = "";
     });
-    newRow.monthlyPreventive = createEmptyMonthlyData();
-    newRow.preventiveFrequencyStartDate = "";
+    newRow.weeklyPreventive = createEmptyWeeklyData();
     newRow.remark = "";
-    newRow.previousPreventiveDate = "";
-    newRow.nextPreventiveDate = "";
+
     onChange([...rows, newRow]);
   };
 
@@ -267,34 +205,12 @@ const PreventiveGrid = ({
     setIsDeleteModalOpen(false);
   };
 
+  /* -------------------- Cell updates -------------------- */
   const updateRow = (rowIndex, key, newValue) => {
     if (disabled) return;
     const updated = [...rows];
     const row = { ...updated[rowIndex] };
     row[key] = newValue;
-
-    if (key === "preventiveFrequency") {
-      row.preventiveFrequencyStartDate = newValue
-        ? dayjs().format("YYYY-MM-DD")
-        : "";
-      if (!newValue) {
-        row.previousPreventiveDate = "";
-        row.nextPreventiveDate = "";
-        row.monthlyPreventive = createEmptyMonthlyData();
-        updated[rowIndex] = row;
-        onChange(updated);
-        return;
-      }
-      row.monthlyPreventive = normalizeMonthlyData(row.monthlyPreventive);
-      const calculated = calculatePreventiveDates(
-        newValue,
-        row.monthlyPreventive,
-        row.previousPreventiveDate,
-        row.nextPreventiveDate
-      );
-      row.previousPreventiveDate = calculated.previousPreventiveDate;
-      row.nextPreventiveDate = calculated.nextPreventiveDate;
-    }
 
     if (key === "equipmentInstrumentName") {
       const equipmentId = newValue;
@@ -310,91 +226,29 @@ const PreventiveGrid = ({
       }
     }
 
-    if (!row.monthlyPreventive || typeof row.monthlyPreventive !== "object") {
-      row.monthlyPreventive = createEmptyMonthlyData();
+    if (!row.weeklyPreventive || typeof row.weeklyPreventive !== "object") {
+      row.weeklyPreventive = createEmptyWeeklyData();
     }
 
     updated[rowIndex] = row;
     onChange(updated);
   };
 
-  const updateMonthlyDate = (rowIndex, monthKey, dateType, newValue) => {
+  const updateWeekValue = (rowIndex, monthKey, weekIndex, field, value) => {
     if (disabled) return;
+
     const updated = [...rows];
     const row = { ...updated[rowIndex] };
-    const monthlyPreventive = normalizeMonthlyData(row.monthlyPreventive);
+    const weekly = normalizeWeeklyData(row.weeklyPreventive);
 
-    monthlyPreventive[monthKey] = {
-      ...monthlyPreventive[monthKey],
-      [dateType]: newValue,
+    weekly[monthKey][weekIndex] = {
+      ...weekly[monthKey][weekIndex],
+      [field]: value, // always a string coming from Input onChange
     };
 
-    if (dateType === "plannedDate") {
-      const currentMonthIndex = MONTHS.findIndex(
-        (month) => month.key === monthKey
-      );
-      if (!newValue) {
-        if (currentMonthIndex !== -1) {
-          for (let i = currentMonthIndex + 1; i < MONTHS.length; i++) {
-            const nextMonthKey = MONTHS[i].key;
-            monthlyPreventive[nextMonthKey] = {
-              ...monthlyPreventive[nextMonthKey],
-              plannedDate: "",
-            };
-          }
-        }
-      }
-      if (newValue && currentMonthIndex !== -1) {
-        const baseDate = dayjs(newValue);
-        if (baseDate.isValid()) {
-          const frequencyMonths =
-            getFrequencyMonths(row.preventiveFrequency) || 1;
-          for (let i = currentMonthIndex + 1; i < MONTHS.length; i++) {
-            const nextMonthKey = MONTHS[i].key;
-            const diffMonths = i - currentMonthIndex;
-            if (frequencyMonths === 1) {
-              const nextDate = baseDate
-                .add(diffMonths, "month")
-                .format("YYYY-MM-DD");
-              monthlyPreventive[nextMonthKey] = {
-                ...monthlyPreventive[nextMonthKey],
-                plannedDate: nextDate,
-              };
-            } else {
-              if (diffMonths % frequencyMonths === 0) {
-                const nextDate = baseDate
-                  .add(diffMonths, "month")
-                  .format("YYYY-MM-DD");
-                monthlyPreventive[nextMonthKey] = {
-                  ...monthlyPreventive[nextMonthKey],
-                  plannedDate: nextDate,
-                };
-              }
-            }
-          }
-          if (!row.previousPreventiveDate) {
-            row.previousPreventiveDate = baseDate.format("YYYY-MM-DD");
-            row.nextPreventiveDate = baseDate
-              .add(frequencyMonths, "month")
-              .format("YYYY-MM-DD");
-          }
-        }
-      }
-    }
-
-    row.monthlyPreventive = monthlyPreventive;
-    if (row.preventiveFrequency) {
-      const calculated = calculatePreventiveDates(
-        row.preventiveFrequency,
-        row.monthlyPreventive,
-        row.previousPreventiveDate,
-        row.nextPreventiveDate
-      );
-      row.previousPreventiveDate = calculated.previousPreventiveDate;
-      row.nextPreventiveDate = calculated.nextPreventiveDate;
-    }
-
+    row.weeklyPreventive = weekly;
     updated[rowIndex] = row;
+
     onChange(updated);
   };
 
@@ -405,31 +259,21 @@ const PreventiveGrid = ({
     onChange(updated);
   };
 
-  useEffect(() => {
-    if (!rows.length) return;
-    let hasChanges = false;
-    const updatedRows = rows.map((row) => {
-      const updatedRow = updateCalculatedPreventiveDates(row);
-      if (updatedRow !== row) hasChanges = true;
-      return updatedRow;
-    });
-    if (hasChanges) onChange(updatedRows);
+  const updateHeaderWeekDate = (monthKey, weekIndex, dateStr) => {
+    if (disabled) return;
 
-    const intervalId = setInterval(() => {
-      const currentRows = Array.isArray(value) ? value : [];
-      if (!currentRows.length) return;
-      let changed = false;
-      const recalculatedRows = currentRows.map((row) => {
-        const updatedRow = updateCalculatedPreventiveDates(row);
-        if (updatedRow !== row) changed = true;
-        return updatedRow;
-      });
-      if (changed) onChange(recalculatedRows);
-    }, 60 * 1000);
+    const updatedWeekDates = {
+      ...headerWeekDates,
+      [monthKey]: headerWeekDates[monthKey].map((d, i) =>
+        i === weekIndex ? dateStr : d
+      ),
+    };
 
-    return () => clearInterval(intervalId);
-  }, [rows.length]);
+    setHeaderWeekDates(updatedWeekDates);
+    if (onWeekDatesChange) onWeekDatesChange(updatedWeekDates);
+  };
 
+  /* -------------------- Field renderer (left columns) -------------------- */
   const renderField = (column, row, rowIndex) => {
     const {
       key,
@@ -438,9 +282,11 @@ const PreventiveGrid = ({
       options: colOptions,
       disabled: columnDisabled,
     } = column;
+
     const fieldValue = row[key] ?? "";
     const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
     const isDisabled = disabled || columnDisabled;
+
     const commonProps = {
       disabled: isDisabled,
       className:
@@ -467,6 +313,7 @@ const PreventiveGrid = ({
           />
         );
       }
+
       return (
         <Select
           {...commonProps}
@@ -518,63 +365,14 @@ const PreventiveGrid = ({
     );
   };
 
-  const renderMonthlyDatePicker = (row, rowIndex, monthKey, dateType) => {
-    const monthlyData = normalizeMonthlyData(row.monthlyPreventive);
-    const dateValue = monthlyData?.[monthKey]?.[dateType] || "";
-    const enabled = isMonthEnabled(
-      row.preventiveFrequency,
-      monthKey,
-      row.preventiveFrequencyStartDate
-    );
-    const isDisabled = disabled || !enabled;
-    return (
-      <DatePicker
-        value={dateValue ? dayjs(dateValue) : null}
-        disabled={isDisabled}
-        placeholder={enabled ? "Select date" : "Disabled"}
-        onChange={(date) => {
-          if (!enabled || disabled) return;
-          updateMonthlyDate(
-            rowIndex,
-            monthKey,
-            dateType,
-            date ? date.format("YYYY-MM-DD") : ""
-          );
-        }}
-        format="DD/MM/YYYY"
-        allowClear
-        className={`!h-9 !w-full !rounded-md !text-[10px] !font-medium !shadow-none ${
-          enabled && !disabled
-            ? "!border-[#D1DBD7] !bg-white !text-[#263B35] hover:!border-[#A8B9B2] focus:!border-[#4E7585]"
-            : "!cursor-not-allowed !border-[#E1E7E4] !bg-[#F0F3F1] !text-[#9AA6A1]"
-        }`}
-      />
-    );
-  };
-
-  const renderPreventiveDatePicker = (row, rowIndex, key) => {
-    const fieldValue = row[key] ?? "";
-    const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
-    return (
-      <DatePicker
-        value={fieldValue ? dayjs(fieldValue) : null}
-        disabled={disabled}
-        placeholder="Select date"
-        onChange={(date) =>
-          handleChange(date ? date.format("YYYY-MM-DD") : "")
-        }
-        format="DD/MM/YYYY"
-        allowClear
-        className="!h-10 !w-full !rounded-lg !border-[#D1DBD7] !bg-white !text-[12px] !font-medium !text-[#263B35] !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585]"
-      />
-    );
-  };
-
   const visibleColumns = columns.filter((column) => column.hidden !== true);
   const showChildColumn = typeof onViewChild === "function";
+  const leftColSpan = 1 + visibleColumns.length;
 
+  /* -------------------- Render -------------------- */
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
+      {/* Header */}
       <div className="flex min-h-[68px] items-center justify-between gap-5 border-b border-[#D7E0DC] bg-[#F7F9F8] px-5">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#D5E0DF] bg-white text-[#4E7585] shadow-[0_2px_7px_rgba(38,53,46,0.05)]">
@@ -591,6 +389,7 @@ const PreventiveGrid = ({
             )}
           </div>
         </div>
+
         {showAddButton && (
           <button
             type="button"
@@ -615,16 +414,61 @@ const PreventiveGrid = ({
         direction="both"
         className="w-full rounded-b-xl"
       >
-        <table className="w-full min-w-[5200px] border-collapse">
+        <table className="w-full min-w-[6800px] border-collapse">
           <thead className="sticky top-0 z-[5]">
+            {/* Row 1: Year + Month names + Right side headers */}
             <tr className="bg-[#EEF3F1]">
-              <th className="sticky left-0 z-[10] w-[56px] border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]">
+              <th
+                colSpan={leftColSpan}
+                className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3 py-2 text-left text-[11px] font-bold text-[#43564F]"
+              >
+                For the Year of&nbsp;
+                <span className="text-[#2B5577]">{year}</span>
+              </th>
+              {MONTHS.map((month) => (
+                <th
+                  key={month.key}
+                  colSpan={WEEKS_PER_MONTH * 2}
+                  className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-2 py-2 text-center text-[12px] font-bold text-[#2F4940]"
+                >
+                  {month.label}
+                </th>
+              ))}
+              <th
+                rowSpan={4}
+                style={{ minWidth: 240 }}
+                className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3.5 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
+              >
+                Remark
+              </th>
+              {showChildColumn && (
+                <th
+                  rowSpan={4}
+                  className="w-[70px] border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-2 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]"
+                >
+                  {viewChildLabel}
+                </th>
+              )}
+              <th
+                rowSpan={4}
+                className="w-[62px] border-b border-[#D5DFDB] bg-[#EEF3F1] px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]"
+              >
+                Action
+              </th>
+            </tr>
+
+            {/* Row 2: Left column headers + Week numbers */}
+            <tr className="bg-[#EEF3F1]">
+              <th
+                rowSpan={3}
+                className="sticky left-0 z-[10] w-[56px] border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]"
+              >
                 S.No
               </th>
-
               {visibleColumns.map((column) => (
                 <th
                   key={column.key}
+                  rowSpan={3}
                   style={{ minWidth: column.minWidth || 180 }}
                   className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3.5 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
                 >
@@ -637,69 +481,71 @@ const PreventiveGrid = ({
                 </th>
               ))}
 
-              {showMonthlyCalendar &&
-                MONTHS.map((month) => (
+              {MONTHS.map((month) =>
+                Array.from({ length: WEEKS_PER_MONTH }).map((_, weekIdx) => (
                   <th
-                    key={month.key}
-                    style={{ minWidth: 300, width: 300 }}
-                    className="border-b border-r border-[#D5DFDB] bg-[#E7EFEC] p-0 text-center align-middle"
+                    key={`${month.key}-week-${weekIdx}`}
+                    colSpan={2}
+                    className="border-b border-r border-[#D5DFDB] bg-[#E7EFEC] px-2 py-2 text-center text-[10px] font-bold uppercase tracking-[0.03em] text-[#63736C]"
                   >
-                    <div className="flex min-h-[48px] items-center justify-center border-b border-[#D5DFDB] bg-[#E1EBE7] px-3">
-                      <div className="flex items-center gap-1.5 text-[12px] font-bold text-[#2F4940]">
-                        <CalendarDays size={14} strokeWidth={1.8} />
-                        {month.label}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2">
-                      <div className="border-r border-[#D5DFDB] px-2 py-2.5 text-center text-[9px] font-bold uppercase tracking-[0.03em] text-[#63736C]">
-                        Planned Date
-                      </div>
-                      <div className="px-2 py-2.5 text-center text-[9px] font-bold uppercase tracking-[0.03em] text-[#63736C]">
-                        Execute Date
-                      </div>
-                    </div>
+                    Week {weekIdx + 1}
                   </th>
-                ))}
-
-              <th
-                style={{ minWidth: 200 }}
-                className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3.5 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
-              >
-                Previous Preventive Date
-              </th>
-
-              <th
-                style={{ minWidth: 200 }}
-                className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3.5 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
-              >
-                Next Preventive Date
-              </th>
-
-              <th
-                style={{ minWidth: 240 }}
-                className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3.5 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
-              >
-                Remark
-              </th>
-
-              {showChildColumn && (
-                <th className="w-[70px] border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-2 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]">
-                  {viewChildLabel}
-                </th>
+                ))
               )}
+            </tr>
 
-              <th className="w-[62px] border-b border-[#D5DFDB] bg-[#EEF3F1] px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]">
-                Action
-              </th>
+            {/* Row 3: Manual date selection in header */}
+            <tr className="bg-[#E7EFEC]">
+              {MONTHS.map((month) =>
+                Array.from({ length: WEEKS_PER_MONTH }).map((_, weekIdx) => (
+                  <th
+                    key={`${month.key}-date-${weekIdx}`}
+                    colSpan={2}
+                    className="border-b border-r border-[#D5DFDB] bg-[#E7EFEC] px-1 py-1.5 text-center"
+                  >
+                    <DatePicker
+                      value={
+                        headerWeekDates?.[month.key]?.[weekIdx]
+                          ? dayjs(headerWeekDates[month.key][weekIdx])
+                          : null
+                      }
+                      onChange={(date) =>
+                        updateHeaderWeekDate(
+                          month.key,
+                          weekIdx,
+                          date ? date.format("YYYY-MM-DD") : ""
+                        )
+                      }
+                      format="DD/MM/YYYY"
+                      allowClear
+                      disabled={disabled}
+                      className="!h-8 !w-full !rounded-md !border-[#D1DBD7] !bg-white !text-[10px] !font-medium !text-[#263B35] !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585]"
+                    />
+                  </th>
+                ))
+              )}
+            </tr>
+
+            {/* Row 4: P / A sub headers */}
+            <tr className="bg-[#E1EBE7]">
+              {MONTHS.map((month) =>
+                Array.from({ length: WEEKS_PER_MONTH }).map((_, weekIdx) => (
+                  <React.Fragment key={`${month.key}-pa-${weekIdx}`}>
+                    <th className="border-b border-r border-[#D5DFDB] bg-[#E1EBE7] px-1 py-2 text-center text-[9px] font-bold text-[#63736C]">
+                      P
+                    </th>
+                    <th className="border-b border-r border-[#D5DFDB] bg-[#E1EBE7] px-1 py-2 text-center text-[9px] font-bold text-[#63736C]">
+                      A
+                    </th>
+                  </React.Fragment>
+                ))
+              )}
             </tr>
           </thead>
+
           <tbody>
             {rows.length > 0 ? (
               rows.map((row, rowIndex) => {
-                const childDateWindowOpen = isChildDateWindowOpen(row);
-                const childButtonEnabled =
-                  canCreateChild && childDateWindowOpen;
-
                 return (
                   <tr
                     key={rowIndex}
@@ -720,58 +566,63 @@ const PreventiveGrid = ({
                       </td>
                     ))}
 
-                    {showMonthlyCalendar &&
-                      MONTHS.map((month) => {
-                        const monthEnabled = isMonthEnabled(
-                          row.preventiveFrequency,
-                          month.key,
-                          row.preventiveFrequencyStartDate
-                        );
-                        return (
-                          <td
-                            key={month.key}
-                            style={{ minWidth: 300 }}
-                            className={`border-b border-r border-[#E0E7E4] p-2 align-top ${
-                              monthEnabled ? "bg-[#FCFDFC]" : "bg-[#F5F7F6]"
-                            }`}
-                          >
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="min-w-0">
-                                {renderMonthlyDatePicker(
-                                  row,
-                                  rowIndex,
-                                  month.key,
-                                  "plannedDate"
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                {renderMonthlyDatePicker(
-                                  row,
-                                  rowIndex,
-                                  month.key,
-                                  "executeDate"
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                        );
-                      })}
+                    {MONTHS.map((month) =>
+                      Array.from({ length: WEEKS_PER_MONTH }).map(
+                        (_, weekIdx) => {
+                          const weekData =
+                            row.weeklyPreventive?.[month.key]?.[weekIdx] || {
+                              planned: "",
+                              actual: "",
+                            };
+                          const dateStr =
+                            headerWeekDates?.[month.key]?.[weekIdx];
+                          const enabled = !!dateStr;
 
-                    <td className="border-b border-r border-[#E0E7E4] px-3 py-2.5 align-top">
-                      {renderPreventiveDatePicker(
-                        row,
-                        rowIndex,
-                        "previousPreventiveDate"
-                      )}
-                    </td>
+                          // force strings — never let a boolean leak into Input value
+                          const plannedValue = toFieldString(weekData.planned);
+                          const actualValue = toFieldString(weekData.actual);
 
-                    <td className="border-b border-r border-[#E0E7E4] px-3 py-2.5 align-top">
-                      {renderPreventiveDatePicker(
-                        row,
-                        rowIndex,
-                        "nextPreventiveDate"
-                      )}
-                    </td>
+                          return (
+                            <React.Fragment
+                              key={`${month.key}-${weekIdx}-pa`}
+                            >
+                              <td className="border-b border-r border-[#E0E7E4] px-1 py-2.5 text-center align-middle">
+                                <Input
+                                  value={plannedValue}
+                                  disabled={disabled || !enabled}
+                                  onChange={(e) =>
+                                    updateWeekValue(
+                                      rowIndex,
+                                      month.key,
+                                      weekIdx,
+                                      "planned",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="!h-8 !w-full !rounded-md !border-[#D1DBD7] !bg-white !text-[10px] !font-medium !text-[#263B35] !shadow-none !px-1 !text-center hover:!border-[#A8B9B2] focus:!border-[#4E7585] disabled:!cursor-not-allowed disabled:!bg-[#F3F6F4] disabled:!text-[#9AA6A1]"
+                                />
+                              </td>
+                              <td className="border-b border-r border-[#E0E7E4] px-1 py-2.5 text-center align-middle">
+                                <Input
+                                  value={actualValue}
+                                  disabled={disabled || !enabled}
+                                  onChange={(e) =>
+                                    updateWeekValue(
+                                      rowIndex,
+                                      month.key,
+                                      weekIdx,
+                                      "actual",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="!h-8 !w-full !rounded-md !border-[#D1DBD7] !bg-white !text-[10px] !font-medium !text-[#263B35] !shadow-none !px-1 !text-center hover:!border-[#A8B9B2] focus:!border-[#4E7585] disabled:!cursor-not-allowed disabled:!bg-[#F3F6F4] disabled:!text-[#9AA6A1]"
+                                />
+                              </td>
+                            </React.Fragment>
+                          );
+                        }
+                      )
+                    )}
 
                     <td className="border-b border-r border-[#E0E7E4] px-3 py-2.5 align-top">
                       <TextArea
@@ -789,25 +640,23 @@ const PreventiveGrid = ({
                         <button
                           type="button"
                           onClick={() => {
-                            if (!childButtonEnabled) return;
+                            if (!canCreateChild) return;
                             onViewChild(rowIndex, row);
                           }}
-                          disabled={!childButtonEnabled}
+                          disabled={!canCreateChild}
                           className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${
-                            childButtonEnabled
+                            canCreateChild
                               ? "bg-[#3d606d] hover:bg-[#2B5577] hover:shadow-md active:scale-95"
                               : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
                           }`}
                           aria-label="Create child preventive record"
                           title={
-                            !canCreateChild
-                              ? "Child creation is available only to Initiator at Close Done stage and before and after 7 days of the Previous Preventive Date or the Next Preventive Date"
-                              : childDateWindowOpen
+                            canCreateChild
                               ? "Create child preventive record"
-                              : `Child can be created only within ±${CHILD_WINDOW_DAYS} days of the Previous Preventive Date or the Next Preventive Date`
+                              : "Child creation is available only to Initiator at Close Done stage"
                           }
                         >
-                          Child
+                          {viewChildLabel}
                         </button>
                       </td>
                     )}
@@ -830,10 +679,8 @@ const PreventiveGrid = ({
               <tr>
                 <td
                   colSpan={
-                    1 +
-                    visibleColumns.length +
-                    (showMonthlyCalendar ? MONTHS.length : 0) +
-                    2 +
+                    leftColSpan +
+                    MONTHS.length * WEEKS_PER_MONTH * 2 +
                     1 +
                     (showChildColumn ? 1 : 0) +
                     1
@@ -848,6 +695,7 @@ const PreventiveGrid = ({
         </table>
       </CustomScrollContainer>
 
+      {/* Footer */}
       <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">
         <span className="text-[10px] font-medium text-[#899690]">
           {rows.length} {rows.length === 1 ? "row" : "rows"}
@@ -859,6 +707,7 @@ const PreventiveGrid = ({
         )}
       </div>
 
+      {/* Delete Confirmation Modal */}
       <UserModal
         isOpen={isDeleteModalOpen}
         onClose={handleCancelDelete}

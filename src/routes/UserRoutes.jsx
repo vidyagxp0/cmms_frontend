@@ -31,6 +31,7 @@ import FieldInstrumentPlannerDashboard from "../pages/user/FieldInstrumentPlanne
 import FieldInstrumentPlannerCreate from "../pages/user/FieldInstrumentPlanner/FieldInstrumentPlannerCreate";
 import FieldInstrumentsPlannerPanel from "../pages/user/FieldInstrumentPlanner/FieldInstrumentsPlannerPanel";
 import FieldInstrumetsDashboard from "../pages/user/FieldInstruments/FieldInstrumetsDashboard";
+import FieldInstrumentsPlannerAudit from "../pages/user/FieldInstrumentPlanner/FieldInstrumentsPlannerAudit";
 
 function UserRoutes() {
   return (
@@ -80,6 +81,7 @@ function UserRoutes() {
         <Route path="field-instrument-planner-dashboard" element={<FieldInstrumentPlannerDashboard />} />
         <Route path="field-instrument-planner-create/:processId" element={<FieldInstrumentPlannerCreate />} />
         <Route path="field-instruments-planner-panel/:recordId" element={<FieldInstrumentsPlannerPanel />} /> 
+        <Route path="field-instruments-planner-audit/:recordId" element={<FieldInstrumentsPlannerAudit />} /> 
         {/* <Route path="equipment-panel/:id" element={<EquipmentPanel/>} /> */}
       </Route>
     </Routes>

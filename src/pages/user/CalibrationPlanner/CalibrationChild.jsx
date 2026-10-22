@@ -182,7 +182,7 @@ const CalibrationChild = () => {
         let profileId = "";
         let profileDeptId = "";
         let profileDeptName = "";
-        const now = dayjs().format("DD/MM/YYYY HH:mm");
+        const now = dayjs().format("DD/MM/YYYY HH:mm:ss");
         let recNum = "";
 
         if (profileRes.status === "fulfilled" && profileRes.value?.data?.data) {
@@ -326,7 +326,7 @@ const CalibrationChild = () => {
       ];
 
       const initiationDate = values.dateOfInitiation || dateOfInitiation;
-      const formattedInitiationDate = dayjs(initiationDate, "DD/MM/YYYY HH:mm").format("DD/MM/YYYY HH:mm");
+      const formattedInitiationDate = dayjs(initiationDate, "DD/MM/YYYY HH:mm:ss").format("DD/MM/YYYY HH:mm:ss");
 
       const payload = {
         process_id: 5,

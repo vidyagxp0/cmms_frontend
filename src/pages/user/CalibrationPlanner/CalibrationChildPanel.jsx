@@ -186,7 +186,8 @@ const CalibrationChildPanel = () => {
   const { recordId } = useParams();
 
   const [workflowStages, setWorkflowStages] = useState([]);
-  const [processId, setProcessId] = useState(null);
+  const [processId, setProcessId] = useState(5);
+  // console.log(processId, "this is processId>>>>>>");
   const [activeStageId, setActiveStageId] = useState(null);
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
@@ -320,6 +321,7 @@ const CalibrationChildPanel = () => {
       if (isInitial) setIsLoading(true);
       const response = await getCalibrationChildDetail(recordId);
       const data = response?.data?.data;
+      console.log(data, "this is child data>>>>>>");
       if (!data) { toast.error("Child calibration record not found."); return; }
 
       setProcessId(data?.process_id || null);

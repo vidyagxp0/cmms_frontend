@@ -121,9 +121,9 @@ const PreventiveGrid = ({
       key: "equipmentInstrumentId",
       title: "Equipment Code",
       type: "text",
-      placeholder: "Auto-filled",
+      // placeholder: "Auto-filled",
       minWidth: 180,
-      disabled: true,
+      // disabled: true,
     },
     {
       key: "location",
@@ -165,6 +165,7 @@ const PreventiveGrid = ({
     onChange([...rows, newRow]);
   };
 
+  console.log(equipmentOptions,"equipmentOptions>>.")
   const handleDeleteRow = (rowIndex) => {
     if (disabled) return;
     if (rows.length <= minRows) return;

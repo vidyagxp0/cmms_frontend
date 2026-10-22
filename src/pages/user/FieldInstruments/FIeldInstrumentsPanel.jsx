@@ -56,7 +56,7 @@ const TABS = [
 ];
 
 /* Process ID used for the Field Instrument workflow. */
-const FIELD_INSTRUMENT_PROCESS_ID = 22;
+const FIELD_INSTRUMENT_PROCESS_ID = 6;
 
 const EMPTY_CHECKLIST = {
   checklist_name: "",
@@ -692,7 +692,7 @@ const FIeldInstrumentsPanel = () => {
             stages={workflowStages}
             activeStageId={activeStageId}
             loading={workflowLoading}
-            cancelledStageId={86}
+            cancelledStageId={32}
           />
 
           <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">

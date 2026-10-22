@@ -412,6 +412,44 @@ const EquipDashboard = () => {
             },
 
             // ========================================================
+            // STAGE
+            // ========================================================
+            {
+                accessorKey: "stage.name",
+                header: "Stage",
+                cell: ({ row }) => {
+                    const stageName = row.original?.stage?.name || "-";
+                    // Optional: add dynamic coloring for certain stages (e.g., Closed, Pending)
+                    const isClosed = stageName.toLowerCase().includes("closed");
+                    
+                    return (
+                        <span
+                            className={`
+                                inline-flex
+                                max-w-full
+                                items-center
+                                rounded-full
+                                border
+                                px-2.5
+                                py-1
+                                text-[10px]
+                                font-bold
+                                tracking-[0.025em]
+                                ${
+                                    isClosed
+                                        ? "border-[#D5E0DB] bg-[#F0F5F2] text-[#536D64]" 
+                                        : "border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]"
+                                }
+                            `}
+                            title={stageName}
+                        >
+                            {stageName}
+                        </span>
+                    );
+                },
+            },
+
+            // ========================================================
             // ACTION
             // ========================================================
             {

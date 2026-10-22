@@ -38,7 +38,7 @@ const CalibrationGrid = ({
     { key: "instrumentrange", title: "Instrument Range", type: "text", placeholder: "", minWidth: 160, disabled: true },
     { key: "operatingrange", title: "Operating Range", type: "text", placeholder: "", minWidth: 160, disabled: true },
     { key: "calibrationTestPoints", title: "Calibration test points", type: "text", placeholder: "", minWidth: 160, disabled: true },
-    { key: "category", title: "*Category", type: "select", placeholder: "Select", minWidth: 110, options: [{ value: "critical", label: "C" }, { value: "non-critical", label: "NC" }, { value: "indicative", label: "I" }] },
+    { key: "category", title: "Category", type: "select", placeholder: "Select", minWidth: 110, options: [{ value: "critical", label: "Critical" }, { value: "non-critical", label: "Non-Critical" }, { value: "indicative", label: "Indicative" }] },
     { key: "plannedDate", title: "Planned date / Calibration Done on", type: "dualDate", minWidth: 320 },
     { key: "remark", title: "Remarks", type: "textarea", placeholder: "Enter remarks", minWidth: 200 },
   ];

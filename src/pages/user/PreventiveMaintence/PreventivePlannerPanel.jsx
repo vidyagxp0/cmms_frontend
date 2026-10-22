@@ -156,7 +156,7 @@ const PreventivePlannerPanel = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [workflowLoading, setWorkflowLoading] = useState(true);
   const [workflowStages, setWorkflowStages] = useState([]);
-  const [processId, setProcessId] = useState(null);
+  const [processId, setProcessId] = useState(2);
   const [activeStageId, setActiveStageId] = useState(null);
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
@@ -223,11 +223,12 @@ const PreventivePlannerPanel = () => {
       try {
         setEquipmentLoading(true);
         const response = await getAllEquipmentData();
+        console.log(response, "this is equipment response>>>>>>");
         const data = response?.data?.data || [];
-        const options = data.map((item) => ({ value: item.id, label: item.name }));
+        const options = data.map((item) => ({ value: item.instrument_name, label: item.instrument_name }));
         const map = {};
         data.forEach((item) => {
-          map[item.id] = item;
+          map[item.instrument_name] = item;
         });
         setEquipmentOptions(options);
         setEquipmentMap(map);

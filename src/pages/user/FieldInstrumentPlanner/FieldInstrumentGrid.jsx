@@ -43,7 +43,7 @@ const FieldInstrumentGrid = ({
     { key: "equipmentInstrumentName", title: "INSTRUMENT NAME.", type: "select", placeholder: "Select instrument", required: true, minWidth: 180 },
     { key: "equipmentInstrumentId", title: "INSTRUMENT ID No.", type: "text", placeholder: "", required: true, minWidth: 150, disabled: true },
     { key: "location", title: "INSTRUMENT LOCATION", type: "text", placeholder: "", minWidth: 140, disabled: true },
-    { key: "category", title: "*CATEGORY", type: "select", placeholder: "Select", minWidth: 110, options: [{ value: "critical", label: "C" }, { value: "non-critical", label: "NC" }, { value: "indicative", label: "I" }] },
+    { key: "category", title: "CATEGORY", type: "select", placeholder: "Select", minWidth: 110, options: [{ value: "critical", label: "Critical" }, { value: "non-critical", label: "Non-Critical" }, { value: "indicative", label: "Indicative" }] },
   ];
 
   const rows = Array.isArray(value) ? value : [];

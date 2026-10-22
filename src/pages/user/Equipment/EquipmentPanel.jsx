@@ -681,7 +681,7 @@ const EquipmentPanel = () => {
             stages={workflowStages}
             activeStageId={activeStageId}
             loading={workflowLoading}
-            cancelledStageId={81}  
+            cancelledStageId={27}  
           />
 
           <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">

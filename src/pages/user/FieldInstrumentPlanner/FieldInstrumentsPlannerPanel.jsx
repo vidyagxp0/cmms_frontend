@@ -26,16 +26,17 @@ import { getProfile } from "../../../services/authApi";
 import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration, getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
 import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
 import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
+import { executeFieldInstrumentPlannerActivity, getAllFieldInstrumentPlannerData, getFieldInstrumentPlannerDetail, updateFieldInstrumentPlanner } from "../../../services/usersApi/fieldInstrumentPlanerApi";
 
 dayjs.extend(customParseFormat);
 
 const TABS = [
-  { id: "general", label: "General Information", stageId: 1 },
-  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 2 },
-  { id: "user-dept-review", label: "User Department Review (User Dept)", stageId: 3 },
-  { id: "qa-review", label: "QA Approval Review", stageId: 4 },
-  { id: "activity", label: "Activity Log", stageId: 5 },
-  { id: "cancellation", label: "Cancellation", stageId: 6 },
+  { id: "general", label: "General Information", stageId: 33 },
+  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 34 },
+  { id: "user-dept-review", label: "User Department Review (User Dept)", stageId: 35 },
+  { id: "qa-review", label: "QA Approval Review", stageId: 36 },
+  { id: "activity", label: "Activity Log", stageId: 37 },
+  { id: "cancellation", label: "Cancellation", stageId: 38 },
 ];
 
 const REQUIRED_FIELDS = [{ name: "shortDescription", label: "Short Description" }];
@@ -162,18 +163,18 @@ const FieldInstrumentsPlannerPanel = () => {
   const [userRoles, setUserRoles] = useState([]);
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  const { recordId } = { recordId: 10 };
+  const { recordId } = useParams();
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "" });
 
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
 
   const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
-  const isGeneralEditable = isStageEditable(1);
-  const isHodEditable = isStageEditable(2);
-  const isUserDeptEditable = isStageEditable(3);
-  const isQaReviewEditable = isStageEditable(4);
-  const isCancellationEditable = isStageEditable(6);
+  const isGeneralEditable = isStageEditable(33);
+  const isHodEditable = isStageEditable(34);
+  const isUserDeptEditable = isStageEditable(35);
+  const isQaReviewEditable = isStageEditable(36);
+  const isCancellationEditable = isStageEditable(38);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -194,7 +195,7 @@ const FieldInstrumentsPlannerPanel = () => {
     const fetchEquipment = async () => {
       try {
         setEquipmentLoading(true);
-        const response = await getAllEquipmentData();
+        const response = await getAllFieldInstrumentPlannerData();
         const data = response?.data?.data || [];
         const options = data.map((item) => ({ value: item.id, label: item.instrument_name || item.name }));
         const map = {};
@@ -233,7 +234,7 @@ const FieldInstrumentsPlannerPanel = () => {
     isFetchingRef.current = true;
     try {
       if (isInitial) setIsLoading(true);
-      const response = await getCalibrationDetail(recordId);
+      const response = await getFieldInstrumentPlannerDetail(recordId);
       const responseData = response?.data?.data;
       if (!responseData) { toast.error("Field Instrument record not found."); return; }
       
@@ -466,7 +467,7 @@ const FieldInstrumentsPlannerPanel = () => {
         gridData,
         checklistData: [],
       };
-      const response = await updateCalibration(recordId, payload);
+      const response = await updateFieldInstrumentPlanner(recordId, payload);
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Field Instrument updated successfully.");
         await fetchCalibrationDetail();
@@ -532,7 +533,7 @@ const FieldInstrumentsPlannerPanel = () => {
               loading={activitiesLoading}
               recordId={recordId}
               userId={loginUserId}
-              activityApi={executeCalibrationActivity}
+              activityApi={executeFieldInstrumentPlannerActivity}
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}

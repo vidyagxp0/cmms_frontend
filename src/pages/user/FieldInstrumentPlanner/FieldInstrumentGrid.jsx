@@ -218,79 +218,86 @@ const FieldInstrumentGrid = ({
               <th className="w-[60px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Action</th>
             </tr>
           </thead>
-          <tbody>
-            {rows.length > 0 ? (
-              rows.map((row, rowIndex) => (
-                <React.Fragment key={rowIndex}>
-                  {/* Planned Row */}
-                  <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                    <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
-                      <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">{rowIndex + 1}.</span>
-                    </td>
-                    {mainColumns.map((column) => (
-                      <td key={column.key} rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
-                        {renderField(column, row, rowIndex)}
-                      </td>
-                    ))}
-                    
-                    {/* Row Label: Planned */}
-                    <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-medium text-[#596760]">
-                      Planned
-                    </td>
-                    
-                    {/* Months - Planned */}
-                    {MONTHS.map((month) => (
-                      <td key={`${month.key}_planned`} className="border border-[#D5DFDB] p-0 align-middle">
-                        {renderDateField(row, `${month.key}_planned`, rowIndex)}
-                      </td>
-                    ))}
+        <tbody>
+  {rows.length > 0 ? (
+    rows.map((row, rowIndex) => (
+      <React.Fragment key={rowIndex}>
+        {/* Spacer between logical rows */}
+        {rowIndex > 0 && (
+          <tr aria-hidden="true">
+            <td colSpan={20} className="!h-3 !border-0 !p-0 !bg-[#F7FAF8]" />
+          </tr>
+        )}
 
-                    <td rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
-                      <TextArea
-                        value={row.remark ?? ""}
-                        onChange={(e) => updateRow(rowIndex, "remark", e.target.value)}
-                        rows={2}
-                        className="!h-full !min-h-[64px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1]"
-                        disabled={disabled}
-                      />
-                    </td>
-                    <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteRow(rowIndex)}
-                        disabled={disabled || rows.length <= minRows}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
-                        aria-label="Delete row"
-                      >
-                        <Trash2 size={14} strokeWidth={1.8} />
-                      </button>
-                    </td>
-                  </tr>
-                  
-                  {/* Executed Row */}
-                  <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                    {/* Row Label: Executed */}
-                    <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-medium text-[#596760]">
-                      Executed
-                    </td>
+        {/* Planned Row */}
+        <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+          <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+            <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">{rowIndex + 1}.</span>
+          </td>
+          {mainColumns.map((column) => (
+            <td key={column.key} rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
+              {renderField(column, row, rowIndex)}
+            </td>
+          ))}
 
-                    {/* Months - Executed */}
-                    {MONTHS.map((month) => (
-                      <td key={`${month.key}_executed`} className="border border-[#D5DFDB] p-0 align-middle">
-                        {renderDateField(row, `${month.key}_executed`, rowIndex)}
-                      </td>
-                    ))}
-                  </tr>
-                </React.Fragment>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={20} className="h-[80px] border border-[#D5DFDB] px-5 text-center text-[11px] font-medium text-[#899690]">
-                  No rows added yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
+          {/* Row Label: Planned */}
+          <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-medium text-[#596760]">
+            Planned
+          </td>
+
+          {/* Months - Planned */}
+          {MONTHS.map((month) => (
+            <td key={`${month.key}_planned`} className="border border-[#D5DFDB] p-0 align-middle">
+              {renderDateField(row, `${month.key}_planned`, rowIndex)}
+            </td>
+          ))}
+
+          <td rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
+            <TextArea
+              value={row.remark ?? ""}
+              onChange={(e) => updateRow(rowIndex, "remark", e.target.value)}
+              rows={2}
+              className="!h-full !min-h-[64px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1]"
+              disabled={disabled}
+            />
+          </td>
+          <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+            <button
+              type="button"
+              onClick={() => handleDeleteRow(rowIndex)}
+              disabled={disabled || rows.length <= minRows}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
+              aria-label="Delete row"
+            >
+              <Trash2 size={14} strokeWidth={1.8} />
+            </button>
+          </td>
+        </tr>
+
+        {/* Executed Row */}
+        <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+          {/* Row Label: Executed */}
+          <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-medium text-[#596760]">
+            Executed
+          </td>
+
+          {/* Months - Executed */}
+          {MONTHS.map((month) => (
+            <td key={`${month.key}_executed`} className="border border-[#D5DFDB] p-0 align-middle">
+              {renderDateField(row, `${month.key}_executed`, rowIndex)}
+            </td>
+          ))}
+        </tr>
+      </React.Fragment>
+    ))
+  ) : (
+    <tr>
+      <td colSpan={20} className="h-[80px] border border-[#D5DFDB] px-5 text-center text-[11px] font-medium text-[#899690]">
+        No rows added yet.
+      </td>
+    </tr>
+  )}
+</tbody>
         </table>
       </CustomScrollContainer>
 

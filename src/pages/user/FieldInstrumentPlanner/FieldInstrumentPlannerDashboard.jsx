@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 
 import {
     getAllCalibrationPlannerRecords,
+    getAllFieldInstrumentPlannerRecords,
 } from "../../../services/usersApi/dashboardAllApi";
 
 const FieldInstrumentPlannerDashboard = () => {
@@ -39,7 +40,7 @@ const FieldInstrumentPlannerDashboard = () => {
         });
 
     // ================================================================
-    // FETCH ENGINEERING RECORDS
+    // FETCH FIELD INSTRUMENT PLANNER RECORDS
     // ================================================================
     const fetchRecords = async (
         page = 1,
@@ -49,7 +50,7 @@ const FieldInstrumentPlannerDashboard = () => {
             setLoading(true);
 
             const response =
-                await getAllCalibrationPlannerRecords(
+                await getAllFieldInstrumentPlannerRecords(
                     {
                         page,
                         per_page: perPage,
@@ -86,7 +87,7 @@ const FieldInstrumentPlannerDashboard = () => {
             });
         } catch (error) {
             console.error(
-                "Failed to fetch engineering records:",
+                "Failed to fetch field instrument planner records:",
                 error
             );
 
@@ -406,7 +407,7 @@ const FieldInstrumentPlannerDashboard = () => {
                             } else {
                                 // Parent / standard record
                                 navigate(
-                                    `/user/calibration-planner-panel/${record.id}`
+                                    `/user/field-instruments-planner-panel/${record.id}`
                                 );
                             }
                         };
@@ -794,13 +795,15 @@ const FieldInstrumentPlannerDashboard = () => {
             {/* =====================================================
                 DARK SECONDARY ACTION BAR
             ====================================================== */}
-            <DashboardActionBar
-                title="Engineering Dashboard"
+              <DashboardActionBar
+                title="Field Instruments Dashboard"
                 buttonName="Create Record"
+                // navigationRoute="/user/create-field-instruments"
                 navigationRoute="/user/create-record"
-                sourceRoute="/user/engineering-dashboard"
-                sourceType="engineering"
+                sourceRoute="/user/field-instrument-planner-dashboard"
+                sourceType="field-instrument-planner"
             />
+
 
             {/* =====================================================
                 ENGINEERING TABLE AREA
@@ -867,9 +870,9 @@ const FieldInstrumentPlannerDashboard = () => {
                             );
                         }}
 
-                        emptyTitle="No engineering records found"
+                        emptyTitle="No Field Instrument Planner records found"
                         emptyDescription="
-                            Engineering records will appear here
+                            Field Instrument Planner records will appear here
                             once they are created.
                         "
                     />

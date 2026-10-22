@@ -24,3 +24,10 @@ export const getAllPreventiveManagementRecords = (params = {}) => {
         params,
     });
 }
+
+export const getAllFieldInstrumentPlannerRecords = (params = {}) => {
+    return api.get("/user/get-field-instrument-planner-records", {
+        params,
+    });
+}
+

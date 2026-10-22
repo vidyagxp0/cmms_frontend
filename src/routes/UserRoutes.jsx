@@ -22,7 +22,7 @@ import PreventivePlannerPanel from "../pages/user/PreventiveMaintence/Preventive
 import PreventiveMaintenanceCreate from "../pages/user/PreventiveMaintence/PreventiveMaintenanceCreate";
 import PreventiveMaintenancePanel from "../pages/user/PreventiveMaintence/PreventiveMaintenancePanel";
 import CalibrationManagmentAudit from "../pages/user/Audit/CalibrationManagmentAudit";
-import FieldInstrumetsDashboard from "../pages/user/FieldInstruments/FieldInstrumetsDashboard";
+// import FieldInstrumetsDashboard from "../pages/user/FieldInstruments/FieldInstrumetsDashboard";
 import CreateFieldInstruments from "../pages/user/FieldInstruments/CreateFieldInstruments";
 import FIeldInstrumentsPanel from "../pages/user/FieldInstruments/FIeldInstrumentsPanel";
 import EquipmentAudit from "../pages/user/Equipment/EquipmentAudit";
@@ -30,6 +30,7 @@ import FieldInstrumentAudit from "../pages/user/FieldInstruments/FieldInstrument
 import FieldInstrumentPlannerDashboard from "../pages/user/FieldInstrumentPlanner/FieldInstrumentPlannerDashboard";
 import FieldInstrumentPlannerCreate from "../pages/user/FieldInstrumentPlanner/FieldInstrumentPlannerCreate";
 import FieldInstrumentsPlannerPanel from "../pages/user/FieldInstrumentPlanner/FieldInstrumentsPlannerPanel";
+import FieldInstrumetsDashboard from "../pages/user/FieldInstruments/FieldInstrumetsDashboard";
 
 function UserRoutes() {
   return (
@@ -77,8 +78,8 @@ function UserRoutes() {
 
                 {/* Field Instrument Planner Routes*/}
         <Route path="field-instrument-planner-dashboard" element={<FieldInstrumentPlannerDashboard />} />
-        <Route path="field-instrument-planner-create/7" element={<FieldInstrumentPlannerCreate />} />
-        <Route path="field-instruments-planner-panel/10" element={<FieldInstrumentsPlannerPanel />} /> 
+        <Route path="field-instrument-planner-create/:processId" element={<FieldInstrumentPlannerCreate />} />
+        <Route path="field-instruments-planner-panel/:recordId" element={<FieldInstrumentsPlannerPanel />} /> 
         {/* <Route path="equipment-panel/:id" element={<EquipmentPanel/>} /> */}
       </Route>
     </Routes>

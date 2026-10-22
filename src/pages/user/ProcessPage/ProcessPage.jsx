@@ -61,6 +61,7 @@ const ProcessPage = () => {
         sourceRoute,
         sourceType,
     } = location.state || {};
+    console.log("ProcessPage sourceType:", sourceType);
 
     const handleSiteSelect = async (
         site
@@ -122,6 +123,20 @@ const ProcessPage = () => {
                     );
             }
 
+            // Field Instrument Planner
+            if (
+                sourceType ===
+                "field-instrument-planner"
+            ) {
+                filteredProcesses =
+                    filteredProcesses.filter(
+                        (process) =>
+                            process.name
+                                ?.toLowerCase() ===
+                            "field instrument planner"
+                    );
+            }
+
             setProcesses(
                 filteredProcesses
             );
@@ -159,6 +174,16 @@ const ProcessPage = () => {
         ) {
             navigate(
                 `/user/preventive-maintenance-planner-create/${process.id}`
+            );
+
+            return;
+        }
+        if (
+            sourceType ===
+            "field-instrument-planner"
+        ) {
+            navigate(
+                `/user/field-instrument-planner-create/${process.id}`
             );
 
             return;

@@ -29,8 +29,6 @@ const MONTHS = [
 const WEEKS_PER_MONTH = 5;
 
 /* -------------------- Weekly data helpers -------------------- */
-// Force every weekly cell value to a string. Booleans / nulls / undefined
-// (from older saved payloads that stored true/false checkboxes) become "".
 const toFieldString = (value) => (typeof value === "string" ? value : "");
 
 const createEmptyWeek = () => ({ planned: "", actual: "" });
@@ -106,22 +104,11 @@ const PreventiveGrid = ({
   year = dayjs().year(),
   weekDates: initialWeekDates,
   onWeekDatesChange,
+  blockValue = "",
+  departmentValue = "",
 }) => {
+  // Only 3 data columns now. Block and Department moved to header.
   const columns = [
-    {
-      key: "block",
-      title: "Block",
-      type: "text",
-      placeholder: "Enter block",
-      minWidth: 140,
-    },
-    {
-      key: "department",
-      title: "Department",
-      type: "text",
-      placeholder: "Enter department",
-      minWidth: 160,
-    },
     {
       key: "equipmentInstrumentName",
       title: "Equipment Name",
@@ -243,7 +230,7 @@ const PreventiveGrid = ({
 
     weekly[monthKey][weekIndex] = {
       ...weekly[monthKey][weekIndex],
-      [field]: value, // always a string coming from Input onChange
+      [field]: value,
     };
 
     row.weeklyPreventive = weekly;
@@ -367,7 +354,9 @@ const PreventiveGrid = ({
 
   const visibleColumns = columns.filter((column) => column.hidden !== true);
   const showChildColumn = typeof onViewChild === "function";
-  const leftColSpan = 1 + visibleColumns.length;
+  
+  // Left side now has 4 columns: Sr. No., Equipment Name, Equipment Code, Location
+  const leftColSpan = 4; 
 
   /* -------------------- Render -------------------- */
   return (
@@ -416,14 +405,17 @@ const PreventiveGrid = ({
       >
         <table className="w-full min-w-[6800px] border-collapse">
           <thead className="sticky top-0 z-[5]">
-            {/* Row 1: Year + Month names + Right side headers */}
+            {/* Row 1 */}
             <tr className="bg-[#EEF3F1]">
               <th
-                colSpan={leftColSpan}
+                colSpan={3}
                 className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3 py-2 text-left text-[11px] font-bold text-[#43564F]"
               >
                 For the Year of&nbsp;
                 <span className="text-[#2B5577]">{year}</span>
+              </th>
+              <th className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3 py-2 text-left text-[11px] font-bold text-[#43564F]">
+                MONTH &rarr;
               </th>
               {MONTHS.map((month) => (
                 <th
@@ -457,29 +449,29 @@ const PreventiveGrid = ({
               </th>
             </tr>
 
-            {/* Row 2: Left column headers + Week numbers */}
+            {/* Row 2 */}
             <tr className="bg-[#EEF3F1]">
               <th
                 rowSpan={3}
                 className="sticky left-0 z-[10] w-[56px] border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]"
               >
-                S.No
+                Sr. No
               </th>
-              {visibleColumns.map((column) => (
-                <th
-                  key={column.key}
-                  rowSpan={3}
-                  style={{ minWidth: column.minWidth || 180 }}
-                  className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3.5 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
-                >
-                  <div className="flex items-center gap-1">
-                    {column.title}
-                    {column.required && (
-                      <span className="text-red-500">*</span>
-                    )}
-                  </div>
-                </th>
-              ))}
+              <th
+                style={{ minWidth: 240 }}
+                className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3.5 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
+              >
+                Block
+              </th>
+              <th
+                style={{ minWidth: 180 }}
+                className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3.5 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
+              >
+                {blockValue}
+              </th>
+              <th className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3 py-2 text-left text-[11px] font-bold text-[#43564F]">
+                WEEK &rarr;
+              </th>
 
               {MONTHS.map((month) =>
                 Array.from({ length: WEEKS_PER_MONTH }).map((_, weekIdx) => (
@@ -488,14 +480,29 @@ const PreventiveGrid = ({
                     colSpan={2}
                     className="border-b border-r border-[#D5DFDB] bg-[#E7EFEC] px-2 py-2 text-center text-[10px] font-bold uppercase tracking-[0.03em] text-[#63736C]"
                   >
-                    Week {weekIdx + 1}
+                    {weekIdx + 1}
                   </th>
                 ))
               )}
             </tr>
 
-            {/* Row 3: Manual date selection in header */}
-            <tr className="bg-[#E7EFEC]">
+            {/* Row 3 */}
+            <tr className="bg-[#EEF3F1]">
+              <th
+                style={{ minWidth: 240 }}
+                className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3.5 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
+              >
+                Department
+              </th>
+              <th
+                style={{ minWidth: 180 }}
+                className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3.5 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
+              >
+                {departmentValue}
+              </th>
+              <th className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3 py-2 text-left text-[11px] font-bold text-[#43564F]">
+                DATE &rarr;
+              </th>
               {MONTHS.map((month) =>
                 Array.from({ length: WEEKS_PER_MONTH }).map((_, weekIdx) => (
                   <th
@@ -526,8 +533,22 @@ const PreventiveGrid = ({
               )}
             </tr>
 
-            {/* Row 4: P / A sub headers */}
-            <tr className="bg-[#E1EBE7]">
+            {/* Row 4 */}
+            <tr className="bg-[#EEF3F1]">
+              {visibleColumns.map((column) => (
+                <th
+                  key={column.key}
+                  style={{ minWidth: column.minWidth || 180 }}
+                  className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3.5 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
+                >
+                  <div className="flex items-center gap-1">
+                    {column.title} {column.key === "location" && "↓"}
+                    {column.required && (
+                      <span className="text-red-500">*</span>
+                    )}
+                  </div>
+                </th>
+              ))}
               {MONTHS.map((month) =>
                 Array.from({ length: WEEKS_PER_MONTH }).map((_, weekIdx) => (
                   <React.Fragment key={`${month.key}-pa-${weekIdx}`}>
@@ -578,7 +599,6 @@ const PreventiveGrid = ({
                             headerWeekDates?.[month.key]?.[weekIdx];
                           const enabled = !!dateStr;
 
-                          // force strings — never let a boolean leak into Input value
                           const plannedValue = toFieldString(weekData.planned);
                           const actualValue = toFieldString(weekData.actual);
 

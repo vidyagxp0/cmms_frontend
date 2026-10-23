@@ -18,6 +18,10 @@ export const getPreventivePlannerSingleReport = (id) => {
     });
 };
 
+export const getPreventiveAuditListing = (id, params = {}) => {
+    return api.get(`/user/preventive-planner-audit-listing/${id}`, {params});
+};
+
 // export const deleteRole = (id) =>
 //     api.delete(`/admin/delete-role/${id}`);
 

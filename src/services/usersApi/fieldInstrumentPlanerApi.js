@@ -31,3 +31,13 @@ export const getFieldInstrumentAuditRecord = (id, params = {}) => {
 export const getAllFieldInstrumentPlannerData = () => {
     return api.get("/user/all-fields-instrument-masters");
 };
+
+export const getFieldInstrumentPlannerReport = (id) => {
+    return api.get(`/user/field-instrument-planner-singleReport/${id}`, {
+        responseType: "blob",
+    });
+};
+
+export const getFieldInstrumentPlannerAudit = (id, params = {}) => {
+    return api.get(`/user/field-instrument-planner-audit-listing/${id}`, {params});
+};

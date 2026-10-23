@@ -586,9 +586,9 @@ const EquipmentPanel = () => {
 
         /* Review + cancellation fields */
         hod_review_comments: values.hodReviewComments || "",
-        hod_review_attachment: values.hodReviewAttachment || [],
+        // hod_review_attachment: values.hodReviewAttachment || [],
         qa_review_comments: values.qaReviewComments || "",
-        qa_review_attachment: values.qaReviewAttachment || [],
+        // qa_review_attachment: values.qaReviewAttachment || [],
         cancellation_remark: values.cancellationRemark || "",
         cancellation_attachment: values.cancellationAttachment || [],
       };

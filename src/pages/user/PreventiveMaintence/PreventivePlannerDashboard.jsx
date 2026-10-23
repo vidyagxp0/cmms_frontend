@@ -17,12 +17,20 @@ import {
 import { useNavigate } from "react-router-dom";
 import { getAllPreventivePlanner } from "../../../services/usersApi/dashboardAllApi";
 import { getPreventivePlannerSingleReport } from "../../../services/usersApi/preventive";
+import { useAuthStore } from "../../../store/authStore";
 
 const PreventivePlannerDashboard = () => {
     const navigate = useNavigate();
 
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const user = useAuthStore((state) => state.user);
+    const authLoading = useAuthStore((state) => state.loading);
+
+    const showCreateButton =
+        !authLoading && user?.roles?.includes("Initiator");
+
 
     // Backend pagination state
     const [pagination, setPagination] =
@@ -781,6 +789,7 @@ const PreventivePlannerDashboard = () => {
                 navigationRoute="/user/create-record"
                 sourceRoute="/user/preventive-planner-dashboard"
                 sourceType="preventive"
+                showCreateButton={showCreateButton}
             />
 
             {/* =====================================================

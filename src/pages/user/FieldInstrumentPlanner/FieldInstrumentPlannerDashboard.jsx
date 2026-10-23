@@ -19,6 +19,7 @@ import {
     getAllCalibrationPlannerRecords,
     getAllFieldInstrumentPlannerRecords,
 } from "../../../services/usersApi/dashboardAllApi";
+import { useAuthStore } from "../../../store/authStore";
 
 const FieldInstrumentPlannerDashboard = () => {
     const navigate = useNavigate();
@@ -29,6 +30,13 @@ const FieldInstrumentPlannerDashboard = () => {
 
     const [loading, setLoading] =
         useState(true);
+
+    const user = useAuthStore((state) => state.user);
+    const authLoading = useAuthStore((state) => state.loading);
+
+    const showCreateButton =
+        !authLoading && user?.roles?.includes("Initiator");
+
 
     // Backend pagination state
     const [pagination, setPagination] =
@@ -802,6 +810,7 @@ const FieldInstrumentPlannerDashboard = () => {
                 navigationRoute="/user/create-record"
                 sourceRoute="/user/field-instrument-planner-dashboard"
                 sourceType="field-instrument-planner"
+                showCreateButton={showCreateButton}
             />
 
 

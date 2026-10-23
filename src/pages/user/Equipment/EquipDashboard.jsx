@@ -10,6 +10,7 @@ import {
     getInstrumentReport,
 } from "../../../services/usersApi/equipmentApi";
 import DataTable from "../../../components/common/DataTable/DataTable";
+import { useAuthStore } from "../../../store/authStore";
 
 /* ───────────────────────── Report window templates ───────────────────────── */
 
@@ -81,6 +82,12 @@ const EquipDashboard = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [equipment, setEquipment] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const user = useAuthStore((state) => state.user);
+    const authLoading = useAuthStore((state) => state.loading);
+
+    const showCreateButton =
+        !authLoading && user?.roles?.includes("Initiator");
 
     // ================================================================
     // BACKEND PAGINATION
@@ -511,6 +518,7 @@ const EquipDashboard = () => {
                 navigationRoute="/user/create-equipment"
                 sourceRoute="/user/equipment-dashboard"
                 sourceType="equipment"
+                showCreateButton={showCreateButton}
             />
 
             {/* =====================================================

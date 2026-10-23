@@ -9,6 +9,7 @@ import {
     getFieldInstrumentReport,
 } from "../../../services/usersApi/equipmentApi";
 import DataTable from "../../../components/common/DataTable/DataTable";
+import { useAuthStore } from "../../../store/authStore";
 
 
 /* report window templates */
@@ -79,6 +80,13 @@ const FieldInstrumetsDashboard = () => {
 
     const [equipment, setEquipment] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const user = useAuthStore((state) => state.user);
+    const authLoading = useAuthStore((state) => state.loading);
+
+    const showCreateButton =
+        !authLoading && user?.roles?.includes("Initiator");
+
 
     // ================================================================
     // BACKEND PAGINATION
@@ -496,6 +504,7 @@ const FieldInstrumetsDashboard = () => {
                 navigationRoute="/user/create-field-instruments"
                 sourceRoute="/user/field-instruments-dashboard"
                 sourceType="equipment"
+                showCreateButton={showCreateButton}
             />
 
             {/* MAIN CONTENT */}

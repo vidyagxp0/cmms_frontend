@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import {
     getAllCalibrationPlannerRecords,
 } from "../../../services/usersApi/dashboardAllApi";
+import { useAuthStore } from "../../../store/authStore";
 
 const EngineeringDashboard = () => {
     const navigate = useNavigate();
@@ -28,6 +29,13 @@ const EngineeringDashboard = () => {
 
     const [loading, setLoading] =
         useState(true);
+
+    const user = useAuthStore((state) => state.user);
+    const authLoading = useAuthStore((state) => state.loading);
+
+    const showCreateButton =
+        !authLoading && user?.roles?.includes("Initiator");
+
 
     // Backend pagination state
     const [pagination, setPagination] =
@@ -800,6 +808,7 @@ const EngineeringDashboard = () => {
                 navigationRoute="/user/create-record"
                 sourceRoute="/user/engineering-dashboard"
                 sourceType="engineering"
+                showCreateButton={showCreateButton}
             />
 
             {/* =====================================================

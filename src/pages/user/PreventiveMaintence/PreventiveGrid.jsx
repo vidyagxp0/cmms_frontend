@@ -159,12 +159,23 @@ const PreventiveGrid = ({
     () => getMergedWeekDates(initialWeekDates, year)
   );
 
-  // Sync state if parent loads data after initial render
+  // ✅ FIX: Sync state if parent loads data after initial render, 
+  // AND notify parent of the defaults so they can be sent in the payload
   useEffect(() => {
-    if (initialWeekDates && Object.keys(initialWeekDates).length > 0) {
-      setHeaderWeekDates(getMergedWeekDates(initialWeekDates, year));
+    const merged = getMergedWeekDates(initialWeekDates, year);
+    
+    setHeaderWeekDates(merged);
+    
+    if (onWeekDatesChange) {
+      const incomingStr = JSON.stringify(initialWeekDates || {});
+      const mergedStr = JSON.stringify(merged);
+      
+      // Only notify parent if the merged data is different from what they passed in
+      if (incomingStr !== mergedStr) {
+        onWeekDatesChange(merged);
+      }
     }
-  }, [initialWeekDates, year]);
+  }, [initialWeekDates, year, onWeekDatesChange]);
 
   /* -------------------- Row actions -------------------- */
   const addRow = () => {

@@ -33,6 +33,7 @@ import FieldInstrumentsPlannerPanel from "../pages/user/FieldInstrumentPlanner/F
 import FieldInstrumetsDashboard from "../pages/user/FieldInstruments/FieldInstrumetsDashboard";
 import FieldInstrumentsPlannerAudit from "../pages/user/FieldInstrumentPlanner/FieldInstrumentsPlannerAudit";
 import PreventivePlannerAudit from "../pages/user/PreventiveMaintence/PreventivePlannerAudit";
+import PreventiveMaintenanceAudit from "../pages/user/PreventiveMaintence/PreventiveMaintenanceAudit";
 
 function UserRoutes() {
   return (
@@ -74,6 +75,7 @@ function UserRoutes() {
         <Route path="preventive-planner-dashboard" element={<PreventivePlannerDashboard />} />
         <Route path="preventive-planner-audit/:recordId" element={<PreventivePlannerAudit />} />
         <Route path="preventive-maintenance-dashboard" element={<PreventiveMaintenanceDashboard />} />
+        <Route path="preventive-maintenance-audit/:recordId" element={<PreventiveMaintenanceAudit />} />
         <Route path="preventive-maintenance-planner-create/:processId" element={<PreventivePlannerCreate />} />
         <Route path="preventive-maintenance-planner-panel/:processId/:recordId" element={<PreventivePlannerPanel />} />
         <Route path="preventive-maintenance-create/:processId/:recordId" element={<PreventiveMaintenanceCreate  />} />

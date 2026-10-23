@@ -960,6 +960,7 @@ const PreventiveMaintenancePanel = () => {
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
+              auditRoute={"/user/preventive-maintenance-audit"}
               onExit={() => navigate(-1)}
             />
           </div>

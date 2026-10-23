@@ -44,3 +44,7 @@ export const getEquipmentMasterChecklist = (equipmentId, frequency) => {
     `/user/equipment-master-checklist/${equipmentId}/${(frequency)}`
   );
 };
+
+export const getPrevemtiveMaintenanceAuditListing = (id, params = {}) => {
+    return api.get(`/user/preventive-maintenance-audit-listing/${id}`, {params});
+};

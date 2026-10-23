@@ -95,7 +95,6 @@ const buildProcessData = (values, systemFields) => [
   })),
   { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
   { key: "comment", label: "Comments", value: values?.comments || "" },
-  // { key: "attachment", label: "Attachment", value: values?.attachment || [] },
   { key: "attachment", label: "Attachment", value:  [] },
   {
     key: "hod_review_comments",
@@ -165,6 +164,10 @@ const PreventivePlannerPanel = () => {
   const [canPerformActivity, setCanPerformActivity] = useState(false);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [preventiveRows, setPreventiveRows] = useState([]);
+  
+  // NEW: State to hold header week dates
+  const [headerWeekDates, setHeaderWeekDates] = useState({});
+
   const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [equipmentMap, setEquipmentMap] = useState({});
   const equipmentMapRef = useRef(equipmentMap);
@@ -223,7 +226,6 @@ const PreventivePlannerPanel = () => {
       try {
         setEquipmentLoading(true);
         const response = await getAllEquipmentData();
-        console.log(response, "this is equipment response>>>>>>");
         const data = response?.data?.data || [];
         const options = data.map((item) => ({ value: item.instrument_name, label: item.instrument_name }));
         const map = {};
@@ -291,6 +293,10 @@ const PreventivePlannerPanel = () => {
           processData,
           "cancellation_attachment"
         );
+
+        // NEW: Extract header week dates from response
+        const savedHeaderDates = responseData?.headerWeekDates || getProcessValue(processData, "headerWeekDates") || {};
+        setHeaderWeekDates(savedHeaderDates);
 
         setSiteLocationCode(locationCode || "");
 
@@ -596,6 +602,10 @@ const PreventivePlannerPanel = () => {
           mergedValues?.dateOfInitiation || dateOfInitiation || "",
         process_data: processData,
         gridData,
+        
+        // NEW: Include header week dates in payload
+        headerWeekDates, 
+        
         checklistData: [],
       };
 
@@ -759,6 +769,8 @@ const PreventivePlannerPanel = () => {
               showAddButton={true}
               canCreateChild={canCreateChild}
               onViewChild={handleViewChild}
+              weekDates={headerWeekDates}           // NEW
+              onWeekDatesChange={setHeaderWeekDates} // NEW
             />
           </div>
           <Form.Item

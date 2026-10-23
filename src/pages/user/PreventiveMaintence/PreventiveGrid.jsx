@@ -219,9 +219,9 @@ const PreventiveGrid = ({
       const equipmentId = newValue;
       if (equipmentId && equipmentMap[equipmentId]) {
         const equipment = equipmentMap[equipmentId];
-        row.equipmentInstrumentId = equipment.equipment_id || "";
+        row.equipmentInstrumentId = equipment.equipment_id || equipment.instrument_id_no || "";
         row.make = equipment.make || "";
-        row.model = equipment.model || "";
+        row.model = equipment.model || equipment.sr_no_model_no || "";
       } else {
         row.equipmentInstrumentId = "";
         row.make = "";

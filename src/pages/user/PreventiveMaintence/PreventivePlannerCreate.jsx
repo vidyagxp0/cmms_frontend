@@ -120,6 +120,10 @@ const PreventivePlannerCreate = () => {
   const [equipmentLoading, setEquipmentLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
   const [preventivePlannerRows, setPreventivePlannerRows] = useState([]);
+  
+  // NEW: State to hold header week dates
+  const [headerWeekDates, setHeaderWeekDates] = useState({});
+
   const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [equipmentMap, setEquipmentMap] = useState({});
   const [initiator, setInitiator] = useState("");
@@ -291,6 +295,10 @@ const PreventivePlannerCreate = () => {
         initiation_date: dateOfInitiation,
         process_data: processData,
         gridData,
+        
+        // NEW: Include header week dates in payload
+        headerWeekDates, 
+        
         checklistData: [],
       };
 
@@ -300,6 +308,7 @@ const PreventivePlannerCreate = () => {
         toast.success("Preventive Planner created successfully.");
         form.resetFields();
         setPreventivePlannerRows([]);
+        setHeaderWeekDates({}); // Reset dates
         navigate("/user/preventive-planner-dashboard");
         return;
       }
@@ -323,6 +332,7 @@ const PreventivePlannerCreate = () => {
 
     form.resetFields();
     setPreventivePlannerRows([]);
+    setHeaderWeekDates({});
     navigate("/user/preventive-planner-dashboard");
   };
 
@@ -428,6 +438,8 @@ const PreventivePlannerCreate = () => {
                 equipmentMap={equipmentMap}
                 equipmentLoading={equipmentLoading}
                 showAddButton={false}
+                weekDates={headerWeekDates}           // NEW
+                onWeekDatesChange={setHeaderWeekDates} // NEW
               />
 
               <Form.Item

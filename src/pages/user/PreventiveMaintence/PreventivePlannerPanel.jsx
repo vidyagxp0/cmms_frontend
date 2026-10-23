@@ -695,6 +695,7 @@ const PreventivePlannerPanel = () => {
               userId={loginUserId}
               activityApi={executePreventiveActivity}
               onActivitySuccess={handleActivitySuccess}
+              auditRoute={"/user/preventive-planner-audit"}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
               onExit={() => navigate("/user/preventive-planner-dashboard")}

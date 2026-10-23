@@ -19,6 +19,7 @@ import {
     getAllCalibrationPlannerRecords,
     getAllFieldInstrumentPlannerRecords,
 } from "../../../services/usersApi/dashboardAllApi";
+import { getFieldInstrumentPlannerReport } from "../../../services/usersApi/fieldInstrumentPlanerApi";
 
 const FieldInstrumentPlannerDashboard = () => {
     const navigate = useNavigate();
@@ -224,7 +225,7 @@ const FieldInstrumentPlannerDashboard = () => {
             reportWindow.document.close();
 
             const response =
-                await getCalibrationSingleReport(
+                await getFieldInstrumentPlannerReport(
                     recordId
                 );
 

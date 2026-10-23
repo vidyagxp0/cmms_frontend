@@ -48,3 +48,9 @@ export const getEquipmentMasterChecklist = (equipmentId, frequency) => {
 export const getPrevemtiveMaintenanceAuditListing = (id, params = {}) => {
     return api.get(`/user/preventive-maintenance-audit-listing/${id}`, {params});
 };
+
+export const getPreventiveMaintenanceSingleReport = (id) => {
+    return api.get(`/user/preventive-maintenance-singleReport/${id}`, {
+        responseType: "blob",
+    });
+};

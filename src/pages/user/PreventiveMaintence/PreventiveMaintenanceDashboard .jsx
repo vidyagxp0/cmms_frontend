@@ -17,6 +17,7 @@ import {
 import {
     getAllPreventiveManagementRecords,
 } from "../../../services/usersApi/dashboardAllApi";
+import { getPreventiveMaintenanceSingleReport } from "../../../services/usersApi/preventive";
 
 const PreventiveMaintenanceDashboard = () => {
     const navigate = useNavigate();
@@ -225,7 +226,7 @@ const PreventiveMaintenanceDashboard = () => {
             reportWindow.document.close();
 
             const response =
-                await getCalibrationSingleReport(
+                await getPreventiveMaintenanceSingleReport(
                     recordId
                 );
 

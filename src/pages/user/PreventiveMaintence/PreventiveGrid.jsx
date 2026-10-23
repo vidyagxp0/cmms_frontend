@@ -83,6 +83,24 @@ const generateDefaultWeekDates = (year) => {
   return result;
 };
 
+// Helper to merge initial saved dates with defaults safely
+const getMergedWeekDates = (initial, currentYear) => {
+  const defaults = generateDefaultWeekDates(currentYear);
+  if (!initial || typeof initial !== "object" || Object.keys(initial).length === 0) {
+    return defaults;
+  }
+  
+  const merged = { ...defaults };
+  MONTHS.forEach(({ key }) => {
+    if (Array.isArray(initial[key])) {
+      merged[key] = Array.from({ length: WEEKS_PER_MONTH }, (_, i) => 
+        typeof initial[key][i] === "string" ? initial[key][i] : ""
+      );
+    }
+  });
+  return merged;
+};
+
 /* -------------------- Main component -------------------- */
 const PreventiveGrid = ({
   value = [],
@@ -107,7 +125,6 @@ const PreventiveGrid = ({
   blockValue = "",
   departmentValue = "",
 }) => {
-  // Only 3 data columns now. Block and Department moved to header.
   const columns = [
     {
       key: "equipmentInstrumentName",
@@ -121,9 +138,7 @@ const PreventiveGrid = ({
       key: "equipmentInstrumentId",
       title: "Equipment Code",
       type: "text",
-      // placeholder: "Auto-filled",
       minWidth: 180,
-      // disabled: true,
     },
     {
       key: "location",
@@ -139,16 +154,17 @@ const PreventiveGrid = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
+  // Initialize state with merged dates
   const [headerWeekDates, setHeaderWeekDates] = useState(
-    () => initialWeekDates || generateDefaultWeekDates(year)
+    () => getMergedWeekDates(initialWeekDates, year)
   );
 
+  // Sync state if parent loads data after initial render
   useEffect(() => {
-    if (initialWeekDates) {
-      setHeaderWeekDates(initialWeekDates);
+    if (initialWeekDates && Object.keys(initialWeekDates).length > 0) {
+      setHeaderWeekDates(getMergedWeekDates(initialWeekDates, year));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialWeekDates]);
+  }, [initialWeekDates, year]);
 
   /* -------------------- Row actions -------------------- */
   const addRow = () => {
@@ -165,7 +181,6 @@ const PreventiveGrid = ({
     onChange([...rows, newRow]);
   };
 
-  console.log(equipmentOptions,"equipmentOptions>>.")
   const handleDeleteRow = (rowIndex) => {
     if (disabled) return;
     if (rows.length <= minRows) return;
@@ -250,14 +265,19 @@ const PreventiveGrid = ({
   const updateHeaderWeekDate = (monthKey, weekIndex, dateStr) => {
     if (disabled) return;
 
+    // Safely grab current array or fallback to empty
+    const currentDates = headerWeekDates[monthKey] || Array(WEEKS_PER_MONTH).fill("");
+    
     const updatedWeekDates = {
       ...headerWeekDates,
-      [monthKey]: headerWeekDates[monthKey].map((d, i) =>
+      [monthKey]: currentDates.map((d, i) =>
         i === weekIndex ? dateStr : d
       ),
     };
 
     setHeaderWeekDates(updatedWeekDates);
+    
+    // Notify parent so it can be included in the save payload
     if (onWeekDatesChange) onWeekDatesChange(updatedWeekDates);
   };
 
@@ -356,7 +376,6 @@ const PreventiveGrid = ({
   const visibleColumns = columns.filter((column) => column.hidden !== true);
   const showChildColumn = typeof onViewChild === "function";
   
-  // Left side now has 4 columns: Sr. No., Equipment Name, Equipment Code, Location
   const leftColSpan = 4; 
 
   /* -------------------- Render -------------------- */
@@ -596,8 +615,9 @@ const PreventiveGrid = ({
                               planned: "",
                               actual: "",
                             };
-                          const dateStr =
-                            headerWeekDates?.[month.key]?.[weekIdx];
+                          
+                          // VALIDATION: Cell is disabled if header date is missing
+                          const dateStr = headerWeekDates?.[month.key]?.[weekIdx];
                           const enabled = !!dateStr;
 
                           const plannedValue = toFieldString(weekData.planned);

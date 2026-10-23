@@ -37,3 +37,7 @@ export const getFieldInstrumentPlannerReport = (id) => {
         responseType: "blob",
     });
 };
+
+export const getFieldInstrumentPlannerAudit = (id, params = {}) => {
+    return api.get(`/user/field-instrument-planner-audit-listing/${id}`, {params});
+};

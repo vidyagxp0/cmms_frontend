@@ -34,6 +34,10 @@ import FieldInstrumetsDashboard from "../pages/user/FieldInstruments/FieldInstru
 import FieldInstrumentsPlannerAudit from "../pages/user/FieldInstrumentPlanner/FieldInstrumentsPlannerAudit";
 import PreventivePlannerAudit from "../pages/user/PreventiveMaintence/PreventivePlannerAudit";
 import PreventiveMaintenanceAudit from "../pages/user/PreventiveMaintence/PreventiveMaintenanceAudit";
+import InstrumentCalibrationDashboard from "../pages/user/FieldInstrumentCalibration/InstrumentCalibrationDashboard";
+import InstrumentCalibrationCreate from "../pages/user/FieldInstrumentCalibration/InstrumentCalibrationCreate";
+import InstrumentsCalibrationPanel from "../pages/user/FieldInstrumentCalibration/InstrumentsCalibrationPanel";
+import InstrumentsCalibrationAudit from "../pages/user/FieldInstrumentCalibration/InstrumentsCalibrationAudit";
 
 function UserRoutes() {
   return (
@@ -86,7 +90,12 @@ function UserRoutes() {
         <Route path="field-instrument-planner-create/:processId" element={<FieldInstrumentPlannerCreate />} />
         <Route path="field-instruments-planner-panel/:recordId" element={<FieldInstrumentsPlannerPanel />} /> 
         <Route path="field-instruments-planner-audit/:recordId" element={<FieldInstrumentsPlannerAudit />} /> 
-        {/* <Route path="equipment-panel/:id" element={<EquipmentPanel/>} /> */}
+
+        {/* Field Instrument Calibration Routes*/}
+        <Route path="instrument-calibration-dashboard" element={<InstrumentCalibrationDashboard />} />
+        <Route path="instrument-calibration-create/:processId" element={<InstrumentCalibrationCreate />} />
+        <Route path="instruments-calibration-panel/:recordId" element={<InstrumentsCalibrationPanel />} /> 
+        <Route path="instruments-calibration-audit/:recordId" element={<InstrumentsCalibrationAudit />} /> 
       </Route>
     </Routes>
   );

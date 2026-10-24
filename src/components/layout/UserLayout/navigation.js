@@ -92,12 +92,30 @@ export const DASHBOARD_NAV_ITEMS = [
 
   // ─── Field Instrument Planner group ───────────────────────────────
   {
-    id: "fieldInstrumentPlanner",
+    id: "fieldInstrument",
+    label: "Field Instrument",
+    path: "/user/field-instrument-planner-dashboard",
+    icon: CalendarClock,
+    group: "fieldInstrument",
+  },
+
+    {
+    id: "fieldInstrument-planner",
     label: "Field Instrument Planner",
     path: "/user/field-instrument-planner-dashboard",
     icon: CalendarClock,
-    group: "fieldInstrumentPlanner",
+    hiddenFromNav: true,
+    group: "fieldInstrument",
   },
+  {
+    id: "fieldInstrument-calibration-addendum",
+    label: "Field Instrument Calibration Addendum",
+    path: "/user/instrument-calibration-dashboard",
+    icon: ClipboardList,
+    hiddenFromNav: true,
+    group: "fieldInstrument",
+  },
+
 ];
 
 export const USER_NAV_ITEMS = DASHBOARD_NAV_ITEMS.filter(

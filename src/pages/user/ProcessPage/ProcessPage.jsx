@@ -137,6 +137,20 @@ const ProcessPage = () => {
                     );
             }
 
+            // Field Instrument Calibration Addendum
+            if (
+                sourceType ===
+                "instrument-calibration"
+            ) {
+                filteredProcesses =
+                    filteredProcesses.filter(
+                        (process) =>
+                            process.name
+                                ?.toLowerCase() ===
+                            "field instrument calibration addendum"
+                    );
+            }
+
             setProcesses(
                 filteredProcesses
             );
@@ -184,6 +198,17 @@ const ProcessPage = () => {
         ) {
             navigate(
                 `/user/field-instrument-planner-create/${process.id}`
+            );
+
+            return;
+        }
+
+        if (
+            sourceType ===
+            "instrument-calibration"
+        ) {
+            navigate(
+                `/user/instrument-calibration-create/${process.id}`
             );
 
             return;

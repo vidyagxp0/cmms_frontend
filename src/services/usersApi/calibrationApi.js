@@ -36,6 +36,12 @@ export const getCalibrationSingleReport = (id) => {
     });
 };
 
+export const getCalibrationAuditReport = (id) => {
+    return api.get(`/user/calibration-audit-report/${id}`, {
+        responseType: "blob",
+    });
+};
+
 // Calibration Child API
 
 export const getCalibrationChildDetail = (id) =>

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Activity, ArrowUpDown, Search, X } from "lucide-react";
+import { Activity, ArrowUpDown, Search, X, FileText } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
-
-import { getCalibrationAuditRecord } from "../../../services/usersApi/calibrationApi";
 
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import CustomScrollContainer from "../../../components/common/CustomScrollbar/CustomScrollContainer";
+import { getPreventiveAuditListing } from "../../../services/usersApi/preventive";
+import { getCalibrationAuditReport } from "../../../services/usersApi/calibrationApi";
 
 const Audit = () => {
   const navigate = useNavigate();
@@ -13,11 +13,10 @@ const Audit = () => {
 
   const [audits, setAudits] = useState([]);
   const [record, setRecord] = useState(null);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reportLoading, setReportLoading] = useState(false);
 
-  /* pagnations */
   const [pagination, setPagination] = useState({
     current_page: 1,
     per_page: 10,
@@ -27,31 +26,33 @@ const Audit = () => {
     to: 0,
   });
 
-  /* filters */
   const [search, setSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
   useEffect(() => {
     if (!recordId) {
+      setLoading(false);
+      setError("Record ID is missing.");
       return;
     }
 
     fetchAudits(pagination.current_page, search, fromDate, toDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordId, pagination.current_page, search, fromDate, toDate]);
 
   const fetchAudits = async (
     page = 1,
     searchValue = search,
     fromDateValue = fromDate,
-    toDateValue = toDate,
+    toDateValue = toDate
   ) => {
     try {
       setLoading(true);
       setError("");
 
       const params = {
-        page: page,
+        page,
         per_page: 10,
       };
 
@@ -67,49 +68,34 @@ const Audit = () => {
         params.to_date = toDateValue;
       }
 
-      const response = await getCalibrationAuditRecord(recordId, params);
-
+      const response = await getPreventiveAuditListing(recordId, params);
       const apiData = response?.data?.data;
-      console.log(apiData, "apiDataapiData>>>>>>>>>>>>>>>>>>>>>>>>>");
 
-      /* record data */
-      if (apiData?.record) {
-        setRecord(apiData.record);
-      } else {
-        setRecord(null);
-      }
+      setRecord(apiData?.record || null);
+      setAudits(Array.isArray(apiData?.audits) ? apiData.audits : []);
 
-      /* audits */
-      if (Array.isArray(apiData?.audits)) {
-        setAudits(apiData.audits);
-      } else {
-        setAudits([]);
-      }
-
-      /* paginations */
       if (apiData?.pagination) {
-        setPagination({
-          current_page: Number(apiData.pagination.current_page) || 1,
-
+        setPagination((previous) => ({
+          ...previous,
+          current_page: Number(apiData.pagination.current_page) || page,
           per_page: Number(apiData.pagination.per_page) || 10,
-
           total: Number(apiData.pagination.total) || 0,
-
           last_page: Number(apiData.pagination.last_page) || 1,
-
           from: Number(apiData.pagination.from) || 0,
-
           to: Number(apiData.pagination.to) || 0,
-        });
+        }));
       } else {
-        setPagination({
+        const count = apiData?.audits?.length || 0;
+
+        setPagination((previous) => ({
+          ...previous,
           current_page: page,
           per_page: 10,
-          total: apiData?.audits?.length || 0,
+          total: count,
           last_page: 1,
-          from: apiData?.audits?.length ? 1 : 0,
-          to: apiData?.audits?.length || 0,
-        });
+          from: count ? 1 : 0,
+          to: count,
+        }));
       }
     } catch (err) {
       console.error("USER AUDIT ERROR:", err);
@@ -122,24 +108,115 @@ const Audit = () => {
     }
   };
 
-  /* clear filters */
+  const handleViewReport = async (recordId) => {
+    if (!recordId) {
+        alert("Process record ID is missing.");
+        return;
+    }
+
+    // Open the tab immediately to avoid popup blocking.
+    const reportWindow = window.open("", "_blank");
+
+    if (!reportWindow) {
+        alert("Please allow pop-ups to view the report.");
+        return;
+    }
+
+    try {
+        reportWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Loading Audit Report...</title>
+                <style>
+                    body {
+                        margin: 0;
+                        height: 100vh;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-family: Arial, sans-serif;
+                        color: #475569;
+                    }
+                    .loader {
+                        text-align: center;
+                    }
+                    .spinner {
+                        width: 32px;
+                        height: 32px;
+                        margin: 0 auto 16px;
+                        border: 3px solid #e2e8f0;
+                        border-top-color: #F28C00;
+                        border-radius: 50%;
+                        animation: spin 0.8s linear infinite;
+                    }
+                    @keyframes spin {
+                        to { transform: rotate(360deg); }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="loader">
+                    <div class="spinner"></div>
+                    <p>Generating Audit Report...</p>
+                </div>
+            </body>
+            </html>
+        `);
+
+        reportWindow.document.close();
+
+        const response = await getCalibrationAuditReport(recordId);
+
+        const blob = new Blob([response.data], {
+            type: "application/pdf",
+        });
+
+        const pdfUrl = window.URL.createObjectURL(blob);
+
+        reportWindow.location.href = pdfUrl;
+
+        // Keep the URL available while the PDF is being viewed.
+        reportWindow.addEventListener("beforeunload", () => {
+            window.URL.revokeObjectURL(pdfUrl);
+        }, { once: true });
+
+    } catch (error) {
+        console.error("Failed to generate Audit Report:", error);
+
+        if (!reportWindow.closed) {
+            reportWindow.document.open();
+            reportWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Audit Report Error</title>
+                </head>
+                <body style="font-family:Arial,sans-serif;text-align:center;padding:60px;">
+                    <h3 style="color:#b91c1c;">Failed to generate Audit Report</h3>
+                    <p>Please close this tab and try again.</p>
+                </body>
+                </html>
+            `);
+            reportWindow.document.close();
+        }
+    }
+  };
+
   const handleClearFilters = () => {
     setSearch("");
     setFromDate("");
     setToDate("");
 
-    setPagination((prev) => ({
-      ...prev,
+    setPagination((previous) => ({
+      ...previous,
       current_page: 1,
     }));
   };
 
   const goToPage = (page) => {
-    if (loading) {
-      return;
-    }
-
     if (
+      loading ||
       page < 1 ||
       page > pagination.last_page ||
       page === pagination.current_page
@@ -147,8 +224,8 @@ const Audit = () => {
       return;
     }
 
-    setPagination((prev) => ({
-      ...prev,
+    setPagination((previous) => ({
+      ...previous,
       current_page: page,
     }));
   };
@@ -170,19 +247,19 @@ const Audit = () => {
     const currentPage = pagination.current_page;
 
     if (totalPages <= 7) {
-      return Array.from({ length: totalPages }, (_, index) => index + 1);
+      return Array.from(
+        { length: totalPages },
+        (_, index) => index + 1
+      );
     }
 
-    const pages = [];
-
-    pages.push(1);
+    const pages = [1];
 
     if (currentPage > 4) {
       pages.push("...");
     }
 
     const start = Math.max(2, currentPage - 1);
-
     const end = Math.min(totalPages - 1, currentPage + 1);
 
     for (let page = start; page <= end; page++) {
@@ -220,6 +297,76 @@ const Audit = () => {
     }
   };
 
+  const MONTH_NAMES = {
+    Jan: "January",
+    Feb: "February",
+    Mar: "March",
+    Apr: "April",
+    May: "May",
+    Jun: "June",
+    Jul: "July",
+    Aug: "August",
+    Sep: "September",
+    Oct: "October",
+    Nov: "November",
+    Dec: "December",
+  };
+
+  const formatWeeklyPreventiveAudit = (value) => {
+    if (
+      typeof value !== "string" ||
+      !value.toLowerCase().includes("weekly preventive")
+    ) {
+      return null;
+    }
+
+    const result = [];
+    const lines = value
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    lines.forEach((rawLine, index) => {
+      const line = rawLine
+        .replace(/^Weekly Preventive(?: Schedule)?\s*:\s*/i, "")
+        .trim();
+
+      const readableMatch = line.match(
+        /^(.+?)\s+[—-]\s+Week\s+(\d+)\s+[—-]\s+Date:\s*(.*?)\s+[—-]\s+Planned\s*\(P\):\s*(.*?)\s+[—-]\s+Actual\s*\(A\):\s*(.*)$/i
+      );
+
+      if (readableMatch) {
+        result.push({
+          id: `weekly-${index}-${readableMatch[1]}-${readableMatch[2]}`,
+          month: readableMatch[1].trim(),
+          weekNumber: Number(readableMatch[2]),
+          date: readableMatch[3].trim() || "-",
+          planned: readableMatch[4].trim() || "-",
+          actual: readableMatch[5].trim() || "-",
+        });
+
+        return;
+      }
+
+      const legacyMatch = line.match(
+        /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*:\s*(\d+)\s*:\s*Planned\s*:\s*(.*?)(?:\s+Actual\s*:\s*(.*))?$/i
+      );
+
+      if (legacyMatch) {
+        result.push({
+          id: `legacy-${index}-${legacyMatch[1]}-${legacyMatch[2]}`,
+          month: MONTH_NAMES[legacyMatch[1]] || legacyMatch[1],
+          weekNumber: Number(legacyMatch[2]) + 1,
+          date: "",
+          planned: legacyMatch[3]?.trim() || "-",
+          actual: legacyMatch[4]?.trim() || "-",
+        });
+      }
+    });
+
+    return result.length ? result : null;
+  };
+
   const formatValue = (value) => {
     if (value === null || value === undefined || value === "") {
       return "-";
@@ -230,24 +377,69 @@ const Audit = () => {
     }
 
     if (typeof value === "object") {
-      return value;
+      if (Array.isArray(value)) {
+        return value.length ? JSON.stringify(value, null, 2) : "-";
+      }
+
+      return JSON.stringify(value, null, 2);
     }
 
     return String(value);
   };
 
-  /* parse attachment audit value */
+  const renderAuditValue = (value) => {
+    const weeklyData = formatWeeklyPreventiveAudit(value);
+
+    if (weeklyData) {
+      return (
+        <div className="space-y-2">
+          {weeklyData.map((item) => (
+            <div
+              key={item.id}
+              className="rounded-md border border-[#E3E8EF] bg-[#F9FAFC] p-2"
+            >
+              <div className="mb-1 text-[11px] font-semibold text-[#2F6FB0]">
+                {item.month} — Week {item.weekNumber}
+                {item.date ? ` — ${item.date}` : ""}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div>
+                  <span className="font-semibold text-[#66707C]">
+                    Planned (P):
+                  </span>{" "}
+                  <span className="font-semibold text-[#1D2939]">
+                    {item.planned}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="font-semibold text-[#66707C]">
+                    Actual (A):
+                  </span>{" "}
+                  <span className="font-semibold text-[#1D2939]">
+                    {item.actual}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return formatValue(value);
+  };
+
   const parseAttachmentValue = (value) => {
     if (!value) {
       return [];
     }
 
-    /* already parsed array */
     if (Array.isArray(value)) {
       return value;
     }
 
-    /* JSON string from backend */
     if (typeof value === "string") {
       try {
         const parsedValue = JSON.parse(value);
@@ -259,7 +451,7 @@ const Audit = () => {
         if (Array.isArray(parsedValue?.attachments)) {
           return parsedValue.attachments;
         }
-      } catch (error) {
+      } catch {
         return [];
       }
     }
@@ -270,30 +462,32 @@ const Audit = () => {
   const isAttachmentValue = (value) => {
     const attachments = parseAttachmentValue(value);
 
-    if (!Array.isArray(attachments) || attachments.length === 0) {
-      return false;
-    }
-
-    return attachments.some(
-      (item) =>
-        item &&
-        typeof item === "object" &&
-        (item.name ||
-          item.Name ||
-          item.path ||
-          item.Path ||
-          item.url ||
-          item.Url),
+    return (
+      Array.isArray(attachments) &&
+      attachments.length > 0 &&
+      attachments.some(
+        (item) =>
+          item &&
+          typeof item === "object" &&
+          (item.name ||
+            item.Name ||
+            item.path ||
+            item.Path ||
+            item.url ||
+            item.Url)
+      )
     );
   };
 
-  /* build attachment URL on frontend */
   const getAttachmentUrl = (attachment) => {
     const path = attachment?.path || attachment?.Path || "";
-
-    const backendUrl = "https://cmms-shilpa-api.mydemosoftware.com";
+    const backendUrl = "http://127.0.0.1:8000";
 
     if (path) {
+      if (/^https?:\/\//i.test(path)) {
+        return path;
+      }
+
       return `${backendUrl}/${path.replace(/^\/+/, "")}`;
     }
 
@@ -303,7 +497,7 @@ const Audit = () => {
   const renderAttachmentValue = (value) => {
     const attachments = parseAttachmentValue(value);
 
-    if (!Array.isArray(attachments) || attachments.length === 0) {
+    if (!attachments.length) {
       return "-";
     }
 
@@ -325,9 +519,9 @@ const Audit = () => {
               href={attachmentUrl || "#"}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={(e) => {
+              onClick={(event) => {
                 if (!attachmentUrl) {
-                  e.preventDefault();
+                  event.preventDefault();
                 }
               }}
               className="block break-words text-[12px] font-medium text-[#2F6FB0] underline decoration-[#B8CCE0] underline-offset-2 hover:text-[#1D4F80] hover:decoration-[#2F6FB0]"
@@ -345,55 +539,33 @@ const Audit = () => {
   };
 
   const columns = [
-    {
-      label: "Action",
-      width: "w-[150px]",
-    },
-
-    {
-      label: "Module / Field",
-      width: "w-[190px]",
-    },
-
-    {
-      label: "Old Value",
-      width: "w-[270px]",
-    },
-
-    {
-      label: "New Value",
-      width: "w-[270px]",
-    },
-
-    {
-      label: "Comment / Reason",
-      width: "w-[230px]",
-    },
-
-    {
-      label: "Responsible Person",
-      width: "w-[170px]",
-    },
-
-    {
-      label: "Date & Time",
-      width: "w-[170px]",
-    },
+    { label: "Action", width: "w-[150px]" },
+    { label: "Module / Field", width: "w-[190px]" },
+    { label: "Old Value", width: "w-[270px]" },
+    { label: "New Value", width: "w-[270px]" },
+    { label: "Comment / Reason", width: "w-[230px]" },
+    { label: "Responsible Person", width: "w-[170px]" },
+    { label: "Date & Time", width: "w-[170px]" },
   ];
 
   const recordInfo = record || {};
 
   return (
     <div className="w-full">
+      {/* HEADER */}
       <div className="mb-5 flex items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#D8E1EA] bg-[#F0F5FA]">
-              <Activity size={18} strokeWidth={2} className="text-[#2F6FB0]" />
+              <Activity
+                size={18}
+                strokeWidth={2}
+                className="text-[#2F6FB0]"
+              />
             </span>
 
             <h2 className="text-[20px] font-semibold tracking-[-0.01em] text-[#1D2939]">
-              Audit History
+              {recordInfo.process} Audit History
             </h2>
           </div>
 
@@ -401,14 +573,27 @@ const Audit = () => {
             View and track all changes made to this record.
           </p>
         </div>
-        {/* Exit Button */}
-        <button
-          onClick={() => navigate(-1)}
-          type="button"
-          className="inline-flex h-9 items-center justify-center rounded-lg border border-[#D0D5DD] bg-white px-4 text-[12px] font-semibold text-[#475467] shadow-sm transition-all duration-200 hover:border-[#2F6FB0] hover:bg-[#F5F9FD] hover:text-[#2F6FB0] active:scale-95"
-        >
-          Exit
-        </button>
+
+        <div className="flex shrink-0 items-center gap-2">
+          {/* AUDIT REPORT BUTTON */}
+          <button
+              type="button"
+              onClick={() => handleViewReport(recordId)}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#C9D9D3] bg-[#EEF4F1] px-4 text-sm font-semibold text-[#56766D] transition hover:bg-[#E2ECE8]"
+          >
+              {/* <Eye size={15} /> */}
+              <span>Audit Report</span>
+          </button>
+
+          {/* EXIT BUTTON */}
+          <button
+            onClick={() => navigate(-1)}
+            type="button"
+            className="inline-flex h-9 items-center justify-center rounded-lg border border-[#D0D5DD] bg-white px-4 text-[12px] font-semibold text-[#475467] shadow-sm transition-all duration-200 hover:border-[#2F6FB0] hover:bg-[#F5F9FD] hover:text-[#2F6FB0] active:scale-95"
+          >
+            Exit
+          </button>
+        </div>
       </div>
 
       <div className="w-full">
@@ -418,58 +603,40 @@ const Audit = () => {
           </div>
         ) : error ? (
           <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-[#F3C6C6] bg-[#FDEEEE] px-6 py-12 text-center">
-            <p className="text-[12px] font-medium text-[#C43D3D]">{error}</p>
+            <p className="text-[12px] font-medium text-[#C43D3D]">
+              {error}
+            </p>
           </div>
         ) : (
           <>
+            {/* RECORD INFORMATION */}
             {record && (
               <div className="mb-5 grid grid-cols-1 gap-3 rounded-2xl border border-[#E3E8EF] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)] sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border border-[#EDF0F4] bg-[#F9FAFC] px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[#8A94A3]">
-                    Process
-                  </p>
+                {[
+                  ["Process", recordInfo.process],
+                  ["Department", recordInfo.department],
+                  ["Initiator", recordInfo.initiator],
+                  ["Initiation Date", recordInfo.initiation_date],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="rounded-xl border border-[#EDF0F4] bg-[#F9FAFC] px-4 py-3"
+                  >
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[#8A94A3]">
+                      {label}
+                    </p>
 
-                  <p className="mt-1 text-[12px] font-semibold text-[#1D2939]">
-                    {recordInfo.process || "-"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-[#EDF0F4] bg-[#F9FAFC] px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[#8A94A3]">
-                    Department
-                  </p>
-
-                  <p className="mt-1 text-[12px] font-semibold text-[#1D2939]">
-                    {recordInfo.department || "-"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-[#EDF0F4] bg-[#F9FAFC] px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[#8A94A3]">
-                    Initiator
-                  </p>
-
-                  <p className="mt-1 text-[12px] font-semibold text-[#1D2939]">
-                    {recordInfo.initiator || "-"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-[#EDF0F4] bg-[#F9FAFC] px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[#8A94A3]">
-                    Initiation Date
-                  </p>
-
-                  <p className="mt-1 text-[12px] font-semibold text-[#1D2939]">
-                    {recordInfo.initiation_date || "-"}
-                  </p>
-                </div>
+                    <p className="mt-1 text-[12px] font-semibold text-[#1D2939]">
+                      {value || "-"}
+                    </p>
+                  </div>
+                ))}
               </div>
             )}
 
+            {/* FILTERS */}
             <div className="mb-5 rounded-2xl border border-[#E3E8EF] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-                {/* SEARCH */}
-
                 <div className="lg:col-span-2">
                   <label className="mb-1.5 block text-[11px] font-semibold text-[#475467]">
                     Search
@@ -484,11 +651,11 @@ const Audit = () => {
                     <input
                       type="text"
                       value={search}
-                      onChange={(e) => {
-                        setSearch(e.target.value);
+                      onChange={(event) => {
+                        setSearch(event.target.value);
 
-                        setPagination((prev) => ({
-                          ...prev,
+                        setPagination((previous) => ({
+                          ...previous,
                           current_page: 1,
                         }));
                       }}
@@ -498,8 +665,6 @@ const Audit = () => {
                   </div>
                 </div>
 
-                {/* from date */}
-
                 <div>
                   <label className="mb-1.5 block text-[11px] font-semibold text-[#475467]">
                     From Date
@@ -508,19 +673,17 @@ const Audit = () => {
                   <input
                     type="date"
                     value={fromDate}
-                    onChange={(e) => {
-                      setFromDate(e.target.value);
+                    onChange={(event) => {
+                      setFromDate(event.target.value);
 
-                      setPagination((prev) => ({
-                        ...prev,
+                      setPagination((previous) => ({
+                        ...previous,
                         current_page: 1,
                       }));
                     }}
                     className="h-10 w-full rounded-lg border border-[#D0D5DD] bg-white px-3 text-[12px] text-[#344054] outline-none transition focus:border-[#2F6FB0] focus:ring-1 focus:ring-[#2F6FB0]"
                   />
                 </div>
-
-                {/* to date */}
 
                 <div>
                   <label className="mb-1.5 block text-[11px] font-semibold text-[#475467]">
@@ -530,11 +693,11 @@ const Audit = () => {
                   <input
                     type="date"
                     value={toDate}
-                    onChange={(e) => {
-                      setToDate(e.target.value);
+                    onChange={(event) => {
+                      setToDate(event.target.value);
 
-                      setPagination((prev) => ({
-                        ...prev,
+                      setPagination((previous) => ({
+                        ...previous,
                         current_page: 1,
                       }));
                     }}
@@ -542,8 +705,6 @@ const Audit = () => {
                   />
                 </div>
               </div>
-
-              {/* FILTER BUTTONS */}
 
               <div className="mt-3 flex items-center gap-2">
                 <button
@@ -557,6 +718,7 @@ const Audit = () => {
               </div>
             </div>
 
+            {/* AUDIT TABLE */}
             <div className="w-full overflow-hidden rounded-2xl border border-[#E3E8EF] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
               <CustomScrollContainer
                 maxHeight="640px"
@@ -564,18 +726,15 @@ const Audit = () => {
                 className="w-full"
               >
                 <table className="w-full min-w-[1300px] border-collapse">
-                  {/* HEADER */}
-
                   <thead className="sticky top-0 z-10">
                     <tr className="border-b border-[#D7E3EE] bg-[#EAF1F8]">
-                      {columns.map((col) => (
+                      {columns.map((column) => (
                         <th
-                          key={col.label}
-                          className={`${col.width} px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.04em] text-[#1B3A5C]`}
+                          key={column.label}
+                          className={`${column.width} px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.04em] text-[#1B3A5C]`}
                         >
                           <span className="inline-flex items-center gap-1.5">
-                            {col.label}
-
+                            {column.label}
                             <ArrowUpDown
                               size={11}
                               strokeWidth={2.25}
@@ -605,7 +764,7 @@ const Audit = () => {
                           <td className="px-4 py-3.5 align-top">
                             <span
                               className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[10.5px] font-semibold ${getActionStyle(
-                                audit.action,
+                                audit.action
                               )}`}
                             >
                               {audit.action || "-"}
@@ -628,7 +787,7 @@ const Audit = () => {
                             >
                               {isAttachmentValue(audit.old_value)
                                 ? renderAttachmentValue(audit.old_value)
-                                : formatValue(audit.old_value)}
+                                : renderAuditValue(audit.old_value)}
                             </div>
                           </td>
 
@@ -642,11 +801,9 @@ const Audit = () => {
                             >
                               {isAttachmentValue(audit.new_value)
                                 ? renderAttachmentValue(audit.new_value)
-                                : formatValue(audit.new_value)}
+                                : renderAuditValue(audit.new_value)}
                             </div>
                           </td>
-
-                          {/* COMMENT / REASON */}
 
                           <td className="px-4 py-3.5 align-top">
                             <div className="max-w-[230px] whitespace-pre-wrap break-words text-[12px] leading-5 text-[#66707C]">
@@ -660,8 +817,6 @@ const Audit = () => {
                             </div>
                           </td>
 
-                          {/* DATE */}
-
                           <td className="px-4 py-3.5 align-top">
                             <div className="whitespace-nowrap text-[11.5px] text-[#66707C]">
                               {audit.created_at || "-"}
@@ -674,6 +829,7 @@ const Audit = () => {
                 </table>
               </CustomScrollContainer>
 
+              {/* PAGINATION */}
               <div className="flex flex-col gap-3 border-t border-[#E3E8EF] bg-[#F9FAFC] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-[11.5px] text-[#66707C]">
                   Showing{" "}

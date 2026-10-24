@@ -368,7 +368,7 @@ const CalibrationChildPanel = () => {
 
       const formData = {
         documentNumber: "SMLJ/ENG/SOP-GEN/005/F08-02",
-        documentType: "Formates",
+        documentType: "Formats",
         recordNumber: recNum || "",
         initiator: backendInitiatorName || "",
         dateOfInitiation: initDate || data?.initiation_date || "",
@@ -543,7 +543,7 @@ const CalibrationChildPanel = () => {
 
   const systemValues = {
     documentNumber: "SMLJ/ENG/SOP-GEN/005/F08-02",
-    documentType: "Formates",
+    documentType: "Formats",
     recordNumber: recordNumber,
     initiator: initiator,
     dateOfInitiation: dateOfInitiation,

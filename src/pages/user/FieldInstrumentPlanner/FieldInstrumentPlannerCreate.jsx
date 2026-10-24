@@ -206,7 +206,7 @@ const FieldInstrumentPlannerCreate = () => {
                     initiationDepartment: departmentName,
                     dateOfInitiation,
                     documentNumber: "SMLJ/ENG/SOP-GEN/005/F01-02",
-                    documentType: "Formate",
+                    documentType: "Formats",
                     recordNumber: generatedRecordNumber,
                 });
 
@@ -245,7 +245,7 @@ const FieldInstrumentPlannerCreate = () => {
 
     const systemFields = [
         { name: "documentNumber", label: "Document Number", value: "SMLJ/ENG/SOP-GEN/005/F01-02" },
-        { name: "documentType", label: "Document Type", value: "Formate" },
+        { name: "documentType", label: "Document Type", value: "Formats" },
         { name: "recordNumber", label: "Record Number", value: recordNumber },
         { name: "initiator", label: "Initiator", value: initiator },
         { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },

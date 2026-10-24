@@ -228,7 +228,7 @@ const CalibrationChild = () => {
         // ✅ Build values
         const values = {
           documentNumber: "SMLJ/ENG/SOP-GEN/005/F08-02",
-          documentType: "Formates",
+          documentType: "Formats",
           recordNumber: recNum,
           initiator: rowData.initiator || profileName,
           dateOfInitiation: rowData.dateOfInitiation || now,
@@ -302,7 +302,7 @@ const CalibrationChild = () => {
   const buildFullProcessData = (values) => {
     const systemValues = {
       documentNumber: values.documentNumber || "SMLJ/ENG/SOP-GEN/005/F08-02",
-      documentType: values.documentType || "Formates",
+      documentType: values.documentType || "Formats",
       recordNumber: values.recordNumber || recordNumber,
       initiator: values.initiator || initiator,
       dateOfInitiation: values.dateOfInitiation || dateOfInitiation,

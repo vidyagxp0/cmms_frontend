@@ -405,7 +405,7 @@ const InstrumentCalibrationDashboard = () => {
                            
                                 // Parent / standard record
                                 navigate(
-                                    `/user/instruments-calibration-panel/${record.id}`
+                                    `/user/field-instrument-calibration-addendum-panel/${record.id}`
                                 );
                            
                         };
@@ -798,7 +798,7 @@ const InstrumentCalibrationDashboard = () => {
                 buttonName="Create Record"
                 // navigationRoute="/user/create-field-instruments"
                 navigationRoute="/user/create-record"
-                sourceRoute="/user/instrument-calibration-dashboard"
+                sourceRoute="/user/field-instrument-calibration-addendum-dashboard"
                 sourceType="instrument-calibration"
                 showCreateButton={showCreateButton}
             />

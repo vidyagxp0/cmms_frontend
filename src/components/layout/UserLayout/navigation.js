@@ -110,7 +110,7 @@ export const DASHBOARD_NAV_ITEMS = [
   {
     id: "fieldInstrument-calibration-addendum",
     label: "Field Instrument Calibration Addendum",
-    path: "/user/instrument-calibration-dashboard",
+    path: "/user/field-instrument-calibration-addendum-dashboard",
     icon: ClipboardList,
     hiddenFromNav: true,
     group: "fieldInstrument",

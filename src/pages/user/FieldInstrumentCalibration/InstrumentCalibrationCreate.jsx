@@ -287,7 +287,7 @@ const InstrumentCalibrationCreate = () => {
                 toast.success("Field Instrument Calibration Addendum record created successfully.");
                 form.resetFields();
                 setCalibrationRows([]);
-                navigate("/user/instrument-calibration-dashboard");
+                navigate("/user/field-instrument-calibration-addendum-dashboard");
                 return;
             }
             toast.error(response?.data?.message || "Failed to create Field Instrument Calibration Addendum record.");
@@ -303,7 +303,7 @@ const InstrumentCalibrationCreate = () => {
         if (isSaving) return;
         form.resetFields();
         setCalibrationRows([]);
-        navigate("/user/instrument-calibration-dashboard");
+        navigate("/user/field-instrument-calibration-addendum-dashboard");
     };
 
     return (

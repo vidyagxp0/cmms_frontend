@@ -208,7 +208,7 @@ const ProcessPage = () => {
             "instrument-calibration"
         ) {
             navigate(
-                `/user/instrument-calibration-create/${process.id}`
+                `/user/field-instrument-calibration-addendum-create/${process.id}`
             );
 
             return;

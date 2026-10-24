@@ -92,10 +92,10 @@ function UserRoutes() {
         <Route path="field-instruments-planner-audit/:recordId" element={<FieldInstrumentsPlannerAudit />} /> 
 
         {/* Field Instrument Calibration Routes*/}
-        <Route path="instrument-calibration-dashboard" element={<InstrumentCalibrationDashboard />} />
-        <Route path="instrument-calibration-create/:processId" element={<InstrumentCalibrationCreate />} />
-        <Route path="instruments-calibration-panel/:recordId" element={<InstrumentsCalibrationPanel />} /> 
-        <Route path="instruments-calibration-audit/:recordId" element={<InstrumentsCalibrationAudit />} /> 
+        <Route path="field-instrument-calibration-addendum-dashboard" element={<InstrumentCalibrationDashboard />} />
+        <Route path="field-instrument-calibration-addendum-create/:processId" element={<InstrumentCalibrationCreate />} />
+        <Route path="field-instrument-calibration-addendum-panel/:recordId" element={<InstrumentsCalibrationPanel />} /> 
+        <Route path="field-instrument-calibration-addendum-audit/:recordId" element={<InstrumentsCalibrationAudit />} /> 
       </Route>
     </Routes>
   );

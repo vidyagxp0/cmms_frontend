@@ -542,7 +542,7 @@ const InstrumentCalibrationPanel = () => {
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
-              auditRoute={"/user/instruments-calibration-audit"}
+              auditRoute={"/user/field-instrument-calibration-addendum-audit"}
               onExit={() => navigate("/user/engineering-dashboard")}
             />
           </div>

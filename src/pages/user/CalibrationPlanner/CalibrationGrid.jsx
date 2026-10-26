@@ -116,6 +116,17 @@ const CalibrationGrid = ({
       }
     }
 
+    // If planned date changes and existing done date is now before it, clear it
+    if (key === "plannedDate") {
+      if (
+        newValue &&
+        row.calibrationDoneDate &&
+        dayjs(row.calibrationDoneDate).isBefore(dayjs(newValue), "day")
+      ) {
+        row.calibrationDoneDate = "";
+      }
+    }
+
     updated[rowIndex] = row;
     onChange(updated);
   };
@@ -148,10 +159,12 @@ const CalibrationGrid = ({
     }
 
     if (type === "dualDate") {
+      const plannedDayjs = row.plannedDate ? dayjs(row.plannedDate) : null;
+
       return (
         <div className="flex flex-row gap-1.5 p-1">
           <DatePicker
-            value={row.plannedDate ? dayjs(row.plannedDate) : null}
+            value={plannedDayjs}
             placeholder="Plan date"
             onChange={(date) => updateRow(rowIndex, "plannedDate", date ? date.format("YYYY-MM-DD") : "")}
             format="DD-MM-YYYY"
@@ -165,6 +178,11 @@ const CalibrationGrid = ({
             format="DD-MM-YYYY"
             className="!h-8 !w-[140px] !rounded !border-[#D1DBD7] !bg-white !px-2 !text-[10px] !font-medium !text-[#263B35] !shadow-none"
             disabled={isDisabled}
+            disabledDate={(current) => {
+              if (!plannedDayjs) return false;
+              return current && current.isBefore(plannedDayjs, "day");
+            }}
+            defaultPickerValue={plannedDayjs || undefined}
           />
         </div>
       );
@@ -208,6 +226,7 @@ const CalibrationGrid = ({
   };
 
   const showChildColumn = typeof onViewChild === "function";
+  const today = dayjs().startOf("day");
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
@@ -257,7 +276,39 @@ const CalibrationGrid = ({
           <tbody>
             {rows.length > 0 ? (
               rows.map((row, rowIndex) => {
-                const childButtonEnabled = canCreateChild; 
+                // ─────────────────────────────────────────────────
+                // ✅ CHILD BUTTON LOGIC (Init + Close Done + Date window)
+                // ─────────────────────────────────────────────────
+                const rowPlannedDate = row.plannedDate ? dayjs(row.plannedDate).startOf("day") : null;
+
+                let isWithinDateWindow = false;
+                let windowStart = null;
+                let windowEnd = null;
+
+                if (rowPlannedDate) {
+                  windowStart = rowPlannedDate.subtract(7, "day").startOf("day");
+                  windowEnd = rowPlannedDate.add(7, "day").endOf("day");
+
+                  // inclusive between [-7 days, +7 days]
+                  isWithinDateWindow =
+                    !today.isBefore(windowStart) && !today.isAfter(windowEnd);
+                }
+
+                const childButtonEnabled = canCreateChild && isWithinDateWindow;
+
+                // Determine why it's disabled (for tooltip)
+                let childButtonTitle = "Create child calibration";
+                if (!canCreateChild) {
+                  childButtonTitle =
+                    "Child creation is available only to Initiator at Close Done stage.";
+                } else if (!rowPlannedDate) {
+                  childButtonTitle =
+                    "Please select a Planned date in this row to enable child creation.";
+                } else if (!isWithinDateWindow) {
+                  childButtonTitle = `Child can only be created between ${windowStart.format(
+                    "DD-MM-YYYY"
+                  )} and ${windowEnd.format("DD-MM-YYYY")} (7 days before to 7 days after the planned date).`;
+                }
 
                 return (
                   <tr key={rowIndex} className="group bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
@@ -284,11 +335,7 @@ const CalibrationGrid = ({
                               : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
                           }`}
                           aria-label="Create child calibration"
-                          title={
-                            !canCreateChild
-                              ? "Child creation is available only to Initiator at Close Done stage"
-                              : "Create child calibration"
-                          }
+                          title={childButtonTitle}
                         >
                           Child
                         </button>

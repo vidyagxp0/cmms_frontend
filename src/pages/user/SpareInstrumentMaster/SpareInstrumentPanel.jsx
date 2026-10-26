@@ -229,7 +229,7 @@ const SpareInstrumentPanel = () => {
 
   const [loginUserId, setLoginUserId] = useState("");
   const [userRoles, setUserRoles] = useState([]);
-  const [processName, setProcessName] = useState("Master Instrument");
+  const [processName, setProcessName] = useState("Spare Instrument Calibration Master");
 
   const isFetchingRef = useRef(false);
 
@@ -661,12 +661,12 @@ const SpareInstrumentPanel = () => {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="truncate text-[22px] font-bold tracking-[-0.035em] text-[var(--color-text-primary)]">
-                  Master Instrument Details
+                        Spare Instrument Calibration Master 
                 </h1>
                 <span className="hidden h-[5px] w-[5px] shrink-0 rounded-full bg-[var(--color-secondary)] sm:block" />
               </div>
               <p className="mt-0.5 text-[10.5px] font-medium text-[var(--color-text-secondary)]">
-                Review and maintain the configuration of this master instrument asset.
+                Review and maintain the configuration of this Spare Instrument Calibration Master asset.
               </p>
             </div>
           </div>

@@ -104,7 +104,7 @@ function UserRoutes() {
         {/* Spare Instrument Calibration Routes*/}
         <Route path="spare-instrument-calibration-master-dashboard" element={<SpareInstrumentDashboard />} />
         <Route path="spare-instrument-calibration-master-create" element={<SpareInstrumentCreate />} />
-        <Route path="spare-instrument-calibration-master-panel/:recordId" element={<SpareInstrumentPanel />} /> 
+        <Route path="spare-instrument-calibration-master-panel/:id" element={<SpareInstrumentPanel />} /> 
         <Route path="spare-instrument-calibration-master-audit/:recordId" element={<SpareInstrumentAudit />} /> 
       </Route>
     </Routes>

@@ -19,5 +19,5 @@ export const getSpareInstrumentAuditRecord = (id, params = {}) => {
 };
 
 export const getAllPermissionsSpareInstrument = (recordId) => {
-    return api.get(`/user/spare-instrument-record-permission/${recordId}`);
+    return api.post(`/user/spare-instrument-record-permission/${recordId}`);
 };

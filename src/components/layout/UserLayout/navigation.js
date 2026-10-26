@@ -49,19 +49,19 @@ export const DASHBOARD_NAV_ITEMS = [
   },
 
   // Child pill #2 (hidden from sidebar, shown in ActionBar)
-  // {
-  //   id: "spare-instruments-dashboard",
-  //   label: "Spare Instrument Calibration Dashboard",
-  //   path: "/user/spare-instrument-calibration-master-dashboard",
-  //   icon: Compass,
-  //   hiddenFromNav: true,
-  //   group: "equipment",
-  // },
+  {
+    id: "spare-instruments-dashboard",
+    label: "Spare Instrument Calibration Dashboard",
+    path: "/user/spare-instrument-calibration-master-dashboard",
+    icon: Compass,
+    hiddenFromNav: true,
+    group: "equipment",
+  },
 
   // ─── Engineering group ──────────────────────────────────────────
   {
     id: "engineering",
-    label: "Calibration Planner",
+    label: "Field Instrument Calibration Planner",
     path: "/user/engineering-dashboard",
     icon: HardHat,
     group: "engineering",
@@ -101,31 +101,31 @@ export const DASHBOARD_NAV_ITEMS = [
   },
 
   // ─── Field Instrument Planner group ───────────────────────────────
-  {
-    id: "fieldInstrument",
-    label: "Field Instrument",
-    path: "/user/field-instrument-planner-dashboard",
-    icon: CalendarClock,
-    group: "fieldInstrument",
-  },
+  // Commented out per request:
+  // {
+  //   id: "fieldInstrument",
+  //   label: "Field Instrument",
+  //   path: "/user/field-instrument-planner-dashboard",
+  //   icon: CalendarClock,
+  //   group: "fieldInstrument",
+  // },
 
-    {
-    id: "fieldInstrument-planner",
-    label: "Field Instrument Planner",
-    path: "/user/field-instrument-planner-dashboard",
-    icon: CalendarClock,
-    hiddenFromNav: true,
-    group: "fieldInstrument",
-  },
+  // {
+  //   id: "fieldInstrument-planner",
+  //   label: "Field Instrument Planner",
+  //   path: "/user/field-instrument-planner-dashboard",
+  //   icon: CalendarClock,
+  //   hiddenFromNav: true,
+  //   group: "fieldInstrument",
+  // },
+
   {
     id: "fieldInstrument-calibration-addendum",
-    label: "Field Instrument Calibration Addendum",
+    label: "Addendum Field Instrument Calibration",
     path: "/user/field-instrument-calibration-addendum-dashboard",
     icon: ClipboardList,
-    hiddenFromNav: true,
     group: "fieldInstrument",
   },
-
 ];
 
 export const USER_NAV_ITEMS = DASHBOARD_NAV_ITEMS.filter(

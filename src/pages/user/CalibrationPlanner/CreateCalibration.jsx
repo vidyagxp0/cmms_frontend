@@ -1046,7 +1046,7 @@ const CreateCalibration = () => {
                         "
                     >
                         {/* SITE */}
-                        <div
+                        {/* <div
                             className="
                                 flex
                                 items-center
@@ -1073,7 +1073,7 @@ const CreateCalibration = () => {
                                     size={12}
                                     strokeWidth={1.9}
                                 />
-                            </span>
+                            </span> */}
 
                             {/* <div>
                                 <p
@@ -1104,7 +1104,7 @@ const CreateCalibration = () => {
                                         "Unit IV"}
                                 </p>
                             </div> */}
-                        </div>
+                        {/* </div> */}
 
                         <div className="mx-1 h-7 w-px bg-[#DCE5E0]" />
 

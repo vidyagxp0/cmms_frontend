@@ -349,9 +349,9 @@ const FieldInstrumentPlannerCreate = () => {
                     {/* CONTEXT */}
                     <div className="flex shrink-0 items-center gap-3 rounded-none border-0 bg-transparent px-0 py-0">
                         <div className="flex items-center gap-2 rounded-none bg-transparent px-0 py-0">
-                            <span className="flex h-[26px] w-[26px] items-center justify-center rounded-[8px] bg-[#EAF1ED] text-[#58776C]">
+                            {/* <span className="flex h-[26px] w-[26px] items-center justify-center rounded-[8px] bg-[#EAF1ED] text-[#58776C]">
                                 <MapPin size={12} strokeWidth={1.9} />
-                            </span>
+                            </span> */}
                             {/* <div>
                                 <p className="font-[var(--font-display)] text-[7.5px] font-extrabold uppercase tracking-[0.12em] text-[#82928B]">Site</p>
                                 <p className="max-w-[110px] truncate font-[var(--font-display)] text-[10.5px] font-bold tracking-[-0.01em] text-[#344A43]">

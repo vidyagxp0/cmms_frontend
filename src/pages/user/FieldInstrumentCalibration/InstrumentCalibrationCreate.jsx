@@ -336,12 +336,12 @@ const InstrumentCalibrationCreate = () => {
                             <span className="flex h-[26px] w-[26px] items-center justify-center rounded-[8px] bg-[#EAF1ED] text-[#58776C]">
                                 <MapPin size={12} strokeWidth={1.9} />
                             </span>
-                            <div>
+                            {/* <div>
                                 <p className="font-[var(--font-display)] text-[7.5px] font-extrabold uppercase tracking-[0.12em] text-[#82928B]">Site</p>
                                 <p className="max-w-[110px] truncate font-[var(--font-display)] text-[10.5px] font-bold tracking-[-0.01em] text-[#344A43]">
                                     {siteName || "Unit IV"}
                                 </p>
-                            </div>
+                            </div> */}
                         </div>
                         <div className="mx-1 h-7 w-px bg-[#DCE5E0]" />
                         <div className="flex items-center gap-2 rounded-none bg-transparent px-0 py-0">

@@ -768,11 +768,11 @@ const PreventiveMaintenancePanel = () => {
       label: "Record Number",
       value: form.getFieldValue("recordNumber") || "",
     },
-    {
-      name: "siteLocationCode",
-      label: "Site / Location Code",
-      value: form.getFieldValue("siteLocationCode") || "",
-    },
+    // {
+    //   name: "siteLocationCode",
+    //   label: "Site / Location Code",
+    //   value: form.getFieldValue("siteLocationCode") || "",
+    // },
     { name: "initiator", label: "Initiator", value: initiator },
     {
       name: "dateOfInitiation",

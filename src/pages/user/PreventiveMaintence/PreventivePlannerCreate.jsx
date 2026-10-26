@@ -186,7 +186,7 @@ const PreventivePlannerCreate = () => {
           initiator: userName,
           initiationDepartment: departmentName,
           dateOfInitiation,
-          siteLocationCode: "Unit IV",
+          // siteLocationCode: "Unit IV",
           recordNumber: generatedRecordNumber,
         });
 
@@ -224,7 +224,7 @@ const PreventivePlannerCreate = () => {
 
   const systemFields = [
     { name: "recordNumber", label: "Record Number", value: recordNumber },
-    { name: "siteLocationCode", label: "Site / Location Code", value: "Unit IV" },
+    // { name: "siteLocationCode", label: "Site / Location Code", value: "Unit IV" },
     { name: "initiator", label: "Initiator", value: initiator },
     { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
     {
@@ -351,14 +351,14 @@ const PreventivePlannerCreate = () => {
         </div>
 
         <div className="flex items-center gap-8 border-l border-slate-200 pl-6">
-          <div>
+          {/* <div>
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">
               Site
             </p>
             <p className="text-sm font-semibold text-[#344A43]">
               {siteName || "Unit IV"}
             </p>
-          </div>
+          </div> */}
 
           <div className="h-9 w-px bg-slate-200" />
 

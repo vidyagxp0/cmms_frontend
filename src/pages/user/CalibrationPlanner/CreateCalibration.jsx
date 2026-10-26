@@ -1075,7 +1075,7 @@ const CreateCalibration = () => {
                                 />
                             </span>
 
-                            <div>
+                            {/* <div>
                                 <p
                                     className="
                                         font-[var(--font-display)]
@@ -1103,7 +1103,7 @@ const CreateCalibration = () => {
                                     {siteName ||
                                         "Unit IV"}
                                 </p>
-                            </div>
+                            </div> */}
                         </div>
 
                         <div className="mx-1 h-7 w-px bg-[#DCE5E0]" />

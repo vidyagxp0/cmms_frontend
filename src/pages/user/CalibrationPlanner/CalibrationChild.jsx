@@ -385,7 +385,6 @@ const CalibrationChild = () => {
         <div className="flex items-center gap-8 border-l border-slate-200 pl-6">
           <div>
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">Site</p>
-            <p className="text-sm font-semibold text-[#344A43]">{siteName || "Unit IV"}</p>
           </div>
           <div className="h-9 w-px bg-slate-200" />
           <div>

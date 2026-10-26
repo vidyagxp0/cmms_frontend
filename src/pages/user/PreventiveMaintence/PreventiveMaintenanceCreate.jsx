@@ -145,7 +145,7 @@ const PreventiveMaintenanceCreate = () => {
 
         form.setFieldsValue({
           recordNumber: generatedRecordNumber,
-          siteLocationCode: "Unit IV",
+          // siteLocationCode: "Unit IV",
           initiator: userName,
           dateOfInitiation,
           initiationDepartment: departmentName,
@@ -185,7 +185,7 @@ const PreventiveMaintenanceCreate = () => {
 
   const systemFields = [
     { name: "recordNumber", label: "Record Number" },
-    { name: "siteLocationCode", label: "Site / Location Code" },
+    // { name: "siteLocationCode", label: "Site / Location Code" },
     { name: "initiator", label: "Initiator" },
     { name: "dateOfInitiation", label: "Date of Initiation" },
     { name: "initiationDepartment", label: "Initiation Department" },
@@ -377,12 +377,12 @@ const PreventiveMaintenanceCreate = () => {
         </div>
 
         <div className="flex items-center gap-8 border-l border-slate-200 pl-6">
-          <div>
+          {/* <div>
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">
               Site
             </p>
             <p className="text-sm font-semibold text-[#344A43]">Unit IV</p>
-          </div>
+          </div> */}
           <div className="h-9 w-px bg-slate-200" />
           <div>
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">

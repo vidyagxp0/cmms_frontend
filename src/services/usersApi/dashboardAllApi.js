@@ -31,3 +31,10 @@ export const getAllFieldInstrumentPlannerRecords = (params = {}) => {
     });
 }
 
+
+export const getAllSpareInstrumentRecords = (params = {}) => {
+    return api.get("/user/spare-instrument-master-listing", {
+        params,
+    });
+}
+

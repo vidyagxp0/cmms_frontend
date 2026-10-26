@@ -752,7 +752,7 @@ const renderAuditValue = (value) => {
 
 
 
-    const backendUrl = "https://cmms-shilpa-api.mydemosoftware.com";
+    const backendUrl = "https://cmms-api.mydemosoftware.com";
 
 
 

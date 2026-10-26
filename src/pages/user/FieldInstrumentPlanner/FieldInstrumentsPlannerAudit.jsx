@@ -292,7 +292,7 @@ const FieldInstrumentsPlannerAudit = () => {
   const getAttachmentUrl = (attachment) => {
     const path = attachment?.path || attachment?.Path || "";
 
-    const backendUrl = "https://cmms-shilpa-api.mydemosoftware.com";
+    const backendUrl = "https://cmms-api.mydemosoftware.com";
 
     if (path) {
       return `${backendUrl}/${path.replace(/^\/+/, "")}`;

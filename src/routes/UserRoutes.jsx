@@ -38,6 +38,10 @@ import InstrumentCalibrationDashboard from "../pages/user/FieldInstrumentCalibra
 import InstrumentCalibrationCreate from "../pages/user/FieldInstrumentCalibration/InstrumentCalibrationCreate";
 import InstrumentsCalibrationPanel from "../pages/user/FieldInstrumentCalibration/InstrumentsCalibrationPanel";
 import InstrumentsCalibrationAudit from "../pages/user/FieldInstrumentCalibration/InstrumentsCalibrationAudit";
+import SpareInstrumentDashboard from "../pages/user/SpareInstrumentMaster/SpareInstrumentDashboard";
+import SpareInstrumentCreate from "../pages/user/SpareInstrumentMaster/SpareInstrumentCreate";
+import SpareInstrumentPanel from "../pages/user/SpareInstrumentMaster/SpareInstrumentPanel";
+import SpareInstrumentAudit from "../pages/user/SpareInstrumentMaster/SpareInstrumentAudit";
 
 function UserRoutes() {
   return (
@@ -96,6 +100,12 @@ function UserRoutes() {
         <Route path="field-instrument-calibration-addendum-create/:processId" element={<InstrumentCalibrationCreate />} />
         <Route path="field-instrument-calibration-addendum-panel/:recordId" element={<InstrumentsCalibrationPanel />} /> 
         <Route path="field-instrument-calibration-addendum-audit/:recordId" element={<InstrumentsCalibrationAudit />} /> 
+
+        {/* Spare Instrument Calibration Routes*/}
+        <Route path="spare-instrument-calibration-master-dashboard" element={<SpareInstrumentDashboard />} />
+        <Route path="spare-instrument-calibration-master-create" element={<SpareInstrumentCreate />} />
+        <Route path="spare-instrument-calibration-master-panel/:recordId" element={<SpareInstrumentPanel />} /> 
+        <Route path="spare-instrument-calibration-master-audit/:recordId" element={<SpareInstrumentAudit />} /> 
       </Route>
     </Routes>
   );

@@ -18,7 +18,8 @@ function UserLayout() {
             "/user/preventive-maintenance-dashboard" || 
             location.pathname === "/user/field-instruments-dashboard" ||
             location.pathname === "/user/field-instrument-planner-dashboard" ||
-            location.pathname === "/user/field-instrument-calibration-addendum-dashboard";
+            location.pathname === "/user/field-instrument-calibration-addendum-dashboard" ||
+            location.pathname === "/user/spare-instrument-calibration-master-dashboard";
 
     return (
         <div

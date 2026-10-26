@@ -481,7 +481,7 @@ const Audit = () => {
 
   const getAttachmentUrl = (attachment) => {
     const path = attachment?.path || attachment?.Path || "";
-    const backendUrl = "http://127.0.0.1:8000";
+    const backendUrl = "http://cmms-api.mydemosoftware.com";
 
     if (path) {
       if (/^https?:\/\//i.test(path)) {

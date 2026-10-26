@@ -106,7 +106,7 @@ const getAttachmentUrl = (file) => {
     const apiBase = appConfig.apiUrl || "";
     const origin = apiBase.startsWith("http")
       ? apiBase.replace(/\/api\/?$/, "")
-      : (window.location.origin || "https://cmms-shilpa-api.mydemosoftware.com");
+      : (window.location.origin || "https://cmms-api.mydemosoftware.com");
     return `${origin}/${cleanPath}`;
   }
   if (typeof file === "object") {
@@ -119,7 +119,7 @@ const getAttachmentUrl = (file) => {
       const apiBase = appConfig.apiUrl || "";
       const origin = apiBase.startsWith("http")
         ? apiBase.replace(/\/api\/?$/, "")
-        : (window.location.origin || "https://cmms-shilpa-api.mydemosoftware.com");
+        : (window.location.origin || "https://cmms-api.mydemosoftware.com");
       return `${origin}/${cleanPath}`;
     }
   }

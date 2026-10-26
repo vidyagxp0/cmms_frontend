@@ -356,7 +356,7 @@ const Audit = () => {
         return directUrl;
       }
 
-      const backendUrl = "https://cmms-shilpa-api.mydemosoftware.com";
+      const backendUrl = "https://cmms-api.mydemosoftware.com";
 
       return `${backendUrl}/${directUrl.replace(/^\/+/, "")}`;
     }
@@ -367,7 +367,7 @@ const Audit = () => {
       "";
 
     if (path) {
-      const backendUrl = "https://cmms-shilpa-api.mydemosoftware.com";
+      const backendUrl = "https://cmms-api.mydemosoftware.com";
 
       return `${backendUrl}/${path.replace(/^\/+/, "")}`;
     }

@@ -165,7 +165,7 @@ const PreventivePlannerPanel = () => {
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [preventiveRows, setPreventiveRows] = useState([]);
   
-  // NEW: State to hold header week dates
+  // State to hold header week dates
   const [headerWeekDates, setHeaderWeekDates] = useState({});
 
   const [equipmentOptions, setEquipmentOptions] = useState([]);
@@ -294,8 +294,13 @@ const PreventivePlannerPanel = () => {
           "cancellation_attachment"
         );
 
-        // NEW: Extract header week dates from response
-        const savedHeaderDates = responseData?.headerWeekDates || getProcessValue(processData, "headerWeekDates") || {};
+        // ✅ FIXED: Extract header week dates from the correct location in the API response
+        const savedHeaderDates = 
+          responseData?.grid_records?.[0]?.week_dates_data || 
+          responseData?.headerWeekDates || 
+          getProcessValue(processData, "headerWeekDates") || 
+          {};
+          
         setHeaderWeekDates(savedHeaderDates);
 
         setSiteLocationCode(locationCode || "");
@@ -603,7 +608,7 @@ const PreventivePlannerPanel = () => {
         process_data: processData,
         gridData,
         
-        // NEW: Include header week dates in payload
+        // Include header week dates in payload
         headerWeekDates, 
         
         checklistData: [],
@@ -770,8 +775,8 @@ const PreventivePlannerPanel = () => {
               showAddButton={true}
               canCreateChild={canCreateChild}
               onViewChild={handleViewChild}
-              weekDates={headerWeekDates}           // NEW
-              onWeekDatesChange={setHeaderWeekDates} // NEW
+              weekDates={headerWeekDates}
+              onWeekDatesChange={setHeaderWeekDates}
             />
           </div>
           <Form.Item

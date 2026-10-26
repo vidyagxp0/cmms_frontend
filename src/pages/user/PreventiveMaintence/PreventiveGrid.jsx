@@ -83,19 +83,43 @@ const generateDefaultWeekDates = (year) => {
   return result;
 };
 
+// ✅ NEW: Helper to handle both `week_dates_data` (from API) and direct object
+const unwrapWeekDates = (input) => {
+  if (!input) return null;
+
+  // If the parent passed the full grid_record containing week_dates_data
+  if (input.week_dates_data && typeof input.week_dates_data === "object") {
+    return input.week_dates_data;
+  }
+
+  // If it's already the dates object
+  if (typeof input === "object" && !Array.isArray(input)) {
+    return input;
+  }
+
+  return null;
+};
+
 // Helper to merge initial saved dates with defaults safely
 const getMergedWeekDates = (initial, currentYear) => {
   const defaults = generateDefaultWeekDates(currentYear);
-  if (!initial || typeof initial !== "object" || Object.keys(initial).length === 0) {
+  const normalized = unwrapWeekDates(initial);
+
+  if (
+    !normalized ||
+    typeof normalized !== "object" ||
+    Object.keys(normalized).length === 0
+  ) {
     return defaults;
   }
-  
+
   const merged = { ...defaults };
   MONTHS.forEach(({ key }) => {
-    if (Array.isArray(initial[key])) {
-      merged[key] = Array.from({ length: WEEKS_PER_MONTH }, (_, i) => 
-        typeof initial[key][i] === "string" ? initial[key][i] : ""
-      );
+    if (Array.isArray(normalized[key])) {
+      merged[key] = Array.from({ length: WEEKS_PER_MONTH }, (_, i) => {
+        const val = normalized[key][i];
+        return typeof val === "string" && val.trim() ? val : "";
+      });
     }
   });
   return merged;
@@ -155,21 +179,24 @@ const PreventiveGrid = ({
   const [selectedId, setSelectedId] = useState(null);
 
   // Initialize state with merged dates
-  const [headerWeekDates, setHeaderWeekDates] = useState(
-    () => getMergedWeekDates(initialWeekDates, year)
+  const [headerWeekDates, setHeaderWeekDates] = useState(() =>
+    getMergedWeekDates(initialWeekDates, year)
   );
+
+  console.log(value,"value>>>>")
 
   // ✅ FIX: Sync state if parent loads data after initial render, 
   // AND notify parent of the defaults so they can be sent in the payload
   useEffect(() => {
     const merged = getMergedWeekDates(initialWeekDates, year);
-    
+
     setHeaderWeekDates(merged);
-    
+
     if (onWeekDatesChange) {
-      const incomingStr = JSON.stringify(initialWeekDates || {});
+      const normalized = unwrapWeekDates(initialWeekDates) || {};
+      const incomingStr = JSON.stringify(normalized);
       const mergedStr = JSON.stringify(merged);
-      
+
       // Only notify parent if the merged data is different from what they passed in
       if (incomingStr !== mergedStr) {
         onWeekDatesChange(merged);
@@ -230,7 +257,8 @@ const PreventiveGrid = ({
       const equipmentId = newValue;
       if (equipmentId && equipmentMap[equipmentId]) {
         const equipment = equipmentMap[equipmentId];
-        row.equipmentInstrumentId = equipment.equipment_id || equipment.instrument_id_no || "";
+        row.equipmentInstrumentId =
+          equipment.equipment_id || equipment.instrument_id_no || "";
         row.make = equipment.make || "";
         row.model = equipment.model || equipment.sr_no_model_no || "";
       } else {
@@ -276,18 +304,16 @@ const PreventiveGrid = ({
   const updateHeaderWeekDate = (monthKey, weekIndex, dateStr) => {
     if (disabled) return;
 
-    // Safely grab current array or fallback to empty
-    const currentDates = headerWeekDates[monthKey] || Array(WEEKS_PER_MONTH).fill("");
-    
+    const currentDates =
+      headerWeekDates[monthKey] || Array(WEEKS_PER_MONTH).fill("");
+
     const updatedWeekDates = {
       ...headerWeekDates,
-      [monthKey]: currentDates.map((d, i) =>
-        i === weekIndex ? dateStr : d
-      ),
+      [monthKey]: currentDates.map((d, i) => (i === weekIndex ? dateStr : d)),
     };
 
     setHeaderWeekDates(updatedWeekDates);
-    
+
     // Notify parent so it can be included in the save payload
     if (onWeekDatesChange) onWeekDatesChange(updatedWeekDates);
   };
@@ -386,8 +412,8 @@ const PreventiveGrid = ({
 
   const visibleColumns = columns.filter((column) => column.hidden !== true);
   const showChildColumn = typeof onViewChild === "function";
-  
-  const leftColSpan = 4; 
+
+  const leftColSpan = 4;
 
   /* -------------------- Render -------------------- */
   return (
@@ -626,7 +652,7 @@ const PreventiveGrid = ({
                               planned: "",
                               actual: "",
                             };
-                          
+
                           // VALIDATION: Cell is disabled if header date is missing
                           const dateStr = headerWeekDates?.[month.key]?.[weekIdx];
                           const enabled = !!dateStr;

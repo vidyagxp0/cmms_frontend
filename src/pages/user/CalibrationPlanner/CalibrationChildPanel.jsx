@@ -73,7 +73,7 @@ const getQaVerifiedDate = (value) => {
   return parsed.isValid() ? parsed.format("DD/MM/YYYY") : "";
 };
 
-// Robust dayjs parser: handles ISO strings, DD/MM/YYYY strings, dayjs, serialized dayjs
+// Robust dayjs parser
 const toDayjs = (val) => {
   if (!val) return null;
   if (typeof val === "object" && val.$d !== undefined && typeof val.clone !== "function") {
@@ -187,7 +187,6 @@ const CalibrationChildPanel = () => {
 
   const [workflowStages, setWorkflowStages] = useState([]);
   const [processId, setProcessId] = useState(5);
-  // console.log(processId, "this is processId>>>>>>");
   const [activeStageId, setActiveStageId] = useState(null);
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
@@ -217,7 +216,10 @@ const CalibrationChildPanel = () => {
   const [calibrationResultRows, setCalibrationResultRows] = useState([]);
   const [calibrationResultTest, setCalibrationResultTest] = useState([]);
   const [parentId, setParentId] = useState(null);
+
+  // Keep both string (for payload) and dayjs (for grid)
   const [calibrationDoneDate, setCalibrationDoneDate] = useState("");
+  const [calibrationDoneDayjs, setCalibrationDoneDayjs] = useState(null);
 
   const [formInitialValues, setFormInitialValues] = useState({});
   const [formReady, setFormReady] = useState(false);
@@ -402,8 +404,14 @@ const CalibrationChildPanel = () => {
       setFormInitialValues(formData);
       form.setFieldsValue(formData);
 
-      const qaVerifiedDate = getQaVerifiedDate(data?.qaVerifiedAt);
-      setCalibrationDoneDate(qaVerifiedDate);
+      // ✅ Convert QA verified date to both string and dayjs
+      const qaVerifiedDateStr = getQaVerifiedDate(data?.qaVerifiedAt);
+      const qaVerifiedDayjs = qaVerifiedDateStr
+        ? dayjs(qaVerifiedDateStr, "DD/MM/YYYY")
+        : null;
+      console.log(qaVerifiedDateStr, "this is qaVerifiedDate>>>>>>");
+      setCalibrationDoneDate(qaVerifiedDateStr);
+      setCalibrationDoneDayjs(qaVerifiedDayjs);
 
       const gridRecords = data?.grid_records || [];
       const allGridData = gridRecords.flatMap((rec) => rec?.grid_data || []);
@@ -434,10 +442,13 @@ const CalibrationChildPanel = () => {
       });
 
       setCalibrationResultRows(calibrationRows);
+
+      // ✅ Pass dayjs objects for date cells so DatePicker can render them
       setCalibrationResultTest(
         testRows.map((row) => ({
           ...row,
-          calibrationdoneDATE: qaVerifiedDate || row.calibrationdoneDATE || "",
+          calibrationdoneDATE:
+            qaVerifiedDayjs || toDayjs(row.calibrationdoneDATE) || null,
         }))
       );
 
@@ -528,17 +539,18 @@ const CalibrationChildPanel = () => {
     setActiveTab(tabId);
   };
 
+  // ✅ Use the dayjs version so grid renders the disabled DatePicker correctly
   const handleCalibrationTestChange = useCallback(
     (rows = []) => {
       setCalibrationResultTest(
         rows.map((row) =>
-          calibrationDoneDate
-            ? { ...row, calibrationdoneDATE: calibrationDoneDate }
+          calibrationDoneDayjs
+            ? { ...row, calibrationdoneDATE: calibrationDoneDayjs }
             : row
         )
       );
     },
-    [calibrationDoneDate]
+    [calibrationDoneDayjs]
   );
 
   const systemValues = {

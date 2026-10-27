@@ -32,6 +32,7 @@ const AddUser = () => {
     const [loadingData, setLoadingData] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
+    const [countryCode, setCountryCode] = useState("+91");
     const [form, setForm] = useState({
         salutation: "",
         person_id: "",
@@ -107,8 +108,13 @@ const AddUser = () => {
         if (!form.username.trim())
             nextErrors.username = "Username is required.";
         if (!form.email.trim()) nextErrors.email = "Email is required.";
-        if (!form.mobile_no.trim())
-            nextErrors.mobile_no = "Mobile number is required.";
+      
+        if (!form.mobile_no.trim()) {
+  nextErrors.mobile_no = "Mobile number is required.";
+} else if (!/^\d{10}$/.test(form.mobile_no)) {
+  nextErrors.mobile_no = "Enter exactly 10 digits.";
+}
+
         if (!form.password)
             nextErrors.password = "Password is required.";
         if (!form.department_id)
@@ -134,7 +140,8 @@ const AddUser = () => {
                 name: form.name.trim(),
                 username: form.username.trim(),
                 email: form.email.trim(),
-                mobile_no: form.mobile_no.trim(),
+                // mobile_no: form.mobile_no.trim(),
+                mobile_no: `${countryCode}${form.mobile_no.trim()}`,
                 password: form.password,
                 department_id: Number(form.department_id),
                 roles: form.roles.map(Number),
@@ -275,23 +282,57 @@ const AddUser = () => {
                         )}
                     </div>
 
-                    <div>
-                        <FieldLabel icon={Phone}>Mobile Number</FieldLabel>
-                        <input
-                            type="tel"
-                            value={form.mobile_no}
-                            onChange={(e) =>
-                                updateField("mobile_no", e.target.value)
-                            }
-                            placeholder="Enter mobile number"
-                            className={inputClass("mobile_no")}
-                        />
-                        {errors.mobile_no && (
-                            <p className="mt-1.5 text-[10.5px] font-medium text-[#C43D3D]">
-                                {errors.mobile_no}
-                            </p>
-                        )}
-                    </div>
+
+<div>
+  <FieldLabel icon={Phone}>Mobile Number</FieldLabel>
+
+  <div
+    className={`flex h-10 w-full overflow-hidden rounded-lg border ${
+      errors.mobile_no
+        ? "border-[#C43D3D]"
+        : "border-[#CBE3D6]"
+    } bg-white transition focus-within:border-[#17734C] focus-within:ring-2 focus-within:ring-[#17734C]/10`}
+  >
+    <select
+      value={countryCode}
+      onChange={(e) => setCountryCode(e.target.value)}
+      aria-label="Country calling code"
+      className="w-[90px] shrink-0 border-r border-[#CBE3D6] bg-[#F5FAF7] px-2 text-sm font-medium text-[#254C3B] outline-none"
+    >
+      <option value="+91">🇮🇳 +91</option>
+      <option value="+1">🇺🇸 +1</option>
+      <option value="+44">🇬🇧 +44</option>
+      <option value="+61">🇦🇺 +61</option>
+      <option value="+971">🇦🇪 +971</option>
+    </select>
+
+    <input
+      type="tel"
+      inputMode="numeric"
+      autoComplete="tel-national"
+      value={form.mobile_no}
+      onChange={(e) => {
+        const digits = e.target.value
+          .replace(/\D/g, "")
+          .slice(0, 10);
+
+        updateField("mobile_no", digits);
+      }}
+      maxLength={10}
+      pattern="[0-9]{10}"
+      placeholder="Enter 10-digit mobile number"
+      aria-label="10-digit mobile number"
+      className="min-w-0 flex-1 bg-transparent px-3 text-sm text-[#152C20] outline-none placeholder:text-[#91A69A]"
+    />
+  </div>
+
+  {errors.mobile_no && (
+    <p className="mt-1.5 text-[10.5px] font-medium text-[#C43D3D]">
+      {errors.mobile_no}
+    </p>
+  )}
+</div>
+
 
                     <div>
                         <FieldLabel icon={LockKeyhole}>Password</FieldLabel>

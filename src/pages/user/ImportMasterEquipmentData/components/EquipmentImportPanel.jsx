@@ -400,11 +400,11 @@ const importRecords = async () => {
                     />
                 )}
 
-                <p className="mt-3 text-xs leading-5 text-gray-500">
+                {/* <p className="mt-3 text-xs leading-5 text-gray-500">
                     The file is uploaded as multipart/form-data.
                     Laravel is responsible for reading, validating,
                     processing, and saving the equipment records.
-                </p>
+                </p> */}
             </section>
 
             {/* Confirmation modal */}

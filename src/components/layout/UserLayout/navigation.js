@@ -41,7 +41,7 @@ export const DASHBOARD_NAV_ITEMS = [
   // Child pill #2 (hidden from sidebar, shown in ActionBar)
   {
     id: "field-instruments-dashboard",
-    label: "Field Instrument Dashboard",
+    label: "Instrument Dashboard",
     path: "/user/field-instruments-dashboard",
     icon: Compass,
     hiddenFromNav: true,
@@ -69,14 +69,14 @@ export const DASHBOARD_NAV_ITEMS = [
   // ─── Engineering group ──────────────────────────────────────────
   {
     id: "engineering",
-    label: "Field Instrument Calibration Planner",
+    label: "Calibration Planner",
     path: "/user/engineering-dashboard",
     icon: HardHat,
     group: "engineering",
   },
   {
     id: "calibration",
-    label: "Field Instrument Calibration Management",
+    label: " Calibration Management",
     path: "/user/calibration-management-dashboard",
     icon: ClipboardCheck,
     hiddenFromNav: true,
@@ -84,7 +84,7 @@ export const DASHBOARD_NAV_ITEMS = [
   },
     {
     id: "fieldInstrument-calibration-addendum",
-    label: "Addendum Field Instrument Calibration",
+    label: "Addendum Calibration",
     path: "/user/field-instrument-calibration-addendum-dashboard",
     icon: ClipboardList,
     group: "engineering",

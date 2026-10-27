@@ -617,19 +617,29 @@ const CalibrationChildPanel = () => {
     } finally { setIsSaving(false); }
   };
 
+  // const handleActivitySuccess = async (response, selectedActivity) => {
+  //   try {
+  //     const values = form.getFieldsValue(true);
+  //     const esignComment = response?.data?.data?.activity?.comment || response?.config?.data ? JSON.parse(response?.config?.data || "{}")?.comment : "";
+  //     if (activeTab === "implementor" && esignComment && !values.implementorComments) {
+  //       values.implementorComments = esignComment;
+  //       form.setFieldValue("implementorComments", esignComment);
+  //     } else if (activeTab === "qa-review" && esignComment && !values.qaReviewComments) {
+  //       values.qaReviewComments = esignComment;
+  //       form.setFieldValue("qaReviewComments", esignComment);
+  //     }
+  //     await handleSubmit(values);
+  //   } catch (error) { console.error("Failed to save after activity:", error); }
+  // };
+
   const handleActivitySuccess = async (response, selectedActivity) => {
     try {
-      const values = form.getFieldsValue(true);
-      const esignComment = response?.data?.data?.activity?.comment || response?.config?.data ? JSON.parse(response?.config?.data || "{}")?.comment : "";
-      if (activeTab === "implementor" && esignComment && !values.implementorComments) {
-        values.implementorComments = esignComment;
-        form.setFieldValue("implementorComments", esignComment);
-      } else if (activeTab === "qa-review" && esignComment && !values.qaReviewComments) {
-        values.qaReviewComments = esignComment;
-        form.setFieldValue("qaReviewComments", esignComment);
-      }
-      await handleSubmit(values);
-    } catch (error) { console.error("Failed to save after activity:", error); }
+      await fetchChildDetail();
+      await fetchPermissions();
+      await fetchActivityLogs();
+    } catch (error) {
+      console.error("Failed to refresh after activity:", error);
+    }
   };
 
   const handleCancel = () => {

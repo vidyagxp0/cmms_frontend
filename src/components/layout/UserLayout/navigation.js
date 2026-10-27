@@ -31,7 +31,7 @@ export const DASHBOARD_NAV_ITEMS = [
   // Child pill #1 (hidden from sidebar, shown in ActionBar)
   {
     id: "instrument-dashboard",
-    label: "Instrument Dashboard",
+    label: "Master Instrument Dashboard",
     path: "/user/equipment-dashboard",
     icon: Gauge,
     hiddenFromNav: true,
@@ -41,7 +41,7 @@ export const DASHBOARD_NAV_ITEMS = [
   // Child pill #2 (hidden from sidebar, shown in ActionBar)
   {
     id: "field-instruments-dashboard",
-    label: "Field Instruments Dashboard",
+    label: "Field Instrument Dashboard",
     path: "/user/field-instruments-dashboard",
     icon: Compass,
     hiddenFromNav: true,
@@ -57,6 +57,14 @@ export const DASHBOARD_NAV_ITEMS = [
     hiddenFromNav: true,
     group: "equipment",
   },
+  {
+    id: "import-master-equipment-data",
+    label: "Import Master Equipment Data",
+    path: "/user/import-master-equipment-data",
+    icon: Compass,
+    hiddenFromNav: true,
+    group: "equipment",
+  },
 
   // ─── Engineering group ──────────────────────────────────────────
   {
@@ -68,11 +76,19 @@ export const DASHBOARD_NAV_ITEMS = [
   },
   {
     id: "calibration",
-    label: "Calibration Management",
+    label: "Field Instrument Calibration Management",
     path: "/user/calibration-management-dashboard",
     icon: ClipboardCheck,
     hiddenFromNav: true,
     group: "engineering",
+  },
+    {
+    id: "fieldInstrument-calibration-addendum",
+    label: "Addendum Field Instrument Calibration",
+    path: "/user/field-instrument-calibration-addendum-dashboard",
+    icon: ClipboardList,
+    group: "engineering",
+    hiddenFromNav: true,
   },
 
   // ─── Preventive Maintenance group ───────────────────────────────
@@ -119,13 +135,7 @@ export const DASHBOARD_NAV_ITEMS = [
   //   group: "fieldInstrument",
   // },
 
-  {
-    id: "fieldInstrument-calibration-addendum",
-    label: "Addendum Field Instrument Calibration",
-    path: "/user/field-instrument-calibration-addendum-dashboard",
-    icon: ClipboardList,
-    group: "fieldInstrument",
-  },
+
 ];
 
 export const USER_NAV_ITEMS = DASHBOARD_NAV_ITEMS.filter(

@@ -42,6 +42,7 @@ import SpareInstrumentDashboard from "../pages/user/SpareInstrumentMaster/SpareI
 import SpareInstrumentCreate from "../pages/user/SpareInstrumentMaster/SpareInstrumentCreate";
 import SpareInstrumentPanel from "../pages/user/SpareInstrumentMaster/SpareInstrumentPanel";
 import SpareInstrumentAudit from "../pages/user/SpareInstrumentMaster/SpareInstrumentAudit";
+import ImportMasterEquipmentData from "../pages/user/ImportMasterEquipmentData/ImportMasterEquipmentData";
 
 function UserRoutes() {
   return (
@@ -106,6 +107,11 @@ function UserRoutes() {
         <Route path="spare-instrument-calibration-master-create" element={<SpareInstrumentCreate />} />
         <Route path="spare-instrument-calibration-master-panel/:id" element={<SpareInstrumentPanel />} /> 
         <Route path="spare-instrument-calibration-master-audit/:recordId" element={<SpareInstrumentAudit />} /> 
+
+        
+        {/* Import Master Equipment Data Routes*/}
+        <Route path="import-master-equipment-data" element={<ImportMasterEquipmentData />} />
+
       </Route>
     </Routes>
   );

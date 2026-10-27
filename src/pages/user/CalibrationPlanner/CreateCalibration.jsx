@@ -4,7 +4,7 @@ import {
     MapPin,
     Workflow,
 } from "lucide-react";
-import { Form, Input } from "antd";
+import { Form, Input, Select } from "antd";
 import {
     useLocation,
     useNavigate,
@@ -1350,7 +1350,32 @@ const CreateCalibration = () => {
                                         <Input
                                             placeholder="Enter Area"
                                         />
+                                    </Form.Item>                                    
+                                    <Form.Item
+                                    name="instrumentType"
+                                    label="Select Instrument Type"
+                                    className="!mb-3"
+                                    >
+                                    <Select
+                                        placeholder="Select Instrument Type"
+                                        disabled
+                                        options={[
+                                        {
+                                            label: "Master Instrument",
+                                            value: "Master Instrument",
+                                        },
+                                        {
+                                            label: "Field Instrument",
+                                            value: "Field Instrument",
+                                        },
+                                        {
+                                            label: "Spare Instrument Calibration",
+                                            value: "Spare Instrument Calibration",
+                                        },
+                                        ]}
+                                    />
                                     </Form.Item>
+
                                 </div>
 
                                 {/* CALIBRATION GRID */}

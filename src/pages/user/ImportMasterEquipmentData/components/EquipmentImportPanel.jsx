@@ -107,11 +107,9 @@ export default function EquipmentImportPanel({
 
         setFile(actualFile);
 
-        toast.success({
-            message: "Excel file selected",
-            description: `${actualFile.name} is ready to upload.`,
-            placement: "topRight",
-        });
+toast.success(
+    `Excel file selected: ${actualFile.name} is ready to upload.`
+);
 
         // Stop Ant Design's automatic upload.
         // The file is uploaded after the user confirms.
@@ -126,53 +124,38 @@ const checkImportStatus = async (importId) => {
     if (!pollingRef.current) return;
 
     try {
-        const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, "");
+        const response = await api.get(
+            `/${String(importId).replace(/^\/+/, "")}`,
+            {
+                headers: {
+                    Accept: "application/json",
+                },
+            }
+        );
 
-        if (!baseUrl) {
-            throw new Error("VITE_API_URL is not configured.");
+        const result = response.data;
+        const data = result?.data;
+
+        if (!data) {
+            throw new Error("Invalid import status response.");
         }
-
-        const statusUrl = `${baseUrl}/${importId}`;
-
-        const response = await fetch(statusUrl, {
-            method: "GET",
-            credentials: "include",
-            headers: {
-                Accept: "application/json",
-            },
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-            throw new Error(
-                result.message || "Failed to fetch import status."
-            );
-        }
-
-        const data = result.data;
 
         setImportProgress(data);
 
-        if (Array.isArray(data.errors)) {
-            setImportErrors(data.errors);
-        }
+        setImportErrors(
+            Array.isArray(data.errors) ? data.errors : []
+        );
 
         if (["completed", "failed"].includes(data.status)) {
             pollingRef.current = false;
+            clearTimeout(timerRef.current);
             setImporting(false);
 
             if (data.status === "completed") {
-                toast.success({
-                    message: "Import completed",
-                    description: `Successful: ${data.success_rows || 0}, Failed: ${data.failed_rows || 0}`,
-                });
+               toast.success("Excel uploaded successfully");
+
             } else {
-                toast.error({
-                    message: "Import failed",
-                    description:
-                        result.message || "Please check the import errors.",
-                });
+               toast.error("Failed to upload Excel file");
             }
 
             return;
@@ -183,17 +166,23 @@ const checkImportStatus = async (importId) => {
         }, 2000);
     } catch (error) {
         pollingRef.current = false;
+        clearTimeout(timerRef.current);
         setImporting(false);
-        setError(error.message || "Unable to check import status.");
+
+        const message =
+            error.response?.data?.message ||
+            error.message ||
+            "Unable to check import status.";
+
+        setError(message);
+        toast.error(message);
     }
 };
 
 
 const importRecords = async () => {
     if (!file) {
-        apiNotification.error({
-            message: "Please select an Excel file.",
-        });
+        toast.error("Please select an Excel file.");
         return;
     }
 
@@ -209,13 +198,14 @@ const importRecords = async () => {
         formData.append("euipmentMasterType", masterKey);
         formData.append("file", file, file.name);
 
-        // Use the reusable Axios instance
+        console.log("Import file:", file.name, file.size, file.type);
+
         const response = await api.post(
-            "user/instrment-excel-import",
+            "/user/import-excel",
             formData,
             {
                 headers: {
-                    Accept: "application/json",
+                    // Accept: "application/json",
                     "Content-Type": "multipart/form-data",
                 },
                 timeout: 0,
@@ -226,14 +216,15 @@ const importRecords = async () => {
 
         setServerResult(result);
 
-        const importId = result.data?.import_id;
+        const importId = result?.data?.import_id;
 
         if (!importId) {
             setImporting(false);
+            setConfirmOpen(false);
 
-            apiNotification.success({
-                message: result.message || "Import request submitted.",
-            });
+            toast.success(
+                result.message || "Import request submitted successfully."
+            );
 
             return;
         }
@@ -242,14 +233,12 @@ const importRecords = async () => {
         setImportProgress(result.data);
         pollingRef.current = true;
 
-        apiNotification.success({
-            message: "Excel uploaded successfully",
-            description: `Import ID: ${importId}`,
-        });
+        toast.success(`Excel uploaded successfully. Import ID: ${importId}`);
 
         await checkImportStatus(importId);
     } catch (error) {
         pollingRef.current = false;
+        clearTimeout(timerRef.current);
         setImporting(false);
 
         const message =
@@ -258,14 +247,9 @@ const importRecords = async () => {
             "Failed to upload Excel file.";
 
         setError(message);
-
-        apiNotification.error({
-            message: "Excel import failed",
-            description: message,
-        });
+        toast.error(message);
     }
 };
-
 
     const uploadProps = {
         accept: ".xlsx,.xls",

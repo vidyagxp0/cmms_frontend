@@ -5,6 +5,7 @@ import UserRoutes from "./UserRoutes";
 import Login from "../pages/auth/Login/Login";
 import NotFound from "../pages/NotFound/NotFound";
 import ProtectedRoute from "./ProtectedRoute";
+import SessionTimeout from "../components/common/SessionTimeout/SessionTimeout";
 
 function AppRoutes() {
     return (
@@ -30,6 +31,7 @@ function AppRoutes() {
                         authType="Admin"
                         allowedRoles={["Admin"]}
                     >
+                    <SessionTimeout tokenKey="admin_token" />
                         <AdminRoutes />
                     </ProtectedRoute>
                 }
@@ -43,6 +45,7 @@ function AppRoutes() {
                         tokenKey="user_token"
                         authType="User"
                     >
+                    <SessionTimeout tokenKey="user_token" />
                         <UserRoutes />
                     </ProtectedRoute>
                 }

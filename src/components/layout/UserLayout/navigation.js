@@ -41,7 +41,7 @@ export const DASHBOARD_NAV_ITEMS = [
   // Child pill #2 (hidden from sidebar, shown in ActionBar)
   {
     id: "field-instruments-dashboard",
-    label: "Instrument Dashboard",
+    label: "Field Instrument Dashboard",
     path: "/user/field-instruments-dashboard",
     icon: Compass,
     hiddenFromNav: true,

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Form, Input } from "antd";
+import { Form, Input, Select } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
@@ -24,6 +24,7 @@ import { getProfile } from "../../../services/authApi";
 import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration,  getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
 import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
 import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
+import { getAllFieldInstrumentPlannerData } from "../../../services/usersApi/fieldInstrumentPlanerApi";
 
 dayjs.extend(customParseFormat);
 
@@ -76,6 +77,11 @@ const buildProcessData = (values, systemFields) => [
   { key: "year", label: "Year", value: values?.year || "" },
   { key: "block", label: "Block", value: values?.block || "" },
   { key: "area", label: "Area", value: values?.area || "" },
+  {
+  key: "instrumentType",
+  label: "Instrument Type",
+  value: values?.instrumentType || "",
+  },
   { key: "comment", label: "Comments", value: values?.comments || "" },
   // { key: "attachment", label: "Attachment", value: values?.attachment || [] },
   { key: "attachment", label: "Attachment", value:[] },
@@ -131,6 +137,7 @@ const CreateCalibrationPanel = () => {
   const [hodUsers, setHodUsers] = useState([]);
   const [qaReviewers, setQaReviewers] = useState([]);
   const [userRoles, setUserRoles] = useState([]);
+  const [selectedInstrumentType, setSelectedInstrumentType] = useState("");
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { recordId } = useParams();
@@ -167,25 +174,116 @@ const CreateCalibrationPanel = () => {
     fetchProfile();
   }, []);
 
-  useEffect(() => {
-    const fetchEquipment = async () => {
-      try {
-        setEquipmentLoading(true);
-        const response = await getAllEquipmentData();
-        const data = response?.data?.data || [];
-        console.log(data,"this is data>>>>>>")
-        const options = data.map((item) => ({ value: item.id, label: item.instrument_name }));
-        const map = {};
-        data.forEach((item) => { map[item.id] = item; });
-        setEquipmentOptions(options);
-        setEquipmentMap(map);
-      } catch (error) {
-        console.error("Failed to fetch equipment:", error);
-        toast.error("Could not load equipment list.");
-      } finally { setEquipmentLoading(false); }
-    };
-    fetchEquipment();
-  }, []);
+
+useEffect(() => {
+  let isCurrent = true;
+
+  const fetchInstruments = async () => {
+    // Clear old options whenever instrument type changes.
+    setEquipmentOptions([]);
+    setEquipmentMap({});
+    equipmentMapRef.current = {};
+
+    if (!selectedInstrumentType) {
+      setEquipmentLoading(false);
+      return;
+    }
+
+    // Spare Instrument Calibration API will be added later.
+    if (selectedInstrumentType === "Spare Instrument Calibration") {
+      setEquipmentLoading(false);
+      return;
+    }
+
+    try {
+      setEquipmentLoading(true);
+
+      let response;
+
+      if (selectedInstrumentType === "Master Instrument") {
+        response = await getAllEquipmentData();
+      } else if (selectedInstrumentType === "Field Instrument") {
+        response = await getAllFieldInstrumentPlannerData();
+      }
+
+      if (!isCurrent) return;
+
+      const data = response?.data?.data || [];
+
+      // Normalize both API responses to the same grid structure.
+      const normalizedData = data.map((item) => ({
+        ...item,
+        instrument_name:
+          item.instrument_name ||
+          item.field_instrument_name ||
+          item.instrumentName ||
+          item.name ||
+          "",
+        instrument_id_no:
+          item.instrument_id_no ||
+          item.equipment_id ||
+          item.field_instrument_id ||
+          item.instrument_id ||
+          "",
+        make: item.make || item.manufacturer || "",
+        sr_no_model_no:
+          item.sr_no_model_no ||
+          item.model ||
+          item.model_no ||
+          "",
+        location: item.location || item.area || "",
+        least_count: item.least_count || item.leastCount || "",
+        accuracy: item.accuracy || "",
+        instrument_range:
+          item.instrument_range ||
+          item.instrumentrange ||
+          item.range ||
+          "",
+        operating_range:
+          item.operating_range ||
+          item.operatingrange ||
+          "",
+        calibration_test_points:
+          item.calibration_test_points ||
+          item.calibrationTestPoints ||
+          "",
+      }));
+
+      const options = normalizedData.map((item) => ({
+        value: item.id,
+        label: item.instrument_name,
+      }));
+
+      const map = {};
+      normalizedData.forEach((item) => {
+        map[item.id] = item;
+      });
+
+      setEquipmentOptions(options);
+      setEquipmentMap(map);
+      equipmentMapRef.current = map;
+    } catch (error) {
+      if (!isCurrent) return;
+
+      console.error("Failed to fetch instruments:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          "Could not load instruments."
+      );
+    } finally {
+      if (isCurrent) {
+        setEquipmentLoading(false);
+      }
+    }
+  };
+
+  fetchInstruments();
+
+  return () => {
+    isCurrent = false;
+  };
+}, [selectedInstrumentType]);
+
 
   useEffect(() => {
     const fetchCalibrationUsers = async () => {
@@ -248,6 +346,10 @@ const CreateCalibrationPanel = () => {
           processData,
           "cancellation_attachment"
       );
+      const instrumentType = getProcessValue(
+  processData,
+  "instrumentType"
+);
 
       // setSiteLocationCode(locationCode || "");
       // Set initiator from the API response (processData or responseData.initiator)
@@ -581,6 +683,53 @@ const CreateCalibrationPanel = () => {
             <Form.Item name="area" label="Area" className="!mb-4">
               <Input placeholder="Enter Area" disabled={!isGeneralEditable} />
             </Form.Item>
+     
+
+     <Form.Item
+  name="instrumentType"
+  label="Select Instrument Type"
+  className="!mb-4"
+>
+  <Select
+    placeholder="Select Instrument Type"
+    disabled={!isGeneralEditable}
+    allowClear
+    onChange={(type) => {
+      setSelectedInstrumentType(type || "");
+
+      // Clear only instrument-specific values.
+      setCalibrationRows((previousRows) =>
+        previousRows.map((row) => ({
+          ...row,
+          equipmentInstrumentName: "",
+          equipmentInstrumentId: "",
+          make: "",
+          model: "",
+          location: "",
+          leastCount: "",
+          accuracy: "",
+          instrumentrange: "",
+          operatingrange: "",
+          calibrationTestPoints: "",
+        }))
+      );
+    }}
+    options={[
+      {
+        label: "Master Instrument",
+        value: "Master Instrument",
+      },
+      {
+        label: "Field Instrument",
+        value: "Field Instrument",
+      },
+      {
+        label: "Spare Instrument Calibration",
+        value: "Spare Instrument Calibration",
+      },
+    ]}
+  />
+</Form.Item>
           </div>
           <div className="mt-5">
             <CalibrationGrid

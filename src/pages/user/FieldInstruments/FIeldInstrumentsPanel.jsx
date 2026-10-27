@@ -55,7 +55,6 @@ const TABS = [
   { id: "cancellation", label: "Cancellation",                              stageId: 32 },
 ];
 
-/* Process ID used for the Field Instrument workflow. */
 const FIELD_INSTRUMENT_PROCESS_ID = 6;
 
 const EMPTY_CHECKLIST = {
@@ -300,7 +299,6 @@ const FIeldInstrumentsPanel = () => {
           stage_id: data.stage_id?.id || data.stage_id || null,
           process_id: data.process_id || null,
 
-          /* Review + cancellation fields */
           hodReviewComments: data.hod_review_comments || "",
           hodReviewAttachment: data.hod_review_attachment || [],
           qaReviewComments: data.qa_review_comments || "",
@@ -454,7 +452,6 @@ const FIeldInstrumentsPanel = () => {
     if (matchingTab) setActiveTab(matchingTab.id);
   }, [activeStageId]);
 
-  /* ───────── Tab switch ───────── */
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
   };
@@ -572,7 +569,6 @@ const FIeldInstrumentsPanel = () => {
       },
     };
 
-    /* ── Submit ── */
     try {
       setIsSaving(true);
 
@@ -592,7 +588,6 @@ const FIeldInstrumentsPanel = () => {
         category: values.category?.trim() || "",
         checklist_config: cleanedChecklistConfig,
 
-        /* Review + cancellation fields */
         hod_review_comments: values.hodReviewComments || "",
         hod_review_attachment: values.hodReviewAttachment || [],
         qa_review_comments: values.qaReviewComments || "",
@@ -649,543 +644,445 @@ const FIeldInstrumentsPanel = () => {
     ? TABS.filter((tab) => tab.id === "cancellation")
     : TABS.filter((tab) => tab.id !== "cancellation");
 
-  /* ───────── Loading state ───────── */
+  /* ───────── Loading state (matches Calibration panel) ───────── */
   if (isLoading) {
     return (
-      <div className="w-full min-h-full bg-[var(--color-background)] px-4 pb-10 sm:px-6 lg:px-8">
-        <div className="mx-auto w-full max-w-7xl space-y-5">
-          <Skeleton variant="title" className="w-full" />
-          <Skeleton variant="form" fields={6} />
-        </div>
+      <div className="w-full space-y-6">
+        <Skeleton variant="title" className="w-full" />
+        <Skeleton variant="form" fields={6} />
       </div>
     );
   }
 
   /* ───────── Render ───────── */
   return (
-    <div className="min-h-full w-full bg-[var(--color-background)] px-4 pb-12 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-7xl">
-        {/* ═══════════════ HEADER ═══════════════ */}
-        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[12px] border border-[#C7D8D2] bg-[#E8F0ED] text-[#56766D] shadow-[0_2px_8px_rgba(86,118,109,0.06)]">
-              <Wrench size={19} strokeWidth={1.9} />
-            </div>
+    <div className="w-full">
+      {/* ═══════════════ WORKFLOW: STAGES + ACTIVITIES ═══════════════ */}
+      <div className="mb-2 space-y-2">
+        <ProcessStage
+          stages={workflowStages}
+          activeStageId={activeStageId}
+          loading={workflowLoading}
+          cancelledStageId={32}
+        />
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="truncate text-[22px] font-bold tracking-[-0.035em] text-[var(--color-text-primary)]">
-                  Field Instrument Details
-                </h1>
-                <span className="hidden h-[5px] w-[5px] shrink-0 rounded-full bg-[var(--color-secondary)] sm:block" />
-              </div>
-              <p className="mt-0.5 text-[10.5px] font-medium text-[var(--color-text-secondary)]">
-                Review and maintain the configuration of this field instrument asset.
+        <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
+          <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
+            <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />
+            <div className="min-w-0 flex-1">
+              <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">
+                Process
+              </p>
+              <p className="truncate text-[11px] font-semibold text-[#344A43]">
+                {processName || "—"}
               </p>
             </div>
           </div>
-        </div>
 
-        {/* ═══════════════ WORKFLOW: STAGES + ACTIVITIES ═══════════════ */}
-        <div className="mb-2 space-y-2">
-          <ProcessStage
-            stages={workflowStages}
-            activeStageId={activeStageId}
-            loading={workflowLoading}
-            cancelledStageId={32}
-          />
-
-          <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
-            <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
-              <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />
-              <div className="min-w-0 flex-1">
-                <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">
-                  Process
-                </p>
-                <p className="truncate text-[11px] font-semibold text-[#344A43]">
-                  {processName || "—"}
-                </p>
-              </div>
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <ProcessActivities
-                activities={activities}
-                loading={activitiesLoading}
-                recordId={id}
-                userId={loginUserId}
-                activityApi={executeFieldInstrumentActivity}
-                onActivitySuccess={handleActivitySuccess}
-                canPerformActivity={canPerformActivity}
-                permissionsLoading={permissionsLoading}
-                auditRoute={"/user/field-instruments-audit"}
-                onExit={() => navigate("/user/field-instruments-dashboard")}
-              />
-            </div>
+          <div className="min-w-0 flex-1">
+            <ProcessActivities
+              activities={activities}
+              loading={activitiesLoading}
+              recordId={id}
+              userId={loginUserId}
+              activityApi={executeFieldInstrumentActivity}
+              onActivitySuccess={handleActivitySuccess}
+              canPerformActivity={canPerformActivity}
+              permissionsLoading={permissionsLoading}
+              auditRoute={"/user/field-instruments-audit"}
+              onExit={() => navigate("/user/field-instruments-dashboard")}
+            />
           </div>
         </div>
+      </div>
 
-        {/* ═══════════════ TABS ═══════════════ */}
-        <div className="mb-5">
-          <ProcessTabs
-            tabs={visibleTabs}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-          />
-        </div>
+      {/* ═══════════════ TABS ═══════════════ */}
+      <div className="mb-6">
+        <ProcessTabs
+          tabs={visibleTabs}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
+      </div>
 
-        {/* ═══════════════ FORM (all sections always mounted) ═══════════════ */}
-        <Form
-          form={form}
-          preserve={true}
-          layout="vertical"
-          requiredMark={false}
-          onFinish={handleSubmit}
-          className="
-            w-full
+      {/* ═══════════════ FORM — plain sections, no cards (matches Calibration panel) ═══════════════ */}
+      <Form
+        form={form}
+        preserve={true}
+        layout="vertical"
+        requiredMark={false}
+        onFinish={handleSubmit}
+        className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
+      >
+        {/* ─── TAB 1: FIELD INSTRUMENT INFORMATION ─── */}
+        <section style={{ display: activeTab === "instrument" ? "block" : "none" }}>
+          <SectionHeader title="FIELD INSTRUMENT INFORMATION" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item
+              name="equipment_name"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <Wrench size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Equipment Name
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter equipment name" },
+              ]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter equipment name" disabled={!isInstrumentEditable} />
+            </Form.Item>
 
-            [&_.ant-form-item-label>label]:!text-[10.5px]
-            [&_.ant-form-item-label>label]:!font-bold
-            [&_.ant-form-item-label>label]:!uppercase
-            [&_.ant-form-item-label>label]:!tracking-[0.07em]
-            [&_.ant-form-item-label]:!pb-1.5
+            <Form.Item
+              name="instrument_name"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <Wrench size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Instrument Name
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter instrument name" },
+              ]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter instrument name" disabled={!isInstrumentEditable} />
+            </Form.Item>
 
-            [&_.ant-form-item-explain-error]:!text-[10.5px]
-            [&_.ant-form-item-required::before]:!text-[#B54A4A]
-            [&_.ant-input]:!rounded-[10px]
-          "
-        >
-          {/* ─── TAB 1: FIELD INSTRUMENT INFORMATION ─── */}
-          <div style={{ display: activeTab === "instrument" ? "block" : "none" }}>
-            <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
-              <div className="h-[3px] w-full bg-[var(--color-primary)]" />
+            <Form.Item
+              name="instrument_id_no"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <Hash size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Instrument ID No.
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter instrument ID No." },
+              ]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter instrument ID No." disabled={!isInstrumentEditable} />
+            </Form.Item>
 
-              <div className="border-b border-[var(--color-border-soft)] px-5 py-4 sm:px-6">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-[36px] w-[36px] items-center justify-center rounded-[9px] border border-[#C9D9D3] bg-[#E8F0ED] text-[#56766D]">
-                    <Activity size={16} strokeWidth={1.9} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-[14px] font-bold tracking-[-0.015em] text-[var(--color-text-primary)]">
-                        Field Instrument Information
-                      </h2>
-                      <span className="h-[5px] w-[5px] rounded-full bg-[var(--color-secondary)]" />
-                    </div>
-                    <p className="mt-0.5 text-[10px] font-medium text-[var(--color-text-muted)]">
-                      Core identification and field instrument specifications.
+            <Form.Item
+              name="make"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <Factory size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Make
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter make" },
+              ]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter make" disabled={!isInstrumentEditable} />
+            </Form.Item>
+
+            <Form.Item
+              name="sr_no_model_no"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <Cpu size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Sr. No. / Model No.
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter Sr. No. / Model No." },
+              ]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter Sr. No. / Model No." disabled={!isInstrumentEditable} />
+            </Form.Item>
+
+            <Form.Item
+              name="least_count"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <Ruler size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Least Count
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter least count" },
+              ]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter least count" disabled={!isInstrumentEditable} />
+            </Form.Item>
+
+            <Form.Item
+              name="location"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <MapPin size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Location
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter location" },
+              ]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter location" disabled={!isInstrumentEditable} />
+            </Form.Item>
+
+            <Form.Item
+              name="accuracy"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <Target size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Accuracy
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter accuracy" },
+              ]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter accuracy" disabled={!isInstrumentEditable} />
+            </Form.Item>
+
+            <Form.Item
+              name="instrument_range"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <Gauge size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Instrument Range
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter instrument range" },
+              ]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter instrument range" disabled={!isInstrumentEditable} />
+            </Form.Item>
+
+            <Form.Item
+              name="operating_range"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <SlidersHorizontal size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Operating Range
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter operating range" },
+              ]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter operating range" disabled={!isInstrumentEditable} />
+            </Form.Item>
+
+            <Form.Item
+              name="calibration_test_points"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <ClipboardList size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Calibration Test Points
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter calibration test points" },
+              ]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter calibration test points" disabled={!isInstrumentEditable} />
+            </Form.Item>
+
+            <Form.Item
+              name="category"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <Layers3 size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Category
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter category" },
+              ]}
+              className="!mb-0"
+            >
+              <FormInput placeholder="Enter category" disabled={!isInstrumentEditable} />
+            </Form.Item>
+          </div>
+        </section>
+
+        {/* ─── TAB 2: HOD REVIEW ─── */}
+        <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
+          <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item name="hodReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+              <FormTextArea
+                rows={5}
+                placeholder="Enter comments..."
+                disabled={!isHodEditable}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="hodReviewAttachment"
+              label="Attachment"
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={true}
+                recordId={id}
+                attachmentField="hod_review_attachment"
+                label="HOD / Designee Review Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isHodEditable}
+              />
+            </Form.Item>
+          </div>
+        </section>
+
+        {/* ─── TAB 3: QA REVIEW ─── */}
+        <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
+          <SectionHeader title="QA APPROVAL REVIEW" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+              <FormTextArea
+                rows={5}
+                placeholder="Enter comments..."
+                disabled={!isQaReviewEditable}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="qaReviewAttachment"
+              label="Attachment"
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={true}
+                recordId={id}
+                attachmentField="qa_review_attachment"
+                label="QA Review Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isQaReviewEditable}
+              />
+            </Form.Item>
+          </div>
+        </section>
+
+        {/* ─── TAB 4: CHECKLIST CONFIGURATION ─── */}
+        <section style={{ display: activeTab === "checklist" ? "block" : "none" }}>
+          <SectionHeader title="CHECKLIST CONFIGURATION" />
+          <div className="mt-5">
+            <ChecklistConfigField
+              value={checklistConfig}
+              onChange={setChecklistConfig}
+              description="Define categorical inspection checkpoints for the field engineers."
+            />
+          </div>
+        </section>
+
+        {/* ─── TAB 5: ACTIVITY LOG ─── */}
+        <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
+          <SectionHeader title="ACTIVITY LOG" />
+          <div className="mt-5 space-y-4">
+            {activityLogsLoading ? (
+              <Skeleton variant="activityLog" />
+            ) : activityLogs.length === 0 ? (
+              <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
+                No activity history found.
+              </div>
+            ) : (
+              activityLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
+                >
+                  <div className="mb-5">
+                    <p className="text-[13px] font-semibold text-[#3E4A5C]">
+                      Activity Name
+                    </p>
+                    <p className="mt-1 text-[14px] font-semibold text-[#182234]">
+                      {log.activity_name || "—"}
                     </p>
                   </div>
-                </div>
-              </div>
 
-              <div className="px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
-                <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2">
-                  <Form.Item
-                    name="equipment_name"
-                    label={
-                      <span className="flex items-center gap-1.5">
-                        <Wrench size={12} strokeWidth={1.9} className="text-[#56766D]" />
-                        Equipment Name
-                      </span>
-                    }
-                    rules={[
-                      { required: true, whitespace: true, message: "Please enter equipment name" },
-                    ]}
-                    className="!mb-4"
-                  >
-                    <FormInput placeholder="Enter equipment name" disabled={!isInstrumentEditable} />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="instrument_name"
-                    label={
-                      <span className="flex items-center gap-1.5">
-                        <Wrench size={12} strokeWidth={1.9} className="text-[#56766D]" />
-                        Instrument Name
-                      </span>
-                    }
-                    rules={[
-                      { required: true, whitespace: true, message: "Please enter instrument name" },
-                    ]}
-                    className="!mb-4"
-                  >
-                    <FormInput placeholder="Enter instrument name" disabled={!isInstrumentEditable} />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="instrument_id_no"
-                    label={
-                      <span className="flex items-center gap-1.5">
-                        <Hash size={12} strokeWidth={1.9} className="text-[#56766D]" />
-                        Instrument ID No.
-                      </span>
-                    }
-                    rules={[
-                      { required: true, whitespace: true, message: "Please enter instrument ID No." },
-                    ]}
-                    className="!mb-4"
-                  >
-                    <FormInput placeholder="Enter instrument ID No." disabled={!isInstrumentEditable} />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="make"
-                    label={
-                      <span className="flex items-center gap-1.5">
-                        <Factory size={12} strokeWidth={1.9} className="text-[#56766D]" />
-                        Make
-                      </span>
-                    }
-                    rules={[
-                      { required: true, whitespace: true, message: "Please enter make" },
-                    ]}
-                    className="!mb-4"
-                  >
-                    <FormInput placeholder="Enter make" disabled={!isInstrumentEditable} />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="sr_no_model_no"
-                    label={
-                      <span className="flex items-center gap-1.5">
-                        <Cpu size={12} strokeWidth={1.9} className="text-[#56766D]" />
-                        Sr. No. / Model No.
-                      </span>
-                    }
-                    rules={[
-                      { required: true, whitespace: true, message: "Please enter Sr. No. / Model No." },
-                    ]}
-                    className="!mb-4"
-                  >
-                    <FormInput placeholder="Enter Sr. No. / Model No." disabled={!isInstrumentEditable} />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="least_count"
-                    label={
-                      <span className="flex items-center gap-1.5">
-                        <Ruler size={12} strokeWidth={1.9} className="text-[#56766D]" />
-                        Least Count
-                      </span>
-                    }
-                    rules={[
-                      { required: true, whitespace: true, message: "Please enter least count" },
-                    ]}
-                    className="!mb-4"
-                  >
-                    <FormInput placeholder="Enter least count" disabled={!isInstrumentEditable} />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="location"
-                    label={
-                      <span className="flex items-center gap-1.5">
-                        <MapPin size={12} strokeWidth={1.9} className="text-[#56766D]" />
-                        Location
-                      </span>
-                    }
-                    rules={[
-                      { required: true, whitespace: true, message: "Please enter location" },
-                    ]}
-                    className="!mb-4"
-                  >
-                    <FormInput placeholder="Enter location" disabled={!isInstrumentEditable} />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="accuracy"
-                    label={
-                      <span className="flex items-center gap-1.5">
-                        <Target size={12} strokeWidth={1.9} className="text-[#56766D]" />
-                        Accuracy
-                      </span>
-                    }
-                    rules={[
-                      { required: true, whitespace: true, message: "Please enter accuracy" },
-                    ]}
-                    className="!mb-4"
-                  >
-                    <FormInput placeholder="Enter accuracy" disabled={!isInstrumentEditable} />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="instrument_range"
-                    label={
-                      <span className="flex items-center gap-1.5">
-                        <Gauge size={12} strokeWidth={1.9} className="text-[#56766D]" />
-                        Instrument Range
-                      </span>
-                    }
-                    rules={[
-                      { required: true, whitespace: true, message: "Please enter instrument range" },
-                    ]}
-                    className="!mb-4"
-                  >
-                    <FormInput placeholder="Enter instrument range" disabled={!isInstrumentEditable} />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="operating_range"
-                    label={
-                      <span className="flex items-center gap-1.5">
-                        <SlidersHorizontal size={12} strokeWidth={1.9} className="text-[#56766D]" />
-                        Operating Range
-                      </span>
-                    }
-                    rules={[
-                      { required: true, whitespace: true, message: "Please enter operating range" },
-                    ]}
-                    className="!mb-4"
-                  >
-                    <FormInput placeholder="Enter operating range" disabled={!isInstrumentEditable} />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="calibration_test_points"
-                    label={
-                      <span className="flex items-center gap-1.5">
-                        <ClipboardList size={12} strokeWidth={1.9} className="text-[#56766D]" />
-                        Calibration Test Points
-                      </span>
-                    }
-                    rules={[
-                      { required: true, whitespace: true, message: "Please enter calibration test points" },
-                    ]}
-                    className="!mb-4"
-                  >
-                    <FormInput placeholder="Enter calibration test points" disabled={!isInstrumentEditable} />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="category"
-                    label={
-                      <span className="flex items-center gap-1.5">
-                        <Layers3 size={12} strokeWidth={1.9} className="text-[#56766D]" />
-                        Category
-                      </span>
-                    }
-                    rules={[
-                      { required: true, whitespace: true, message: "Please enter category" },
-                    ]}
-                    className="!mb-0 md:col-span-2"
-                  >
-                    <FormInput placeholder="Enter category" disabled={!isInstrumentEditable} />
-                  </Form.Item>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          {/* ─── TAB 3: HOD REVIEW ─── */}
-          <div style={{ display: activeTab === "hod" ? "block" : "none" }}>
-            <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
-              <div className="h-[3px] w-full bg-[var(--color-primary)]" />
-
-              <div className="border-b border-[var(--color-border-soft)] px-5 py-4 sm:px-6">
-                <h2 className="text-[14px] font-bold tracking-[-0.015em] text-[var(--color-text-primary)]">
-                  HOD / DESIGNEE REVIEW (ENGINEERING DEPT)
-                </h2>
-              </div>
-
-              <div className="px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
-                <Form.Item name="hodReviewComments" label="Comments" className="!mb-4">
-                  <FormTextArea
-                    rows={5}
-                    placeholder="Enter comments..."
-                    disabled={!isHodEditable}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="hodReviewAttachment"
-                  label="Attachment"
-                  valuePropName="value"
-                  className="!mb-0"
-                >
-                  <FormAttachment
-                    multiple={true}
-                    recordId={id}
-                    attachmentField="hod_review_attachment"
-                    label="HOD / Designee Review Attachment"
-                    uploadApi={addMultipleAttachments}
-                    disabled={!isHodEditable}
-                  />
-                </Form.Item>
-              </div>
-            </section>
-          </div>
-
-          {/* ─── TAB 4: QA REVIEW ─── */}
-          <div style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
-            <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
-              <div className="h-[3px] w-full bg-[var(--color-primary)]" />
-
-              <div className="border-b border-[var(--color-border-soft)] px-5 py-4 sm:px-6">
-                <h2 className="text-[14px] font-bold tracking-[-0.015em] text-[var(--color-text-primary)]">
-                  QA APPROVAL REVIEW
-                </h2>
-              </div>
-
-              <div className="px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
-                <Form.Item name="qaReviewComments" label="Comments" className="!mb-4">
-                  <FormTextArea
-                    rows={5}
-                    placeholder="Enter comments..."
-                    disabled={!isQaReviewEditable}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="qaReviewAttachment"
-                  label="Attachment"
-                  valuePropName="value"
-                  className="!mb-0"
-                >
-                  <FormAttachment
-                    multiple={true}
-                    recordId={id}
-                    attachmentField="qa_review_attachment"
-                    label="QA Review Attachment"
-                    uploadApi={addMultipleAttachments}
-                    disabled={!isQaReviewEditable}
-                  />
-                </Form.Item>
-              </div>
-            </section>
-          </div>
-
-          {/* ─── TAB 5: CHECKLIST CONFIGURATION ─── */}
-          <div style={{ display: activeTab === "checklist" ? "block" : "none" }}>
-            <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
-              <div className="h-[2px] w-full bg-[var(--color-secondary)]" />
-
-              <div className="p-5 sm:p-6">
-                <ChecklistConfigField
-                  value={checklistConfig}
-                  onChange={setChecklistConfig}
-                  description="Define categorical inspection checkpoints for the field engineers."
-                />
-              </div>
-            </section>
-          </div>
-
-          {/* ─── TAB 6: ACTIVITY LOG ─── */}
-          <div style={{ display: activeTab === "activity" ? "block" : "none" }}>
-            <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
-              <div className="h-[2px] w-full bg-[var(--color-secondary)]" />
-
-              <div className="p-5 sm:p-6">
-                <SectionHeader title="ACTIVITY LOG" />
-
-                <div className="mt-5 space-y-4">
-                  {activityLogsLoading ? (
-                    <Skeleton variant="activityLog" />
-                  ) : activityLogs.length === 0 ? (
-                    <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
-                      No activity history found.
-                    </div>
-                  ) : (
-                    activityLogs.map((log) => (
-                      <div
-                        key={log.id}
-                        className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
-                      >
-                        <div className="mb-5">
-                          <p className="text-[13px] font-semibold text-[#3E4A5C]">
-                            Activity Name
-                          </p>
-                          <p className="mt-1 text-[14px] font-semibold text-[#182234]">
-                            {log.activity_name || "—"}
-                          </p>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                          <div>
-                            <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
-                              Performed By
-                            </p>
-                            <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                              <span className="text-[14px] text-[#526071]">
-                                {log.performed_by || "—"}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div>
-                            <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
-                              Date Performed
-                            </p>
-                            <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                              <span className="text-[14px] text-[#526071]">
-                                {log.performed_at || "—"}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div>
-                            <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
-                              Comments
-                            </p>
-                            <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
-                              <p className="break-words text-[14px] leading-5 text-[#526071]">
-                                {log.comment || "—"}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
+                        Performed By
+                      </p>
+                      <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                        <span className="text-[14px] text-[#526071]">
+                          {log.performed_by || "—"}
+                        </span>
                       </div>
-                    ))
-                  )}
+                    </div>
+
+                    <div>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
+                        Date Performed
+                      </p>
+                      <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                        <span className="text-[14px] text-[#526071]">
+                          {log.performed_at || "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
+                        Comments
+                      </p>
+                      <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
+                        <p className="break-words text-[14px] leading-5 text-[#526071]">
+                          {log.comment || "—"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </section>
+              ))
+            )}
           </div>
+        </section>
 
-          {/* ─── TAB 7: CANCELLATION ─── */}
-          <div style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
-            <section className="overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_5px_20px_rgba(36,50,56,0.055)]">
-              <div className="h-[3px] w-full bg-[var(--color-primary)]" />
+        {/* ─── TAB 6: CANCELLATION ─── */}
+        <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
+          <SectionHeader title="CANCELLATION" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item
+              name="cancellationRemark"
+              label="Remark"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormTextArea
+                rows={5}
+                placeholder="Enter cancellation remark..."
+                disabled={!isCancellationEditable}
+              />
+            </Form.Item>
 
-              <div className="border-b border-[var(--color-border-soft)] px-5 py-4 sm:px-6">
-                <h2 className="text-[14px] font-bold tracking-[-0.015em] text-[var(--color-text-primary)]">
-                  CANCELLATION
-                </h2>
-              </div>
-
-              <div className="px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
-                <Form.Item
-                  name="cancellationRemark"
-                  label="Remark"
-                  className="!mb-4"
-                >
-                  <FormTextArea
-                    rows={5}
-                    placeholder="Enter cancellation remark..."
-                    disabled={!isCancellationEditable}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="cancellationAttachment"
-                  label="Attachment"
-                  valuePropName="value"
-                  className="!mb-0"
-                >
-                  <FormAttachment
-                    multiple={true}
-                    recordId={id}
-                    attachmentField="cancellation_attachment"
-                    label="Cancellation Attachment"
-                    uploadApi={addMultipleAttachments}
-                    disabled={!isCancellationEditable}
-                  />
-                </Form.Item>
-              </div>
-            </section>
+            <Form.Item
+              name="cancellationAttachment"
+              label="Attachment"
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={true}
+                recordId={id}
+                attachmentField="cancellation_attachment"
+                label="Cancellation Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isCancellationEditable}
+              />
+            </Form.Item>
           </div>
-        </Form>
-      </div>
+        </section>
+      </Form>
 
       {/* ═══════════════ FLOATING ACTIONS ═══════════════ */}
       <FloatingActionButtons

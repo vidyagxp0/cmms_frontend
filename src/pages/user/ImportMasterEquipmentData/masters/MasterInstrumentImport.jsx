@@ -23,7 +23,7 @@ export default function MasterInstrumentImport() {
       masterLabel="Master Instrument"
       requiredHeaders={REQUIRED_HEADERS}
       requiredFields={REQUIRED_FIELDS}
-      apiEndpoint={import.meta.env.VITE_MASTER_INSTRUMENT_IMPORT_URL}
+      apiEndpoint={"/user/import-excel"}
       instructions={[
         "Use the Master Instrument Excel template.",
         "Keep all seven column headers unchanged. Line breaks in headers are supported.",

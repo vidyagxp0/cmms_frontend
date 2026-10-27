@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 import {
     Alert,
@@ -22,6 +22,8 @@ import {
 } from "@ant-design/icons";
 
 import { formatBytes } from "../utils/excelImportUtils";
+import { toast } from "sonner";
+import api from "../../../../services/api";
 
 const { Dragger } = Upload;
 
@@ -35,13 +37,18 @@ export default function EquipmentImportPanel({
     instructions = [],
     apiEndpoint,
 }) {
-    const [api, contextHolder] = notification.useNotification();
+    // const [api, contextHolder] = notification.useNotification();
 
     const [file, setFile] = useState(null);
     const [error, setError] = useState("");
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [importing, setImporting] = useState(false);
     const [serverResult, setServerResult] = useState(null);
+
+    const [importProgress, setImportProgress] = useState(null);
+    const [importErrors, setImportErrors] = useState([]);
+    const pollingRef = useRef(false);
+    const timerRef = useRef(null);
 
     // Reset selected file and related state.
     const reset = () => {
@@ -52,6 +59,13 @@ export default function EquipmentImportPanel({
         setConfirmOpen(false);
         setServerResult(null);
     };
+
+    useEffect(() => {
+    return () => {
+        pollingRef.current = false;
+        clearTimeout(timerRef.current);
+    };
+}, []);
 
     // Select the file without reading its contents in React.
     const beforeUpload = (uploadFile) => {
@@ -93,7 +107,7 @@ export default function EquipmentImportPanel({
 
         setFile(actualFile);
 
-        api.success({
+        toast.success({
             message: "Excel file selected",
             description: `${actualFile.name} is ready to upload.`,
             placement: "topRight",
@@ -107,89 +121,149 @@ export default function EquipmentImportPanel({
     // Upload the original Excel file to Laravel.
    
 
-const importRecords = async () => {
-  if (!file) {
-    notification.error({ message: "Please select an Excel file." });
-    return;
-  }
 
-//   if (!apiEndpoint) {
-//     notification.error({ message: "Import API endpoint is not configured." });
-//     return;
-//   }
+const checkImportStatus = async (importId) => {
+    if (!pollingRef.current) return;
 
-  try {
-    setImporting(true);
+    try {
+        const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, "");
 
-    const formData = new FormData();
+        if (!baseUrl) {
+            throw new Error("VITE_API_URL is not configured.");
+        }
 
-    // Selected equipment master
-    formData.append("Select Equipment Master", masterKey);
+        const statusUrl = `${baseUrl}/${importId}`;
 
-    // Complete original Excel file
-    formData.append("file", file, file.name);
-
-    // Log selected master
-    console.log("Selected Equipment Master:", masterKey);
-
-    // Log uploaded file details
-    console.log("Uploaded File Object:", file);
-    console.log("File Name:", file.name);
-    console.log("File Size:", file.size, "bytes");
-    console.log("File Type:", file.type);
-    console.log("Last Modified:", new Date(file.lastModified));
-
-    // Log complete FormData payload
-    console.log("Payload being sent:");
-
-    for (const [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        console.log(`${key}:`, {
-          name: value.name,
-          size: value.size,
-          type: value.type,
-          lastModified: value.lastModified,
-          fileObject: value,
+        const response = await fetch(statusUrl, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+                Accept: "application/json",
+            },
         });
-      } else {
-        console.log(`${key}:`, value);
-      }
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                result.message || "Failed to fetch import status."
+            );
+        }
+
+        const data = result.data;
+
+        setImportProgress(data);
+
+        if (Array.isArray(data.errors)) {
+            setImportErrors(data.errors);
+        }
+
+        if (["completed", "failed"].includes(data.status)) {
+            pollingRef.current = false;
+            setImporting(false);
+
+            if (data.status === "completed") {
+                toast.success({
+                    message: "Import completed",
+                    description: `Successful: ${data.success_rows || 0}, Failed: ${data.failed_rows || 0}`,
+                });
+            } else {
+                toast.error({
+                    message: "Import failed",
+                    description:
+                        result.message || "Please check the import errors.",
+                });
+            }
+
+            return;
+        }
+
+        timerRef.current = setTimeout(() => {
+            checkImportStatus(importId);
+        }, 2000);
+    } catch (error) {
+        pollingRef.current = false;
+        setImporting(false);
+        setError(error.message || "Unable to check import status.");
+    }
+};
+
+
+const importRecords = async () => {
+    if (!file) {
+        apiNotification.error({
+            message: "Please select an Excel file.",
+        });
+        return;
     }
 
-    console.log("API Endpoint:", apiEndpoint);
+    try {
+        setImporting(true);
+        setError("");
+        setImportProgress(null);
+        setImportErrors([]);
+        setServerResult(null);
 
-    const response = await fetch(apiEndpoint, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        Accept: "application/json",
-      },
-      body: formData,
-    });
+        const formData = new FormData();
 
-    const result = await response.json();
+        formData.append("euipmentMasterType", masterKey);
+        formData.append("file", file, file.name);
 
-    console.log("API Response Status:", response.status);
-    console.log("API Response:", result);
+        // Use the reusable Axios instance
+        const response = await api.post(
+            "user/instrment-excel-import",
+            formData,
+            {
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "multipart/form-data",
+                },
+                timeout: 0,
+            }
+        );
 
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to import Excel file.");
+        const result = response.data;
+
+        setServerResult(result);
+
+        const importId = result.data?.import_id;
+
+        if (!importId) {
+            setImporting(false);
+
+            apiNotification.success({
+                message: result.message || "Import request submitted.",
+            });
+
+            return;
+        }
+
+        setConfirmOpen(false);
+        setImportProgress(result.data);
+        pollingRef.current = true;
+
+        apiNotification.success({
+            message: "Excel uploaded successfully",
+            description: `Import ID: ${importId}`,
+        });
+
+        await checkImportStatus(importId);
+    } catch (error) {
+        pollingRef.current = false;
+        setImporting(false);
+
+        const message =
+            error.response?.data?.message ||
+            error.message ||
+            "Failed to upload Excel file.";
+
+        setError(message);
+
+        apiNotification.error({
+            message: "Excel import failed",
+            description: message,
+        });
     }
-
-    setServerResult(result);
-
-    notification.success({
-      message: result.message || "File submitted successfully.",
-    });
-  } catch (error) {
-    console.error("Equipment Import Error:", error);
-
-    notification.error({
-      message: error.message || "Failed to upload file.",
-    });
-  } finally {
-    setImporting(false);
-  }
 };
 
 
@@ -204,7 +278,7 @@ const importRecords = async () => {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2">
-            {contextHolder}
+            {/* {contextHolder} */}
 
             {/* Import instructions */}
             <section className="border-b border-gray-200 px-4 py-5 lg:border-b-0 lg:border-r">
@@ -368,6 +442,103 @@ const importRecords = async () => {
                                 }
                             />
                         )}
+
+                        {importProgress && (
+    <div className="mt-4 rounded-lg border border-gray-200 p-4">
+        <div className="mb-3 flex items-center justify-between">
+            <h4 className="font-semibold text-gray-800">
+                Import Progress
+            </h4>
+
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium capitalize text-blue-700">
+                {importProgress.status}
+            </span>
+        </div>
+
+        <div className="mb-2 flex justify-between text-sm text-gray-600">
+            <span>
+                Processed: {importProgress.processed_rows || 0} / {importProgress.total_rows || 0}
+            </span>
+
+            <span>
+                {importProgress.total_rows > 0
+                    ? Math.round(
+                        (importProgress.processed_rows / importProgress.total_rows) * 100
+                    )
+                    : 0}%
+            </span>
+        </div>
+
+        <div className="h-3 overflow-hidden rounded-full bg-gray-200">
+            <div
+                className="h-full rounded-full bg-blue-600 transition-all duration-300"
+                style={{
+                    width: `${
+                        importProgress.total_rows > 0
+                            ? Math.min(
+                                100,
+                                (importProgress.processed_rows / importProgress.total_rows) * 100
+                            )
+                            : 0
+                    }%`
+                }}
+            />
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-gray-50 p-3">
+                <p className="text-xs text-gray-500">Total</p>
+                <p className="font-bold">
+                    {importProgress.total_rows || 0}
+                </p>
+            </div>
+
+            <div className="rounded-lg bg-green-50 p-3">
+                <p className="text-xs text-green-700">Success</p>
+                <p className="font-bold text-green-700">
+                    {importProgress.success_rows || 0}
+                </p>
+            </div>
+
+            <div className="rounded-lg bg-red-50 p-3">
+                <p className="text-xs text-red-700">Failed</p>
+                <p className="font-bold text-red-700">
+                    {importProgress.failed_rows || 0}
+                </p>
+            </div>
+        </div>
+
+        {importProgress.status === "completed" && (
+            <Alert
+                className="mt-4"
+                type="success"
+                showIcon
+                message="Excel import completed successfully."
+            />
+        )}
+
+        {importProgress.status === "failed" && (
+            <Alert
+                className="mt-4"
+                type="error"
+                showIcon
+                message="Excel import failed."
+            />
+        )}
+
+        {importErrors.length > 0 && (
+            <div className="mt-4">
+                <h5 className="mb-2 font-medium text-red-700">
+                    Import Errors
+                </h5>
+
+                <pre className="max-h-60 overflow-auto rounded-lg bg-gray-50 p-3 text-xs">
+                    {JSON.stringify(importErrors, null, 2)}
+                </pre>
+            </div>
+        )}
+    </div>
+)}
 
                         <div className="mt-4 flex flex-wrap gap-2">
                             <Button

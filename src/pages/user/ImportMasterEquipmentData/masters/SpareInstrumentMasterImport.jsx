@@ -28,7 +28,7 @@ export default function SpareInstrumentMasterImport() {
       masterLabel="Spare Instrument Master"
       requiredHeaders={REQUIRED_HEADERS}
       requiredFields={REQUIRED_FIELDS}
-      apiEndpoint={import.meta.env.VITE_SPARE_INSTRUMENT_IMPORT_URL}
+      apiEndpoint={"/user/import-excel"}
       instructions={[
         "Use the approved Spare Instrument Master Excel template.",
         "Keep the column headers exactly as they appear in the approved template.",

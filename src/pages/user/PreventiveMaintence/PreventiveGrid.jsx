@@ -28,6 +28,72 @@ const MONTHS = [
 
 const WEEKS_PER_MONTH = 5;
 
+/* -------------------- Frequency helpers -------------------- */
+// Priority per business rule: Y > Q > H > M
+export const FREQUENCY_PRIORITY = { Y: 4, Q: 3, H: 2, M: 1 };
+
+export const FREQUENCY_LABEL_BY_CODE = {
+  Y: "yearly",
+  Q: "quarterly",
+  H: "half-yearly",
+  M: "monthly",
+};
+
+const WORD_PATTERNS = [
+  [/HALF[\s-]?YEARLY|HALF[\s-]?YEAR/g, "H"],
+  [/YEARLY|ANNUAL(LY)?/g, "Y"],
+  [/QUARTERLY|QUARTER/g, "Q"],
+  [/MONTHLY|MONTH/g, "M"],
+];
+
+const extractFrequencyTokens = (raw) => {
+  if (raw === undefined || raw === null) return [];
+  let str = String(raw).trim().toUpperCase();
+  if (!str) return [];
+
+  const tokens = new Set();
+
+  WORD_PATTERNS.forEach(([re, code]) => {
+    if (re.test(str)) tokens.add(code);
+    str = str.replace(re, " ");
+  });
+
+  const letters = str.replace(/[^A-Z]/g, "");
+  for (const ch of letters) {
+    if (FREQUENCY_PRIORITY[ch] !== undefined) tokens.add(ch);
+  }
+
+  return [...tokens];
+};
+
+/**
+ * Scans every P/A cell of a row and returns the biggest frequency found.
+ * @returns {{ code: string, label: string }}  e.g. { code: "Q", label: "quarterly" }
+ */
+export const getRowBiggestFrequency = (row) => {
+  const weekly = row?.weeklyPreventive;
+  const codes = [];
+
+  if (weekly && typeof weekly === "object") {
+    Object.values(weekly).forEach((weeks) => {
+      if (!Array.isArray(weeks)) return;
+      weeks.forEach((week) => {
+        if (!week) return;
+        extractFrequencyTokens(week.planned).forEach((c) => codes.push(c));
+        extractFrequencyTokens(week.actual).forEach((c) => codes.push(c));
+      });
+    });
+  }
+
+  if (codes.length === 0) return { code: "", label: "" };
+
+  const code = codes.reduce((best, cur) =>
+    FREQUENCY_PRIORITY[cur] > FREQUENCY_PRIORITY[best] ? cur : best
+  );
+
+  return { code, label: FREQUENCY_LABEL_BY_CODE[code] || "" };
+};
+
 /* -------------------- Weekly data helpers -------------------- */
 const toFieldString = (value) => (typeof value === "string" ? value : "");
 
@@ -83,16 +149,13 @@ const generateDefaultWeekDates = (year) => {
   return result;
 };
 
-// ✅ NEW: Helper to handle both `week_dates_data` (from API) and direct object
 const unwrapWeekDates = (input) => {
   if (!input) return null;
 
-  // If the parent passed the full grid_record containing week_dates_data
   if (input.week_dates_data && typeof input.week_dates_data === "object") {
     return input.week_dates_data;
   }
 
-  // If it's already the dates object
   if (typeof input === "object" && !Array.isArray(input)) {
     return input;
   }
@@ -100,7 +163,6 @@ const unwrapWeekDates = (input) => {
   return null;
 };
 
-// Helper to merge initial saved dates with defaults safely
 const getMergedWeekDates = (initial, currentYear) => {
   const defaults = generateDefaultWeekDates(currentYear);
   const normalized = unwrapWeekDates(initial);
@@ -178,15 +240,10 @@ const PreventiveGrid = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
-  // Initialize state with merged dates
   const [headerWeekDates, setHeaderWeekDates] = useState(() =>
     getMergedWeekDates(initialWeekDates, year)
   );
 
-  console.log(value,"value>>>>")
-
-  // ✅ FIX: Sync state if parent loads data after initial render, 
-  // AND notify parent of the defaults so they can be sent in the payload
   useEffect(() => {
     const merged = getMergedWeekDates(initialWeekDates, year);
 
@@ -197,7 +254,6 @@ const PreventiveGrid = ({
       const incomingStr = JSON.stringify(normalized);
       const mergedStr = JSON.stringify(merged);
 
-      // Only notify parent if the merged data is different from what they passed in
       if (incomingStr !== mergedStr) {
         onWeekDatesChange(merged);
       }
@@ -259,10 +315,12 @@ const PreventiveGrid = ({
         const equipment = equipmentMap[equipmentId];
         row.equipmentInstrumentId =
           equipment.equipment_id || equipment.instrument_id_no || "";
+        row.equipmentDbId = equipment.id || "";
         row.make = equipment.make || "";
         row.model = equipment.model || equipment.sr_no_model_no || "";
       } else {
         row.equipmentInstrumentId = "";
+        row.equipmentDbId = "";
         row.make = "";
         row.model = "";
       }
@@ -314,7 +372,6 @@ const PreventiveGrid = ({
 
     setHeaderWeekDates(updatedWeekDates);
 
-    // Notify parent so it can be included in the save payload
     if (onWeekDatesChange) onWeekDatesChange(updatedWeekDates);
   };
 
@@ -653,7 +710,6 @@ const PreventiveGrid = ({
                               actual: "",
                             };
 
-                          // VALIDATION: Cell is disabled if header date is missing
                           const dateStr = headerWeekDates?.[month.key]?.[weekIdx];
                           const enabled = !!dateStr;
 
@@ -719,7 +775,7 @@ const PreventiveGrid = ({
                           type="button"
                           onClick={() => {
                             if (!canCreateChild) return;
-                            onViewChild(rowIndex, row);
+                            onViewChild(rowIndex, row, getRowBiggestFrequency(row));
                           }}
                           disabled={!canCreateChild}
                           className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${

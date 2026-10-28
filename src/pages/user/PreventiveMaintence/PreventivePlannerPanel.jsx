@@ -35,7 +35,7 @@ import {
   getAllPermissions,
   getAllStages,
 } from "../../../services/usersApi/workflowCommonApi";
-import PreventiveGrid from "./PreventiveGrid";
+import PreventiveGrid, { getRowBiggestFrequency } from "./PreventiveGrid";
 
 dayjs.extend(customParseFormat);
 
@@ -48,7 +48,9 @@ const TABS = [
   { id: "cancellation", label: "Cancellation", stageId: 12 },
 ];
 
-const REQUIRED_FIELDS = [{ name: "shortDescription", label: "Short Description" }];
+const REQUIRED_FIELDS = [
+  { name: "shortDescription", label: "Short Description" },
+];
 
 const getProcessValue = (processData = [], key) => {
   if (Array.isArray(processData)) {
@@ -80,7 +82,7 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
       else if (key === "nextPreventiveDate" && value)
         value = dayjs(value).format("DD/MM/YYYY");
       if (key === "equipmentInstrumentName" && value && equipmentMap[value])
-        value = equipmentMap[value]?.name || value;
+        value = equipmentMap[value]?.instrument_name || equipmentMap[value]?.name || value;
       rowData[key] = { key, label: key, value };
     });
     return rowData;
@@ -93,9 +95,13 @@ const buildProcessData = (values, systemFields) => [
     label: field.label,
     value: values?.[field.name] || "",
   })),
-  { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
+  {
+    key: "short_description",
+    label: "Short Description",
+    value: values?.shortDescription || "",
+  },
   { key: "comment", label: "Comments", value: values?.comments || "" },
-  { key: "attachment", label: "Attachment", value:  [] },
+  { key: "attachment", label: "Attachment", value: [] },
   {
     key: "hod_review_comments",
     label: "HOD / Designee Review Comments",
@@ -104,7 +110,7 @@ const buildProcessData = (values, systemFields) => [
   {
     key: "hod_review_attachment",
     label: "HOD / Designee Review Attachment",
-    value:  [],
+    value: [],
   },
   {
     key: "user_dept_review_comments",
@@ -124,7 +130,7 @@ const buildProcessData = (values, systemFields) => [
   {
     key: "qa_review_attachment",
     label: "QA Review Attachment",
-    value:  [],
+    value: [],
   },
   {
     key: "cancellation_remark",
@@ -134,7 +140,7 @@ const buildProcessData = (values, systemFields) => [
   {
     key: "cancellation_attachment",
     label: "Cancellation Attachment",
-    value:  [],
+    value: [],
   },
 ];
 
@@ -164,8 +170,7 @@ const PreventivePlannerPanel = () => {
   const [canPerformActivity, setCanPerformActivity] = useState(false);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [preventiveRows, setPreventiveRows] = useState([]);
-  
-  // State to hold header week dates
+
   const [headerWeekDates, setHeaderWeekDates] = useState({});
 
   const [equipmentOptions, setEquipmentOptions] = useState([]);
@@ -227,7 +232,10 @@ const PreventivePlannerPanel = () => {
         setEquipmentLoading(true);
         const response = await getAllEquipmentData();
         const data = response?.data?.data || [];
-        const options = data.map((item) => ({ value: item.instrument_name, label: item.instrument_name }));
+        const options = data.map((item) => ({
+          value: item.instrument_name,
+          label: item.instrument_name,
+        }));
         const map = {};
         data.forEach((item) => {
           map[item.instrument_name] = item;
@@ -270,14 +278,29 @@ const PreventivePlannerPanel = () => {
         const recordNumber = getProcessValue(processData, "recordNumber");
         const locationCode = getProcessValue(processData, "siteLocationCode");
         const processInitiator = getProcessValue(processData, "initiator");
-        const processDateOfInitiation = getProcessValue(processData, "dateOfInitiation");
+        const processDateOfInitiation = getProcessValue(
+          processData,
+          "dateOfInitiation"
+        );
         const dueDate = getProcessValue(processData, "dueDate");
-        const processDepartment = getProcessValue(processData, "initiationDepartment");
-        const shortDescription = getProcessValue(processData, "short_description");
+        const processDepartment = getProcessValue(
+          processData,
+          "initiationDepartment"
+        );
+        const shortDescription = getProcessValue(
+          processData,
+          "short_description"
+        );
         const comments = getProcessValue(processData, "comment");
         const attachment = getProcessValue(processData, "attachment");
-        const hodReviewComments = getProcessValue(processData, "hod_review_comments");
-        const hodReviewAttachment = getProcessValue(processData, "hod_review_attachment");
+        const hodReviewComments = getProcessValue(
+          processData,
+          "hod_review_comments"
+        );
+        const hodReviewAttachment = getProcessValue(
+          processData,
+          "hod_review_attachment"
+        );
         const userDeptReviewComments = getProcessValue(
           processData,
           "user_dept_review_comments"
@@ -286,21 +309,29 @@ const PreventivePlannerPanel = () => {
           processData,
           "user_dept_review_attachment"
         );
-        const qaReviewComments = getProcessValue(processData, "qa_review_comments");
-        const qaReviewAttachment = getProcessValue(processData, "qa_review_attachment");
-        const cancellationRemark = getProcessValue(processData, "cancellation_remark");
+        const qaReviewComments = getProcessValue(
+          processData,
+          "qa_review_comments"
+        );
+        const qaReviewAttachment = getProcessValue(
+          processData,
+          "qa_review_attachment"
+        );
+        const cancellationRemark = getProcessValue(
+          processData,
+          "cancellation_remark"
+        );
         const cancellationAttachment = getProcessValue(
           processData,
           "cancellation_attachment"
         );
 
-        // ✅ FIXED: Extract header week dates from the correct location in the API response
-        const savedHeaderDates = 
-          responseData?.grid_records?.[0]?.week_dates_data || 
-          responseData?.headerWeekDates || 
-          getProcessValue(processData, "headerWeekDates") || 
+        const savedHeaderDates =
+          responseData?.grid_records?.[0]?.week_dates_data ||
+          responseData?.headerWeekDates ||
+          getProcessValue(processData, "headerWeekDates") ||
           {};
-          
+
         setHeaderWeekDates(savedHeaderDates);
 
         setSiteLocationCode(locationCode || "");
@@ -380,14 +411,26 @@ const PreventivePlannerPanel = () => {
           newRow.preventiveFrequencyStartDate =
             row.preventiveFrequencyStartDate || "";
 
+          // ✅ Keep the instrument_name (what the Select expects) — do NOT convert to id
           if (
             newRow.equipmentInstrumentName &&
-            typeof newRow.equipmentInstrumentName === "string"
+            typeof newRow.equipmentInstrumentName === "string" &&
+            !currentEquipmentMap[newRow.equipmentInstrumentName]
           ) {
             const found = Object.values(currentEquipmentMap).find(
-              (eq) => eq.name === newRow.equipmentInstrumentName
+              (eq) =>
+                eq.instrument_name === newRow.equipmentInstrumentName ||
+                eq.name === newRow.equipmentInstrumentName ||
+                String(eq.id) === String(newRow.equipmentInstrumentName)
             );
-            if (found) newRow.equipmentInstrumentName = found.id;
+            if (found) {
+              newRow.equipmentInstrumentName =
+                found.instrument_name ?? found.name ?? newRow.equipmentInstrumentName;
+              newRow.equipmentDbId = found.id || newRow.equipmentDbId || "";
+            }
+          } else if (currentEquipmentMap[newRow.equipmentInstrumentName]) {
+            newRow.equipmentDbId =
+              currentEquipmentMap[newRow.equipmentInstrumentName].id || "";
           }
 
           newRow.previousPreventiveDate = newRow.previousPreventiveDate
@@ -426,7 +469,9 @@ const PreventivePlannerPanel = () => {
         setWorkflowLoading(true);
         const response = await getAllStages(processId);
         const stages = response?.data?.data || [];
-        const activeStages = stages.filter((stage) => stage?.is_active !== false);
+        const activeStages = stages.filter(
+          (stage) => stage?.is_active !== false
+        );
         setWorkflowStages(activeStages);
       } catch (error) {
         console.error("Failed to fetch workflow stages:", error);
@@ -484,7 +529,8 @@ const PreventivePlannerPanel = () => {
       console.error("Failed to fetch record permissions:", error);
       setCanPerformActivity(false);
       toast.error(
-        error?.response?.data?.message || "Failed to check activity permissions."
+        error?.response?.data?.message ||
+          "Failed to check activity permissions."
       );
     } finally {
       setPermissionsLoading(false);
@@ -533,13 +579,12 @@ const PreventivePlannerPanel = () => {
       label: "Record Number",
       value: form.getFieldValue("recordNumber") || "",
     },
-    // {
-    //   name: "siteLocationCode",
-    //   label: "Site / Location Code",
-    //   value: form.getFieldValue("siteLocationCode") || "",
-    // },
     { name: "initiator", label: "Initiator", value: initiator },
-    { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
+    {
+      name: "dateOfInitiation",
+      label: "Date of Initiation",
+      value: dateOfInitiation,
+    },
     {
       name: "initiationDepartment",
       label: "Initiation Department",
@@ -547,14 +592,19 @@ const PreventivePlannerPanel = () => {
     },
   ];
 
-  const handleViewChild = (rowIndex, rowData) => {
+  const handleViewChild = (rowIndex, rowData, biggestFrequency) => {
     const shortDesc = form.getFieldValue("shortDescription") || "";
+    const { code = "", label = "" } =
+      biggestFrequency || getRowBiggestFrequency(rowData);
+
     navigate(`/user/preventive-maintenance-create/${4}/${recordId}`, {
       state: {
         rowData,
         shortDescription: shortDesc,
         processId: 4,
         parentId: recordId,
+        preventiveFrequency: label,
+        preventiveFrequencyCode: code,
       },
     });
   };
@@ -607,10 +657,7 @@ const PreventivePlannerPanel = () => {
           mergedValues?.dateOfInitiation || dateOfInitiation || "",
         process_data: processData,
         gridData,
-        
-        // Include header week dates in payload
-        headerWeekDates, 
-        
+        headerWeekDates,
         checklistData: [],
       };
 
@@ -666,7 +713,7 @@ const PreventivePlannerPanel = () => {
     );
   }
 
-  const isCancellationStageActive = Number(activeStageId) === 6;
+  const isCancellationStageActive = Number(activeStageId) === 12;
 
   const visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")

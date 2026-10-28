@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { Form, DatePicker } from "antd";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -60,6 +60,22 @@ const SELECTION_TYPES = [
   "single_select_checkbox",
   "multi_select_checkbox",
 ];
+
+/* ─────────── Frequency code helpers (labels in DB → codes for API) ─────────── */
+const FREQUENCY_CODE_BY_LABEL = {
+  monthly: "M",
+  quarterly: "Q",
+  "half-yearly": "H",
+  yearly: "Y",
+};
+const VALID_FREQ_CODES = new Set(["M", "Q", "H", "Y"]);
+
+const toFrequencyCode = (value) => {
+  if (!value) return "";
+  const v = String(value).trim();
+  if (VALID_FREQ_CODES.has(v.toUpperCase())) return v.toUpperCase();
+  return FREQUENCY_CODE_BY_LABEL[v.toLowerCase()] || "";
+};
 
 const getProcessValue = (processData = [], key) => {
   if (Array.isArray(processData)) {
@@ -276,7 +292,6 @@ const buildChecklistPayload = (structure, answers) => {
     question.data_cells?.[String(columnId)] ??
     null;
 
-  // Find the data column header by id (data_columns are the response fields)
   const getColumnName = (columnId) => {
     const col = data_columns.find(
       (c) => c.id === columnId || String(c.id) === String(columnId)
@@ -284,7 +299,6 @@ const buildChecklistPayload = (structure, answers) => {
     return col?.column_header || "";
   };
 
-  // Turn an option id (or array of ids) into its display label(s)
   const resolveOptionValue = (question, columnId, rawValue) => {
     const cell = getCell(question, columnId);
     const options = cell?.options || [];
@@ -300,7 +314,6 @@ const buildChecklistPayload = (structure, answers) => {
     checklist_name,
     include_serial_number,
     questions: questions.map((question) => {
-      // question text keyed by question column id (supports multiple columns)
       const questionObj = {};
       question_columns.forEach((col) => {
         const v =
@@ -339,7 +352,6 @@ const buildChecklistPayload = (structure, answers) => {
       };
     }),
 
-    // note travels inside checklist_config, under `notes`
     notes: {
       heading: notes?.heading?.trim() || "",
       include_serial_number: notes?.include_serial_number !== false,
@@ -392,12 +404,36 @@ const PreventiveMaintenancePanel = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { recordId } = useParams();
+  const location = useLocation();
+  const passedFrequency = location.state?.preventiveFrequency || "";
+  const passedFrequencyCode = location.state?.preventiveFrequencyCode || "";
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "" });
   const hasHydratedChecklistRef = useRef(false);
 
-  const equipmentId = Form.useWatch("equipmentInstrumentName", form);
-  const preventiveFrequency = Form.useWatch("preventiveFrequency", form);
+  const equipmentNameWatch = Form.useWatch("equipmentInstrumentName", form);
+  const preventiveFreqWatch = Form.useWatch("preventiveFrequency", form);
+
+  // Resolve the equipment object from the map — matches by instrument_name
+  // first, then by numeric id (covers legacy records that stored the id).
+  const equipmentObj =
+    equipmentMap[equipmentNameWatch] ||
+    Object.values(equipmentMap).find(
+      (eq) =>
+        String(eq?.id) === String(equipmentNameWatch) ||
+        String(eq?.instrument_id_no) === String(equipmentNameWatch)
+    ) ||
+    null;
+
+  // The API expects the numeric DB id — never a string code like "INST-PRS-001".
+  const equipmentIdForApi =
+    equipmentObj?.id ||
+    location.state?.rowData?.equipmentDbId ||
+    "";
+
+  const frequencyLabel = preventiveFreqWatch || passedFrequency || "";
+  const frequencyCodeForApi =
+    passedFrequencyCode || toFrequencyCode(frequencyLabel);
 
   useEffect(() => {
     equipmentMapRef.current = equipmentMap;
@@ -428,10 +464,46 @@ const PreventiveMaintenancePanel = () => {
     fetchProfile();
   }, []);
 
-  // ── Fetch equipment master checklist when the Checklist tab opens ──
+  // ── Fetch equipment master (feeds the disabled Select + id lookup) ──
   useEffect(() => {
-    if (activeTab !== "checklist") return;
-    if (!equipmentId || !preventiveFrequency) {
+    const fetchEquipment = async () => {
+      try {
+        setEquipmentLoading(true);
+        const response = await getAllEquipmentData();
+        const data = response?.data?.data || [];
+        setEquipmentOptions(
+          data.map((item) => ({
+            value: item.instrument_name,
+            label: item.instrument_name,
+          }))
+        );
+        const map = {};
+        data.forEach((item) => {
+          map[item.instrument_name] = item;
+        });
+        setEquipmentMap(map);
+      } catch (error) {
+        console.error("Failed to fetch equipment:", error);
+      } finally {
+        setEquipmentLoading(false);
+      }
+    };
+    fetchEquipment();
+  }, []);
+
+  // ── Fetch equipment master checklist as soon as id + frequency resolve ──
+  // NOTE: fires without waiting for the user to click the "Checklist" tab,
+  // so the data is already cached the first time they open it.
+  useEffect(() => {
+    console.log("[CHECKLIST GATE]", {
+      equipmentNameWatch,
+      equipmentIdForApi,
+      frequencyLabel,
+      frequencyCodeForApi,
+      willCallApi: !!equipmentIdForApi && !!frequencyCodeForApi,
+    });
+
+    if (!equipmentIdForApi || !frequencyCodeForApi) {
       setChecklistData(null);
       return;
     }
@@ -441,14 +513,17 @@ const PreventiveMaintenancePanel = () => {
     const fetchChecklist = async () => {
       try {
         setChecklistLoading(true);
+        console.log(
+          "[CHECKLIST API] GET /user/equipment-master-checklist/",
+          equipmentIdForApi,
+          frequencyCodeForApi
+        );
         const response = await getEquipmentMasterChecklist(
-          equipmentId,
-          preventiveFrequency
+          equipmentIdForApi,
+          frequencyCodeForApi
         );
         if (cancelled) return;
         setChecklistData(response?.data?.data || null);
-        // note: no longer resets checklistAnswers to {} — the hydration
-        // effect below decides whether to prefill or keep current edits
       } catch (error) {
         if (cancelled) return;
         console.error("Failed to fetch equipment checklist:", error);
@@ -465,7 +540,7 @@ const PreventiveMaintenancePanel = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, equipmentId, preventiveFrequency]);
+  }, [equipmentIdForApi, frequencyCodeForApi, equipmentNameWatch, frequencyLabel]);
 
   // ── Once master is loaded AND saved answers exist, hydrate once ──
   useEffect(() => {
@@ -583,7 +658,6 @@ const PreventiveMaintenancePanel = () => {
           processDateOfInitiation || responseData?.initiation_date || ""
         );
 
-        // ── saved checklist from the API response ──
         const savedChecklist =
           responseData?.checklist_records?.[0]?.checklist_data || null;
         setSavedChecklistRaw(savedChecklist);
@@ -593,16 +667,19 @@ const PreventiveMaintenancePanel = () => {
           shortDescription: shortDescription || "",
         };
 
-        // Resolve equipment name → id for the disabled Select
         const currentEquipmentMap = equipmentMapRef.current;
         let equipmentValue = equipmentName || undefined;
-        if (equipmentName && currentEquipmentMap[equipmentName]) {
-          equipmentValue = equipmentName;
-        } else if (equipmentName) {
+        if (equipmentName && !currentEquipmentMap[equipmentName]) {
           const found = Object.values(currentEquipmentMap).find(
-            (eq) => eq.name === equipmentName
+            (eq) =>
+              eq.instrument_name === equipmentName ||
+              eq.name === equipmentName ||
+              String(eq.id) === String(equipmentName)
           );
-          if (found) equipmentValue = found.id;
+          if (found) {
+            equipmentValue =
+              found.instrument_name ?? found.name ?? equipmentName;
+          }
         }
 
         form.setFieldsValue({
@@ -768,11 +845,6 @@ const PreventiveMaintenancePanel = () => {
       label: "Record Number",
       value: form.getFieldValue("recordNumber") || "",
     },
-    // {
-    //   name: "siteLocationCode",
-    //   label: "Site / Location Code",
-    //   value: form.getFieldValue("siteLocationCode") || "",
-    // },
     { name: "initiator", label: "Initiator", value: initiator },
     {
       name: "dateOfInitiation",
@@ -789,7 +861,6 @@ const PreventiveMaintenancePanel = () => {
   const handleSave = async () => {
     if (isSaving || isLoading) return;
 
-    // 1) Standard form validation
     const missingFields = validatePreventiveMaintenceForm(
       form,
       requiredValuesRef.current
@@ -809,7 +880,6 @@ const PreventiveMaintenancePanel = () => {
       return;
     }
 
-    // 2) Checklist required-field validation
     if (checklistData) {
       const missingChecklist = getEmptyChecklistFields(
         checklistData,
@@ -834,7 +904,6 @@ const PreventiveMaintenancePanel = () => {
       }
     }
 
-    // 3) All good — submit
     form.submit();
   };
 
@@ -914,6 +983,28 @@ const PreventiveMaintenancePanel = () => {
     if (isSaving) return;
     navigate(-1);
   };
+
+  // Seed form fields from the parent grid row + nav state.
+  useEffect(() => {
+    if (isLoading) return;
+
+    const setIfEmpty = (field, value) => {
+      if (value === undefined || value === null || value === "") return;
+      if (form.getFieldValue(field)) return;
+      form.setFieldValue(field, value);
+    };
+
+    const rowData = location.state?.rowData;
+
+    if (rowData) {
+      setIfEmpty("equipmentInstrumentName", rowData.equipmentInstrumentName);
+      setIfEmpty("equipmentInstrumentId", rowData.equipmentInstrumentId);
+      setIfEmpty("location", rowData.location);
+      setIfEmpty("remark", rowData.remark);
+    }
+
+    setIfEmpty("preventiveFrequency", passedFrequency);
+  }, [isLoading, location.state, passedFrequency, form]);
 
   if (isLoading) {
     return (
@@ -1217,10 +1308,10 @@ const PreventiveMaintenancePanel = () => {
               <Skeleton variant="form" fields={5} />
             ) : !checklistData ? (
               <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
-                {!equipmentId
+                {!equipmentIdForApi
                   ? "No equipment associated with this record."
-                  : !preventiveFrequency
-                  ? "No frequency was saved on this record."
+                  : !frequencyCodeForApi
+                  ? "No frequency was found on this record."
                   : "No checklist found for this equipment and frequency."}
               </div>
             ) : (

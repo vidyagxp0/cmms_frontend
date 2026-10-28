@@ -47,13 +47,14 @@ const PreventiveMaintenanceCreate = () => {
     shortDescription: parentShortDescription = "",
     processId: stateProcessId,
     parentId: stateParentId,
+    preventiveFrequency: passedFrequency = "",           // ← from parent
+    preventiveFrequencyCode: passedFrequencyCode = "",   // ← from parent (unused here, kept for debug)
   } = state;
 
   const routeProcessId = params.processId || stateProcessId || null;
   const routeParentId =
     params.parentId || params.recordId || stateParentId || null;
 
-    console.log(rowData,"rowData>>>>")
   const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState("general");
   const [isLoading, setIsLoading] = useState(true);
@@ -69,15 +70,15 @@ const PreventiveMaintenanceCreate = () => {
   const [dateOfInitiation] = useState(() => formatDateTime(new Date()));
 
   // Prefill sources from the parent row
-  const rowEquipmentId = rowData?.equipmentInstrumentName || "";
-  const rowEquipmentCode = rowData?.equipmentInstrumentId || "";
+  const rowEquipmentName = rowData?.equipmentInstrumentName || "";   // instrument_name string
+  const rowEquipmentDbId = rowData?.equipmentDbId || "";             // numeric id (if present)
+  const rowEquipmentCode = rowData?.equipmentInstrumentId || "";     // "INST-PRS-001"
   const rowBlock = rowData?.block || "";
   const rowDepartment = rowData?.department || "";
   const rowLocation = rowData?.location || "";
   const rowPrevDate = rowData?.previousPreventiveDate || "";
   const rowNextDate = rowData?.nextPreventiveDate || "";
   const rowRemark = rowData?.remark || "";
-  const rowPreventiveFrequency = rowData?.preventiveFrequency || "";
 
   useEffect(() => {
     let isMounted = true;
@@ -120,38 +121,56 @@ const PreventiveMaintenanceCreate = () => {
 
         if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
           equipmentData = equipmentRes.value.data.data || [];
+
+          // ── FIX 1: options use instrument_name (what the API actually returns) ──
           const options = equipmentData.map((item) => ({
-            value: item.id,
-            label: item.name,
+            value: item.instrument_name,
+            label: item.instrument_name,
           }));
           equipmentData.forEach((item) => {
-            map[item.id] = item;
+            map[item.instrument_name] = item;
           });
+
           setEquipmentOptions(options);
           setEquipmentMap(map);
         } else if (equipmentRes.status === "rejected") {
           console.error("Failed to fetch equipment:", equipmentRes.reason);
         }
 
-        let equipmentValue = rowEquipmentId;
-        if (rowEquipmentId && map[rowEquipmentId]) {
-          equipmentValue = rowEquipmentId;
-        } else if (rowEquipmentId) {
+        // ── FIX 2: resolve instrument_name from whatever the parent passed ──
+        // Parent sends rowData.equipmentInstrumentName = instrument_name.
+        // Fallback to numeric id / instrument_id_no / rowData.equipmentDbId
+        // so legacy or partial data still resolves.
+        let equipmentValue = "";
+        if (rowEquipmentName && map[rowEquipmentName]) {
+          equipmentValue = rowEquipmentName;
+        } else if (rowEquipmentName) {
           const found = equipmentData.find(
-            (item) => item.name === rowEquipmentId
+            (item) =>
+              String(item.id) === String(rowEquipmentName) ||
+              String(item.id) === String(rowEquipmentDbId) ||
+              item.instrument_id_no === rowEquipmentName ||
+              item.instrument_id_no === rowEquipmentCode
           );
-          if (found) equipmentValue = found.id;
+          if (found) equipmentValue = found.instrument_name;
+        } else if (rowEquipmentDbId) {
+          const found = equipmentData.find(
+            (item) => String(item.id) === String(rowEquipmentDbId)
+          );
+          if (found) equipmentValue = found.instrument_name;
         }
 
         form.setFieldsValue({
           recordNumber: generatedRecordNumber,
-          // siteLocationCode: "Unit IV",
           initiator: userName,
           dateOfInitiation,
           initiationDepartment: departmentName,
           shortDescription: parentShortDescription || "",
           equipmentInstrumentName: equipmentValue || undefined,
-          equipmentInstrumentId: rowEquipmentCode,
+          equipmentInstrumentId:
+            rowEquipmentCode ||
+            map[equipmentValue]?.instrument_id_no ||
+            "",
           block: rowBlock,
           department: rowDepartment,
           location: rowLocation,
@@ -163,7 +182,8 @@ const PreventiveMaintenanceCreate = () => {
           engineerReviewAttachment: [],
           qaApprovalComments: "",
           qaApprovalAttachment: [],
-          preventiveFrequency: rowPreventiveFrequency || "",
+          // ── FIX 3: read frequency from location.state, not rowData ──
+          preventiveFrequency: passedFrequency || "",
         });
       } catch (error) {
         console.error("Error loading initial data:", error);
@@ -181,11 +201,10 @@ const PreventiveMaintenanceCreate = () => {
       isMounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeProcessId, form, dateOfInitiation]);
+  }, [routeProcessId, form, dateOfInitiation, passedFrequency]);
 
   const systemFields = [
     { name: "recordNumber", label: "Record Number" },
-    // { name: "siteLocationCode", label: "Site / Location Code" },
     { name: "initiator", label: "Initiator" },
     { name: "dateOfInitiation", label: "Date of Initiation" },
     { name: "initiationDepartment", label: "Initiation Department" },
@@ -256,10 +275,10 @@ const PreventiveMaintenanceCreate = () => {
       value: values?.qaApprovalAttachment || [],
     },
     {
-  key: "preventive_frequency",
-  label: "Preventive Frequency",
-  value: values?.preventiveFrequency || "",
-},
+      key: "preventive_frequency",
+      label: "Preventive Frequency",
+      value: values?.preventiveFrequency || "",
+    },
   ];
 
   const validateCalibrationForm = (formInstance) => {
@@ -271,7 +290,6 @@ const PreventiveMaintenanceCreate = () => {
     });
   };
 
-  // Only General Information tab is accessible on this create screen.
   const handleTabChange = (tabId) => {
     if (tabId !== "general") {
       toast.warning(
@@ -310,7 +328,6 @@ const PreventiveMaintenanceCreate = () => {
 
       const payload = {
         process_id: Number(routeProcessId),
-        // TODO: replace 12 with the actual initial stage id of child process 4
         stage_id: 13,
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
@@ -377,12 +394,6 @@ const PreventiveMaintenanceCreate = () => {
         </div>
 
         <div className="flex items-center gap-8 border-l border-slate-200 pl-6">
-          {/* <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">
-              Site
-            </p>
-            <p className="text-sm font-semibold text-[#344A43]">Unit IV</p>
-          </div> */}
           <div className="h-9 w-px bg-slate-200" />
           <div>
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">
@@ -410,7 +421,6 @@ const PreventiveMaintenanceCreate = () => {
         onFinish={handleSubmit}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
-        {/* General Information */}
         {activeTab === "general" && (
           <section>
             <SectionHeader title="GENERAL INFORMATION" />
@@ -507,21 +517,21 @@ const PreventiveMaintenanceCreate = () => {
               </Form.Item>
 
               <Form.Item
-              name="preventiveFrequency"
-              label="Preventive Frequency"
-              className="!mb-4"
-            >
-              <FormSelect
-                placeholder="—"
-                options={[
-                  { value: "monthly", label: "Monthly" },
-                  { value: "quarterly", label: "Quarterly" },
-                  { value: "half-yearly", label: "Half Yearly" },
-                  { value: "yearly", label: "Yearly" },
-                ]}
-                disabled
-              />
-            </Form.Item>
+                name="preventiveFrequency"
+                label="Preventive Frequency"
+                className="!mb-4"
+              >
+                <FormSelect
+                  placeholder="—"
+                  options={[
+                    { value: "monthly", label: "Monthly" },
+                    { value: "quarterly", label: "Quarterly" },
+                    { value: "half-yearly", label: "Half Yearly" },
+                    { value: "yearly", label: "Yearly" },
+                  ]}
+                  disabled
+                />
+              </Form.Item>
             </div>
 
             <Form.Item name="remark" label="Remark" className="!mb-4 md:col-span-2">
@@ -534,14 +544,11 @@ const PreventiveMaintenanceCreate = () => {
               valuePropName="value"
               className="!mb-4 md:col-span-2"
             >
-              <FormAttachment
-                  disabled
-              />
+              <FormAttachment disabled />
             </Form.Item>
           </section>
         )}
 
-        {/* Review By Engineer Dept */}
         {activeTab === "engineer-review" && (
           <section>
             <SectionHeader title="REVIEW BY ENGINEER DEPT" />
@@ -560,15 +567,12 @@ const PreventiveMaintenanceCreate = () => {
                 valuePropName="value"
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment
-                    disabled
-                />
+                <FormAttachment disabled />
               </Form.Item>
             </div>
           </section>
         )}
 
-        {/* QA Approval */}
         {activeTab === "qa-approval" && (
           <section>
             <SectionHeader title="QA APPROVAL" />
@@ -587,9 +591,7 @@ const PreventiveMaintenanceCreate = () => {
                 valuePropName="value"
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment
-                  disabled
-                />
+                <FormAttachment disabled />
               </Form.Item>
             </div>
           </section>

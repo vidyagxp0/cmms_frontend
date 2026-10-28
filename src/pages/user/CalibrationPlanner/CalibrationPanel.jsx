@@ -112,7 +112,7 @@ const CreateCalibrationPanel = () => {
   const [usersLoading, setUsersLoading] = useState(true);
   const [workflowLoading, setWorkflowLoading] = useState(true);
   const [workflowStages, setWorkflowStages] = useState([]);
-  const [processId, setProcessId] = useState(null);
+  const [processId, setProcessId] = useState(1);
   const [activeStageId, setActiveStageId] = useState(null);
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);

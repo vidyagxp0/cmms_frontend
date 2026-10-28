@@ -54,7 +54,7 @@ const TABS = [
   { id: "cancellation", label: "Cancellation", stageId: 49 },
 ];
 
-const MASTER_INSTRUMENT_PROCESS_ID = 3;
+const MASTER_INSTRUMENT_PROCESS_ID = 9;
 
 const EMPTY_CHECKLIST = {
   checklist_name: "",

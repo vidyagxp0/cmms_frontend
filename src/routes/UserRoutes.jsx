@@ -86,9 +86,9 @@ function UserRoutes() {
         <Route path="preventive-maintenance-dashboard" element={<PreventiveMaintenanceDashboard />} />
         <Route path="preventive-maintenance-audit/:recordId" element={<PreventiveMaintenanceAudit />} />
         <Route path="preventive-maintenance-planner-create/:processId" element={<PreventivePlannerCreate />} />
-        <Route path="preventive-maintenance-planner-panel/:processId/:recordId" element={<PreventivePlannerPanel />} />
+        <Route path="preventive-maintenance-planner-panel/:recordId" element={<PreventivePlannerPanel />} />
         <Route path="preventive-maintenance-create/:processId/:recordId" element={<PreventiveMaintenanceCreate  />} />
-        <Route path="preventive-maintenance-panel/:processId/:recordId" element={<PreventiveMaintenancePanel  />} />
+        <Route path="preventive-maintenance-panel/:recordId" element={<PreventiveMaintenancePanel  />} />
 
                 {/* Field Instrument Planner Routes*/}
         <Route path="field-instrument-planner-dashboard" element={<FieldInstrumentPlannerDashboard />} />

@@ -396,7 +396,7 @@ const PreventivePlannerDashboard = () => {
                             }
 
                             navigate(
-                                `/user/preventive-maintenance-planner-panel/${7}/${record.id}`
+                                `/user/preventive-maintenance-planner-panel/${record.id}`
                             );
                         };
 

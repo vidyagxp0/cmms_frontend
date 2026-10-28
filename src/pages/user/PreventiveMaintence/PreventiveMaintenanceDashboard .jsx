@@ -400,7 +400,7 @@ const PreventiveMaintenanceDashboard = () => {
                             }
 
                             navigate(
-                                `/user/preventive-maintenance-panel/4/${record.id}`
+                                `/user/preventive-maintenance-panel/${record.id}`
                             );
                         };
 

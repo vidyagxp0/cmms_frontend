@@ -19,6 +19,7 @@ import {
 import { formatBytes } from "../utils/excelImportUtils";
 import { toast } from "sonner";
 import api from "../../../../services/api";
+import { useNavigate } from "react-router-dom";
 
 const { Dragger } = Upload;
 
@@ -71,6 +72,23 @@ export default function EquipmentImportPanel({
   const [importErrors, setImportErrors] = useState([]);
   const pollingRef = useRef(false);
   const timerRef = useRef(null);
+
+  const navigate = useNavigate();
+
+const dashboardRoutes = {
+  master_instrument: "/user/equipment-dashboard",
+  field_instrument_master: "/user/field-instruments-dashboard",
+  spare_instrument_master:
+    "/user/spare-instrument-calibration-master-dashboard",
+};
+
+const navigateToDashboard = () => {
+  const dashboardRoute = dashboardRoutes[masterKey];
+
+  if (dashboardRoute) {
+    navigate(dashboardRoute, { replace: true });
+  }
+};
 
   // Reset selected file and related state.
   const reset = () => {
@@ -154,19 +172,23 @@ export default function EquipmentImportPanel({
       setImportProgress(data);
       setImportErrors(Array.isArray(data.errors) ? data.errors : []);
 
+
       if (["completed", "failed"].includes(data.status)) {
-        pollingRef.current = false;
-        clearTimeout(timerRef.current);
-        setImporting(false);
+  pollingRef.current = false;
+  clearTimeout(timerRef.current);
+  setImporting(false);
 
-        if (data.status === "completed") {
-          toast.success("Excel import completed successfully.");
-        } else {
-          toast.error("Excel import failed. Check the import errors.");
-        }
+  if (data.status === "completed") {
+    toast.success("Excel import completed successfully.");
 
-        return;
-      }
+    // Navigate only after the import is completed successfully.
+    navigateToDashboard();
+  } else {
+    toast.error("Excel import failed. Check the import errors.");
+  }
+
+  return;
+}
 
       timerRef.current = setTimeout(() => {
         checkImportStatus(importId);
@@ -223,16 +245,18 @@ export default function EquipmentImportPanel({
 
       const importId = result?.data?.import_id;
 
-      if (!importId) {
-        setImporting(false);
-        setConfirmOpen(false);
+if (!importId) {
+  setImporting(false);
+  setConfirmOpen(false);
 
-        toast.success(
-          result.message || "Import request submitted successfully.",
-        );
+  toast.success(
+    result.message || "Import request submitted successfully.",
+  );
 
-        return;
-      }
+  navigateToDashboard();
+
+  return;
+}
 
       setConfirmOpen(false);
       setImportProgress(result.data);

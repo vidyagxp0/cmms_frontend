@@ -22,7 +22,6 @@ const equipmentMasterOptions = [
 const steps = [
   { icon: <DatabaseOutlined />, title: "Select master", text: "Choose the data type" },
   { icon: <CloudUploadOutlined />, title: "Upload file", text: "Add your Excel sheet" },
-  { icon: <CheckCircleOutlined />, title: "Import & track", text: "Monitor live progress" },
 ];
 
 export default function ImportMasterEquipmentData() {

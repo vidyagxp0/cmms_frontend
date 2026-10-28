@@ -392,8 +392,8 @@ const EquipDashboard = () => {
                             allowClear
                             style={{
                                 width: "140px",
-                                minWidth: "140px",
-                                maxWidth: "140px",
+                                minWidth: "300px",
+                                maxWidth: "300px",
                                 flex: "0 0 140px",
                                 height: "30px",
                                 fontSize: "12px",

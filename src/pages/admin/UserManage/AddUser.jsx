@@ -110,10 +110,10 @@ const AddUser = () => {
         if (!form.email.trim()) nextErrors.email = "Email is required.";
       
         if (!form.mobile_no.trim()) {
-  nextErrors.mobile_no = "Mobile number is required.";
-} else if (!/^\d{10}$/.test(form.mobile_no)) {
-  nextErrors.mobile_no = "Enter exactly 10 digits.";
-}
+        nextErrors.mobile_no = "Mobile number is required.";
+        } else if (!/^\d{10}$/.test(form.mobile_no)) {
+        nextErrors.mobile_no = "Enter exactly 10 digits.";
+        }
 
         if (!form.password)
             nextErrors.password = "Password is required.";

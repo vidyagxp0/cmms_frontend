@@ -229,6 +229,11 @@ const FIeldInstrumentsPanel = () => {
   const [userRoles, setUserRoles] = useState([]);
   const [processName, setProcessName] = useState("Field Instrument");
 
+  /* ── NEW: track is_imported from getFieldInstrumentDetail ── */
+  const [isImported, setIsImported] = useState(false);
+  const isImportedRef = useRef(false);
+  /* ────────────────────────────────────────────────────────── */
+
   const isFetchingRef = useRef(false);
 
   /* ───────── Stage-based editability ───────── */
@@ -280,6 +285,15 @@ const FIeldInstrumentsPanel = () => {
           navigate(-1);
           return;
         }
+
+        /* ── NEW: capture is_imported before any downstream effect runs ── */
+        const imported =
+          data.is_imported === 1 ||
+          data.is_imported === true ||
+          data.is_imported === "1";
+        isImportedRef.current = imported;
+        setIsImported(imported);
+        /* ─────────────────────────────────────────────────────────────── */
 
         form.setFieldsValue({
           equipment_name:
@@ -420,6 +434,15 @@ const FIeldInstrumentsPanel = () => {
 
   /* ───────── Activity logs ───────── */
   const fetchActivityLogs = useCallback(async () => {
+    /* ── NEW: wait for detail to settle, then skip if imported ── */
+    if (isLoading) return;
+    if (isImportedRef.current) {
+      setActivityLogs([]);
+      setActivityLogsLoading(false);
+      return;
+    }
+    /* ─────────────────────────────────────────────────────────── */
+
     if (!id) {
       setActivityLogs([]);
       return;
@@ -437,7 +460,7 @@ const FIeldInstrumentsPanel = () => {
     } finally {
       setActivityLogsLoading(false);
     }
-  }, [id, processId]);
+  }, [id, processId, isLoading]);
 
   useEffect(() => {
     fetchActivityLogs();
@@ -446,6 +469,11 @@ const FIeldInstrumentsPanel = () => {
   /* ───────── Auto-switch tab based on active stage ───────── */
   useEffect(() => {
     if (!activeStageId) return;
+
+    /* ── NEW: don't auto-select the Activity tab (stage 31) when imported ── */
+    if (isImportedRef.current && Number(activeStageId) === 31) return;
+    /* ────────────────────────────────────────────────────────────────────── */
+
     const matchingTab = TABS.find(
       (tab) => Number(tab.stageId) === Number(activeStageId)
     );
@@ -640,9 +668,16 @@ const FIeldInstrumentsPanel = () => {
 
   /* ───────── Visible tabs (hide cancellation unless on its stage) ───────── */
   const isCancellationStageActive = Number(activeStageId) === 86;
-  const visibleTabs = isCancellationStageActive
+
+  let visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")
     : TABS.filter((tab) => tab.id !== "cancellation");
+
+  /* ── NEW: hide Activity Log tab when the record is imported ── */
+  if (isImported) {
+    visibleTabs = visibleTabs.filter((tab) => tab.id !== "activity");
+  }
+  /* ──────────────────────────────────────────────────────────────── */
 
   /* ───────── Loading state (matches Calibration panel) ───────── */
   if (isLoading) {

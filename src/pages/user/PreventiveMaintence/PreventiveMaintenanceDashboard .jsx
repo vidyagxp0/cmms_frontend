@@ -1,23 +1,27 @@
-import React, {
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
-
-import { Eye } from "lucide-react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { Eye, Search, Filter } from "lucide-react";
+import { Input, Select, Button, DatePicker } from "antd";
+import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
 import DataTable from "../../../components/common/DataTable/DataTable";
 
 import {
-    getCalibrationSingleReport,
-} from "../../../services/usersApi/calibrationApi";
-
-import {
     getAllPreventiveManagementRecords,
 } from "../../../services/usersApi/dashboardAllApi";
 import { getPreventiveMaintenanceSingleReport } from "../../../services/usersApi/preventive";
+
+const { RangePicker } = DatePicker;
+
+// 🔥 STATIC STAGES FROM IMAGE
+const STAGE_OPTIONS = [
+    { label: "Opened", value: "Opened" },
+    { label: "Engineering Department Review", value: "Engineering Department Review" },
+    { label: "Pending QA Approval", value: "Pending QA Approval" },
+    { label: "Closed - Done", value: "Closed - Done" },
+    { label: "Close - Cancelled", value: "Close - Cancelled" },
+];
 
 const PreventiveMaintenanceDashboard = () => {
     const navigate = useNavigate();
@@ -36,55 +40,48 @@ const PreventiveMaintenanceDashboard = () => {
     });
 
     // =========================================================
+    // FILTER STATE
+    // =========================================================
+    const [searchTerm, setSearchTerm] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const [dateRange, setDateRange] = useState(null); // [start_date, end_date]
+
+    // Debounce search
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 400);
+        return () => clearTimeout(t);
+    }, [searchTerm]);
+
+    // =========================================================
     // FETCH RECORDS
     // =========================================================
-    const fetchRecords = async (
-        page = 1,
-        perPage = 10
-    ) => {
+    const fetchRecords = useCallback(async (page = 1, perPage = 10, filters = {}) => {
         try {
             setLoading(true);
 
-            const response =
-                await getAllPreventiveManagementRecords({
-                    page,
-                    per_page: perPage,
-                });
+            const params = { page, per_page: perPage };
+            if (filters.search)     params.search     = filters.search;
+            if (filters.status)     params.status     = filters.status;
+            if (filters.start_date) params.start_date = filters.start_date;
+            if (filters.end_date)   params.end_date   = filters.end_date;
 
-            const paginationData =
-                response?.data?.data;
+            const response = await getAllPreventiveManagementRecords(params);
 
-            const recordsData =
-                paginationData?.data || [];
+            const paginationData = response?.data?.data;
+            const recordsData = paginationData?.data || [];
 
-            setRecords(
-                Array.isArray(recordsData)
-                    ? recordsData
-                    : []
-            );
+            setRecords(Array.isArray(recordsData) ? recordsData : []);
 
             setPagination({
-                currentPage:
-                    paginationData?.current_page ||
-                    page,
-                lastPage:
-                    paginationData?.last_page ||
-                    1,
-                perPage:
-                    paginationData?.per_page ||
-                    perPage,
-                total:
-                    paginationData?.total ||
-                    0,
+                currentPage: paginationData?.current_page || page,
+                lastPage: paginationData?.last_page || 1,
+                perPage: paginationData?.per_page || perPage,
+                total: paginationData?.total || 0,
             });
         } catch (error) {
-            console.error(
-                "Failed to fetch preventive maintenance records:",
-                error
-            );
-
+            console.error("Failed to fetch preventive maintenance records:", error);
             setRecords([]);
-
             setPagination({
                 currentPage: 1,
                 lastPage: 1,
@@ -94,26 +91,28 @@ const PreventiveMaintenanceDashboard = () => {
         } finally {
             setLoading(false);
         }
-    };
-
-    useEffect(() => {
-        fetchRecords(1, 10);
     }, []);
+
+    // Trigger fetch on filters change
+    useEffect(() => {
+        fetchRecords(1, pagination.perPage, {
+            search: debouncedSearch,
+            status: statusFilter,
+            start_date: dateRange?.[0] || "",
+            end_date: dateRange?.[1] || "",
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedSearch, statusFilter, dateRange, fetchRecords]);
 
     // =========================================================
     // VIEW REPORT
     // =========================================================
     const handleViewReport = async (recordId) => {
-        const reportWindow = window.open(
-            "",
-            "_blank"
-        );
+        const reportWindow = window.open("", "_blank");
 
         try {
             if (!reportWindow) {
-                alert(
-                    "Please allow pop-ups to view the report."
-                );
+                alert("Please allow pop-ups to view the report.");
                 return;
             }
 
@@ -122,101 +121,32 @@ const PreventiveMaintenanceDashboard = () => {
                 <html>
                 <head>
                     <title>Loading Report...</title>
-
                     <style>
-                        * {
-                            box-sizing: border-box;
-                        }
-
-                        html,
-                        body {
-                            margin: 0;
-                            padding: 0;
-                            width: 100%;
-                            height: 100%;
-                        }
-
-                        body {
-                            overflow: hidden;
-                            font-family: Arial, sans-serif;
-                            background: #FBFCFA;
-                        }
-
+                        * { box-sizing: border-box; }
+                        html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+                        body { overflow: hidden; font-family: Arial, sans-serif; background: #FBFCFA; }
                         .loader {
-                            position: fixed;
-                            inset: 0;
-                            z-index: 9999;
-
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-
+                            position: fixed; inset: 0; z-index: 9999;
+                            display: flex; align-items: center; justify-content: center;
                             background: #FBFCFA;
                         }
-
-                        .loader-content {
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                        }
-
-                        .logo {
-                            margin-bottom: 24px;
-                            height: 56px;
-                            width: auto;
-                            object-fit: contain;
-                        }
-
+                        .loader-content { display: flex; flex-direction: column; align-items: center; }
+                        .logo { margin-bottom: 24px; height: 56px; width: auto; object-fit: contain; }
                         .spinner {
-                            width: 32px;
-                            height: 32px;
-
-                            border: 2px solid #D9E4DF;
-                            border-top-color: #244F4A;
-
-                            border-radius: 50%;
-
-                            animation:
-                                spin 0.8s linear infinite;
+                            width: 32px; height: 32px;
+                            border: 2px solid #D9E4DF; border-top-color: #244F4A;
+                            border-radius: 50%; animation: spin 0.8s linear infinite;
                         }
-
-                        .text {
-                            margin-top: 16px;
-
-                            font-size: 12px;
-                            font-weight: 500;
-
-                            color: #7A8B84;
-                        }
-
-                        @keyframes spin {
-                            from {
-                                transform: rotate(0deg);
-                            }
-
-                            to {
-                                transform: rotate(360deg);
-                            }
-                        }
+                        .text { margin-top: 16px; font-size: 12px; font-weight: 500; color: #7A8B84; }
+                        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                     </style>
                 </head>
-
                 <body>
                     <div class="loader">
                         <div class="loader-content">
-
-                            <img
-                                src="/vidyagxp_logo.png"
-                                alt="VidyaGxP"
-                                class="logo"
-                            />
-
+                            <img src="/vidyagxp_logo.png" alt="VidyaGxP" class="logo" />
                             <div class="spinner"></div>
-
-                            <p class="text">
-                                Loading your workspace...
-                            </p>
-
+                            <p class="text">Loading your workspace...</p>
                         </div>
                     </div>
                 </body>
@@ -225,95 +155,41 @@ const PreventiveMaintenanceDashboard = () => {
 
             reportWindow.document.close();
 
-            const response =
-                await getPreventiveMaintenanceSingleReport(
-                    recordId
-                );
+            const response = await getPreventiveMaintenanceSingleReport(recordId);
 
-            const blob = new Blob(
-                [response.data],
-                {
-                    type: "application/pdf",
-                }
-            );
-
-            const pdfUrl =
-                window.URL.createObjectURL(blob);
+            const blob = new Blob([response.data], { type: "application/pdf" });
+            const pdfUrl = window.URL.createObjectURL(blob);
 
             reportWindow.location.href = pdfUrl;
 
             setTimeout(() => {
-                window.URL.revokeObjectURL(
-                    pdfUrl
-                );
+                window.URL.revokeObjectURL(pdfUrl);
             }, 10000);
         } catch (error) {
-            console.error(
-                "Failed to open preventive maintenance report:",
-                error
-            );
+            console.error("Failed to open preventive maintenance report:", error);
 
-            if (
-                reportWindow &&
-                !reportWindow.closed
-            ) {
+            if (reportWindow && !reportWindow.closed) {
                 reportWindow.document.open();
-
                 reportWindow.document.write(`
                     <!DOCTYPE html>
                     <html>
                     <head>
                         <title>Report Error</title>
-
                         <style>
-                            body {
-                                margin: 0;
-                                height: 100vh;
-
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-
-                                font-family:
-                                    Arial, sans-serif;
-
-                                background: #FBFCFA;
-                            }
-
-                            .error {
-                                text-align: center;
-                            }
-
-                            .error-title {
-                                font-size: 16px;
-                                font-weight: 600;
-                                color: #B83E43;
-                            }
-
-                            .error-message {
-                                margin-top: 8px;
-                                font-size: 12px;
-                                color: #7A8B84;
-                            }
+                            body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; background: #FBFCFA; }
+                            .error { text-align: center; }
+                            .error-title { font-size: 16px; font-weight: 600; color: #B83E43; }
+                            .error-message { margin-top: 8px; font-size: 12px; color: #7A8B84; }
                         </style>
                     </head>
-
                     <body>
                         <div class="error">
-
-                            <div class="error-title">
-                                Failed to generate report
-                            </div>
-
-                            <div class="error-message">
-                                Please close this tab and try again.
-                            </div>
-
+                            <div class="error-title">Failed to generate report</div>
+                            <div class="error-message">Please close this tab and try again.</div>
                         </div>
                     </body>
                     </html>
                 `);
-
                 reportWindow.document.close();
             }
         }
@@ -322,50 +198,20 @@ const PreventiveMaintenanceDashboard = () => {
     // =========================================================
     // PROCESS DATA HELPER
     // =========================================================
-    const getProcessValue = (
-        record,
-        key
-    ) => {
-        const processData =
-            record?.process_data;
+    const getProcessValue = (record, key) => {
+        const processData = record?.process_data;
 
         if (Array.isArray(processData)) {
-            const field =
-                processData.find(
-                    (item) =>
-                        item?.key === key
-                );
-
-            return (
-                field?.value ?? "-"
-            );
+            const field = processData.find((item) => item?.key === key);
+            return field?.value ?? "-";
         }
 
-        if (
-            processData &&
-            typeof processData === "object"
-        ) {
-            if (
-                processData[key] !==
-                undefined
-            ) {
-                return (
-                    processData[key] ??
-                    "-"
-                );
+        if (processData && typeof processData === "object") {
+            if (processData[key] !== undefined) {
+                return processData[key] ?? "-";
             }
-
-            const field =
-                Object.values(
-                    processData
-                ).find(
-                    (item) =>
-                        item?.key === key
-                );
-
-            return (
-                field?.value ?? "-"
-            );
+            const field = Object.values(processData).find((item) => item?.key === key);
+            return field?.value ?? "-";
         }
 
         return "-";
@@ -376,300 +222,109 @@ const PreventiveMaintenanceDashboard = () => {
     // =========================================================
     const columns = useMemo(
         () => [
-            // =====================================================
             // ID
-            // =====================================================
             {
                 accessorKey: "id",
-
                 header: "ID",
-
-                cell: ({
-                    row,
-                    getValue,
-                }) => {
-                    const record =
-                        row.original;
-
-                    const handleClick =
-                        () => {
-                            if (
-                                !record?.id
-                            ) {
-                                return;
-                            }
-
-                            navigate(
-                                `/user/preventive-maintenance-panel/${record.id}`
-                            );
-                        };
+                cell: ({ row, getValue }) => {
+                    const record = row.original;
+                    const handleClick = () => {
+                        if (!record?.id) return;
+                        navigate(`/user/preventive-maintenance-panel/${record.id}`);
+                    };
 
                     return (
                         <button
                             type="button"
-                            onClick={
-                                handleClick
-                            }
-                            className="
-                                inline-flex
-                                cursor-pointer
-                                items-center
-                                rounded-[8px]
-                                border
-                                border-[#D3E1DB]
-                                bg-[#F1F5F2]
-                                px-2
-                                py-1.5
-                                font-[var(--font-display)]
-                                text-[10px]
-                                font-bold
-                                tracking-[-0.01em]
-                                text-[#56766D]
-                                transition-all
-                                duration-200
-                                hover:border-[#B9CEC5]
-                                hover:bg-[#E8F0EC]
-                                hover:text-[#244F4A]
-                                focus:outline-none
-                                focus:ring-2
-                                focus:ring-[#6E9487]/20
-                            "
+                            onClick={handleClick}
+                            className="inline-flex cursor-pointer items-center rounded-[8px] border border-[#D3E1DB] bg-[#F1F5F2] px-2 py-1.5 font-[var(--font-display)] text-[10px] font-bold tracking-[-0.01em] text-[#56766D] transition-all duration-200 hover:border-[#B9CEC5] hover:bg-[#E8F0EC] hover:text-[#244F4A] focus:outline-none focus:ring-2 focus:ring-[#6E9487]/20"
                             title="View record details"
                         >
-                            #
-                            {getValue() || "-"}
+                            #{getValue() || "-"}
                         </button>
                     );
                 },
             },
 
-            // =====================================================
             // RECORD NUMBER
-            // =====================================================
             {
                 id: "recordNumber",
-
                 header: "Record Number",
-
-                accessorFn: (row) =>
-                    row?.record_number ||
-                    getProcessValue(
-                        row,
-                        "recordNumber"
-                    ),
-
-                cell: ({
-                    getValue,
-                }) => (
-                    <span
-                        className="
-                            font-[var(--font-display)]
-                            text-[11px]
-                            font-bold
-                            tracking-[-0.01em]
-                            text-[#344A43]
-                        "
-                    >
+                accessorFn: (row) => row?.record_number || getProcessValue(row, "recordNumber"),
+                cell: ({ getValue }) => (
+                    <span className="font-[var(--font-display)] text-[11px] font-bold tracking-[-0.01em] text-[#344A43]">
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
-            // =====================================================
             // PROCESS
-            // =====================================================
             {
                 id: "process",
-
                 header: "Process",
-
-                accessorFn: (row) =>
-                    row?.process?.name ||
-                    "-",
-
-                cell: ({
-                    getValue,
-                }) => (
-                    <span
-                        className="
-                            inline-flex
-                            items-center
-                            rounded-full
-                            border
-                            border-[#C9DCD4]
-                            bg-[#EEF4F1]
-                            px-2.5
-                            py-1
-                            font-[var(--font-display)]
-                            text-[10px]
-                            font-bold
-                            tracking-[-0.01em]
-                            text-[#56766D]
-                        "
-                    >
+                accessorFn: (row) => row?.process?.name || "-",
+                cell: ({ getValue }) => (
+                    <span className="inline-flex items-center rounded-full border border-[#C9DCD4] bg-[#EEF4F1] px-2.5 py-1 font-[var(--font-display)] text-[10px] font-bold tracking-[-0.01em] text-[#56766D]">
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
-            // =====================================================
             // SHORT DESCRIPTION
-            // =====================================================
             {
-                accessorKey:
-                    "short_description",
-
-                header:
-                    "Short Description",
-
-                cell: ({
-                    getValue,
-                }) => (
+                accessorKey: "short_description",
+                header: "Short Description",
+                cell: ({ getValue }) => (
                     <div className="max-w-[260px]">
-                        <p
-                            className="
-                                truncate
-                                font-[var(--font-display)]
-                                text-[11px]
-                                font-bold
-                                tracking-[-0.01em]
-                                text-[#344A43]
-                            "
-                        >
+                        <p className="truncate font-[var(--font-display)] text-[11px] font-bold tracking-[-0.01em] text-[#344A43]">
                             {getValue() || "-"}
                         </p>
                     </div>
                 ),
             },
 
-            // =====================================================
             // INITIATOR
-            // =====================================================
             {
                 id: "initiator",
-
                 header: "Initiator",
-
-                accessorFn: (row) =>
-                    row?.initiator?.name ||
-                    getProcessValue(
-                        row,
-                        "initiator"
-                    ) ||
-                    "-",
-
-                cell: ({
-                    getValue,
-                }) => (
-                    <span
-                        className="
-                            font-[var(--font-display)]
-                            text-[11px]
-                            font-semibold
-                            tracking-[-0.01em]
-                            text-[#5E7169]
-                        "
-                    >
+                accessorFn: (row) => row?.initiator?.name || getProcessValue(row, "initiator") || "-",
+                cell: ({ getValue }) => (
+                    <span className="font-[var(--font-display)] text-[11px] font-semibold tracking-[-0.01em] text-[#5E7169]">
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
-            // =====================================================
             // DEPARTMENT
-            // =====================================================
             {
                 id: "department",
-
                 header: "Department",
-
-                accessorFn: (row) =>
-                    row?.department?.name ||
-                    getProcessValue(
-                        row,
-                        "initiationDepartment"
-                    ) ||
-                    "-",
-
-                cell: ({
-                    getValue,
-                }) => (
-                    <span
-                        className="
-                            inline-flex
-                            items-center
-                            rounded-full
-                            border
-                            border-[#D7E0DC]
-                            bg-[#F2F5F3]
-                            px-2.5
-                            py-1
-                            font-[var(--font-display)]
-                            text-[10px]
-                            font-bold
-                            tracking-[-0.01em]
-                            text-[#65766F]
-                        "
-                    >
+                accessorFn: (row) => row?.department?.name || getProcessValue(row, "initiationDepartment") || "-",
+                cell: ({ getValue }) => (
+                    <span className="inline-flex items-center rounded-full border border-[#D7E0DC] bg-[#F2F5F3] px-2.5 py-1 font-[var(--font-display)] text-[10px] font-bold tracking-[-0.01em] text-[#65766F]">
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
-            // =====================================================
             // STAGE
-            // =====================================================
             {
                 id: "stage",
-
                 header: "Stage",
-
-                accessorFn: (row) =>
-                    row?.stage?.name ||
-                    "-",
-
-                cell: ({
-                    getValue,
-                }) => {
-                    const stage =
-                        String(
-                            getValue() ||
-                                "-"
-                        ).trim();
-
-                    const normalizedStage =
-                        stage.toLowerCase();
-
-                    const isClosedDone =
-                        normalizedStage ===
-                        "closed - done";
+                accessorFn: (row) => row?.stage?.name || "-",
+                cell: ({ getValue }) => {
+                    const stage = String(getValue() || "-").trim();
+                    const normalizedStage = stage.toLowerCase();
+                    const isClosedDone = normalizedStage === "closed - done";
 
                     return (
                         <span
                             className={`
-                                inline-flex
-                                items-center
-                                rounded-full
-                                border
-                                px-2.5
-                                py-1
-                                font-[var(--font-display)]
-                                text-[10px]
-                                font-bold
-                                tracking-[-0.01em]
-
+                                inline-flex items-center rounded-full border px-2.5 py-1 font-[var(--font-display)] text-[10px] font-bold tracking-[-0.01em]
                                 ${
                                     isClosedDone
-                                        ? `
-                                            border-[#B83E43]
-                                            bg-[#F8E8E8]
-                                            text-[#B83E43]
-                                        `
-                                        : `
-                                            border-[#C9DCD4]
-                                            bg-[#EAF3EE]
-                                            text-[#4F7568]
-                                        `
+                                        ? "border-[#B83E43] bg-[#F8E8E8] text-[#B83E43]"
+                                        : "border-[#C9DCD4] bg-[#EAF3EE] text-[#4F7568]"
                                 }
                             `}
                         >
@@ -679,94 +334,32 @@ const PreventiveMaintenanceDashboard = () => {
                 },
             },
 
-            // =====================================================
             // INITIATED
-            // =====================================================
             {
                 id: "dateOfInitiation",
-
                 header: "Initiated",
-
-                accessorFn: (row) =>
-                    getProcessValue(
-                        row,
-                        "dateOfInitiation"
-                    ),
-
-                cell: ({
-                    getValue,
-                }) => (
-                    <span
-                        className="
-                            whitespace-nowrap
-                            font-[var(--font-display)]
-                            text-[10px]
-                            font-bold
-                            tracking-[-0.01em]
-                            text-[#56766D]
-                        "
-                    >
+                accessorFn: (row) => getProcessValue(row, "dateOfInitiation"),
+                cell: ({ getValue }) => (
+                    <span className="whitespace-nowrap font-[var(--font-display)] text-[10px] font-bold tracking-[-0.01em] text-[#56766D]">
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
-            // =====================================================
             // ACTION
-            // =====================================================
             {
                 id: "actions",
-
                 header: "Action",
-
                 enableSorting: false,
-
-                cell: ({
-                    row,
-                }) => (
+                cell: ({ row }) => (
                     <button
                         type="button"
-                        onClick={() =>
-                            handleViewReport(
-                                row.original?.id
-                            )
-                        }
-                        className="
-                            inline-flex
-                            items-center
-                            gap-2
-                            rounded-[9px]
-                            border
-                            border-[#CADBD5]
-                            bg-[#F1F5F2]
-                            px-3
-                            py-1.5
-                            font-[var(--font-display)]
-                            text-[10px]
-                            font-bold
-                            tracking-[-0.01em]
-                            text-[#4F7568]
-                            transition-all
-                            duration-200
-                            hover:border-[#AFC9BF]
-                            hover:bg-[#E7F0EC]
-                            hover:text-[#244F4A]
-                            hover:shadow-[0_3px_8px_rgba(36,79,74,0.08)]
-                            focus:outline-none
-                            focus:ring-2
-                            focus:ring-[#6E9487]/20
-                            active:scale-[0.98]
-                        "
+                        onClick={() => handleViewReport(row.original?.id)}
+                        className="inline-flex items-center gap-2 rounded-[9px] border border-[#CADBD5] bg-[#F1F5F2] px-3 py-1.5 font-[var(--font-display)] text-[10px] font-bold tracking-[-0.01em] text-[#4F7568] transition-all duration-200 hover:border-[#AFC9BF] hover:bg-[#E7F0EC] hover:text-[#244F4A] hover:shadow-[0_3px_8px_rgba(36,79,74,0.08)] focus:outline-none focus:ring-2 focus:ring-[#6E9487]/20 active:scale-[0.98]"
                         title="View preventive maintenance report"
                     >
-                        <Eye
-                            size={13}
-                            strokeWidth={1.9}
-                        />
-
-                        <span>
-                            View Report
-                        </span>
+                        <Eye size={13} strokeWidth={1.9} />
+                        <span>View Report</span>
                     </button>
                 ),
             },
@@ -774,22 +367,20 @@ const PreventiveMaintenanceDashboard = () => {
         [navigate]
     );
 
+    const hasActiveFilters = Boolean(searchTerm) || Boolean(statusFilter) || Boolean(dateRange);
+    
+    const clearFilters = () => {
+        setSearchTerm("");
+        setStatusFilter("");
+        setDateRange(null);
+    };
+
     // =========================================================
     // RENDER
     // =========================================================
     return (
-        <div
-            className="
-                flex
-                h-full
-                min-h-0
-                flex-col
-                overflow-hidden
-            "
-        >
-            {/* =================================================
-                DASHBOARD ACTION BAR
-            ================================================== */}
+        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white">
+            {/* DASHBOARD ACTION BAR */}
             <DashboardActionBar
                 title="Preventive Maintenance Dashboard"
                 buttonName="Create Record"
@@ -799,72 +390,113 @@ const PreventiveMaintenanceDashboard = () => {
                 showCreateButton={false}
             />
 
-            {/* =================================================
-                TABLE AREA
-                SAME DASHBOARD SPACING STANDARD
-            ================================================== */}
-            <main
-                className="
-                    min-h-0
-                    flex-1
-                    overflow-hidden
-                    px-0
-                    pb-0
-                    pt-[58px]
-                "
-            >
-                <div
-                    className="
-                        h-full
-                        min-h-0
-                        overflow-hidden
-                    "
-                >
-                    <DataTable
-                        data={records}
-                        columns={columns}
-                        loading={loading}
-                        searchable
-                        searchPlaceholder="Search preventive records..."
-                        pagination
-                        pageSize={pagination.perPage}
-                        pageSizeOptions={[
-                            10,
-                            20,
-                            50,
-                        ]}
-                        sortable
-                        showColumnVisibility
-                        hoverable
+            {/* MAIN CONTENT */}
+            <main className="min-h-0 flex-1 overflow-hidden px-0 pb-0 pt-[58px]">
+                <section className="flex h-full min-h-0 flex-col overflow-hidden bg-transparent">
+                    
+                    {/* ───────────── SIDE-BY-SIDE COMPACT FILTER BAR ───────────── */}
+                    <div className="flex shrink-0 flex-nowrap items-center gap-2 px-4 py-3 border-b border-gray-100 bg-[#FAFBFA] overflow-x-auto">
+                        
+                        {/* Search Input - Strict Fixed Width */}
+                        <Input
+                            size="small"
+                            placeholder="Search..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            prefix={<Search size={13} className="text-gray-400" />}
+                            allowClear
+                            style={{
+                                width: "160px",
+                                minWidth: "160px",
+                                maxWidth: "160px",
+                                flex: "0 0 160px",
+                                height: "30px",
+                                fontSize: "12px",
+                            }}
+                        />
 
-                        /* Backend pagination */
-                        manualPagination
-                        pageCount={
-                            pagination.lastPage
-                        }
-                        totalRows={
-                            pagination.total
-                        }
-                        onPaginationChange={({
-                            pageIndex,
-                            pageSize,
-                        }) => {
-                            const nextPage =
-                                pageIndex + 1;
+                        {/* Status Select */}
+                        <Select
+                            size="middle"
+                            placeholder="Stage"
+                            value={statusFilter || undefined}
+                            onChange={(val) => setStatusFilter(val || "")}
+                            options={STAGE_OPTIONS}
+                            allowClear
+                            className="w-64 text-sm font-medium shadow-sm"
+                            popupClassName="rounded-lg"
+                        />
 
-                            fetchRecords(
-                                nextPage,
-                                pageSize
-                            );
-                        }}
+                        {/* Date Range Picker */}
+                        <RangePicker
+                            size="middle"
+                            value={dateRange ? [dayjs(dateRange[0]), dayjs(dateRange[1])] : null}
+                            onChange={(dates) => {
+                                if (dates && dates[0] && dates[1]) {
+                                    setDateRange([
+                                        dates[0].format("YYYY-MM-DD"),
+                                        dates[1].format("YYYY-MM-DD")
+                                    ]);
+                                } else {
+                                    setDateRange(null);
+                                }
+                            }}
+                            className="w-56 text-sm font-medium shadow-sm rounded-lg"
+                        />
 
-                        emptyTitle="No preventive records found"
-                        emptyDescription="
-                            Preventive records will appear here
-                            once they are created.
-                        "
-                    />
-                </div>
+                        {/* Clear Filters Button */}
+                        {hasActiveFilters && (
+                            <Button
+                                size="middle"
+                                icon={<Filter size={14} className="mr-1" />}
+                                onClick={clearFilters}
+                                className="rounded-lg font-semibold text-gray-600 shadow-sm hover:text-gray-900 border-gray-200"
+                            >
+                                Clear
+                            </Button>
+                        )}
+                    </div>
+
+                    {/* TABLE WRAPPER */}
+                    <div className="min-h-0 flex-1 overflow-hidden w-full bg-white">
+                        <DataTable
+                            data={records}
+                            columns={columns}
+                            loading={loading}
+                            
+                            /* Removes the gap & internal toolbar */
+                            toolbar={false}
+                            searchable={false}
+                            
+                            /* Makes the table completely flat and stretches to edges */
+                            className="!rounded-none !border-0 !shadow-none !h-full"
+                            
+                            pagination
+                            pageSize={pagination.perPage}
+                            pageSizeOptions={[10, 20, 50]}
+                            sortable
+                            hoverable
+                            
+                            /* Backend pagination */
+                            manualPagination
+                            pageCount={pagination.lastPage}
+                            totalRows={pagination.total}
+                            onPaginationChange={({ pageIndex, pageSize }) => {
+                                const pageSizeChanged = pageSize !== pagination.perPage;
+                                const nextPage = pageSizeChanged ? 1 : pageIndex + 1;
+
+                                fetchRecords(nextPage, pageSize, {
+                                    search: debouncedSearch,
+                                    status: statusFilter,
+                                    start_date: dateRange?.[0] || "",
+                                    end_date: dateRange?.[1] || "",
+                                });
+                            }}
+                            emptyTitle="No preventive records found"
+                            emptyDescription="Try changing filters or create a new record."
+                        />
+                    </div>
+                </section>
             </main>
         </div>
     );

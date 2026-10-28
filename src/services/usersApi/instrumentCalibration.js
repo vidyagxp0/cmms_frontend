@@ -13,8 +13,11 @@ export const updateInstrumentCalibration = (id, payload) =>
     api.put(`/user/update-addendum-field-instrument-planner-record/${id}`, payload);
 
 
-export const getAllInstrumentCalibrationData = () => {
-    return api.get("/user/addendum-field-instrument-planner-records");
+export const getAllInstrumentCalibrationData = (params = {}) => {
+    // return api.get("/user/addendum-field-instrument-planner-records");
+      return api.get("/user/addendum-field-instrument-planner-records", {
+        params,
+    });
 };
 
 export const getInstrumentCalibrationReport = (id) => {

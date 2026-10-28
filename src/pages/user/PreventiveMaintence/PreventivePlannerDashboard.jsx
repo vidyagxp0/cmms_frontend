@@ -1,23 +1,27 @@
-import React, {
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
-
-import { Eye } from "lucide-react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { Eye, Search, Filter } from "lucide-react";
+import { Input, Select, Button, DatePicker } from "antd";
+import dayjs from "dayjs";
+import { useNavigate } from "react-router-dom";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
 import DataTable from "../../../components/common/DataTable/DataTable";
 
-import {
-    getAllRecords,
-    getCalibrationSingleReport,
-} from "../../../services/usersApi/calibrationApi";
-
-import { useNavigate } from "react-router-dom";
 import { getAllPreventivePlanner } from "../../../services/usersApi/dashboardAllApi";
 import { getPreventivePlannerSingleReport } from "../../../services/usersApi/preventive";
 import { useAuthStore } from "../../../store/authStore";
+
+const { RangePicker } = DatePicker;
+
+// 🔥 STATIC STAGES FROM IMAGE
+const STAGE_OPTIONS = [
+    { label: "Opened", value: "Opened" },
+    { label: "Pending HOD/Designee Review", value: "Pending HOD/Designee Review" },
+    { label: "Pending QA Review", value: "Pending QA Review" },
+    { label: "Pending QA Approval", value: "Pending QA Approval" },
+    { label: "Closed - Done", value: "Closed - Done" },
+    { label: "Close - Cancelled", value: "Close - Cancelled" },
+];
 
 const PreventivePlannerDashboard = () => {
     const navigate = useNavigate();
@@ -31,69 +35,57 @@ const PreventivePlannerDashboard = () => {
     const showCreateButton =
         !authLoading && user?.roles?.includes("Initiator");
 
-
     // Backend pagination state
-    const [pagination, setPagination] =
-        useState({
-            currentPage: 1,
-            lastPage: 1,
-            perPage: 10,
-            total: 0,
-        });
+    const [pagination, setPagination] = useState({
+        currentPage: 1,
+        lastPage: 1,
+        perPage: 10,
+        total: 0,
+    });
+
+    // ================================================================
+    // FILTER STATE
+    // ================================================================
+    const [searchTerm, setSearchTerm] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const [dateRange, setDateRange] = useState(null); // [start_date, end_date]
+
+    // Debounce search
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 400);
+        return () => clearTimeout(t);
+    }, [searchTerm]);
 
     // ================================================================
     // FETCH PREVENTIVE PLANNER RECORDS
-    // FUNCTIONALITY UNCHANGED
     // ================================================================
-    const fetchRecords = async (
-        page = 1,
-        perPage = 10
-    ) => {
+    const fetchRecords = useCallback(async (page = 1, perPage = 10, filters = {}) => {
         try {
             setLoading(true);
 
-            const response =
-                await getAllPreventivePlanner({
-                    page,
-                    per_page: perPage,
-                });
+            const params = { page, per_page: perPage };
+            if (filters.search)     params.search     = filters.search;
+            if (filters.status)     params.status     = filters.status;
+            if (filters.start_date) params.start_date = filters.start_date;
+            if (filters.end_date)   params.end_date   = filters.end_date;
 
-            const paginationData =
-                response?.data?.data;
+            const response = await getAllPreventivePlanner(params);
 
-            const recordsData =
-                paginationData?.data || [];
+            const paginationData = response?.data?.data;
+            const recordsData = paginationData?.data || [];
 
-            setRecords(
-                Array.isArray(recordsData)
-                    ? recordsData
-                    : []
-            );
+            setRecords(Array.isArray(recordsData) ? recordsData : []);
 
             setPagination({
-                currentPage:
-                    paginationData?.current_page ||
-                    page,
-
-                lastPage:
-                    paginationData?.last_page ||
-                    1,
-
-                perPage:
-                    paginationData?.per_page ||
-                    perPage,
-
-                total:
-                    paginationData?.total || 0,
+                currentPage: paginationData?.current_page || page,
+                lastPage: paginationData?.last_page || 1,
+                perPage: paginationData?.per_page || perPage,
+                total: paginationData?.total || 0,
             });
         } catch (error) {
-            console.error(
-                "Failed to fetch engineering records:",
-                error
-            );
-
+            console.error("Failed to fetch preventive planner records:", error);
             setRecords([]);
-
             setPagination({
                 currentPage: 1,
                 lastPage: 1,
@@ -103,28 +95,28 @@ const PreventivePlannerDashboard = () => {
         } finally {
             setLoading(false);
         }
-    };
-
-    useEffect(() => {
-        fetchRecords(1, 10);
     }, []);
+
+    // Trigger fetch on filters change
+    useEffect(() => {
+        fetchRecords(1, pagination.perPage, {
+            search: debouncedSearch,
+            status: statusFilter,
+            start_date: dateRange?.[0] || "",
+            end_date: dateRange?.[1] || "",
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedSearch, statusFilter, dateRange, fetchRecords]);
 
     // ================================================================
     // VIEW REPORT
-    // FUNCTIONALITY UNCHANGED
     // ================================================================
-    const handleViewReport = async (
-        recordId
-    ) => {
-        const reportWindow =
-            window.open("", "_blank");
+    const handleViewReport = async (recordId) => {
+        const reportWindow = window.open("", "_blank");
 
         try {
             if (!reportWindow) {
-                alert(
-                    "Please allow pop-ups to view the report."
-                );
-
+                alert("Please allow pop-ups to view the report.");
                 return;
             }
 
@@ -133,90 +125,32 @@ const PreventivePlannerDashboard = () => {
                 <html>
                 <head>
                     <title>Loading Report...</title>
-
                     <style>
-                        * {
-                            box-sizing: border-box;
-                        }
-
-                        html,
-                        body {
-                            margin: 0;
-                            padding: 0;
-                            width: 100%;
-                            height: 100%;
-                        }
-
-                        body {
-                            overflow: hidden;
-                            font-family: Arial, sans-serif;
-                        }
-
+                        * { box-sizing: border-box; }
+                        html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+                        body { overflow: hidden; font-family: Arial, sans-serif; }
                         .loader {
-                            position: fixed;
-                            inset: 0;
-                            z-index: 9999;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
+                            position: fixed; inset: 0; z-index: 9999;
+                            display: flex; align-items: center; justify-content: center;
                             background: white;
                         }
-
-                        .loader-content {
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                        }
-
-                        .logo {
-                            margin-bottom: 24px;
-                            height: 56px;
-                            width: auto;
-                            object-fit: contain;
-                        }
-
+                        .loader-content { display: flex; flex-direction: column; align-items: center; }
+                        .logo { margin-bottom: 24px; height: 56px; width: auto; object-fit: contain; }
                         .spinner {
-                            width: 32px;
-                            height: 32px;
-                            border: 2px solid #e2e8f0;
-                            border-top-color: #F28C00;
-                            border-radius: 50%;
-                            animation: spin 0.8s linear infinite;
+                            width: 32px; height: 32px;
+                            border: 2px solid #e2e8f0; border-top-color: #F28C00;
+                            border-radius: 50%; animation: spin 0.8s linear infinite;
                         }
-
-                        .text {
-                            margin-top: 16px;
-                            font-size: 12px;
-                            font-weight: 500;
-                            color: #94a3b8;
-                        }
-
-                        @keyframes spin {
-                            from {
-                                transform: rotate(0deg);
-                            }
-
-                            to {
-                                transform: rotate(360deg);
-                            }
-                        }
+                        .text { margin-top: 16px; font-size: 12px; font-weight: 500; color: #94a3b8; }
+                        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                     </style>
                 </head>
-
                 <body>
                     <div class="loader">
                         <div class="loader-content">
-                            <img
-                                src="/vidyagxp_logo.png"
-                                alt="VidyaGxP"
-                                class="logo"
-                            />
-
+                            <img src="/vidyagxp_logo.png" alt="VidyaGxP" class="logo" />
                             <div class="spinner"></div>
-
-                            <p class="text">
-                                Loading your workspace...
-                            </p>
+                            <p class="text">Loading your workspace...</p>
                         </div>
                     </div>
                 </body>
@@ -227,87 +161,39 @@ const PreventivePlannerDashboard = () => {
 
             const response = await getPreventivePlannerSingleReport(recordId);
 
-            const blob = new Blob(
-                [response.data],
-                {
-                    type: "application/pdf",
-                }
-            );
+            const blob = new Blob([response.data], { type: "application/pdf" });
+            const pdfUrl = window.URL.createObjectURL(blob);
 
-            const pdfUrl =
-                window.URL.createObjectURL(
-                    blob
-                );
-
-            reportWindow.location.href =
-                pdfUrl;
+            reportWindow.location.href = pdfUrl;
 
             setTimeout(() => {
-                window.URL.revokeObjectURL(
-                    pdfUrl
-                );
+                window.URL.revokeObjectURL(pdfUrl);
             }, 10000);
         } catch (error) {
-            console.error(
-                "Failed to open calibration report:",
-                error
-            );
+            console.error("Failed to open preventive planner report:", error);
 
-            if (
-                reportWindow &&
-                !reportWindow.closed
-            ) {
+            if (reportWindow && !reportWindow.closed) {
                 reportWindow.document.open();
-
                 reportWindow.document.write(`
                     <!DOCTYPE html>
                     <html>
                     <head>
                         <title>Report Error</title>
-
                         <style>
-                            body {
-                                margin: 0;
-                                height: 100vh;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                font-family: Arial, sans-serif;
-                                background: white;
-                            }
-
-                            .error {
-                                text-align: center;
-                            }
-
-                            .error-title {
-                                font-size: 16px;
-                                font-weight: 600;
-                                color: #b91c1c;
-                            }
-
-                            .error-message {
-                                margin-top: 8px;
-                                font-size: 12px;
-                                color: #94a3b8;
-                            }
+                            body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; background: white; }
+                            .error { text-align: center; }
+                            .error-title { font-size: 16px; font-weight: 600; color: #b91c1c; }
+                            .error-message { margin-top: 8px; font-size: 12px; color: #94a3b8; }
                         </style>
                     </head>
-
                     <body>
                         <div class="error">
-                            <div class="error-title">
-                                Failed to generate report
-                            </div>
-
-                            <div class="error-message">
-                                Please close this tab and try again.
-                            </div>
+                            <div class="error-title">Failed to generate report</div>
+                            <div class="error-message">Please close this tab and try again.</div>
                         </div>
                     </body>
                     </html>
                 `);
-
                 reportWindow.document.close();
             }
         }
@@ -315,53 +201,21 @@ const PreventivePlannerDashboard = () => {
 
     // ================================================================
     // PROCESS VALUE HELPER
-    // FUNCTIONALITY UNCHANGED
     // ================================================================
-    const getProcessValue = (
-        record,
-        key
-    ) => {
-        const processData =
-            record?.process_data;
+    const getProcessValue = (record, key) => {
+        const processData = record?.process_data;
 
         if (Array.isArray(processData)) {
-            const field =
-                processData.find(
-                    (item) =>
-                        item?.key === key
-                );
-
-            return (
-                field?.value ?? "-"
-            );
+            const field = processData.find((item) => item?.key === key);
+            return field?.value ?? "-";
         }
 
-        if (
-            processData &&
-            typeof processData ===
-                "object"
-        ) {
-            if (
-                processData[key] !==
-                undefined
-            ) {
-                return (
-                    processData[key] ??
-                    "-"
-                );
+        if (processData && typeof processData === "object") {
+            if (processData[key] !== undefined) {
+                return processData[key] ?? "-";
             }
-
-            const field =
-                Object.values(
-                    processData
-                ).find(
-                    (item) =>
-                        item?.key === key
-                );
-
-            return (
-                field?.value ?? "-"
-            );
+            const field = Object.values(processData).find((item) => item?.key === key);
+            return field?.value ?? "-";
         }
 
         return "-";
@@ -372,300 +226,117 @@ const PreventivePlannerDashboard = () => {
     // ================================================================
     const columns = useMemo(
         () => [
-            /* =========================================================
-               ID
-            ========================================================== */
+            // ID
             {
                 accessorKey: "id",
-
                 header: "ID",
-
-                cell: ({
-                    row,
-                    getValue,
-                }) => {
-                    const record =
-                        row.original;
-
-                    const handleClick =
-                        () => {
-                            if (
-                                !record?.id
-                            ) {
-                                return;
-                            }
-
-                            navigate(
-                                `/user/preventive-maintenance-planner-panel/${record.id}`
-                            );
-                        };
+                cell: ({ row, getValue }) => {
+                    const record = row.original;
+                    const handleClick = () => {
+                        if (!record?.id) return;
+                        navigate(`/user/preventive-maintenance-planner-panel/${record.id}`);
+                    };
 
                     return (
                         <button
                             type="button"
-                            onClick={
-                                handleClick
-                            }
-                            className="
-                                group
-                                inline-flex
-                                cursor-pointer
-                                items-center
-                                gap-1.5
-                                rounded-[9px]
-                                border
-                                border-[#D5E0DB]
-                                bg-[#F0F5F2]
-                                px-2.5
-                                py-1.5
-                                font-mono
-                                text-[10.5px]
-                                font-bold
-                                tracking-[0.03em]
-                                text-[#536D64]
-                                shadow-[0_1px_4px_rgba(36,50,56,0.035)]
-                                transition-all
-                                duration-200
-                                hover:border-[#B7CAC2]
-                                hover:bg-[#E5EEEA]
-                                hover:text-[#405F55]
-                                hover:shadow-[0_3px_8px_rgba(86,118,109,0.08)]
-                                focus:outline-none
-                                focus-visible:ring-2
-                                focus-visible:ring-[var(--color-primary-muted)]
-                                focus-visible:ring-offset-1
-                            "
+                            onClick={handleClick}
+                            className="group inline-flex cursor-pointer items-center gap-1.5 rounded-[9px] border border-[#D5E0DB] bg-[#F0F5F2] px-2.5 py-1.5 font-mono text-[10.5px] font-bold tracking-[0.03em] text-[#536D64] shadow-[0_1px_4px_rgba(36,50,56,0.035)] transition-all duration-200 hover:border-[#B7CAC2] hover:bg-[#E5EEEA] hover:text-[#405F55] hover:shadow-[0_3px_8px_rgba(86,118,109,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-muted)] focus-visible:ring-offset-1"
                             title="View record details"
                         >
-                            <span>
-                                #{getValue() || "-"}
-                            </span>
+                            <span>#{getValue() || "-"}</span>
                         </button>
                     );
                 },
             },
 
-            /* =========================================================
-               RECORD NUMBER
-            ========================================================== */
+            // RECORD NUMBER
             {
                 id: "recordNumber",
-
                 header: "Record Number",
-
-                accessorFn: (row) =>
-                    row?.record_number ||
-                    getProcessValue(
-                        row,
-                        "recordNumber"
-                    ),
-
-                cell: ({
-                    getValue,
-                }) => (
-                    <span
-                        className="
-                            text-[11.5px]
-                            font-bold
-                            tracking-[-0.01em]
-                            text-[#475A55]
-                        "
-                    >
+                accessorFn: (row) => row?.record_number || getProcessValue(row, "recordNumber"),
+                cell: ({ getValue }) => (
+                    <span className="text-[11.5px] font-bold tracking-[-0.01em] text-[#475A55]">
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
-            /* =========================================================
-               PROCESS
-            ========================================================== */
+            // PROCESS
             {
                 id: "process",
-
                 header: "Process",
-
-                accessorFn: (row) =>
-                    row?.process?.name ||
-                    "-",
-
-                cell: ({
-                    getValue,
-                }) => (
+                accessorFn: (row) => row?.process?.name || "-",
+                cell: ({ getValue }) => (
                     <span
-                        className="
-                            inline-flex
-                            max-w-full
-                            items-center
-                            rounded-full
-                            border
-                            border-[#D9E3DE]
-                            bg-[#F1F5F3]
-                            px-2.5
-                            py-1
-                            text-[10px]
-                            font-bold
-                            tracking-[0.02em]
-                            text-[#56766D]
-                        "
-                        title={
-                            getValue() || "-"
-                        }
+                        className="inline-flex max-w-full items-center rounded-full border border-[#D9E3DE] bg-[#F1F5F3] px-2.5 py-1 text-[10px] font-bold tracking-[0.02em] text-[#56766D]"
+                        title={getValue() || "-"}
                     >
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
-            /* =========================================================
-               SHORT DESCRIPTION
-            ========================================================== */
+            // SHORT DESCRIPTION
             {
-                accessorKey:
-                    "short_description",
-
-                header:
-                    "Short Description",
-
-                cell: ({
-                    getValue,
-                }) => (
+                accessorKey: "short_description",
+                header: "Short Description",
+                cell: ({ getValue }) => (
                     <div className="max-w-[280px]">
                         <p
-                            className="
-                                truncate
-                                text-[11.5px]
-                                font-semibold
-                                text-[#53635E]
-                            "
-                            title={
-                                getValue() ||
-                                "-"
-                            }
+                            className="truncate text-[11.5px] font-semibold text-[#53635E]"
+                            title={getValue() || "-"}
                         >
-                            {getValue() ||
-                                "-"}
+                            {getValue() || "-"}
                         </p>
                     </div>
                 ),
             },
 
-            /* =========================================================
-               INITIATOR
-            ========================================================== */
+            // INITIATOR
             {
                 id: "initiator",
-
                 header: "Initiator",
-
-                accessorFn: (row) =>
-                    row?.initiator?.name ||
-                    getProcessValue(
-                        row,
-                        "initiator"
-                    ) ||
-                    "-",
-
-                cell: ({
-                    getValue,
-                }) => (
-                    <span
-                        className="
-                            text-[11.5px]
-                            font-medium
-                            text-[#687773]
-                        "
-                    >
+                accessorFn: (row) => row?.initiator?.name || getProcessValue(row, "initiator") || "-",
+                cell: ({ getValue }) => (
+                    <span className="text-[11.5px] font-medium text-[#687773]">
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
-            /* =========================================================
-               DEPARTMENT
-            ========================================================== */
+            // DEPARTMENT
             {
                 id: "department",
-
                 header: "Department",
-
-                accessorFn: (row) =>
-                    row?.department?.name ||
-                    getProcessValue(
-                        row,
-                        "initiationDepartment"
-                    ) ||
-                    "-",
-
-                cell: ({
-                    getValue,
-                }) => (
+                accessorFn: (row) => row?.department?.name || getProcessValue(row, "initiationDepartment") || "-",
+                cell: ({ getValue }) => (
                     <span
-                        className="
-                            inline-flex
-                            max-w-full
-                            items-center
-                            rounded-full
-                            border
-                            border-[#E0E5E2]
-                            bg-[#F6F7F5]
-                            px-2.5
-                            py-1
-                            text-[10px]
-                            font-bold
-                            text-[#65736E]
-                        "
-                        title={
-                            getValue() || "-"
-                        }
+                        className="inline-flex max-w-full items-center rounded-full border border-[#E0E5E2] bg-[#F6F7F5] px-2.5 py-1 text-[10px] font-bold text-[#65736E]"
+                        title={getValue() || "-"}
                     >
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
-            /* =========================================================
-               STAGE
-            ========================================================== */
+            // STAGE
             {
                 id: "stage",
-
                 header: "Stage",
-
-                accessorFn: (row) =>
-                    row?.stage?.name ||
-                    "-",
-
+                accessorFn: (row) => row?.stage?.name || "-",
                 cell: ({ getValue }) => {
-                    const stage = String(
-                        getValue() || "-"
-                    ).trim();
-
-                    const isClosedDone =
-                        stage.toLowerCase() === "closed - done";
+                    const stage = String(getValue() || "-").trim();
+                    const isClosedDone = stage.toLowerCase() === "closed - done";
 
                     return (
                         <span
                             className={`
-                                inline-flex
-                                items-center
-                                rounded-full
-                                border
-                                px-2.5
-                                py-1
-                                text-[10px]
-                                font-bold
+                                inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold
                                 ${
                                     isClosedDone
-                                        ? `
-                                            border-[#B83E43]
-                                            bg-[#F8E8E8]
-                                            text-[#B83E43]
-                                        `
-                                        : `
-                                            border-[#CFE1D9]
-                                            bg-[#EEF5F2]
-                                            text-[#56766D]
-                                        `
+                                        ? "border-[#B83E43] bg-[#F8E8E8] text-[#B83E43]"
+                                        : "border-[#CFE1D9] bg-[#EEF5F2] text-[#56766D]"
                                 }
                             `}
                         >
@@ -675,93 +346,32 @@ const PreventivePlannerDashboard = () => {
                 },
             },
 
-            /* =========================================================
-               INITIATED
-            ========================================================== */
+            // INITIATED
             {
                 id: "dateOfInitiation",
-
                 header: "Initiated",
-
-                accessorFn: (row) =>
-                    getProcessValue(
-                        row,
-                        "dateOfInitiation"
-                    ),
-
-                cell: ({
-                    getValue,
-                }) => (
-                    <span
-                        className="
-                            whitespace-nowrap
-                            font-mono
-                            text-[10.5px]
-                            font-semibold
-                            text-[#5F7770]
-                        "
-                    >
+                accessorFn: (row) => getProcessValue(row, "dateOfInitiation"),
+                cell: ({ getValue }) => (
+                    <span className="whitespace-nowrap font-mono text-[10.5px] font-semibold text-[#5F7770]">
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
-            /* =========================================================
-               ACTION
-            ========================================================== */
+            // ACTION
             {
                 id: "actions",
-
                 header: "Action",
-
                 enableSorting: false,
-
-                cell: ({
-                    row,
-                }) => (
+                cell: ({ row }) => (
                     <button
                         type="button"
-                        onClick={() =>
-                            handleViewReport(
-                                row.original?.id
-                            )
-                        }
-                        className="
-                            inline-flex
-                            cursor-pointer
-                            items-center
-                            gap-2
-                            rounded-[9px]
-                            border
-                            border-[#C9D9D3]
-                            bg-[#EEF4F1]
-                            px-3
-                            py-1.5
-                            text-[10.5px]
-                            font-bold
-                            text-[#56766D]
-                            shadow-[0_1px_4px_rgba(86,118,109,0.045)]
-                            transition-all
-                            duration-200
-                            hover:border-[#AFC5BC]
-                            hover:bg-[#E2ECE8]
-                            hover:text-[#48685F]
-                            hover:shadow-[0_3px_9px_rgba(86,118,109,0.09)]
-                            focus:outline-none
-                            focus-visible:ring-2
-                            focus-visible:ring-[var(--color-primary-muted)]
-                            focus-visible:ring-offset-1
-                        "
+                        onClick={() => handleViewReport(row.original?.id)}
+                        className="inline-flex cursor-pointer items-center gap-2 rounded-[9px] border border-[#C9D9D3] bg-[#EEF4F1] px-3 py-1.5 text-[10.5px] font-bold text-[#56766D] shadow-[0_1px_4px_rgba(86,118,109,0.045)] transition-all duration-200 hover:border-[#AFC5BC] hover:bg-[#E2ECE8] hover:text-[#48685F] hover:shadow-[0_3px_9px_rgba(86,118,109,0.09)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-muted)] focus-visible:ring-offset-1"
                         title="View preventive maintenance report"
                     >
-                        <Eye
-                            size={14}
-                            strokeWidth={1.9}
-                        />
-
-                        <span>
-                            View Report
-                        </span>
+                        <Eye size={14} strokeWidth={1.9} />
+                        <span>View Report</span>
                     </button>
                 ),
             },
@@ -769,20 +379,17 @@ const PreventivePlannerDashboard = () => {
         [navigate]
     );
 
+    const hasActiveFilters = Boolean(searchTerm) || Boolean(statusFilter) || Boolean(dateRange);
+    
+    const clearFilters = () => {
+        setSearchTerm("");
+        setStatusFilter("");
+        setDateRange(null);
+    };
+
     return (
-        <div
-            className="
-                flex
-                h-full
-                min-h-0
-                flex-col
-                overflow-hidden
-                bg-[var(--color-background)]
-            "
-        >
-            {/* =====================================================
-                DARK SECONDARY ACTION BAR
-            ====================================================== */}
+        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white">
+            {/* DARK SECONDARY ACTION BAR */}
             <DashboardActionBar
                 title="Preventive Maintenance Dashboard"
                 buttonName="Create Record"
@@ -792,74 +399,113 @@ const PreventivePlannerDashboard = () => {
                 showCreateButton={showCreateButton}
             />
 
-            {/* =====================================================
-                FULL-WIDTH HIGH-DENSITY TABLE
-            ====================================================== */}
-            <main
-    className="
-        min-h-0
-        flex-1
-        overflow-hidden
-        px-0
-        pb-0
-        pt-[58px]
-    "
->
-                <div
-        className="
-            h-full
-            min-h-0
-            overflow-hidden
-        "
-    >
-                    <DataTable
-                        data={records}
-                        columns={columns}
-                        loading={loading}
-                        searchable
-                        searchPlaceholder="Search preventive records..."
-                        pagination
-                        pageSize={
-                            pagination.perPage
-                        }
-                        pageSizeOptions={[
-                            10,
-                            20,
-                            50,
-                        ]}
-                        sortable
-                        showColumnVisibility
-                        hoverable
+            {/* MAIN CONTENT */}
+            <main className="min-h-0 flex-1 overflow-hidden px-0 pb-0 pt-[58px]">
+                <section className="flex h-full min-h-0 flex-col overflow-hidden bg-transparent">
+                    
+                    {/* ───────────── SIDE-BY-SIDE COMPACT FILTER BAR ───────────── */}
+                    <div className="flex shrink-0 flex-nowrap items-center gap-2 px-4 py-3 border-b border-gray-100 bg-[#FAFBFA] overflow-x-auto">
+                        
+                        {/* Search Input - Strict Fixed Width */}
+                        <Input
+                            size="small"
+                            placeholder="Search..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            prefix={<Search size={13} className="text-gray-400" />}
+                            allowClear
+                            style={{
+                                width: "160px",
+                                minWidth: "160px",
+                                maxWidth: "160px",
+                                flex: "0 0 160px",
+                                height: "30px",
+                                fontSize: "12px",
+                            }}
+                        />
 
-                        /* Backend pagination */
-                        manualPagination
-                        pageCount={
-                            pagination.lastPage
-                        }
-                        totalRows={
-                            pagination.total
-                        }
+                        {/* Status Select - Widened to fit long stages */}
+                        <Select
+                            size="middle"
+                            placeholder="Stage"
+                            value={statusFilter || undefined}
+                            onChange={(val) => setStatusFilter(val || "")}
+                            options={STAGE_OPTIONS}
+                            allowClear
+                            className="w-64 text-sm font-medium shadow-sm"
+                            popupClassName="rounded-lg"
+                        />
 
-                        onPaginationChange={({
-                            pageIndex,
-                            pageSize,
-                        }) => {
-                            const nextPage =
-                                pageIndex + 1;
+                        {/* Date Range Picker */}
+                        <RangePicker
+                            size="middle"
+                            value={dateRange ? [dayjs(dateRange[0]), dayjs(dateRange[1])] : null}
+                            onChange={(dates) => {
+                                if (dates && dates[0] && dates[1]) {
+                                    setDateRange([
+                                        dates[0].format("YYYY-MM-DD"),
+                                        dates[1].format("YYYY-MM-DD")
+                                    ]);
+                                } else {
+                                    setDateRange(null);
+                                }
+                            }}
+                            className="w-56 text-sm font-medium shadow-sm rounded-lg"
+                        />
 
-                            fetchRecords(
-                                nextPage,
-                                pageSize
-                            );
-                        }}
+                        {/* Clear Filters Button */}
+                        {hasActiveFilters && (
+                            <Button
+                                size="middle"
+                                icon={<Filter size={14} className="mr-1" />}
+                                onClick={clearFilters}
+                                className="rounded-lg font-semibold text-gray-600 shadow-sm hover:text-gray-900 border-gray-200"
+                            >
+                                Clear
+                            </Button>
+                        )}
+                    </div>
 
-                        emptyTitle="No preventive records found"
-                        emptyDescription="
-                            Preventive records will appear here
-                            once they are created.
-                        "
-                    />
-                </div>
+                    {/* TABLE WRAPPER */}
+                    <div className="min-h-0 flex-1 overflow-hidden w-full bg-white">
+                        <DataTable
+                            data={records}
+                            columns={columns}
+                            loading={loading}
+                            
+                            /* Removes the gap & internal toolbar */
+                            toolbar={false}
+                            searchable={false}
+                            
+                            /* Makes the table completely flat and stretches to edges */
+                            className="!rounded-none !border-0 !shadow-none !h-full"
+                            
+                            pagination
+                            pageSize={pagination.perPage}
+                            pageSizeOptions={[10, 20, 50]}
+                            sortable
+                            hoverable
+                            
+                            /* Backend pagination */
+                            manualPagination
+                            pageCount={pagination.lastPage}
+                            totalRows={pagination.total}
+                            onPaginationChange={({ pageIndex, pageSize }) => {
+                                const pageSizeChanged = pageSize !== pagination.perPage;
+                                const nextPage = pageSizeChanged ? 1 : pageIndex + 1;
+
+                                fetchRecords(nextPage, pageSize, {
+                                    search: debouncedSearch,
+                                    status: statusFilter,
+                                    start_date: dateRange?.[0] || "",
+                                    end_date: dateRange?.[1] || "",
+                                });
+                            }}
+                            emptyTitle="No preventive records found"
+                            emptyDescription="Try changing filters or create a new record."
+                        />
+                    </div>
+                </section>
             </main>
         </div>
     );

@@ -24,7 +24,7 @@ import { getProfile } from "../../../services/authApi";
 import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration,  getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
 import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
 import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
-import { getAllFieldInstrumentPlannerData } from "../../../services/usersApi/fieldInstrumentPlanerApi";
+import { getAllFieldInstrumentPlannerData, getAllSpareInstrumentMasterData } from "../../../services/usersApi/fieldInstrumentPlanerApi";
 
 dayjs.extend(customParseFormat);
 
@@ -189,12 +189,6 @@ useEffect(() => {
       return;
     }
 
-    // Spare Instrument Calibration API will be added later.
-    if (selectedInstrumentType === "Spare Instrument Calibration") {
-      setEquipmentLoading(false);
-      return;
-    }
-
     try {
       setEquipmentLoading(true);
 
@@ -204,6 +198,9 @@ useEffect(() => {
         response = await getAllEquipmentData();
       } else if (selectedInstrumentType === "Field Instrument") {
         response = await getAllFieldInstrumentPlannerData();
+      }
+      else if (selectedInstrumentType === "Spare Instrument Calibration") {
+        response = await getAllSpareInstrumentMasterData();
       }
 
       if (!isCurrent) return;

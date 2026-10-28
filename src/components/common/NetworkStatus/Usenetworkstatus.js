@@ -8,8 +8,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
  */
 const DEFAULT_CHECK_URLS = [
   "https://www.gstatic.com/generate_204",
-  "https://www.cloudflare.com/cdn-cgi/trace",
-  "https://www.google.com/generate_204",
+  // "https://www.cloudflare.com/cdn-cgi/trace",
+  // "https://www.google.com/generate_204",
 ];
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -67,8 +67,8 @@ function hasInternet(urls, timeoutMs = 4000) {
  */
 export default function useNetworkStatus({
   checkUrls = DEFAULT_CHECK_URLS,
-  pollMs = 3000,
-  heartbeatMs = 10000,
+  pollMs = 5000,
+  heartbeatMs = 30000,
   failuresBeforeOffline = 2,
   restoredMs = 4500,
 } = {}) {

@@ -1,12 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Eye, Wrench, ArrowUpRight } from "lucide-react";
+import { Eye, Wrench, ArrowUpRight, Search, Filter } from "lucide-react";
+import { Input, Select, Button } from "antd";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
 // import CreateEquipmentModal from "./CreateEquipmentModal";
 import {
-    getAllEquipment,
     getInstrumentReport,
 } from "../../../services/usersApi/equipmentApi";
 import DataTable from "../../../components/common/DataTable/DataTable";
@@ -77,6 +77,23 @@ const REPORT_ERROR_HTML = `
 </html>
 `;
 
+/* ───────────────────────── Filter option constants ───────────────────────── */
+
+const CATEGORY_OPTIONS = [
+    { label: "Critical",     value: "critical"     },
+    { label: "Non Critical", value: "non critical" },
+    { label: "Indicative",   value: "indicative"   },
+];
+
+// 🔥 STATIC STAGES ADDED HERE
+const STAGE_OPTIONS = [
+    { label: "Opened",             value: "Opened" },
+    { label: "HOD Review",         value: "HOD Review" },
+    { label: "QA Approval",        value: "QA Approval" },
+    { label: "Closed - Done",      value: "Closed - Done" },
+    { label: "Closed - Cancelled", value: "Closed - Cancelled" },
+];
+
 const SpareInstrumentDashboard = () => {
     const navigate = useNavigate();
 
@@ -101,16 +118,32 @@ const SpareInstrumentDashboard = () => {
     });
 
     // ================================================================
+    // FILTER STATE
+    // ================================================================
+    const [searchTerm, setSearchTerm]           = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [categoryFilter, setCategoryFilter]   = useState("");
+    const [statusFilter, setStatusFilter]       = useState("");
+
+    // Debounce search
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 400);
+        return () => clearTimeout(t);
+    }, [searchTerm]);
+
+    // ================================================================
     // FETCH EQUIPMENT
     // ================================================================
-    const fetchEquipment = async (page = 1, perPage = 10) => {
+    const fetchEquipment = useCallback(async (page = 1, perPage = 10, filters = {}) => {
         try {
             setLoading(true);
 
-            const response = await getAllSpareInstrumentRecords({
-                page,
-                per_page: perPage,
-            });
+            const params = { page, per_page: perPage };
+            if (filters.search)   params.search   = filters.search;
+            if (filters.category) params.category = filters.category;
+            if (filters.status)   params.status   = filters.status;
+
+            const response = await getAllSpareInstrumentRecords(params);
 
             const paginationData = response?.data?.data;
             const equipmentData = paginationData?.data || [];
@@ -124,7 +157,7 @@ const SpareInstrumentDashboard = () => {
                 total: paginationData?.total || 0,
             });
         } catch (error) {
-            console.error("Failed to fetch instruments:", error);
+            console.error("Failed to fetch spare instruments:", error);
             setEquipment([]);
             setPagination({
                 currentPage: 1,
@@ -135,21 +168,22 @@ const SpareInstrumentDashboard = () => {
         } finally {
             setLoading(false);
         }
-    };
-
-    // ================================================================
-    // INITIAL LOAD
-    // ================================================================
-    useEffect(() => {
-        fetchEquipment(1, 10);
     }, []);
+
+    // Trigger fetch on filters change
+    useEffect(() => {
+        fetchEquipment(1, pagination.perPage, {
+            search:   debouncedSearch,
+            category: categoryFilter,
+            status:   statusFilter,
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedSearch, categoryFilter, statusFilter, fetchEquipment]);
 
     // ================================================================
     // VIEW REPORT
-    // Opens the tab immediately (so pop-up blockers allow it), shows a
-    // loader, then swaps in the generated PDF.
     // ================================================================
-    const handleViewReport = async (instrumentId) => {
+    const handleViewReport = useCallback(async (instrumentId) => {
         if (!instrumentId) return;
 
         const reportWindow = window.open("", "_blank");
@@ -164,11 +198,7 @@ const SpareInstrumentDashboard = () => {
             reportWindow.document.close();
 
             const response = await getInstrumentReport(instrumentId);
-
-            const blob = new Blob([response.data], {
-                type: "application/pdf",
-            });
-
+            const blob = new Blob([response.data], { type: "application/pdf" });
             const pdfUrl = window.URL.createObjectURL(blob);
 
             reportWindow.location.href = pdfUrl;
@@ -178,23 +208,20 @@ const SpareInstrumentDashboard = () => {
             }, 10000);
         } catch (error) {
             console.error("Failed to open instrument report:", error);
-
             if (reportWindow && !reportWindow.closed) {
                 reportWindow.document.open();
                 reportWindow.document.write(REPORT_ERROR_HTML);
                 reportWindow.document.close();
             }
         }
-    };
+    }, []);
 
     // ================================================================
     // TABLE COLUMNS
     // ================================================================
     const columns = useMemo(
         () => [
-            // ========================================================
             // INSTRUMENT ID NO.
-            // ========================================================
             {
                 accessorKey: "instrument_id_no",
                 header: "Instrument ID",
@@ -205,60 +232,19 @@ const SpareInstrumentDashboard = () => {
                             type="button"
                             onClick={() => {
                                 if (!row.original?.id) return;
-                                navigate(
-                                    `/user/spare-instrument-calibration-master-panel/${row.original.id}`
-                                );
+                                navigate(`/user/spare-instrument-calibration-master-panel/${row.original.id}`);
                             }}
-                            className="
-                                group
-                                inline-flex
-                                cursor-pointer
-                                items-center
-                                gap-1.5
-                                rounded-[9px]
-                                border
-                                border-[#D5E0DB]
-                                bg-[#F0F5F2]
-                                px-2.5
-                                py-1.5
-                                font-mono
-                                text-[10.5px]
-                                font-bold
-                                tracking-[0.03em]
-                                text-[#536D64]
-                                shadow-[0_1px_4px_rgba(36,50,56,0.035)]
-                                transition-all
-                                duration-200
-                                hover:border-[#B7CAC2]
-                                hover:bg-[#E5EEEA]
-                                hover:text-[#405F55]
-                                hover:shadow-[0_3px_8px_rgba(86,118,109,0.08)]
-                                focus:outline-none
-                                focus-visible:ring-2
-                                focus-visible:ring-[var(--color-primary-muted)]
-                                focus-visible:ring-offset-1
-                            "
+                            className="group inline-flex cursor-pointer items-center gap-1.5 rounded-[9px] border border-[#D5E0DB] bg-[#F0F5F2] px-2.5 py-1.5 font-mono text-[10.5px] font-bold tracking-[0.03em] text-[#536D64] shadow-[0_1px_4px_rgba(36,50,56,0.035)] transition-all duration-200 hover:border-[#B7CAC2] hover:bg-[#E5EEEA] hover:text-[#405F55] hover:shadow-[0_3px_8px_rgba(86,118,109,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-muted)] focus-visible:ring-offset-1"
                             title="View instrument details"
                         >
                             <span>{value || "-"}</span>
-                            <ArrowUpRight
-                                size={11}
-                                strokeWidth={2}
-                                className="
-                                    opacity-0
-                                    transition-opacity
-                                    duration-200
-                                    group-hover:opacity-100
-                                "
-                            />
+                            <ArrowUpRight size={11} strokeWidth={2} className="opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
                         </button>
                     );
                 },
             },
 
-            // ========================================================
             // INSTRUMENT NAME
-            // ========================================================
             {
                 accessorKey: "instrument_name",
                 header: "Instrument",
@@ -266,34 +252,11 @@ const SpareInstrumentDashboard = () => {
                     const name = row.original?.instrument_name || "-";
                     return (
                         <div className="flex min-w-0 items-center gap-3">
-                            <div
-                                className="
-                                    flex
-                                    h-8
-                                    w-8
-                                    shrink-0
-                                    items-center
-                                    justify-center
-                                    rounded-[9px]
-                                    border
-                                    border-[#D5E0DB]
-                                    bg-[#F1F5F3]
-                                    text-[#56766D]
-                                "
-                            >
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] border border-[#D5E0DB] bg-[#F1F5F3] text-[#56766D]">
                                 <Wrench size={14} strokeWidth={1.9} />
                             </div>
                             <div className="min-w-0">
-                                <p
-                                    className="
-                                        truncate
-                                        text-[12px]
-                                        font-bold
-                                        tracking-[-0.01em]
-                                        text-[var(--color-text-primary)]
-                                    "
-                                    title={name}
-                                >
+                                <p className="truncate text-[12px] font-bold tracking-[-0.01em] text-[var(--color-text-primary)]" title={name}>
                                     {name}
                                 </p>
                             </div>
@@ -302,10 +265,7 @@ const SpareInstrumentDashboard = () => {
                 },
             },
 
-
-            // ========================================================
             // MAKE
-            // ========================================================
             {
                 accessorKey: "make",
                 header: "Make",
@@ -316,107 +276,51 @@ const SpareInstrumentDashboard = () => {
                 ),
             },
 
-            // ========================================================
             // SR. NO. / MODEL NO.
-            // ========================================================
             {
                 accessorKey: "sr_no_model_no",
                 header: "Sr. No. / Model No.",
                 cell: ({ getValue }) => (
-                    <span
-                        className="
-                            inline-flex
-                            rounded-[8px]
-                            bg-[#F7F8F6]
-                            px-2
-                            py-1
-                            font-mono
-                            text-[10.5px]
-                            font-semibold
-                            tracking-[0.02em]
-                            text-[#52625E]
-                        "
-                    >
+                    <span className="inline-flex rounded-[8px] bg-[#F7F8F6] px-2 py-1 font-mono text-[10.5px] font-semibold tracking-[0.02em] text-[#52625E]">
                         {getValue() || "-"}
                     </span>
                 ),
             },
 
-            // ========================================================
             // CREATED
-            // ========================================================
             {
                 accessorKey: "created_at",
                 header: "Created",
                 cell: ({ getValue }) => {
                     const value = getValue();
-                    if (!value) {
-                        return (
-                            <span className="text-[11px] text-[#98A19E]">
-                                -
-                            </span>
-                        );
-                    }
+                    if (!value) return <span className="text-[11px] text-[#98A19E]">-</span>;
                     const date = new Date(value);
-                    if (Number.isNaN(date.getTime())) {
-                        return (
-                            <span className="text-[11px] text-[#687571]">
-                                {value}
-                            </span>
-                        );
-                    }
+                    if (Number.isNaN(date.getTime())) return <span className="text-[11px] text-[#687571]">{value}</span>;
                     return (
                         <div className="flex flex-col gap-0.5">
                             <span className="whitespace-nowrap text-[10.5px] font-bold text-[#4D625B]">
-                                {date.toLocaleDateString("en-IN", {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric",
-                                })}
+                                {date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                             </span>
                             <span className="whitespace-nowrap font-mono text-[9.5px] font-medium text-[#8A9691]">
-                                {date.toLocaleTimeString("en-IN", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                    second: "2-digit",
-                                    hour12: false,
-                                })}
+                                {date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
                             </span>
                         </div>
                     );
                 },
             },
 
-            // ========================================================
             // STAGE
-            // ========================================================
             {
                 accessorKey: "stage.name",
                 header: "Stage",
                 cell: ({ row }) => {
                     const stageName = row.original?.stage?.name || "-";
-                    // Optional: add dynamic coloring for certain stages (e.g., Closed, Pending)
                     const isClosed = stageName.toLowerCase().includes("closed");
-                    
                     return (
                         <span
-                            className={`
-                                inline-flex
-                                max-w-full
-                                items-center
-                                rounded-full
-                                border
-                                px-2.5
-                                py-1
-                                text-[10px]
-                                font-bold
-                                tracking-[0.025em]
-                                ${
-                                    isClosed
-                                        ? "border-[#D5E0DB] bg-[#F0F5F2] text-[#536D64]" 
-                                        : "border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]"
-                                }
-                            `}
+                            className={`inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-[0.025em] ${
+                                isClosed ? "border-[#D5E0DB] bg-[#F0F5F2] text-[#536D64]" : "border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]"
+                            }`}
                             title={stageName}
                         >
                             {stageName}
@@ -425,9 +329,7 @@ const SpareInstrumentDashboard = () => {
                 },
             },
 
-            // ========================================================
             // ACTION
-            // ========================================================
             {
                 id: "actions",
                 header: "Action",
@@ -439,32 +341,7 @@ const SpareInstrumentDashboard = () => {
                             event.stopPropagation();
                             handleViewReport(row.original?.id);
                         }}
-                        className="
-                            inline-flex
-                            cursor-pointer
-                            items-center
-                            gap-2
-                            rounded-[9px]
-                            border
-                            border-[#C9D9D3]
-                            bg-[#EEF4F1]
-                            px-3
-                            py-1.5
-                            text-[10.5px]
-                            font-bold
-                            text-[#56766D]
-                            shadow-[0_1px_4px_rgba(86,118,109,0.045)]
-                            transition-all
-                            duration-200
-                            hover:border-[#AFC5BC]
-                            hover:bg-[#E2ECE8]
-                            hover:text-[#48685F]
-                            hover:shadow-[0_3px_9px_rgba(86,118,109,0.09)]
-                            focus:outline-none
-                            focus-visible:ring-2
-                            focus-visible:ring-[var(--color-primary-muted)]
-                            focus-visible:ring-offset-1
-                        "
+                        className="inline-flex cursor-pointer items-center gap-2 rounded-[9px] border border-[#C9D9D3] bg-[#EEF4F1] px-3 py-1.5 text-[10.5px] font-bold text-[#56766D] shadow-[0_1px_4px_rgba(86,118,109,0.045)] transition-all duration-200 hover:border-[#AFC5BC] hover:bg-[#E2ECE8] hover:text-[#48685F] hover:shadow-[0_3px_9px_rgba(86,118,109,0.09)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-muted)] focus-visible:ring-offset-1"
                         title="View instrument report"
                     >
                         <Eye size={14} strokeWidth={1.9} />
@@ -473,14 +350,19 @@ const SpareInstrumentDashboard = () => {
                 ),
             },
         ],
-        [navigate]
+        [navigate, handleViewReport]
     );
 
+    const hasActiveFilters = Boolean(searchTerm) || Boolean(categoryFilter) || Boolean(statusFilter);
+    const clearFilters = () => {
+        setSearchTerm("");
+        setCategoryFilter("");
+        setStatusFilter("");
+    };
+
     return (
-        <div className="flex h-full min-h-0 flex-col overflow-hidden">
-            {/* =====================================================
-                SECONDARY ACTION BAR
-            ====================================================== */}
+        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white">
+            {/* SECONDARY ACTION BAR */}
             <DashboardActionBar
                 title="Spare Instrument Dashboard"
                 buttonName="Create Record"
@@ -490,42 +372,109 @@ const SpareInstrumentDashboard = () => {
                 showCreateButton={showCreateButton}
             />
 
-            {/* =====================================================
-                MAIN CONTENT
-            ====================================================== */}
+            {/* MAIN CONTENT */}
             <main className="min-h-0 flex-1 overflow-hidden px-0 pb-0 pt-[58px]">
-                <section className="h-full min-h-0 overflow-hidden bg-transparent">
-                    <div className="h-full min-h-0 overflow-hidden">
+                <section className="flex h-full min-h-0 flex-col overflow-hidden bg-transparent">
+                    
+                    {/* ───────────── SIDE-BY-SIDE COMPACT FILTER BAR ───────────── */}
+                    <div className="flex shrink-0 flex-nowrap items-center gap-2 px-4 py-3 border-b border-gray-100 bg-[#FAFBFA] overflow-x-auto">
+                        
+                        {/* Search Input - Strict Fixed Width */}
+                        <Input
+                            size="small"
+                            placeholder="Search..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            prefix={<Search size={13} className="text-gray-400" />}
+                            allowClear
+                            style={{
+                                width: "140px",
+                                minWidth: "140px",
+                                maxWidth: "140px",
+                                flex: "0 0 140px",
+                                height: "30px",
+                                fontSize: "12px",
+                            }}
+                        />
+
+                        {/* Category Select - Very Small Width */}
+                        <Select
+                            size="middle"
+                            placeholder="Category"
+                            value={categoryFilter || undefined}
+                            onChange={(val) => setCategoryFilter(val || "")}
+                            options={CATEGORY_OPTIONS}
+                            allowClear
+                            className="w-32 text-sm font-medium shadow-sm"
+                            popupClassName="rounded-lg"
+                        />
+
+                        {/* Status Select - Static STAGE_OPTIONS */}
+                        <Select
+                            size="middle"
+                            placeholder="Stage"
+                            value={statusFilter || undefined}
+                            onChange={(val) => setStatusFilter(val || "")}
+                            options={STAGE_OPTIONS}
+                            allowClear
+                            className="w-36 text-sm font-medium shadow-sm"
+                            popupClassName="rounded-lg"
+                        />
+
+                        {/* Clear Filters Button */}
+                        {hasActiveFilters && (
+                            <Button
+                                size="middle"
+                                icon={<Filter size={14} className="mr-1" />}
+                                onClick={clearFilters}
+                                className="rounded-lg font-semibold text-gray-600 shadow-sm hover:text-gray-900 border-gray-200"
+                            >
+                                Clear
+                            </Button>
+                        )}
+                    </div>
+
+                    {/* TABLE WRAPPER */}
+                    <div className="min-h-0 flex-1 overflow-hidden w-full bg-white">
                         <DataTable
                             data={equipment}
                             columns={columns}
                             loading={loading}
-                            searchable
-                            searchPlaceholder="Search instruments..."
+                            
+                            /* Removes the gap & internal toolbar */
+                            toolbar={false}
+                            searchable={false}
+                            
+                            /* Makes the table completely flat and stretches to edges */
+                            className="!rounded-none !border-0 !shadow-none !h-full"
+                            
                             pagination
                             pageSize={pagination.perPage}
                             pageSizeOptions={[10, 20, 50]}
                             sortable
-                            showColumnVisibility
                             hoverable
+                            
                             /* Backend pagination */
                             manualPagination
                             pageCount={pagination.lastPage}
                             totalRows={pagination.total}
                             onPaginationChange={({ pageIndex, pageSize }) => {
-                                const nextPage = pageIndex + 1;
-                                fetchEquipment(nextPage, pageSize);
+                                const pageSizeChanged = pageSize !== pagination.perPage;
+                                const nextPage = pageSizeChanged ? 1 : pageIndex + 1;
+
+                                fetchEquipment(nextPage, pageSize, {
+                                    search:   debouncedSearch,
+                                    category: categoryFilter,
+                                    status:   statusFilter,
+                                });
                             }}
-                            emptyTitle="No Spare Instrument Calibration Master Found "
-                            emptyDescription="Spare Instrument Calibration Master records will appear here once they are created."
+                            emptyTitle="No Spare Instrument Calibration Master Found"
+                            emptyDescription="Try changing filters or create a new record."
                         />
                     </div>
                 </section>
             </main>
 
-            {/* =====================================================
-                CREATE EQUIPMENT MODAL
-            ====================================================== */}
             {/* <CreateEquipmentModal
                 open={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}

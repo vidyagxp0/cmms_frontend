@@ -94,7 +94,7 @@ const css = `
 /* ------------------------------------------------------------------ */
 /*  Wi-Fi icon                                                         */
 /* ------------------------------------------------------------------ */
-function WifiIcon({ variant, ink }) {
+function WifiIcon({ variant, ink, size = 54 }) {
   const offline = variant === "offline";
   const arcClass = offline ? "nsm-arc-search" : "nsm-arc-on";
   const delay = (i) => ({
@@ -104,8 +104,8 @@ function WifiIcon({ variant, ink }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      width="54"
-      height="54"
+      width={size}
+      height={size}
       fill="none"
       stroke="currentColor"
       strokeWidth="1.8"
@@ -225,8 +225,8 @@ function NetworkStatusModal({ checkUrls }) {
         {/* key => the card re-animates when it switches offline -> restored */}
         <div
           key={variant}
-          className={`nsm-card w-full overflow-hidden rounded-[28px] bg-white ${
-            isOffline ? "max-w-[440px]" : "max-w-[400px]"
+          className={`nsm-card w-full overflow-hidden bg-white ${
+            isOffline ? "max-w-[340px] rounded-[20px]" : "max-w-[400px] rounded-[28px]"
           } ${closing ? "is-closing" : ""}`}
           style={{
             "--nsm-color": color,
@@ -236,10 +236,12 @@ function NetworkStatusModal({ checkUrls }) {
         >
           {/* ---------- Icon panel ---------- */}
           <div
-            className="flex items-center justify-center overflow-hidden px-6 py-9"
+            className={`flex items-center justify-center overflow-hidden px-6 ${
+              isOffline ? "py-5" : "py-9"
+            }`}
             style={{ backgroundColor: panel }}
           >
-            <div className="relative h-[112px] w-[112px]">
+            <div className={`relative ${isOffline ? "h-[80px] w-[80px]" : "h-[112px] w-[112px]"}`}>
               <span className="nsm-ring" style={{ animationDelay: "0s" }} />
               <span
                 className={`nsm-ring ${isOffline ? "" : "is-once"}`}
@@ -250,7 +252,7 @@ function NetworkStatusModal({ checkUrls }) {
                 className="relative flex h-full w-full items-center justify-center rounded-full bg-white"
                 style={{ boxShadow: "0 14px 30px -12px rgba(15,29,23,.32)" }}
               >
-                <WifiIcon variant={variant} ink={ink} />
+                <WifiIcon variant={variant} ink={ink} size={isOffline ? 38 : 54} />
               </div>
 
               {!isOffline && (
@@ -280,10 +282,12 @@ function NetworkStatusModal({ checkUrls }) {
           </div>
 
           {/* ---------- Content ---------- */}
-          <div className="px-7 pb-7 pt-6">
+          <div className={`${isOffline ? "px-5 pb-5 pt-4" : "px-7 pb-7 pt-6"}`}>
             <h2
               id="nsm-title"
-              className="text-center text-[22px] font-semibold leading-tight"
+              className={`text-center font-semibold leading-tight ${
+                isOffline ? "text-[18px]" : "text-[22px]"
+              }`}
               style={{ color: "#0F1D17", letterSpacing: "-0.01em" }}
             >
               {isOffline ? "Internet connection lost" : "You're back online"}
@@ -291,7 +295,9 @@ function NetworkStatusModal({ checkUrls }) {
 
             <p
               id="nsm-desc"
-              className="mx-auto mt-2 max-w-[340px] text-center text-sm leading-relaxed"
+              className={`mx-auto mt-1.5 max-w-[340px] text-center leading-relaxed ${
+                isOffline ? "text-[12.5px]" : "text-sm"
+              }`}
               style={{ color: "#5B6B63" }}
             >
               {isOffline
@@ -305,17 +311,17 @@ function NetworkStatusModal({ checkUrls }) {
               <>
                 {/* What to do */}
                 <ul
-                  className="nsm-rise mt-5 space-y-2.5 rounded-2xl p-4"
+                  className="nsm-rise mt-3.5 space-y-2 rounded-xl p-3.5"
                   style={{ backgroundColor: "#F6F8F6", animationDelay: ".15s" }}
                 >
                   {TIPS.map((tip) => (
                     <li
                       key={tip}
-                      className="flex items-start gap-3 text-[13px] leading-snug"
+                      className="flex items-start gap-2.5 text-[12px] leading-snug"
                       style={{ color: "#33443B" }}
                     >
                       <span
-                        className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full"
+                        className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full"
                         style={{ backgroundColor: color }}
                       />
                       {tip}
@@ -325,10 +331,10 @@ function NetworkStatusModal({ checkUrls }) {
 
                 {/* Live status */}
                 <div
-                  className="mt-5 flex items-center justify-between border-t pt-4 text-[13px]"
+                  className="mt-3.5 flex items-center justify-between border-t pt-3 text-[12px]"
                   style={{ borderColor: "rgba(15,29,23,.08)", color: "#5B6B63" }}
                 >
-                  <span className="flex items-center gap-2.5">
+                  <span className="flex items-center gap-2">
                     <span className="flex items-center gap-1" aria-hidden="true">
                       {[0, 1, 2].map((i) => (
                         <span
@@ -357,7 +363,7 @@ function NetworkStatusModal({ checkUrls }) {
                   type="button"
                   onClick={retry}
                   disabled={checking}
-                  className="nsm-btn mt-5 flex w-full items-center justify-center gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                  className="nsm-btn mt-4 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-[13px] font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
                   style={{
                     backgroundColor: "#0F1D17",
                     boxShadow: "0 10px 22px -10px rgba(15,29,23,.7)",
@@ -367,7 +373,7 @@ function NetworkStatusModal({ checkUrls }) {
                 >
                   {checking && (
                     <span
-                      className="nsm-spinner block h-4 w-4 rounded-full border-2"
+                      className="nsm-spinner block h-3.5 w-3.5 rounded-full border-2"
                       style={{
                         borderColor: "rgba(255,255,255,.3)",
                         borderTopColor: "#FFFFFF",
@@ -379,7 +385,7 @@ function NetworkStatusModal({ checkUrls }) {
 
                 {retryFailed && !checking && (
                   <p
-                    className="nsm-rise mt-3 text-center text-[13px] font-medium"
+                    className="nsm-rise mt-2 text-center text-[12px] font-medium"
                     style={{ color: ink }}
                     role="status"
                   >

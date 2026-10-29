@@ -31,6 +31,7 @@ import { getCalibrationUser } from "../../../services/usersApi/calibrationApi"; 
 import { addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
 import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
 import InstrumentCalibrationGrid from "./InstrumentCalibrationGrid";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 dayjs.extend(customParseFormat);
 
@@ -605,13 +606,37 @@ const InstrumentCalibrationPanel = () => {
           
           <SectionHeader title="FIELD INSTRUMENT INFORMATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="year" label="Year" className="!mb-4">
+            <Form.Item
+            name="year"
+             label={
+              <span className="inline-flex items-center">
+                Year
+                <RequiredAsterisk message="Year are required to proceed. Please enter your Year." />
+              </span>
+            }
+            className="!mb-4">
               <Input placeholder="Enter Year" disabled={!isGeneralEditable} />
             </Form.Item>
-            <Form.Item name="block" label="Block" className="!mb-4">
+            <Form.Item
+            name="block"
+             label={
+              <span className="inline-flex items-center">
+                Block
+                <RequiredAsterisk message="Block are required to proceed. Please enter your Block." />
+              </span>
+            }
+            className="!mb-4">
               <Input placeholder="Enter Block" disabled={!isGeneralEditable} />
             </Form.Item>
-            <Form.Item name="area" label="Area" className="!mb-4">
+            <Form.Item
+            name="area"
+            label={
+            <span className="inline-flex items-center">
+              Area
+              <RequiredAsterisk message="Area are required to proceed. Please enter your Area." />
+            </span>
+          }
+            className="!mb-4">
               <Input placeholder="Enter Area" disabled={!isGeneralEditable} />
             </Form.Item>
           </div>
@@ -631,7 +656,15 @@ const InstrumentCalibrationPanel = () => {
             />
           </div>
           
-          <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2 mt-4">
+          <Form.Item
+          name="comments"
+          label={
+          <span className="inline-flex items-center">
+            Comments
+            <RequiredAsterisk message="Comments are required to proceed. Please enter your Comments." />
+          </span>
+        }
+          className="!mb-4 md:col-span-2 mt-4">
             <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isGeneralEditable} />
           </Form.Item>
           <Form.Item
@@ -655,7 +688,15 @@ const InstrumentCalibrationPanel = () => {
         <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
           <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="hodReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+            <Form.Item
+             name="hodReviewComments"
+            label={
+            <span className="inline-flex items-center">
+            Comments
+            <RequiredAsterisk message="Comments are required to proceed. Please enter your Comments." />
+          </span>
+        }
+            className="!mb-4 md:col-span-2">
               <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isHodEditable} />
             </Form.Item>
             <Form.Item
@@ -680,7 +721,15 @@ const InstrumentCalibrationPanel = () => {
         <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
           <SectionHeader title="USER DEPT REVIEW (USER DEPT)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="userDeptReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+            <Form.Item
+            name="userDeptReviewComments"
+             label={
+            <span className="inline-flex items-center">
+              Comments
+              <RequiredAsterisk message="Comments are required to proceed. Please enter your Comments." />
+            </span>
+          }
+            className="!mb-4 md:col-span-2">
               <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isUserDeptEditable} />
             </Form.Item>
             <Form.Item
@@ -705,7 +754,15 @@ const InstrumentCalibrationPanel = () => {
         <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
           <SectionHeader title="QA REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+            <Form.Item
+            name="qaReviewComments"
+            label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your Comments." />
+              </span>
+            }
+            className="!mb-4 md:col-span-2">
               <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isQaReviewEditable} />
             </Form.Item>
             <Form.Item

@@ -6,6 +6,7 @@ import UserModal from "../../../components/common/UserModal/UserModal";
 import CustomScrollContainer from "../../../components/common/CustomScrollbar/CustomScrollContainer";
 import { updateCalibration } from "../../../services/usersApi/calibrationApi";
 import "../../../components/ui/disabledFields.css";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 const { TextArea } = Input;
 
@@ -26,9 +27,9 @@ const InstrumentCalibrationGrid = ({
 }) => {
   // Added descriptive placeholders so users know what to type
   const mainColumns = [
-    { key: "equipmentName", title: "Equipment Name", type: "select", placeholder: "Select equipment", required: true, minWidth: 160 },
-    { key: "instrumentName", title: "Instrument Name", type: "text", placeholder: "Enter name", required: true, minWidth: 150 },
-    { key: "instrumentId", title: "Instrument ID No.", type: "text", placeholder: "Auto-filled", required: true, minWidth: 140, disabled: true },
+    { key: "equipmentName", title: "Equipment Name", type: "select", placeholder: "Select equipment",  minWidth: 160 },
+    { key: "instrumentName", title: "Instrument Name", type: "text", placeholder: "Enter name",  minWidth: 150 },
+    { key: "instrumentId", title: "Instrument ID No.", type: "text", placeholder: "Auto-filled",  minWidth: 140, disabled: true },
     { key: "make", title: "Make", type: "text", placeholder: "Enter make", minWidth: 100 },
     { key: "modelNo", title: "Sr. No./ Model No.", type: "text", placeholder: "Enter Sr. No.", minWidth: 130 },
     { key: "leastCount", title: "Least Count", type: "text", placeholder: "Enter count", minWidth: 100 },
@@ -240,11 +241,29 @@ const InstrumentCalibrationGrid = ({
                   style={{ minWidth: column.minWidth || 120 }} 
                   className="border border-[#D5DFDB] px-2 py-2 text-left align-middle text-[10px] font-bold text-[#43564F]"
                 >
-                  <div className="flex items-center gap-1">{column.title}{column.required && <span className="text-red-500">*</span>}</div>
+                  <div className="flex items-center gap-1">
+                {column.title}
+                {column.key === "equipmentName" && (
+                  <RequiredAsterisk
+                    message="Equipment Name is required. Please select an equipment item to continue."
+                  />
+                )}
+
+                {column.key !== "equipmentName" && column.required && (
+                  <span className="text-red-500">*</span>
+                )}
+              </div>
                 </th>
               ))}
               
-              <th className="w-[140px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Calibration Next Due Date</th>
+          <th className="w-[180px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
+            <div className="flex items-center justify-center gap-1">
+              Calibration Next Due Date
+              <RequiredAsterisk
+                message="Calibration Next Due Date is required. Please select the next due date."
+              />
+            </div>
+          </th>
               <th className="w-[140px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Calibration Done Date</th>
               
               <th className="w-[150px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Remarks</th>

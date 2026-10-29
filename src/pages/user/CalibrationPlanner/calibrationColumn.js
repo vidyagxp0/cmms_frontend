@@ -4,7 +4,7 @@ const CALIBRATED_BY_COLUMNS = [
     title: "Master Instrument Readings in",
     type: "text",
     placeholder: "Enter Master Instrument Readings",
-    required: true,
+    // required: true,
     minWidth: 180,
     symbolic: true,
     toggleable: true,
@@ -41,7 +41,7 @@ const CALIBRATION_RESULT_GRID = [
     title: "Name",
     type: "text",
     placeholder: "Enter name",
-    required: true,
+    // required: true,
     minWidth: 180,
   },
   {

@@ -33,6 +33,7 @@ import {
 } from "../../../services/usersApi/calibrationApi";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
 import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 const TABS = [
   { id: "management", label: "General Information", stageId: 18 },
@@ -155,7 +156,7 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
     envHumidity: "Environmental Condition Relative Humidity",
     previousCalibrationDate: "Previous Calibration Date",
     nextCalibrationDate: "Next Calibration Date",
-    comments: "Remarks",
+    comments: "Comments",
     attachment: "Attachment",
     implementorComments: "HOD / Designee Review Comments",
     implementorAttachment: "HOD / Designee Review Attachment",
@@ -881,7 +882,15 @@ const CalibrationChildPanel = () => {
           
           <div className="my-9 h-px w-full bg-slate-200" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="comments" label="Remarks" className="!mb-4 md:col-span-2">
+            <Form.Item
+            name="comments"
+            label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
+            className="!mb-4 md:col-span-2">
               <FormTextArea rows={4} placeholder="Additional comments..." disabled={!isManagementEditable} />
             </Form.Item>
             <Form.Item name="attachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
@@ -901,7 +910,15 @@ const CalibrationChildPanel = () => {
         <section style={{ display: activeTab === "implementor" ? "block" : "none" }}>
           <SectionHeader title="HOD / DESIGNEE REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="implementorComments" label="Comments" className="!mb-4 md:col-span-2">
+            <Form.Item
+             name="implementorComments"
+            label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
+            className="!mb-4 md:col-span-2">
               <FormTextArea rows={5} placeholder="Enter HOD / Designee review comments..." disabled={!isImplementorEditable} />
             </Form.Item>
             <Form.Item name="implementorAttachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
@@ -921,7 +938,15 @@ const CalibrationChildPanel = () => {
         <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
           <SectionHeader title="QA REVIEW & APPROVAL" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+            <Form.Item
+            name="qaReviewComments"
+            label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
+            className="!mb-4 md:col-span-2">
               <FormTextArea rows={5} placeholder="Enter QA review and approval comments..." disabled={!isQaReviewEditable && !isQaApprovalEditable} />
             </Form.Item>
             <Form.Item name="qaReviewAttachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">

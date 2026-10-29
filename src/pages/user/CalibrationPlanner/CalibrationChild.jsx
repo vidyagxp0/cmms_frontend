@@ -22,6 +22,7 @@ import { getCalibrationUser, getAllEquipmentData, addCalibrationChild } from "..
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
 import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 dayjs.extend(customParseFormat);
 
@@ -415,7 +416,15 @@ const CalibrationChild = () => {
                   <FormDisabledInput />
                 </Form.Item>
               ))}
-              <Form.Item name="shortDescription" label="Short Description" className="!mb-4">
+              <Form.Item 
+              name="shortDescription"
+              label={
+              <span className="inline-flex items-center">
+              Short Description
+              <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
+            </span>
+            }
+              className="!mb-4">
                 <FormInput placeholder="Enter short description" />
               </Form.Item>
             </div>

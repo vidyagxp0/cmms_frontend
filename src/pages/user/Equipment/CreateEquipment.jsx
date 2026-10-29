@@ -13,6 +13,7 @@ import ChecklistConfiguration from "./ChecklistConfig";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import { getProfile } from "../../../services/authApi";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
@@ -374,12 +375,10 @@ const handleTabChange = (tabId) => {
                             <Form.Item
                                 name="instrument_name"
                                 label={
-                                    <span>
-                                        Instrument Name{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
-                                    </span>
+                                <span className="inline-flex items-center">
+                                Instrument Name
+                                <RequiredAsterisk message="Instrument Name are required to proceed. Please enter your Instrument Name." />
+                                </span>
                                 }
                                 rules={[
                                     {
@@ -398,12 +397,10 @@ const handleTabChange = (tabId) => {
                             <Form.Item
                                 name="instrument_id_no"
                                 label={
-                                    <span>
-                                        Instrument ID No.{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
-                                    </span>
+                                <span className="inline-flex items-center">
+                                    Instrument ID No.
+                                    <RequiredAsterisk message="Instrument ID No. is required. Please enter the instrument ID number." />
+                                </span>
                                 }
                                 rules={[
                                     {
@@ -421,13 +418,11 @@ const handleTabChange = (tabId) => {
                             {/* MAKE */}
                             <Form.Item
                                 name="make"
-                                label={
-                                    <span>
-                                        Make{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
-                                    </span>
+                               label={
+                                <span className="inline-flex items-center">
+                                    Make
+                                    <RequiredAsterisk message="Make is required. Please enter the instrument make." />
+                                </span>
                                 }
                                 rules={[
                                     {
@@ -445,12 +440,10 @@ const handleTabChange = (tabId) => {
                             <Form.Item
                                 name="sr_no_model_no"
                                 label={
-                                    <span>
-                                        Sr. No. / Model No.{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
-                                    </span>
+                                <span className="inline-flex items-center">
+                                    Sr. No. / Model No.
+                                    <RequiredAsterisk message="Sr. No. / Model No. is required. Please enter the serial or model number." />
+                                </span>
                                 }
                                 rules={[
                                     {
@@ -469,12 +462,10 @@ const handleTabChange = (tabId) => {
                             <Form.Item
                                 name="location"
                                 label={
-                                    <span>
-                                        Location{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
-                                    </span>
+                                <span className="inline-flex items-center">
+                                    Location
+                                    <RequiredAsterisk message="Location is required. Please enter the instrument location." />
+                                </span>
                                 }
                                 rules={[
                                     {
@@ -492,12 +483,10 @@ const handleTabChange = (tabId) => {
                             <Form.Item
                                 name="least_count"
                                 label={
-                                    <span>
-                                        Least Count{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
-                                    </span>
+                                <span className="inline-flex items-center">
+                                    Least Count
+                                    <RequiredAsterisk message="Least Count is required. Please enter the least count." />
+                                </span>
                                 }
                                 rules={[
                                     {
@@ -515,12 +504,10 @@ const handleTabChange = (tabId) => {
                             <Form.Item
                                 name="accuracy"
                                 label={
-                                    <span>
-                                        Accuracy{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
-                                    </span>
+                                <span className="inline-flex items-center">
+                                    Accuracy
+                                    <RequiredAsterisk message="Accuracy is required. Please enter the instrument accuracy." />
+                                </span>
                                 }
                                 rules={[
                                     {
@@ -538,12 +525,10 @@ const handleTabChange = (tabId) => {
                             <Form.Item
                                 name="instrument_range"
                                 label={
-                                    <span>
-                                        Instrument Range{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
-                                    </span>
+                                <span className="inline-flex items-center">
+                                    Instrument Range
+                                    <RequiredAsterisk message="Instrument Range is required. Please enter the instrument range." />
+                                </span>
                                 }
                                 rules={[
                                     {
@@ -562,12 +547,10 @@ const handleTabChange = (tabId) => {
                             <Form.Item
                                 name="operating_range"
                                 label={
-                                    <span>
-                                        Operating Range{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
-                                    </span>
+                                <span className="inline-flex items-center">
+                                    Operating Range
+                                    <RequiredAsterisk message="Operating Range is required. Please enter the operating range." />
+                                </span>
                                 }
                                 rules={[
                                     {
@@ -586,12 +569,10 @@ const handleTabChange = (tabId) => {
                             <Form.Item
                                 name="calibration_test_points"
                                 label={
-                                    <span>
-                                        Calibration Test Points{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
-                                    </span>
+                                <span className="inline-flex items-center">
+                                    Calibration Test Points
+                                    <RequiredAsterisk message="Calibration Test Points are required. Please enter the calibration test points." />
+                                </span>
                                 }
                                 rules={[
                                     {
@@ -610,12 +591,10 @@ const handleTabChange = (tabId) => {
                             <Form.Item
                                 name="category"
                                 label={
-                                    <span>
-                                        Category{" "}
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
-                                    </span>
+                                <span className="inline-flex items-center">
+                                    Category
+                                    <RequiredAsterisk message="Category is required. Please enter the instrument category." />
+                                </span>
                                 }
                                 rules={[
                                     {

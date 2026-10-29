@@ -23,6 +23,7 @@ import { addPreventiveMaintence } from "../../../services/usersApi/preventive";
 import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
 import { formatDateTime } from "../../../utils/date";
 import { addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 dayjs.extend(customParseFormat);
 
@@ -439,10 +440,11 @@ const PreventiveMaintenanceCreate = () => {
               <Form.Item
                 name="shortDescription"
                 label={
-                  <span>
-                    Short Description <span className="text-red-500">*</span>
-                  </span>
-                }
+                <span className="inline-flex items-center">
+                Short Description
+                <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
+              </span>
+              }
                 rules={[
                   {
                     required: true,

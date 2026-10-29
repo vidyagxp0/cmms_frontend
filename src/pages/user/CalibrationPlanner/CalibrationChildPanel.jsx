@@ -791,7 +791,15 @@ const CalibrationChildPanel = () => {
             <Form.Item name="initiator" label="Initiator" className="!mb-4"><FormDisabledInput /></Form.Item>
             <Form.Item name="dateOfInitiation" label="Date of Initiation" className="!mb-4"><FormDisabledInput /></Form.Item>
             <Form.Item name="initiationDepartment" label="Initiation Department" className="!mb-4"><FormDisabledInput /></Form.Item>
-            <Form.Item name="shortDescription" label="Short Description" className="!mb-4">
+            <Form.Item 
+            name="shortDescription"
+             label={
+              <span className="inline-flex items-center">
+              Short Description
+              <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
+            </span>
+            }
+            className="!mb-4">
               <FormInput placeholder="Enter short description" disabled={!isManagementEditable} />
             </Form.Item>
           </div>

@@ -44,6 +44,7 @@ import {
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 
 import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 const TABS = [
     {
@@ -1270,10 +1271,10 @@ const CreateCalibration = () => {
                                         name="shortDescription"
                                         label={
                                             <span>
-                                                Short Description{" "}
-                                                <span className="text-[#C94B4F]">
-                                                    *
-                                                </span>
+                                                Short Description
+                                                <RequiredAsterisk
+                                                message="This field is required to proceed. Please enter a Short Description."
+                                            />
                                             </span>
                                         }
                                         rules={[

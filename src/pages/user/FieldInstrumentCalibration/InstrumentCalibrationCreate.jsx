@@ -41,6 +41,7 @@ import {
 import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
 import InstrumentCalibrationGrid from "./InstrumentCalibrationGrid";
 import { addInstrumentCalibration } from "../../../services/usersApi/instrumentCalibration";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 const TABS = [
     { id: "general", label: "General Information" },
@@ -390,7 +391,11 @@ const InstrumentCalibrationCreate = () => {
                                     ))}
                                     <Form.Item
                                         name="shortDescription"
-                                        label={<span>Short Description <span className="text-[#C94B4F]">*</span></span>}
+                                        label={<span>Short Description
+                                        <RequiredAsterisk
+                                        message="This field is required to proceed. Please enter a Short Description."
+                                        />
+                                        </span>}
                                         rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
                                         className="!mb-3"
                                     >

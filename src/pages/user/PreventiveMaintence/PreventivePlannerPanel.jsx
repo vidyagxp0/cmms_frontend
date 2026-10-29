@@ -810,10 +810,11 @@ const PreventivePlannerPanel = () => {
             ))}
             <Form.Item
               name="shortDescription"
-              label={
-                <span>
-                  Short Description <span className="text-red-500">*</span>
-                </span>
+               label={
+                <span className="inline-flex items-center">
+                Short Description
+                <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
+              </span>
               }
               rules={[
                 {

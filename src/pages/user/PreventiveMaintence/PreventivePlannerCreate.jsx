@@ -21,6 +21,7 @@ import FormAttachment from "../../../components/common/Attachment/FormAttachment
 import { addPreventive } from "../../../services/usersApi/preventive";
 import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
 import PreventiveGrid from "./PreventiveGrid";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 const TABS = [
   { id: "general", label: "General Information" },
@@ -410,9 +411,10 @@ const PreventivePlannerCreate = () => {
                 <Form.Item
                   name="shortDescription"
                   label={
-                    <span>
-                      Short Description <span className="text-red-500">*</span>
-                    </span>
+                    <span className="inline-flex items-center">
+                    Short Description
+                    <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
+                  </span>
                   }
                   rules={[
                     {

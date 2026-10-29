@@ -4,6 +4,7 @@ import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "../../../store/authStore";
 import { useNavigate } from "react-router-dom";
 import SessionTimer from "../../common/SessionTimer/SessionTimer";
+import NotificationPopup from "../../notification/NotificationPopup";
 
 const UserHeader = ({
     notificationCount = 3,
@@ -15,6 +16,9 @@ const UserHeader = ({
 
     const userName = user?.name;
     const userRole = user?.roles?.[0];
+const [showNotification, setShowNotification] = useState(false);
+const notificationRef = useRef(null);
+
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -24,6 +28,14 @@ const UserHeader = ({
             ) {
                 setShowProfile(false);
             }
+             // Close notification dropdown
+        if (
+            notificationRef.current &&
+            !notificationRef.current.contains(event.target) &&
+            !event.target.closest?.(".ant-select-dropdown")
+        ) {
+            setShowNotification(false);
+        }
         };
 
         document.addEventListener("mousedown", handleClickOutside);
@@ -159,10 +171,13 @@ const UserHeader = ({
                     >
                         <SessionTimer />
                     </div>
-
+          <div ref={notificationRef} className="relative">
                     {/* NOTIFICATIONS */}
-                    <button
-                        type="button"
+                    <button 
+                    type="button"
+                     onClick={() => setShowNotification((prev) => !prev)}
+
+                        
                         aria-label={`Notifications (${notificationCount} unread)`}
                         className="
                             relative
@@ -206,6 +221,13 @@ const UserHeader = ({
                             />
                         )}
                     </button>
+                     {/* POPUP CONDITIONAL RENDER */}
+    {showNotification && (
+        <NotificationPopup
+            onClose={() => setShowNotification(false)}
+        />
+    )}
+    </div>
 
                     {/* DIVIDER */}
                     <div className="mx-1 hidden h-[30px] w-px bg-[#D1D4CF] sm:block" />

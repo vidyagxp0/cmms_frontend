@@ -7,6 +7,7 @@ import UserModal from "../../../components/common/UserModal/UserModal";
 import CustomScrollContainer from "../../../components/common/CustomScrollbar/CustomScrollContainer";
 import { updatePreventive } from "../../../services/usersApi/preventive";
 import "../../../components/ui/disabledFields.css";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 dayjs.extend(customParseFormat);
 const { TextArea } = Input;
@@ -655,12 +656,16 @@ const PreventiveGrid = ({
                   style={{ minWidth: column.minWidth || 180 }}
                   className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3.5 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
                 >
-                  <div className="flex items-center gap-1">
-                    {column.title} {column.key === "location" && "↓"}
-                    {column.required && (
-                      <span className="text-red-500">*</span>
-                    )}
-                  </div>
+            <div className="flex items-center gap-1">
+              {column.title}
+              {column.key === "location" && "↓"}
+
+              {column.key === "equipmentInstrumentName" && (
+                <RequiredAsterisk
+                  message="Equipment Name is required. Please select an equipment item to continue."
+                />
+              )}
+            </div>
                 </th>
               ))}
               {MONTHS.map((month) =>

@@ -38,6 +38,7 @@ import {
   getAllStages,
 } from "../../../services/usersApi/workflowCommonApi";
 import ChecklistInput from "../../../components/common/ChecklistInput/ChecklistInput";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 dayjs.extend(customParseFormat);
 
@@ -1136,7 +1137,12 @@ const PreventiveMaintenancePanel = () => {
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
               name="equipmentInstrumentName"
-              label="Equipment Name"
+               label={
+                <span className="inline-flex items-center">
+                  Equipment Name
+                  <RequiredAsterisk message="Equipment Name are required to proceed. Please enter your Equipment Name." />
+                </span>
+              }
               className="!mb-4"
             >
               <FormSelect
@@ -1148,30 +1154,69 @@ const PreventiveMaintenancePanel = () => {
 
             <Form.Item
               name="equipmentInstrumentId"
-              label="Equipment Code"
+              // label="Equipment Code"
+               label={
+                <span className="inline-flex items-center">
+                  Equipment Code
+                  <RequiredAsterisk message="Equipment Code are required to proceed. Please enter your Equipment Code." />
+                </span>
+              }
               className="!mb-4"
             >
               <FormInput placeholder="Equipment code" disabled />
             </Form.Item>
 
-            <Form.Item name="block" label="Block" className="!mb-4">
+            <Form.Item 
+            name="block"
+            // label="Block"
+             label={
+              <span className="inline-flex items-center">
+                Block
+                <RequiredAsterisk message="Block are required to proceed. Please enter your Block." />
+              </span>
+            }
+            className="!mb-4">
               <FormInput placeholder="Block" disabled={!isGeneralEditable} />
             </Form.Item>
 
-            <Form.Item name="department" label="Department" className="!mb-4">
+            <Form.Item
+            name="department"
+            // label="Department"
+             label={
+              <span className="inline-flex items-center">
+                Department
+                <RequiredAsterisk message="Department are required to proceed. Please enter your Department." />
+              </span>
+            }
+            className="!mb-4">
               <FormInput
                 placeholder="Department"
                 disabled={!isGeneralEditable}
               />
             </Form.Item>
 
-            <Form.Item name="location" label="Location" className="!mb-4">
+            <Form.Item
+            name="location"
+            // label="Location"
+             label={
+              <span className="inline-flex items-center">
+                Location
+                <RequiredAsterisk message="Location are required to proceed. Please enter your Location." />
+              </span>
+            }
+            className="!mb-4">
               <FormInput placeholder="Location" disabled={!isGeneralEditable} />
             </Form.Item>
 
             <Form.Item
               name="previousPreventiveDate"
-              label="Previous Preventive Date"
+              // label="Previous Preventive Date"
+               label={
+              <span className="inline-flex items-center">
+                Previous Preventive Date
+                <RequiredAsterisk message="Previous Preventive Date are required to proceed. Please enter your Previous Preventive Date." />
+              </span>
+            }
               className="!mb-4"
             >
               <DatePicker
@@ -1215,7 +1260,12 @@ const PreventiveMaintenancePanel = () => {
 
           <Form.Item
             name="remark"
-            label="Remark"
+            label={
+          <span className="inline-flex items-center">
+            Remark
+            <RequiredAsterisk message="Remark are required to proceed. Please enter your Remark." />
+          </span>
+        }
             className="!mb-4 md:col-span-2"
           >
             <FormTextArea
@@ -1252,7 +1302,12 @@ const PreventiveMaintenancePanel = () => {
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
               name="engineerReviewComments"
-              label="Comments"
+              label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
               className="!mb-4 md:col-span-2"
             >
               <FormTextArea
@@ -1288,7 +1343,12 @@ const PreventiveMaintenancePanel = () => {
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
               name="qaApprovalComments"
-              label="Comments"
+               label={
+                <span className="inline-flex items-center">
+                  Comments
+                  <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+                </span>
+              }
               className="!mb-4 md:col-span-2"
             >
               <FormTextArea

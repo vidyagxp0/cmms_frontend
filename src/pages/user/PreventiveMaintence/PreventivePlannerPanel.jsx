@@ -227,31 +227,35 @@ const PreventivePlannerPanel = () => {
     fetchProfile();
   }, []);
 
-  useEffect(() => {
-    const fetchEquipment = async () => {
-      try {
-        setEquipmentLoading(true);
-        const response = await getAllEquipmentData();
-        const data = response?.data?.data || [];
-        const options = data.map((item) => ({
-          value: item.instrument_name,
-          label: item.instrument_name,
-        }));
-        const map = {};
-        data.forEach((item) => {
-          map[item.instrument_name] = item;
-        });
-        setEquipmentOptions(options);
-        setEquipmentMap(map);
-      } catch (error) {
-        console.error("Failed to fetch equipment:", error);
-        toast.error("Could not load equipment list.");
-      } finally {
-        setEquipmentLoading(false);
-      }
-    };
-    fetchEquipment();
-  }, []);
+useEffect(() => {
+  const fetchEquipment = async () => {
+    try {
+      setEquipmentLoading(true);
+      const response = await getAllEquipmentData();
+      const data = response?.data?.data || [];
+
+      // ONLY the name is used here
+      const options = data.map((item) => ({
+        value: String(item.id),
+        label: item.instrument_name || "",
+      }));
+
+      const map = {};
+      data.forEach((item) => {
+        map[String(item.id)] = item;
+      });
+
+      setEquipmentOptions(options);
+      setEquipmentMap(map);
+    } catch (error) {
+      console.error("Failed to fetch equipment:", error);
+      toast.error("Could not load equipment list.");
+    } finally {
+      setEquipmentLoading(false);
+    }
+  };
+  fetchEquipment();
+}, []);
 
   const fetchPreventiveDetail = useCallback(
     async (isInitial = false) => {

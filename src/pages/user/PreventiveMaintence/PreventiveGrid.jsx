@@ -30,7 +30,6 @@ const MONTHS = [
 const WEEKS_PER_MONTH = 5;
 
 /* -------------------- Frequency helpers -------------------- */
-// Priority per business rule: Y > Q > H > M
 export const FREQUENCY_PRIORITY = { Y: 4, Q: 3, H: 2, M: 1 };
 
 export const FREQUENCY_LABEL_BY_CODE = {
@@ -67,10 +66,6 @@ const extractFrequencyTokens = (raw) => {
   return [...tokens];
 };
 
-/**
- * Scans every P/A cell of a row and returns the biggest frequency found.
- * @returns {{ code: string, label: string }}  e.g. { code: "Q", label: "quarterly" }
- */
 export const getRowBiggestFrequency = (row) => {
   const weekly = row?.weeklyPreventive;
   const codes = [];
@@ -270,6 +265,9 @@ const PreventiveGrid = ({
     columns.forEach((column) => {
       newRow[column.key] = "";
     });
+    newRow.equipmentDbId = "";
+    newRow.make = "";
+    newRow.model = "";
     newRow.weeklyPreventive = createEmptyWeeklyData();
     newRow.remark = "";
 
@@ -308,23 +306,29 @@ const PreventiveGrid = ({
     if (disabled) return;
     const updated = [...rows];
     const row = { ...updated[rowIndex] };
-    row[key] = newValue;
 
     if (key === "equipmentInstrumentName") {
-      const equipmentId = newValue;
-      if (equipmentId && equipmentMap[equipmentId]) {
-        const equipment = equipmentMap[equipmentId];
+      // newValue is the unique equipment DB id from the Select
+      const equipment = equipmentMap[String(newValue)];
+
+      if (equipment) {
+        row.equipmentDbId = String(equipment.id);
+        row.equipmentInstrumentName = equipment.instrument_name || "";
         row.equipmentInstrumentId =
-          equipment.equipment_id || equipment.instrument_id_no || "";
-        row.equipmentDbId = equipment.id || "";
+          equipment.instrument_id_no || equipment.equipment_id || "";
+        row.location = equipment.location || "";
         row.make = equipment.make || "";
-        row.model = equipment.model || equipment.sr_no_model_no || "";
+        row.model = equipment.sr_no_model_no || equipment.model || "";
       } else {
-        row.equipmentInstrumentId = "";
         row.equipmentDbId = "";
+        row.equipmentInstrumentName = "";
+        row.equipmentInstrumentId = "";
+        row.location = "";
         row.make = "";
         row.model = "";
       }
+    } else {
+      row[key] = newValue;
     }
 
     if (!row.weeklyPreventive || typeof row.weeklyPreventive !== "object") {
@@ -398,19 +402,26 @@ const PreventiveGrid = ({
 
     if (type === "select") {
       if (key === "equipmentInstrumentName") {
+        // Bind by the unique equipmentDbId instead of the name
+        const selectValue =
+          row.equipmentDbId !== undefined &&
+          row.equipmentDbId !== null &&
+          row.equipmentDbId !== ""
+            ? String(row.equipmentDbId)
+            : undefined;
+
         return (
           <Select
             {...commonProps}
-            value={fieldValue || undefined}
+            value={selectValue}
             placeholder={equipmentLoading ? "Loading..." : placeholder}
-            onChange={handleChange}
+            onChange={(id) => updateRow(rowIndex, "equipmentInstrumentName", id)}
             options={equipmentOptions}
             disabled={isDisabled || equipmentLoading}
             showSearch
+            optionFilterProp="label"
             filterOption={(input, option) =>
-              (option?.label ?? "")
-                .toLowerCase()
-                .includes(input.toLowerCase())
+              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
             }
             className="!w-full [&_.ant-select-selector]:!h-10 [&_.ant-select-selector]:!rounded-lg [&_.ant-select-selector]:!border-[#D1DBD7] [&_.ant-select-selector]:!bg-white [&_.ant-select-selector]:!px-3 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[12px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[#9AA6A1] hover:[&_.ant-select-selector]:!border-[#A8B9B2] [&.ant-select-focused_.ant-select-selector]:!border-[#4E7585]"
           />
@@ -656,16 +667,14 @@ const PreventiveGrid = ({
                   style={{ minWidth: column.minWidth || 180 }}
                   className="border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3.5 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
                 >
-            <div className="flex items-center gap-1">
-              {column.title}
-              {column.key === "location" && "↓"}
+                  <div className="flex items-center gap-1">
+                    {column.title}
+                    {column.key === "location" && "↓"}
 
-              {column.key === "equipmentInstrumentName" && (
-                <RequiredAsterisk
-                  message="Equipment Name is required. Please select an equipment item to continue."
-                />
-              )}
-            </div>
+                    {column.key === "equipmentInstrumentName" && (
+                      <RequiredAsterisk message="Equipment Name is required. Please select an equipment item to continue." />
+                    )}
+                  </div>
                 </th>
               ))}
               {MONTHS.map((month) =>
@@ -722,9 +731,7 @@ const PreventiveGrid = ({
                           const actualValue = toFieldString(weekData.actual);
 
                           return (
-                            <React.Fragment
-                              key={`${month.key}-${weekIdx}-pa`}
-                            >
+                            <React.Fragment key={`${month.key}-${weekIdx}-pa`}>
                               <td className="border-b border-r border-[#E0E7E4] px-1 py-2.5 text-center align-middle">
                                 <Input
                                   value={plannedValue}
@@ -780,7 +787,11 @@ const PreventiveGrid = ({
                           type="button"
                           onClick={() => {
                             if (!canCreateChild) return;
-                            onViewChild(rowIndex, row, getRowBiggestFrequency(row));
+                            onViewChild(
+                              rowIndex,
+                              row,
+                              getRowBiggestFrequency(row)
+                            );
                           }}
                           disabled={!canCreateChild}
                           className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${

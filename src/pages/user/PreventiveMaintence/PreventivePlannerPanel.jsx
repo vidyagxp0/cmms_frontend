@@ -276,6 +276,8 @@ const PreventivePlannerPanel = () => {
         setProcessName(responseData?.process?.name || "");
 
         const processData = responseData?.process_data || [];
+        const documentNumber = getProcessValue(processData, "documentNumber");
+        const documentType = getProcessValue(processData, "documentType");
         const recordNumber = getProcessValue(processData, "recordNumber");
         const locationCode = getProcessValue(processData, "siteLocationCode");
         const processInitiator = getProcessValue(processData, "initiator");
@@ -359,6 +361,8 @@ const PreventivePlannerPanel = () => {
         };
 
         form.setFieldsValue({
+          documentNumber: documentNumber || "SMLJ/ENG/SOP-GEN/OO3/T01-01",
+          documentType: documentType || "Formats",
           recordNumber,
           siteLocationCode: locationCode || "",
           initiator: backendInitiatorName,
@@ -575,6 +579,16 @@ const PreventivePlannerPanel = () => {
   }, [activeStageId]);
 
   const systemFields = [
+    {
+    name: "documentNumber",
+    label: "Document Number",
+    value: "SMLJ/ENG/SOP-GEN/OO3/T01-01",
+    },
+    {
+        name: "documentType",
+        label: "Document Type",
+        value: "Formats",
+    },
     {
       name: "recordNumber",
       label: "Record Number",

@@ -184,6 +184,8 @@ const PreventivePlannerCreate = () => {
         }
 
         form.setFieldsValue({
+          documentNumber: "SMLJ/ENG/SOP-GEN/OO3/T01-01",
+          documentType: "Formats",
           initiator: userName,
           initiationDepartment: departmentName,
           dateOfInitiation,
@@ -224,6 +226,16 @@ const PreventivePlannerCreate = () => {
   }, [processId, form, dateOfInitiation]);
 
   const systemFields = [
+     {
+            name: "documentNumber",
+            label: "Document Number",
+            value: "SMLJ/ENG/SOP-GEN/OO3/T01-01",
+    },
+    {
+        name: "documentType",
+        label: "Document Type",
+        value: "Formats",
+    },
     { name: "recordNumber", label: "Record Number", value: recordNumber },
     // { name: "siteLocationCode", label: "Site / Location Code", value: "Unit IV" },
     { name: "initiator", label: "Initiator", value: initiator },

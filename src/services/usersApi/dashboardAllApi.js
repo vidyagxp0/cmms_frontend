@@ -38,3 +38,7 @@ export const getAllSpareInstrumentRecords = (params = {}) => {
     });
 }
 
+export const getAllDashboardData = () => {
+    return api.get("/user/dashboard-count");
+}
+

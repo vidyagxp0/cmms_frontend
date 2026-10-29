@@ -20,6 +20,7 @@ const ProcessActivities = ({
     userId,
     activityApi,
     onActivitySuccess,
+    onBeforeActivity,
     onExit,
     auditRoute = "/user/new-audit",
     canPerformActivity = false,
@@ -82,6 +83,14 @@ const ProcessActivities = ({
                 activity_id:
                     selectedActivity.id,
             };
+// Save and validate the form before executing the activity.
+if (onBeforeActivity) {
+    const saved = await onBeforeActivity();
+
+    if (saved !== true) {
+        return; // Do not execute activity if saving fails.
+    }
+}
 
             const response =
                 await activityApi(

@@ -537,6 +537,44 @@ useEffect(() => {
     form.submit();
   };
 
+  const handleSaveBeforeActivity = async () => {
+    if (isSaving || isLoading || usersLoading) {
+        return false;
+    }
+
+    const missingFields = validateCalibrationForm(
+        form,
+        requiredValuesRef.current
+    );
+
+    if (missingFields.length > 0) {
+        const missingFieldNames = missingFields
+            .map((field) => field.label)
+            .join(", ");
+
+        toast.error(`Required fields missing: ${missingFieldNames}`);
+
+        form.setFields(
+            missingFields.map((field) => ({
+                name: field.name,
+                errors: [`${field.label} is required`],
+            }))
+        );
+
+        setActiveTab("general");
+
+        return false;
+    }
+
+    try {
+        const values = await form.validateFields();
+        return await handleSubmit(values);
+    } catch (error) {
+        // Ant Design field validation failed.
+        return false;
+    }
+};
+
   const handleSubmit = async (values) => {
     if (isSaving || !recordId) return;
     try {
@@ -567,12 +605,13 @@ useEffect(() => {
         await fetchCalibrationDetail();
         await fetchPermissions();
         await fetchActivityLogs();
-        return;
+        return true;
       }
       toast.error(response?.data?.message || "Failed to update Calibration.");
     } catch (error) {
       console.error("Calibration update failed:", error);
       toast.error(error?.response?.data?.message || "Failed to update Calibration. Please try again.");
+      return false;
     } finally { setIsSaving(false); }
   };
 
@@ -630,6 +669,7 @@ useEffect(() => {
               userId={loginUserId}
               activityApi={executeCalibrationActivity}
               onActivitySuccess={handleActivitySuccess}
+              onBeforeActivity={handleSaveBeforeActivity}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
               onExit={() => navigate("/user/engineering-dashboard")}

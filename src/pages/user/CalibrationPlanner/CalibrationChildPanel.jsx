@@ -580,6 +580,84 @@ const CalibrationChildPanel = () => {
     form.submit();
   };
 
+  const handleSaveBeforeActivity = async () => {
+  if (
+    isSaving ||
+    isLoading ||
+    usersLoading ||
+    !recordId
+  ) {
+    return false;
+  }
+
+  // Preserve the existing required-field validation.
+  const values = form.getFieldsValue(true);
+
+  const missing = REQUIRED_FIELDS.filter((field) => {
+    const value = values[field.name];
+
+    if (typeof value === "string") {
+      return !value.trim();
+    }
+
+    return (
+      value === undefined ||
+      value === null ||
+      value === ""
+    );
+  });
+
+  if (missing.length > 0) {
+    const names = missing.map((field) => field.label).join(", ");
+
+    toast.error(`Required fields missing: ${names}`);
+
+    form.setFields(
+      missing.map((field) => ({
+        name: field.name,
+        errors: [`${field.label} is required`],
+      }))
+    );
+
+    setActiveTab("management");
+    return false;
+  }
+
+  try {
+    // Validate Ant Design form fields before saving.
+    const validatedValues = await form.validateFields();
+
+    // The activity can proceed only when the update API succeeds.
+    return await handleSubmit(validatedValues);
+  } catch (error) {
+    // Validation failed; do not execute the activity.
+    if (error?.errorFields) {
+      const firstError = error.errorFields[0];
+      if (firstError?.name?.length) {
+        const fieldName = firstError.name[0];
+        if (
+          ["implementorComments", "implementorAttachment"].includes(
+            fieldName
+          )
+        ) {
+          setActiveTab("implementor");
+        } else if (
+          ["qaReviewComments", "qaReviewAttachment"].includes(
+            fieldName
+          )
+        ) {
+          setActiveTab("qa-review");
+        } else {
+          setActiveTab("management");
+        }
+      }
+      return false;
+    }
+    console.error("Save before activity failed:", error);
+    return false;
+  }
+};
+
   const handleSubmit = async (values) => {
     if (isSaving || !recordId) return;
     try {
@@ -608,12 +686,15 @@ const CalibrationChildPanel = () => {
         await fetchChildDetail();
         await fetchPermissions();
         await fetchActivityLogs();
+        return true;
       } else {
         toast.error(response?.data?.message || "Failed to update child calibration.");
+        return false;
       }
     } catch (error) {
       console.error("Update failed:", error);
       toast.error(error?.response?.data?.message || "Failed to update child calibration.");
+      return false;
     } finally { setIsSaving(false); }
   };
 
@@ -677,6 +758,7 @@ const CalibrationChildPanel = () => {
               userId={loginUserId}
               activityApi={executeCalibrationActivityChild}
               onActivitySuccess={handleActivitySuccess}
+              onBeforeActivity={handleSaveBeforeActivity}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
               onExit={() => navigate("/user/calibration-management-dashboard")}

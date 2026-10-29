@@ -6,6 +6,7 @@ import UserModal from "../../../components/common/UserModal/UserModal";
 import CustomScrollContainer from "../../../components/common/CustomScrollbar/CustomScrollContainer";
 import { updateCalibration } from "../../../services/usersApi/calibrationApi";
 import "../../../components/ui/disabledFields.css";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 const { TextArea } = Input;
 
@@ -264,7 +265,16 @@ const CalibrationGrid = ({
                   style={{ minWidth: column.minWidth || 120 }} 
                   className="border border-[#D5DFDB] px-2 py-2 text-left align-middle text-[10px] font-bold text-[#43564F]"
                 >
-                  <div className="flex items-center gap-1">{column.title}{column.required && <span className="text-red-500">*</span>}</div>
+                  {/* <div className="flex items-center gap-1">{column.title}{column.required && <span className="text-red-500">*</span>}</div> */}
+                  <div className="flex items-center gap-1">
+                {column.title.replace(/\.$/, "")}
+
+                {column.key === "equipmentInstrumentName" && (
+                  <RequiredAsterisk
+                    message="Instrument Name is required. Please select an instrument to proceed."
+                  />
+                )}
+              </div>
                 </th>
               ))}
               {showChildColumn && (

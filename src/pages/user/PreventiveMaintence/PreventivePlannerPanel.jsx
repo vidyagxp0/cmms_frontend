@@ -632,6 +632,24 @@ const PreventivePlannerPanel = () => {
     form.submit();
   };
 
+  
+  const handleSaveBeforeActivity = async () => {
+  if (isSaving || isLoading || !recordId) {
+    return false;
+  }
+  try {
+    const values = form.getFieldsValue(true);
+    const saved = await handleSubmit(values);
+    if (saved !== true) {
+      return false;
+    }
+    return true;
+  } catch (error) {
+    toast.error("Save before activity failed:", error);
+    return false;
+  }
+};
+
   const handleSubmit = async (values) => {
     if (isSaving || !recordId) return;
     try {
@@ -668,17 +686,19 @@ const PreventivePlannerPanel = () => {
         await fetchPreventiveDetail();
         await fetchPermissions();
         await fetchActivityLogs();
-        return;
+        return true;
       }
       toast.error(
         response?.data?.message || "Failed to update Preventive Planner."
       );
+      return false
     } catch (error) {
       console.error("Preventive Planner update failed:", error);
       toast.error(
         error?.response?.data?.message ||
           "Failed to update Preventive Planner. Please try again."
       );
+     return false;
     } finally {
       setIsSaving(false);
     }
@@ -746,6 +766,7 @@ const PreventivePlannerPanel = () => {
               recordId={recordId}
               userId={loginUserId}
               activityApi={executePreventiveActivity}
+              onBeforeActivity={handleSaveBeforeActivity}
               onActivitySuccess={handleActivitySuccess}
               auditRoute={"/user/preventive-planner-audit"}
               canPerformActivity={canPerformActivity}

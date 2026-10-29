@@ -446,6 +446,26 @@ const InstrumentCalibrationPanel = () => {
     form.submit();
   };
 
+  const handleSaveBeforeActivity = async () => {
+  if (isSaving || isLoading || !recordId) {
+    return false;
+  }
+  try {
+    const values = form.getFieldsValue(true);
+
+    const saved = await handleSubmit(values);
+
+    return saved === true;
+  } catch (error) {
+    console.error(
+      "Failed to save Calibration Addendum before activity:",
+      error
+    );
+
+    return false;
+  }
+};
+
   const handleSubmit = async (values) => {
     if (isSaving || !recordId) return;
     try {
@@ -477,12 +497,14 @@ const InstrumentCalibrationPanel = () => {
         await fetchCalibrationDetail();
         await fetchPermissions();
         await fetchActivityLogs();
-        return;
+        return true;
       }
       toast.error(response?.data?.message || "Failed to update Field Instrument Calibration Addendum.");
+      return false;
     } catch (error) {
       console.error("Update failed:", error);
       toast.error(error?.response?.data?.message || "Failed to update Field Instrument Calibration Addendum. Please try again.");
+      return false;
     } finally { setIsSaving(false); }
   };
 

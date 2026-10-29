@@ -907,8 +907,25 @@ const PreventiveMaintenancePanel = () => {
     form.submit();
   };
 
+  const handleSaveBeforeActivity = async () => {
+  if (isSaving || isLoading || !recordId) {
+    return false;
+  }
+  try {
+    const values = form.getFieldsValue(true);
+    const saved = await handleSubmit(values);
+    return saved === true;
+  } catch (error) {
+    console.error(
+      "Failed to save Preventive Maintenance before activity:",
+      error
+    );
+    return false;
+  }
+};
+
   const handleSubmit = async (values) => {
-    if (isSaving || !recordId) return;
+    if (isSaving || !recordId) return false;
     try {
       setIsSaving(true);
       const allFormValues = form.getFieldsValue(true);
@@ -945,17 +962,19 @@ const PreventiveMaintenancePanel = () => {
         await fetchPreventiveMaintenceDetail();
         await fetchPermissions();
         await fetchActivityLogs();
-        return;
+        return true;
       }
       toast.error(
         response?.data?.message || "Failed to update Preventive Maintenance."
       );
+      return false;
     } catch (error) {
       console.error("Preventive Maintenance update failed:", error);
       toast.error(
         error?.response?.data?.message ||
           "Failed to update Preventive Maintenance. Please try again."
       );
+      return false;
     } finally {
       setIsSaving(false);
     }

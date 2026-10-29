@@ -25,6 +25,7 @@ import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, u
 import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
 import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
 import { getAllFieldInstrumentPlannerData, getAllSpareInstrumentMasterData } from "../../../services/usersApi/fieldInstrumentPlanerApi";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 dayjs.extend(customParseFormat);
 
@@ -701,7 +702,11 @@ useEffect(() => {
             ))}
             <Form.Item
               name="shortDescription"
-              label={<span>Short Description <span className="text-red-500">*</span></span>}
+              label={<span>Short Description
+                <RequiredAsterisk
+                message="This field is required to proceed. Please enter a Short Description."
+              />
+              </span>}
               rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
               className="!mb-4"
             >
@@ -711,62 +716,105 @@ useEffect(() => {
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="CALIBRATION INFORMATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="year" label="Year" className="!mb-4">
-              <Input placeholder="Enter Year" disabled={!isGeneralEditable} />
-            </Form.Item>
-            <Form.Item name="block" label="Block" className="!mb-4">
-              <Input placeholder="Enter Block" disabled={!isGeneralEditable} />
-            </Form.Item>
-            <Form.Item name="area" label="Area" className="!mb-4">
-              <Input placeholder="Enter Area" disabled={!isGeneralEditable} />
-            </Form.Item>
-     
+            <Form.Item
+                name="year"
+                label={
+                  <span className="inline-flex items-center">
+                    Year
+                    <RequiredAsterisk message="Year is required to proceed. Please enter the year." />
+                  </span>
+                }
+                className="!mb-4"
+              >
+                <Input
+                  placeholder="Enter Year"
+                  disabled={!isGeneralEditable}
+                />
+              </Form.Item>
 
-     <Form.Item
-  name="instrumentType"
-  label="Select Instrument Type"
-  className="!mb-4"
->
-  <Select
-    placeholder="Select Instrument Type"
-    disabled={!isGeneralEditable}
-    allowClear
-    onChange={(type) => {
-      setSelectedInstrumentType(type || "");
+              <Form.Item
+                name="block"
+                label={
+                  <span className="inline-flex items-center">
+                    Block
+                    <RequiredAsterisk message="Block is required to proceed. Please enter the block." />
+                  </span>
+                }
+                className="!mb-4"
+              >
+                <Input
+                  placeholder="Enter Block"
+                  disabled={!isGeneralEditable}
+                />
+              </Form.Item>
 
-      // Clear only instrument-specific values.
-      setCalibrationRows((previousRows) =>
-        previousRows.map((row) => ({
-          ...row,
-          equipmentInstrumentName: "",
-          equipmentInstrumentId: "",
-          make: "",
-          model: "",
-          location: "",
-          leastCount: "",
-          accuracy: "",
-          instrumentrange: "",
-          operatingrange: "",
-          calibrationTestPoints: "",
-        }))
-      );
-    }}
-    options={[
-      {
-        label: "Master Instrument",
-        value: "Master Instrument",
-      },
-      {
-        label: "Field Instrument",
-        value: "Field Instrument",
-      },
-      {
-        label: "Spare Instrument Calibration",
-        value: "Spare Instrument Calibration",
-      },
-    ]}
-  />
-</Form.Item>
+              <Form.Item
+                name="area"
+                label={
+                  <span className="inline-flex items-center">
+                    Area
+                    <RequiredAsterisk message="Area is required to proceed. Please enter the area." />
+                  </span>
+                }
+                className="!mb-4"
+              >
+                <Input
+                  placeholder="Enter Area"
+                  disabled={!isGeneralEditable}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="instrumentType"
+                label={
+                  <span className="inline-flex items-center">
+                    Select Instrument Type
+                    <RequiredAsterisk message="Instrument Type is required. Please select an instrument type to proceed." />
+                  </span>
+                }
+                className="!mb-4"
+              >
+                <Select
+                  placeholder="Select Instrument Type"
+                  disabled={!isGeneralEditable}
+                  allowClear
+                  onChange={(type) => {
+                    setSelectedInstrumentType(type || "");
+
+                    // Clear only instrument-specific values.
+                    setCalibrationRows((previousRows) =>
+                      previousRows.map((row) => ({
+                        ...row,
+                        equipmentInstrumentName: "",
+                        equipmentInstrumentId: "",
+                        make: "",
+                        model: "",
+                        location: "",
+                        leastCount: "",
+                        accuracy: "",
+                        instrumentrange: "",
+                        operatingrange: "",
+                        calibrationTestPoints: "",
+                      }))
+                    );
+                  }}
+                  options={[
+                    {
+                      label: "Master Instrument",
+                      value: "Master Instrument",
+                    },
+                    {
+                      label: "Field Instrument",
+                      value: "Field Instrument",
+                    },
+                    {
+                      label: "Spare Instrument Calibration",
+                      value: "Spare Instrument Calibration",
+                    },
+                  ]}
+                />
+              </Form.Item>
+
           </div>
           <div className="mt-5">
             <CalibrationGrid
@@ -782,8 +830,21 @@ useEffect(() => {
               showAddButton={true}
             />
           </div>
-          <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
-            <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isGeneralEditable} />
+          <Form.Item
+            name="comments"
+            label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
+            className="!mb-4 md:col-span-2"
+          >
+            <FormTextArea
+              rows={5}
+              placeholder="Enter comments..."
+              disabled={!isGeneralEditable}
+            />
           </Form.Item>
           <Form.Item
             name="attachment"
@@ -806,7 +867,15 @@ useEffect(() => {
         <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
           <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="hodReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+            <Form.Item
+            name="hodReviewComments"
+            label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
+              className="!mb-4 md:col-span-2">
               <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isHodEditable} />
             </Form.Item>
             <Form.Item
@@ -831,7 +900,15 @@ useEffect(() => {
         <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
           <SectionHeader title="USER DEPT REVIEW (USER DEPT)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="userDeptReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+            <Form.Item 
+            name="userDeptReviewComments"
+            label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
+            className="!mb-4 md:col-span-2">
               <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isUserDeptEditable} />
             </Form.Item>
             <Form.Item
@@ -856,7 +933,15 @@ useEffect(() => {
         <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
           <SectionHeader title="QA REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="qaReviewComments" label="Comments" className="!mb-4 md:col-span-2">
+            <Form.Item 
+            name="qaReviewComments"
+            label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
+            className="!mb-4 md:col-span-2">
               <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isQaReviewEditable} />
             </Form.Item>
             <Form.Item

@@ -36,6 +36,7 @@ import {
   getAllStages,
 } from "../../../services/usersApi/workflowCommonApi";
 import PreventiveGrid, { getRowBiggestFrequency } from "./PreventiveGrid";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 dayjs.extend(customParseFormat);
 
@@ -881,7 +882,12 @@ const PreventivePlannerPanel = () => {
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
               name="hodReviewComments"
-              label="Comments"
+               label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
               className="!mb-4 md:col-span-2"
             >
               <FormTextArea
@@ -916,7 +922,12 @@ const PreventivePlannerPanel = () => {
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
               name="userDeptReviewComments"
-              label="Comments"
+               label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
               className="!mb-4 md:col-span-2"
             >
               <FormTextArea
@@ -949,7 +960,12 @@ const PreventivePlannerPanel = () => {
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
               name="qaReviewComments"
-              label="Comments"
+               label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
               className="!mb-4 md:col-span-2"
             >
               <FormTextArea

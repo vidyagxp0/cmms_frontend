@@ -363,3 +363,57 @@ textarea,
 .ant-input-affix-wrapper {
   box-shadow: none;
 }
+
+/* Fix Ant Design Dragger extra bottom space */
+.equipment-import-dragger {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Actual Ant Design drag area */
+.equipment-import-dragger .ant-upload-drag {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+/* Remove extra spacing from inner upload element */
+.equipment-import-dragger .ant-upload {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+/* Inner content */
+.equipment-import-dragger .ant-upload-drag-container {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #fff !important;
+}
+
+/* Remove extra bottom spacing */
+.equipment-import-dragger .ant-upload-btn {
+  padding: 0 !important;
+}
+
+/* Remove pseudo-elements */
+.equipment-import-dragger::before,
+.equipment-import-dragger::after,
+.equipment-import-dragger .ant-upload-drag::before,
+.equipment-import-dragger .ant-upload-drag::after {
+  display: none !important;
+  content: none !important;
+}

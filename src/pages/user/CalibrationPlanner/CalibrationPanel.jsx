@@ -348,6 +348,8 @@ useEffect(() => {
   "instrumentType"
 );
 
+setSelectedInstrumentType(instrumentType || "");
+
       // setSiteLocationCode(locationCode || "");
       // Set initiator from the API response (processData or responseData.initiator)
       const backendInitiatorId =
@@ -381,6 +383,7 @@ useEffect(() => {
         year,
         block,
         area,
+        instrumentType: instrumentType || "",
         comments,
         attachment: attachment || [],
         hodReviewComments,

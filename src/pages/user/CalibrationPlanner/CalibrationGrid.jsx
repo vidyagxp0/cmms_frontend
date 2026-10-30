@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Trash2, Table2 } from "lucide-react";
+import { Plus, Trash2, Table2, Loader2 } from "lucide-react";
 import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import UserModal from "../../../components/common/UserModal/UserModal";
@@ -117,7 +117,6 @@ const CalibrationGrid = ({
       }
     }
 
-    // If planned date changes and existing done date is now before it, clear it
     if (key === "plannedDate") {
       if (
         newValue &&
@@ -137,7 +136,7 @@ const CalibrationGrid = ({
     const fieldValue = row[key] ?? "";
     const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
     const isDisabled = disabled || columnDisabled;
-    
+
     const commonProps = {
       disabled: isDisabled,
       className: "!w-full !rounded-none !border-transparent !bg-transparent !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!shadow-none disabled:!cursor-not-allowed disabled:!bg-transparent disabled:!text-[#65746E]",
@@ -228,24 +227,36 @@ const CalibrationGrid = ({
 
   const showChildColumn = typeof onViewChild === "function";
   const today = dayjs().startOf("day");
+  const totalColumns = columns.length + 2 + (showChildColumn ? 1 : 0);
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
       <div className="flex min-h-[68px] items-center justify-between gap-5 border-b border-[#D7E0DC] bg-[#F7F9F8] px-5">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#D5E0DF] bg-white text-[#4E7585] shadow-[0_2px_7px_rgba(38,53,46,0.05)]">
-            <Table2 size={17} strokeWidth={1.8} />
+            {equipmentLoading ? (
+              <Loader2 size={17} strokeWidth={1.8} className="animate-spin" />
+            ) : (
+              <Table2 size={17} strokeWidth={1.8} />
+            )}
           </div>
           <div className="min-w-0">
             <h3 className="truncate text-[14px] font-bold tracking-[-0.01em] text-[#263B35]">{name}</h3>
-            {description && <p className="mt-0.5 truncate text-[11px] font-medium text-[#899690]">{description}</p>}
+            {equipmentLoading ? (
+              <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-[#4E7585]">
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#4E7585]" />
+                Loading instruments…
+              </p>
+            ) : description ? (
+              <p className="mt-0.5 truncate text-[11px] font-medium text-[#899690]">{description}</p>
+            ) : null}
           </div>
         </div>
         {showAddButton && (
           <button
             type="button"
             onClick={addRow}
-            disabled={disabled || (maxRows !== undefined && rows.length >= maxRows)}
+            disabled={disabled || equipmentLoading || (maxRows !== undefined && rows.length >= maxRows)}
             className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[#2B5577] px-3.5 text-[11px] font-semibold text-white shadow-[0_4px_12px_rgba(43,85,119,0.20)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-[#234766] hover:shadow-[0_7px_16px_rgba(43,85,119,0.25)] active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
           >
             <Plus size={14} strokeWidth={2} className="transition-transform duration-200 group-hover:rotate-90" />
@@ -260,21 +271,19 @@ const CalibrationGrid = ({
             <tr className="bg-[#EEF3F1]">
               <th className="w-[50px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Sr. No</th>
               {columns.map((column) => (
-                <th 
-                  key={column.key} 
-                  style={{ minWidth: column.minWidth || 120 }} 
+                <th
+                  key={column.key}
+                  style={{ minWidth: column.minWidth || 120 }}
                   className="border border-[#D5DFDB] px-2 py-2 text-left align-middle text-[10px] font-bold text-[#43564F]"
                 >
-                  {/* <div className="flex items-center gap-1">{column.title}{column.required && <span className="text-red-500">*</span>}</div> */}
                   <div className="flex items-center gap-1">
-                {column.title.replace(/\.$/, "")}
-
-                {column.key === "equipmentInstrumentName" && (
-                  <RequiredAsterisk
-                    message="Instrument Name is required. Please select an instrument to proceed."
-                  />
-                )}
-              </div>
+                    {column.title.replace(/\.$/, "")}
+                    {column.key === "equipmentInstrumentName" && (
+                      <RequiredAsterisk
+                        message="Instrument Name is required. Please select an instrument to proceed."
+                      />
+                    )}
+                  </div>
                 </th>
               ))}
               {showChildColumn && (
@@ -284,11 +293,33 @@ const CalibrationGrid = ({
             </tr>
           </thead>
           <tbody>
-            {rows.length > 0 ? (
+            {equipmentLoading ? (
+              /* ─── SKELETON LOADER ROWS ─── */
+              Array.from({ length: 5 }).map((_, idx) => (
+                <tr key={`skeleton-${idx}`} className="bg-white">
+                  <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+                    <div className="mx-auto h-4 w-5 animate-pulse rounded bg-[#E5EBE8]" />
+                  </td>
+                  {columns.map((column, colIdx) => (
+                    <td key={column.key} className="border border-[#D5DFDB] px-2 py-2 align-middle">
+                      <div
+                        className="h-4 animate-pulse rounded bg-[#E5EBE8]"
+                        style={{ width: `${55 + ((idx * 13 + colIdx * 17) % 45)}%` }}
+                      />
+                    </td>
+                  ))}
+                  {showChildColumn && (
+                    <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+                      <div className="mx-auto h-4 w-10 animate-pulse rounded bg-[#E5EBE8]" />
+                    </td>
+                  )}
+                  <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+                    <div className="mx-auto h-4 w-4 animate-pulse rounded bg-[#E5EBE8]" />
+                  </td>
+                </tr>
+              ))
+            ) : rows.length > 0 ? (
               rows.map((row, rowIndex) => {
-                // ─────────────────────────────────────────────────
-                // ✅ CHILD BUTTON LOGIC (Init + Close Done + Date window)
-                // ─────────────────────────────────────────────────
                 const rowPlannedDate = row.plannedDate ? dayjs(row.plannedDate).startOf("day") : null;
 
                 let isWithinDateWindow = false;
@@ -299,14 +330,12 @@ const CalibrationGrid = ({
                   windowStart = rowPlannedDate.subtract(7, "day").startOf("day");
                   windowEnd = rowPlannedDate.add(7, "day").endOf("day");
 
-                  // inclusive between [-7 days, +7 days]
                   isWithinDateWindow =
                     !today.isBefore(windowStart) && !today.isAfter(windowEnd);
                 }
 
                 const childButtonEnabled = canCreateChild && isWithinDateWindow;
 
-                // Determine why it's disabled (for tooltip)
                 let childButtonTitle = "Create child calibration";
                 if (!canCreateChild) {
                   childButtonTitle =
@@ -367,7 +396,7 @@ const CalibrationGrid = ({
               })
             ) : (
               <tr>
-                <td colSpan={columns.length + 2 + (showChildColumn ? 1 : 0)} className="h-[80px] border border-[#D5DFDB] px-5 text-center text-[11px] font-medium text-[#899690]">
+                <td colSpan={totalColumns} className="h-[80px] border border-[#D5DFDB] px-5 text-center text-[11px] font-medium text-[#899690]">
                   No calibration rows added yet.
                 </td>
               </tr>
@@ -377,8 +406,14 @@ const CalibrationGrid = ({
       </CustomScrollContainer>
 
       <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">
-        <span className="text-[10px] font-medium text-[#899690]">{rows.length} {rows.length === 1 ? "row" : "rows"}</span>
-        {maxRows !== undefined && <span className="text-[10px] font-medium text-[#899690]">{rows.length} / {maxRows} rows</span>}
+        <span className="text-[10px] font-medium text-[#899690]">
+          {equipmentLoading
+            ? "Fetching instruments…"
+            : `${rows.length} ${rows.length === 1 ? "row" : "rows"}`}
+        </span>
+        {maxRows !== undefined && !equipmentLoading && (
+          <span className="text-[10px] font-medium text-[#899690]">{rows.length} / {maxRows} rows</span>
+        )}
       </div>
 
       <UserModal isOpen={isDeleteModalOpen} onClose={handleCancelDelete} title="Delete Row" description="Please confirm this action before continuing." width="max-w-[420px]">

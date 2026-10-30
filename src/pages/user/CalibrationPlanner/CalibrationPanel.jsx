@@ -72,6 +72,24 @@ if (key === "equipmentInstrumentName" && value && equipmentMap[value]) value = e
   });
 };
 
+// Build a single CalibrationGrid row from a normalized instrument.
+const buildRowFromInstrument = (item = {}) => ({
+  equipmentInstrumentName: item.id ?? "",
+  equipmentInstrumentId: item.instrument_id_no || "",
+  make: item.make || "",
+  model: item.sr_no_model_no || "",
+  location: item.location || "",
+  leastCount: item.least_count || "",
+  accuracy: item.accuracy || "",
+  instrumentrange: item.instrument_range || "",
+  operatingrange: item.operating_range || "",
+  calibrationTestPoints: item.calibration_test_points || "",
+  category: "",
+  plannedDate: "",
+  calibrationDoneDate: "",
+  remark: "",
+});
+
 const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({ key: field.name, label: field.label, value: values?.[field.name] || "" })),
   { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
@@ -132,7 +150,6 @@ const CreateCalibrationPanel = () => {
   const [departmentId, setDepartmentId] = useState("");
   const [initiationDepartment, setInitiationDepartment] = useState("");
   const [dateOfInitiation, setDateOfInitiation] = useState("");
-  // const [siteLocationCode, setSiteLocationCode] = useState("");
   const [processName, setProcessName] = useState("");
   const [hodUsers, setHodUsers] = useState([]);
   const [qaReviewers, setQaReviewers] = useState([]);
@@ -144,7 +161,39 @@ const CreateCalibrationPanel = () => {
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "" });
 
+  // When true → the next instrument fetch REPLACES grid rows with one
+  // pre-filled row per returned instrument. Only set by Select onChange
+  // (i.e. when the USER changes the type).
+  const autoPopulateRowsRef = useRef(false);
+
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
+
+  // ─────────────────────────────────────────────────────────────
+  // RE-HYDRATE — convert saved instrument NAMES back into IDs once
+  // the instrument map is available. Fixes the "saved rows show blank
+  // in the dropdown after reload" bug.
+  // ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!equipmentMap || Object.keys(equipmentMap).length === 0) return;
+
+    setCalibrationRows((prev) => {
+      let changed = false;
+      const next = prev.map((row) => {
+        const current = row.equipmentInstrumentName;
+        if (!current) return row;                          // empty row — skip
+        if (equipmentMap[current]) return row;             // already a valid ID
+
+        const match = Object.values(equipmentMap).find(
+          (eq) => eq.instrument_name === current
+        );
+        if (!match) return row;
+
+        changed = true;
+        return { ...row, equipmentInstrumentName: match.id };
+      });
+      return changed ? next : prev;                        // avoid needless rerenders
+    });
+  }, [equipmentMap]);
 
   const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
   const isGeneralEditable = isStageEditable(1);
@@ -162,8 +211,6 @@ const CreateCalibrationPanel = () => {
 
         if (!profile) return;
 
-        // Current logged-in user ONLY.
-        // Used for e-sign / activity.
         setLoginUserId(profile?.id || "");
         setUserRoles(Array.isArray(profile?.roles) ? profile.roles : []);
       } catch (error) {
@@ -259,6 +306,11 @@ useEffect(() => {
       setEquipmentOptions(options);
       setEquipmentMap(map);
       equipmentMapRef.current = map;
+
+      // AUTO-POPULATE — only when the USER changed the dropdown.
+      if (autoPopulateRowsRef.current) {
+        setCalibrationRows(normalizedData.map(buildRowFromInstrument));
+      }
     } catch (error) {
       if (!isCurrent) return;
 
@@ -269,6 +321,9 @@ useEffect(() => {
       );
     } finally {
       if (isCurrent) {
+        // Reset only for the CURRENT run — a stale fetch cannot cancel
+        // the auto-populate of a newer fetch.
+        autoPopulateRowsRef.current = false;
         setEquipmentLoading(false);
       }
     }
@@ -317,7 +372,6 @@ useEffect(() => {
       const recordNumber = getProcessValue(processData, "recordNumber");
       const documentNumber = getProcessValue(processData, "documentNumber");
       const documentType = getProcessValue(processData, "documentType");
-      // const locationCode = getProcessValue(processData, "siteLocationCode");
       const processInitiator = getProcessValue(processData, "initiator");
       const processDateOfInitiation = getProcessValue(processData, "dateOfInitiation");
       const dueDate = getProcessValue(processData, "dueDate");
@@ -334,24 +388,12 @@ useEffect(() => {
       const userDeptReviewAttachment = getProcessValue(processData, "user_dept_review_attachment");
       const qaReviewComments = getProcessValue(processData, "qa_review_comments");
       const qaReviewAttachment = getProcessValue(processData, "qa_review_attachment");
-      const cancellationRemark = getProcessValue(
-          processData,
-          "cancellation_remark"
-      );
+      const cancellationRemark = getProcessValue(processData, "cancellation_remark");
+      const cancellationAttachment = getProcessValue(processData, "cancellation_attachment");
+      const instrumentType = getProcessValue(processData, "instrumentType");
 
-      const cancellationAttachment = getProcessValue(
-          processData,
-          "cancellation_attachment"
-      );
-      const instrumentType = getProcessValue(
-  processData,
-  "instrumentType"
-);
+      setSelectedInstrumentType(instrumentType || "");
 
-setSelectedInstrumentType(instrumentType || "");
-
-      // setSiteLocationCode(locationCode || "");
-      // Set initiator from the API response (processData or responseData.initiator)
       const backendInitiatorId =
         responseData?.initiator?.id ??
         responseData?.initiator_id ??
@@ -374,7 +416,6 @@ setSelectedInstrumentType(instrumentType || "");
         recordNumber,
         documentNumber,
         documentType,
-        // siteLocationCode: locationCode || "",
         initiator: backendInitiatorName,
         dateOfInitiation: processDateOfInitiation || responseData?.initiation_date || "",
         dueDate,
@@ -498,7 +539,6 @@ setSelectedInstrumentType(instrumentType || "");
     } finally { setActivityLogsLoading(false); }
   }, [recordId, processId]);
 
-  // useEffect(() => { fetchActivityLogs(); }, [fetchActivityLogs]);
   useEffect(() => {
   if (!processId) return;
   fetchActivityLogs();
@@ -514,7 +554,6 @@ setSelectedInstrumentType(instrumentType || "");
     { name: "documentNumber", label: "Document Number", value: form.getFieldValue("documentNumber") || "" },
     { name: "documentType", label: "Document Type", value: form.getFieldValue("documentType") || "" },
     { name: "recordNumber", label: "Record Number", value: form.getFieldValue("recordNumber") || "" },
-    // { name: "siteLocationCode", label: "Site / Location Code", value: form.getFieldValue("siteLocationCode") || "" },
     { name: "initiator", label: "Initiator", value: initiator },
     { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
@@ -573,7 +612,6 @@ setSelectedInstrumentType(instrumentType || "");
         const values = await form.validateFields();
         return await handleSubmit(values);
     } catch (error) {
-        // Ant Design field validation failed.
         return false;
     }
 };
@@ -582,7 +620,6 @@ setSelectedInstrumentType(instrumentType || "");
     if (isSaving || !recordId) return;
     try {
       setIsSaving(true);
-      // Get ALL form values (including hidden tabs) using getFieldsValue(true)
       const allFormValues = form.getFieldsValue(true);
       const mergedValues = { ...allFormValues, ...values };
       REQUIRED_FIELDS.forEach(({ name }) => {
@@ -645,8 +682,7 @@ setSelectedInstrumentType(instrumentType || "");
     );
   }
 
-  const isCancellationStageActive =
-    Number(activeStageId) === 6;
+  const isCancellationStageActive = Number(activeStageId) === 6;
 
   const visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")
@@ -687,13 +723,12 @@ setSelectedInstrumentType(instrumentType || "");
 
       <Form
         form={form}
-        preserve={true} // <-- ADD THIS
+        preserve={true}
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
-        {/* General Information - always mounted, hidden when not active */}
         <section style={{ display: activeTab === "general" ? "block" : "none" }}>
           <SectionHeader title="GENERAL INFORMATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -781,24 +816,16 @@ setSelectedInstrumentType(instrumentType || "");
                   disabled={!isGeneralEditable}
                   allowClear
                   onChange={(type) => {
-                    setSelectedInstrumentType(type || "");
+                    const nextType = type || "";
 
-                    // Clear only instrument-specific values.
-                    setCalibrationRows((previousRows) =>
-                      previousRows.map((row) => ({
-                        ...row,
-                        equipmentInstrumentName: "",
-                        equipmentInstrumentId: "",
-                        make: "",
-                        model: "",
-                        location: "",
-                        leastCount: "",
-                        accuracy: "",
-                        instrumentrange: "",
-                        operatingrange: "",
-                        calibrationTestPoints: "",
-                      }))
-                    );
+                    // Mark that this change should auto-populate the grid
+                    // with one row per returned instrument.
+                    autoPopulateRowsRef.current = Boolean(nextType);
+
+                    setSelectedInstrumentType(nextType);
+
+                    // Clear immediately — the effect will refill.
+                    setCalibrationRows([]);
                   }}
                   options={[
                     {
@@ -829,7 +856,7 @@ setSelectedInstrumentType(instrumentType || "");
               recordId={recordId}
               disabled={!isGeneralEditable}
               canCreateChild={canCreateChild}
-              showAddButton={true}
+              showAddButton={false}
             />
           </div>
           <Form.Item
@@ -865,7 +892,6 @@ setSelectedInstrumentType(instrumentType || "");
           </Form.Item>
         </section>
 
-        {/* HOD Review - always mounted */}
         <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
           <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -898,7 +924,6 @@ setSelectedInstrumentType(instrumentType || "");
           </div>
         </section>
 
-        {/* User Dept Review - always mounted */}
         <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
           <SectionHeader title="USER DEPT REVIEW (USER DEPT)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -931,7 +956,6 @@ setSelectedInstrumentType(instrumentType || "");
           </div>
         </section>
 
-        {/* QA Review - always mounted */}
         <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
           <SectionHeader title="QA REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -964,7 +988,6 @@ setSelectedInstrumentType(instrumentType || "");
           </div>
         </section>
 
-        {/* Cancellation - always mounted (hidden unless stage 6) */}
         <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
           <SectionHeader title="CANCELLATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -976,7 +999,6 @@ setSelectedInstrumentType(instrumentType || "");
               <FormTextArea
                 rows={5}
                 placeholder="Enter cancellation remark..."
-                // disabled={!isCancellationEditable}
               />
             </Form.Item>
             <Form.Item
@@ -997,7 +1019,6 @@ setSelectedInstrumentType(instrumentType || "");
           </div>
         </section>
 
-        {/* Activity Log - always mounted */}
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
           <SectionHeader title="ACTIVITY LOG" />
           <div className="mt-5 space-y-4">

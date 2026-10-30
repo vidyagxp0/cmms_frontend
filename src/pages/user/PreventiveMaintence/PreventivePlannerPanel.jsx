@@ -35,7 +35,10 @@ import {
   getAllPermissions,
   getAllStages,
 } from "../../../services/usersApi/workflowCommonApi";
-import PreventiveGrid, { getRowBiggestFrequency } from "./PreventiveGrid";
+import PreventiveGrid, {
+  getRowBiggestFrequency,
+  createEmptyWeeklyData,
+} from "./PreventiveGrid";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 dayjs.extend(customParseFormat);
@@ -89,6 +92,22 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
     return rowData;
   });
 };
+
+// ─────────────────────────────────────────────────────────────
+// NEW: Build a single PreventiveGrid row from a raw equipment item.
+// Mirrors the field mapping inside PreventiveGrid.updateRow().
+// ─────────────────────────────────────────────────────────────
+const buildRowFromEquipment = (item = {}) => ({
+  equipmentDbId:
+    item.id !== undefined && item.id !== null ? String(item.id) : "",
+  equipmentInstrumentName: item.instrument_name || item.name || "",
+  equipmentInstrumentId: item.instrument_id_no || item.equipment_id || "",
+  location: item.location || "",
+  make: item.make || "",
+  model: item.sr_no_model_no || item.model || "",
+  weeklyPreventive: createEmptyWeeklyData(),
+  remark: "",
+});
 
 const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({
@@ -193,6 +212,15 @@ const PreventivePlannerPanel = () => {
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "" });
 
+  // ─────────────────────────────────────────────────────────────
+  // NEW refs — one-shot auto-populate on initial mount only.
+  // ─────────────────────────────────────────────────────────────
+  const equipmentDataRef = useRef([]);                 // raw equipment list
+  const hasInitialDetailLoadedRef = useRef(false);     // record API done?
+  const hasInitialEquipmentLoadedRef = useRef(false);  // equipment API done?
+  const savedRowsCountRef = useRef(0);                 // rows that came from backend
+  const autoPopulateDoneRef = useRef(false);           // fires at most once
+
   const canCreateChild =
     Number(activeStageId) === 11 &&
     userRoles.some((role) => String(role).toLowerCase() === "initiator");
@@ -212,6 +240,28 @@ const PreventivePlannerPanel = () => {
   const isQaReviewEditable = isStageEditable(10);
   const isCancellationEditable = isStageEditable(11);
 
+  // ─────────────────────────────────────────────────────────────
+  // NEW: Auto-populate once both APIs finish, only if the record
+  // had ZERO saved rows. Guarded to run at most once.
+  // ─────────────────────────────────────────────────────────────
+  const tryAutoPopulateOnInitial = useCallback(() => {
+    if (autoPopulateDoneRef.current) return;
+    if (!hasInitialDetailLoadedRef.current) return;
+    if (!hasInitialEquipmentLoadedRef.current) return;
+
+    // If the backend already had rows, respect them.
+    if (savedRowsCountRef.current > 0) {
+      autoPopulateDoneRef.current = true;
+      return;
+    }
+
+    const equipment = equipmentDataRef.current;
+    if (!Array.isArray(equipment) || equipment.length === 0) return;
+
+    autoPopulateDoneRef.current = true;
+    setPreventiveRows(equipment.map(buildRowFromEquipment));
+  }, []);
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -227,35 +277,45 @@ const PreventivePlannerPanel = () => {
     fetchProfile();
   }, []);
 
-useEffect(() => {
-  const fetchEquipment = async () => {
-    try {
-      setEquipmentLoading(true);
-      const response = await getAllEquipmentData();
-      const data = response?.data?.data || [];
+  useEffect(() => {
+    const fetchEquipment = async () => {
+      try {
+        setEquipmentLoading(true);
+        const response = await getAllEquipmentData();
+        const data = response?.data?.data || [];
 
-      // ONLY the name is used here
-      const options = data.map((item) => ({
-        value: String(item.id),
-        label: item.instrument_name || "",
-      }));
+        // ONLY the name is used here
+        const options = data.map((item) => ({
+          value: String(item.id),
+          label: item.instrument_name || "",
+        }));
 
-      const map = {};
-      data.forEach((item) => {
-        map[String(item.id)] = item;
-      });
+        const map = {};
+        data.forEach((item) => {
+          map[String(item.id)] = item;
+        });
 
-      setEquipmentOptions(options);
-      setEquipmentMap(map);
-    } catch (error) {
-      console.error("Failed to fetch equipment:", error);
-      toast.error("Could not load equipment list.");
-    } finally {
-      setEquipmentLoading(false);
-    }
-  };
-  fetchEquipment();
-}, []);
+        setEquipmentOptions(options);
+        setEquipmentMap(map);
+        equipmentMapRef.current = map;
+
+        // NEW: stash raw data + trigger auto-populate check.
+        equipmentDataRef.current = data;
+        hasInitialEquipmentLoadedRef.current = true;
+        tryAutoPopulateOnInitial();
+      } catch (error) {
+        console.error("Failed to fetch equipment:", error);
+        toast.error("Could not load equipment list.");
+        // Still mark as loaded so detail API can finish normally.
+        hasInitialEquipmentLoadedRef.current = true;
+        tryAutoPopulateOnInitial();
+      } finally {
+        setEquipmentLoading(false);
+      }
+    };
+    fetchEquipment();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchPreventiveDetail = useCallback(
     async (isInitial = false) => {
@@ -420,7 +480,7 @@ useEffect(() => {
           newRow.preventiveFrequencyStartDate =
             row.preventiveFrequencyStartDate || "";
 
-          // ✅ Keep the instrument_name (what the Select expects) — do NOT convert to id
+          // Keep the instrument_name (what the Select expects) — do NOT convert to id
           if (
             newRow.equipmentInstrumentName &&
             typeof newRow.equipmentInstrumentName === "string" &&
@@ -452,19 +512,31 @@ useEffect(() => {
           return newRow;
         });
 
+        // ── NEW: record initial-load info BEFORE setting state. ──
+        if (isInitial && !hasInitialDetailLoadedRef.current) {
+          hasInitialDetailLoadedRef.current = true;
+          savedRowsCountRef.current = normalizedRows.length;
+        }
+
         setPreventiveRows(normalizedRows);
+
+        // ── NEW: try auto-populate (no-op if already done / has rows). ──
+        tryAutoPopulateOnInitial();
       } catch (error) {
         console.error("Failed to fetch preventive planner detail:", error);
         toast.error(
           error?.response?.data?.message ||
             "Failed to load Preventive Planner record."
         );
+        // Mark as loaded so equipment fetch can proceed normally.
+        if (isInitial) hasInitialDetailLoadedRef.current = true;
+        tryAutoPopulateOnInitial();
       } finally {
         setIsLoading(false);
         isFetchingRef.current = false;
       }
     },
-    [recordId, form]
+    [recordId, form, tryAutoPopulateOnInitial]
   );
 
   useEffect(() => {
@@ -651,7 +723,6 @@ useEffect(() => {
     form.submit();
   };
 
-  
   const handleSaveBeforeActivity = async () => {
   if (isSaving || isLoading || !recordId) {
     return false;
@@ -860,7 +931,7 @@ useEffect(() => {
               equipmentLoading={equipmentLoading}
               recordId={recordId}
               disabled={!isGeneralEditable}
-              showAddButton={true}
+              showAddButton={false}
               canCreateChild={canCreateChild}
               onViewChild={handleViewChild}
               weekDates={headerWeekDates}

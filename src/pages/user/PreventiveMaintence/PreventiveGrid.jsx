@@ -95,7 +95,8 @@ const toFieldString = (value) => (typeof value === "string" ? value : "");
 
 const createEmptyWeek = () => ({ planned: "", actual: "" });
 
-const createEmptyWeeklyData = () => {
+// ── NEW: exported so the panel can build pre-filled rows ──
+export const createEmptyWeeklyData = () => {
   const data = {};
   MONTHS.forEach(({ key }) => {
     data[key] = Array.from({ length: WEEKS_PER_MONTH }, createEmptyWeek);

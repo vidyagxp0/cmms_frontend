@@ -302,6 +302,8 @@ const EquipmentPanel = () => {
           instrument_range: data.instrument_range || "",
           operating_range: data.operating_range || "",
           calibration_test_points: data.calibration_test_points || "",
+          asset_code: data.asset_code || "",
+          capacity: data.capacity || "",
           category: data.category || data.equipment_type || "",
           stage_id: data.stage_id?.id || data.stage_id || null,
           process_id: data.process_id || null,
@@ -596,6 +598,10 @@ const EquipmentPanel = () => {
         operating_range: values.operating_range?.trim() || "",
         calibration_test_points:
           values.calibration_test_points?.trim() || "",
+        asset_code:
+          values.asset_code?.trim() || "",
+        capacity:
+          values.capacity?.trim() || "",
         category: values.category?.trim() || "",
         checklist_config: cleanedChecklistConfig,
 
@@ -887,6 +893,38 @@ const EquipmentPanel = () => {
               className="!mb-4"
             >
               <FormInput placeholder="Enter calibration test points" disabled={!isInstrumentEditable} />
+            </Form.Item>
+
+            <Form.Item
+              name="asset_code"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <ClipboardList size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Asset Code
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter Asset Code" },
+              ]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter Asset Code" disabled={!isInstrumentEditable} />
+            </Form.Item>
+
+            <Form.Item
+              name="capacity"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <ClipboardList size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Capacity
+                </span>
+              }
+              rules={[
+                { required: true, whitespace: true, message: "Please enter Capacity" },
+              ]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter Capacity" disabled={!isInstrumentEditable} />
             </Form.Item>
 
             <Form.Item

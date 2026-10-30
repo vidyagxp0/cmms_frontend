@@ -37,6 +37,8 @@ const REQUIRED_FIELDS = [
     { name: "instrument_range", label: "Instrument Range" },
     { name: "operating_range", label: "Operating Range" },
     { name: "calibration_test_points", label: "Calibration Test Points" },
+    { name: "asset_code", label: "Asset Code" },
+    { name: "capacity", label: "Capacity" },
     { name: "category", label: "Category" },
 ];
 
@@ -274,6 +276,10 @@ const handleTabChange = (tabId) => {
                 operating_range: values.operating_range.trim(),
                 calibration_test_points:
                     values.calibration_test_points.trim(),
+                asset_code:
+                    values.asset_code.trim(),
+                capacity:
+                    values.capacity.trim(),
                 category: values.category.trim(),
                 checklist_config: cleanedChecklistConfig,
                 stage_id: 23 || null,
@@ -584,6 +590,50 @@ const handleTabChange = (tabId) => {
                                 className="!mb-4"
                             >
                                 <FormInput placeholder="Enter calibration test points" />
+                            </Form.Item>
+
+                            {/* Asset Code */}
+                            <Form.Item
+                                name="asset_code"
+                                label={
+                                <span className="inline-flex items-center">
+                                    Asset Code
+                                    <RequiredAsterisk message="Asset Code are required. Please enter the Asset Code." />
+                                </span>
+                                }
+                                rules={[
+                                    {
+                                        required: true,
+                                        whitespace: true,
+                                        message:
+                                            "Please enter Asset Code",
+                                    },
+                                ]}
+                                className="!mb-4"
+                            >
+                                <FormInput placeholder="Enter Asset Code" />
+                            </Form.Item>
+
+                            {/* Capacity */}
+                            <Form.Item
+                                name="capacity"
+                                label={
+                                <span className="inline-flex items-center">
+                                    Capacity
+                                    <RequiredAsterisk message="Capacity are required. Please enter the Capacity." />
+                                </span>
+                                }
+                                rules={[
+                                    {
+                                        required: true,
+                                        whitespace: true,
+                                        message:
+                                            "Please enter Capacity",
+                                    },
+                                ]}
+                                className="!mb-4"
+                            >
+                                <FormInput placeholder="Enter Capacity" />
                             </Form.Item>
 
                             {/* CATEGORY */}

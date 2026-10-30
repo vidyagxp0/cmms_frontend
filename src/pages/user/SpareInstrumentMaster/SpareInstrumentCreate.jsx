@@ -280,7 +280,6 @@ const SpareInstrumentCreate = () => {
                 qa_review_attachment: values.qaReviewAttachment || null,
             };
 
-            console.log("Create Instrument Payload:", payload);
 
             await addSpareInstrumentMaster(payload);
 

@@ -324,7 +324,6 @@ const CalibrationChildPanel = () => {
       if (isInitial) setIsLoading(true);
       const response = await getCalibrationChildDetail(recordId);
       const data = response?.data?.data;
-      console.log(data, "this is child data>>>>>>");
       if (!data) { toast.error("Child calibration record not found."); return; }
 
       setProcessId(data?.process_id || null);
@@ -410,7 +409,6 @@ const CalibrationChildPanel = () => {
       const qaVerifiedDayjs = qaVerifiedDateStr
         ? dayjs(qaVerifiedDateStr, "DD/MM/YYYY")
         : null;
-      console.log(qaVerifiedDateStr, "this is qaVerifiedDate>>>>>>");
       setCalibrationDoneDate(qaVerifiedDateStr);
       setCalibrationDoneDayjs(qaVerifiedDayjs);
 

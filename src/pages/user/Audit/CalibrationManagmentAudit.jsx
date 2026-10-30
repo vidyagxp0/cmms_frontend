@@ -70,7 +70,6 @@ const Audit = () => {
       const response = await getCalibrationManagementAudit(recordId, params);
 
       const apiData = response?.data?.data;
-      console.log(apiData, "apiDataapiData");
       
       
 

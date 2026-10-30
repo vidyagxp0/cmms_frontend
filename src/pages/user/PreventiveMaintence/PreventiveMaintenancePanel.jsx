@@ -496,13 +496,6 @@ const PreventiveMaintenancePanel = () => {
   // NOTE: fires without waiting for the user to click the "Checklist" tab,
   // so the data is already cached the first time they open it.
   useEffect(() => {
-    console.log("[CHECKLIST GATE]", {
-      equipmentNameWatch,
-      equipmentIdForApi,
-      frequencyLabel,
-      frequencyCodeForApi,
-      willCallApi: !!equipmentIdForApi && !!frequencyCodeForApi,
-    });
 
     if (!equipmentIdForApi || !frequencyCodeForApi) {
       setChecklistData(null);
@@ -514,11 +507,6 @@ const PreventiveMaintenancePanel = () => {
     const fetchChecklist = async () => {
       try {
         setChecklistLoading(true);
-        console.log(
-          "[CHECKLIST API] GET /user/equipment-master-checklist/",
-          equipmentIdForApi,
-          frequencyCodeForApi
-        );
         const response = await getEquipmentMasterChecklist(
           equipmentIdForApi,
           frequencyCodeForApi

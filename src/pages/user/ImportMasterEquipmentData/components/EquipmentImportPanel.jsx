@@ -226,7 +226,6 @@ const navigateToDashboard = () => {
       formData.append("euipmentMasterType", masterKey);
       formData.append("file", file, file.name);
 
-      console.log("Import file:", file.name, file.size, file.type);
 
       const response = await api.post(
         "/user/instrment-excel-import",

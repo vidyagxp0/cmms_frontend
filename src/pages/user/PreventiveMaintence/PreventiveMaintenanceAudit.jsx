@@ -71,7 +71,6 @@ const PreventiveMaintenanceAudit = () => {
       const response = await getPrevemtiveMaintenanceAuditListing(recordId, params);
 
       const apiData = response?.data?.data;
-      console.log(apiData, "apiDataapiData>>>>>>>>>>>>>>>>>>>>>>>>>");
 
       /* record data */
       if (apiData?.record) {

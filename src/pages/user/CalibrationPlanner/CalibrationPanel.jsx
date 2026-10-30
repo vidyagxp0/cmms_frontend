@@ -123,7 +123,6 @@ const CreateCalibrationPanel = () => {
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [calibrationRows, setCalibrationRows] = useState([]);
   const [equipmentOptions, setEquipmentOptions] = useState([]);
-  console.log(equipmentOptions,"equipmentOptions>>>")
   const [equipmentMap, setEquipmentMap] = useState({});
   const equipmentMapRef = useRef(equipmentMap);
   const [equipmentLoading, setEquipmentLoading] = useState(false);

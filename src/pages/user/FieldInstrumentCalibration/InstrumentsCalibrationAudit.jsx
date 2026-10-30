@@ -71,7 +71,6 @@ const InstrumentsCalibrationAudit = () => {
       const response = await getInstrumentCalibrationAudit(recordId, params);
 
       const apiData = response?.data?.data;
-      console.log(apiData, "apiDataapiData>>>>>>>>>>>>>>>>>>>>>>>>>");
 
       /* record data */
       if (apiData?.record) {

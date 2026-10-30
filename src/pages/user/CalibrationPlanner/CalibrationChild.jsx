@@ -156,7 +156,6 @@ const CalibrationChild = () => {
   useEffect(() => {
     let isMounted = true;
 
-    console.log("🔍 CalibrationChild location.state:", location.state);
 
     if (!rowData) {
       toast.error("No data provided for this calibration item.");
@@ -253,7 +252,6 @@ const CalibrationChild = () => {
           attachment: rowData.attachment || [],
         };
 
-        console.log("✅ Built form initial values:", values);
         setFormInitialValues(values);
         setCalibrationResultRows(rowData.calibrationResultRows || []);
         setCalibrationResultTest(rowData.calibrationResultTest || []);

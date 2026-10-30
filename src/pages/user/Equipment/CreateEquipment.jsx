@@ -286,7 +286,6 @@ const handleTabChange = (tabId) => {
                 qa_review_attachment: values.qaReviewAttachment || [],
             };
 
-            console.log("Create Instrument Payload:", payload);
 
             await addEquipment(payload);
 

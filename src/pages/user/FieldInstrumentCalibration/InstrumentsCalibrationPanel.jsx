@@ -147,7 +147,6 @@ const InstrumentCalibrationPanel = () => {
   
   const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [equipmentMap, setEquipmentMap] = useState({});
-  console.log(equipmentMap,"equipmentMap>>>")
   const equipmentMapRef = useRef(equipmentMap);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
   const [initiator, setInitiator] = useState("");

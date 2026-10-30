@@ -280,7 +280,6 @@ const CreateFieldInstruments = () => {
                 qa_review_attachment: values.qaReviewAttachment || [],
             };
 
-            console.log("Create Field Instrument Payload:", payload);
 
             await addFieldInstrument(payload);
 

@@ -32,8 +32,8 @@ export default function SpareInstrumentMasterImport() {
       instructions={[
         "Use the approved Spare Instrument Master Excel template.",
         "Keep the column headers exactly as they appear in the approved template.",
-        "Provide the spare name and spare code for each record.",
-        "Review the preview before importing stock or spare records.",
+        // "Provide the spare name and spare code for each record.",
+        // "Review the preview before importing stock or spare records.",
       ]}
     />
   );

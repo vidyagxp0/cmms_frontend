@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Eye,
   EyeOff,
-  Mail,
+  User,
   LockKeyhole,
   ArrowRight,
   ShieldCheck,
@@ -52,7 +52,7 @@ const Login = () => {
 
   /* =========================================================
      LOGIN FUNCTIONALITY
-     UNCHANGED
+     AUTHENTICATES WITH USERNAME + PASSWORD
   ========================================================= */
 
   const handleLogin = async (event) => {
@@ -61,7 +61,7 @@ const Login = () => {
     const formData = new FormData(event.currentTarget);
 
     const payload = {
-      email: formData.get("email"),
+      username: formData.get("username"),
       password: formData.get("password"),
     };
 
@@ -83,7 +83,7 @@ const Login = () => {
       const user = {
         id: apiUser.id,
         name: apiUser.name,
-        email: apiUser.email,
+        username: apiUser.username,
         roleType: apiUser.role_type,
         roles: apiUser.roles || [],
         permissions: apiUser.permissions || [],
@@ -112,7 +112,7 @@ const Login = () => {
       setLoginErrors(true);
 
       toast.error(
-        error.response?.data?.message || "User or Password Incorrect",
+        error.response?.data?.message || "Invalid username or password",
       );
     } finally {
       setLoading(false);
@@ -352,12 +352,12 @@ const Login = () => {
 
               <form onSubmit={handleLogin} className="space-y-3.5">
                 {/* =================================================
-                    EMAIL
+                    USERNAME
                 ================================================= */}
 
                 <div>
                   <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.09em] text-[#59676c]">
-                    Email address
+                    Username
                   </label>
 
                   <div
@@ -372,13 +372,13 @@ const Login = () => {
                       transition-all
                       duration-200
                       ${
-                        focusField === "email"
+                        focusField === "username"
                           ? "border-[#8daeb2] bg-white shadow-[0_0_0_4px_rgba(141,174,178,0.10)]"
                           : "border-[#dde1df] hover:border-[#c8cfcc] hover:bg-white"
                       }
                     `}
                   >
-                    <Mail
+                    <User
                       className={`
                         ml-4
                         h-[17px]
@@ -387,7 +387,7 @@ const Login = () => {
                         transition-colors
                         duration-200
                         ${
-                          focusField === "email"
+                          focusField === "username"
                             ? "text-[#668e93]"
                             : "text-[#9ba5a8]"
                         }
@@ -395,12 +395,12 @@ const Login = () => {
                     />
 
                     <input
-                      type="email"
-                      name="email"
+                      type="text"
+                      name="username"
                       required
                       autoComplete="username"
-                      placeholder="Enter your email"
-                      onFocus={() => setFocusField("email")}
+                      placeholder="Enter your username"
+                      onFocus={() => setFocusField("username")}
                       onBlur={() => setFocusField(null)}
                       className="
                         h-full
@@ -519,7 +519,7 @@ const Login = () => {
                 {loginErrors && (
                   <div className="rounded-xl border border-red-100 bg-red-50 px-3.5 py-2.5">
                     <p className="text-[11px] font-medium text-red-500">
-                      User or Password Incorrect
+                      Invalid username or password
                     </p>
                   </div>
                 )}

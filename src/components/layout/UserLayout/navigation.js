@@ -51,7 +51,7 @@ export const DASHBOARD_NAV_ITEMS = [
   // Child pill #2 (hidden from sidebar, shown in ActionBar)
   {
     id: "spare-instruments-dashboard",
-    label: "Spare Instrument Calibration Dashboard",
+    label: "Spare Instrument Dashboard",
     path: "/user/spare-instrument-calibration-master-dashboard",
     icon: Compass,
     hiddenFromNav: true,
@@ -59,7 +59,7 @@ export const DASHBOARD_NAV_ITEMS = [
   },
   {
     id: "import-master-equipment-data",
-    label: "Import Master Equipment Data",
+    label: "Import Master Data",
     path: "/user/import-master-equipment-data",
     icon: Compass,
     hiddenFromNav: true,

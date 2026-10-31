@@ -424,7 +424,7 @@ useEffect(() => {
         year,
         block,
         area,
-        instrumentType: instrumentType || "",
+        instrumentType: instrumentType || null,
         comments,
         attachment: attachment || [],
         hodReviewComments,

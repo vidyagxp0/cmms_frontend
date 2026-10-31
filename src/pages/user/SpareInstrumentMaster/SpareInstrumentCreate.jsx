@@ -299,7 +299,7 @@ const SpareInstrumentCreate = () => {
 
             toast.error(
                 error?.response?.data?.message ||
-                    "Failed to create Spare Instrument Calibration Master. Please try again."
+                    "Failed to create Spare Instrument Master. Please try again."
             );
         } finally {
             setIsSaving(false);
@@ -330,7 +330,7 @@ const SpareInstrumentCreate = () => {
                         </div>
 
                         <h1 className="text-[22px] font-semibold tracking-tight text-[#263B35]">
-                            Spare Instrument Calibration Master 
+                            Spare Instrument Master 
                         </h1>
                     </div>
                 </div>

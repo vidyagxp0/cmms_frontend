@@ -468,7 +468,7 @@ const SpareInstrumentDashboard = () => {
                                     status:   statusFilter,
                                 });
                             }}
-                            emptyTitle="No Spare Instrument Calibration Master Found"
+                            emptyTitle="No Spare Instrument Master Found"
                             emptyDescription="Try changing filters or create a new record."
                         />
                     </div>

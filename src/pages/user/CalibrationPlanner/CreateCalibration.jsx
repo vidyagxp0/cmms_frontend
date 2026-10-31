@@ -1370,8 +1370,8 @@ const CreateCalibration = () => {
                                             value: "Field Instrument",
                                         },
                                         {
-                                            label: "Spare Instrument Calibration",
-                                            value: "Spare Instrument Calibration",
+                                            label: "Spare Instrument",
+                                            value: "Spare Instrument",
                                         },
                                         ]}
                                     />

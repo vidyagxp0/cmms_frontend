@@ -227,7 +227,7 @@ const SpareInstrumentPanel = () => {
 
   const [loginUserId, setLoginUserId] = useState("");
   const [userRoles, setUserRoles] = useState([]);
-  const [processName, setProcessName] = useState("Spare Instrument Calibration Master");
+  const [processName, setProcessName] = useState("Spare Instrument Master");
 
   /* ── NEW: track is_imported from getSpareInstrumentMasterDetail ── */
   const [isImported, setIsImported] = useState(false);
@@ -330,7 +330,7 @@ const SpareInstrumentPanel = () => {
       } catch (error) {
         console.error("Failed to fetch instrument detail:", error);
         toast.error(
-          error?.response?.data?.message || "Failed to load Spare Instrument Calibration Master details."
+          error?.response?.data?.message || "Failed to load Spare Instrument Master details."
         );
         navigate(-1);
       } finally {
@@ -622,7 +622,7 @@ const SpareInstrumentPanel = () => {
 
       await updateSpareInstrumentMaster(id, payload);
 
-      toast.success("Spare Instrument Calibration Master updated successfully.");
+      toast.success("Spare Instrument Master updated successfully.");
 
       await fetchDetail(false);
       await fetchPermissions();

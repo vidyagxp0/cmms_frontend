@@ -246,7 +246,7 @@ useEffect(() => {
       } else if (selectedInstrumentType === "Field Instrument") {
         response = await getAllFieldInstrumentPlannerData();
       }
-      else if (selectedInstrumentType === "Spare Instrument Calibration") {
+      else if (selectedInstrumentType === "Spare Instrument") {
         response = await getAllSpareInstrumentMasterData();
       }
 
@@ -837,8 +837,8 @@ useEffect(() => {
                       value: "Field Instrument",
                     },
                     {
-                      label: "Spare Instrument Calibration",
-                      value: "Spare Instrument Calibration",
+                      label: "Spare Instrument",
+                      value: "Spare Instrument",
                     },
                   ]}
                 />

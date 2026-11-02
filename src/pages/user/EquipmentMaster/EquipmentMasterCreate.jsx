@@ -11,15 +11,15 @@ import FloatingActionButtons from "../../../components/ui/FloatingActionButtons"
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import { getProfile } from "../../../services/authApi";
-import { addSpareInstrumentMaster } from "../../../services/usersApi/spareInstrumentApi";
 import { getAllDepartments } from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import ChecklistConfiguration from "../../../components/checklist/ChecklistConfig";
+import { addEquipmentMaster } from "../../../services/usersApi/equipmentApi";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
 const TABS = [
-    { id: "instrument", label: "General Information" }, // ← renamed
+    { id: "instrument", label: "General Information" },
     { id: "checklist", label: "Checklist Configuration" },
     { id: "hod", label: "HOD / Designee Review (Engineering Dept)" },
     { id: "qa-review", label: "QA Approval Review" },
@@ -28,14 +28,14 @@ const TABS = [
 /* ───────────────────────── Required fields for tab validation ───────────────────────── */
 
 const REQUIRED_FIELDS = [
-    { name: "department_id",     label: "Department" },
-    { name: "instrument_name",   label: "Equipment / Instrument Name" },
-    { name: "instrument_id_no",  label: "Equipment / Instrument Code Number" },
-    { name: "location",          label: "Location" },
-    { name: "asset_code",        label: "Asset Code" },
-    { name: "make",              label: "Make" },
-    { name: "model",             label: "Model" },
-    { name: "capacity",          label: "Capacity" },
+    { name: "department_id",    label: "Department" },
+    { name: "instrument_name",  label: "Equipment / Instrument Name" },
+    { name: "instrument_id_no", label: "Equipment / Instrument Code Number" },
+    { name: "location",         label: "Location" },
+    { name: "asset_code",       label: "Asset Code" },
+    { name: "make",             label: "Make" },
+    { name: "model",            label: "Model" },
+    { name: "capacity",         label: "Capacity" },
 ];
 
 const EMPTY_CHECKLIST = {
@@ -156,7 +156,7 @@ const EquipmentMasterCreate = () => {
 
             if (missingFields.length > 0) {
                 toast.warning(
-                    "Please complete all mandatory fields in General Information and save the record before accessing the other tabs." // ← renamed
+                    "Please complete all mandatory fields in General Information and save the record before accessing the other tabs."
                 );
 
                 setActiveTab("instrument");
@@ -285,6 +285,12 @@ const EquipmentMasterCreate = () => {
             },
         };
 
+        /* ── Resolve department name for payload ── */
+        const selectedDeptOption = departmentOptions.find(
+            (opt) => String(opt.value) === String(values.department_id)
+        );
+        const selectedDepartmentName = selectedDeptOption?.label || "";
+
         /* ───────── Submit ───────── */
 
         try {
@@ -292,16 +298,19 @@ const EquipmentMasterCreate = () => {
 
             const payload = {
                 department_id: values.department_id ?? null,
-                instrument_name: values.instrument_name.trim(),
-                instrument_id_no: values.instrument_id_no.trim(),
-                location: values.location.trim(),
+                department_name: selectedDepartmentName,
+
+                equipment_name: values.instrument_name.trim(),
+                equipment_id_no: values.instrument_id_no.trim(),
+                equipment_make: values.make.trim(),
+                equipment_model: values.model.trim(),
+                equipment_location: values.location.trim(),
                 asset_code: values.asset_code.trim(),
-                make: values.make.trim(),
-                model: values.model.trim(),
                 capacity: values.capacity.trim(),
+
                 checklist_config: cleanedChecklistConfig,
-                stage_id: 45 || null,
-                process_id: 9 || null,
+                stage_id: 50 || null,
+                process_id: 10 || null,
                 initiator_id: loginUserId || null,
 
                 hod_review_comments: values.hodReviewComments || null,
@@ -310,7 +319,7 @@ const EquipmentMasterCreate = () => {
                 qa_review_attachment: values.qaReviewAttachment || null,
             };
 
-            await addSpareInstrumentMaster(payload);
+            await addEquipmentMaster(payload);
 
             toast.success("Equipment Master created successfully.");
 
@@ -390,7 +399,7 @@ const EquipmentMasterCreate = () => {
 
                 {activeTab === "instrument" && (
                     <section>
-                        <SectionHeader title="GENERAL INFORMATION" /> {/* ← renamed */}
+                        <SectionHeader title="GENERAL INFORMATION" />
 
                         <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
 

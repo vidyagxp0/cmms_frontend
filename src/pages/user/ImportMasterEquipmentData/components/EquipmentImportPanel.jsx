@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-
-import { Alert, Button, Modal, Tooltip, Upload, Spin } from "antd";
+import { Alert, Button, Modal, Tooltip, Upload, Spin, Select } from "antd";
 
 import {
   CloudUploadOutlined,
@@ -20,6 +19,7 @@ import { formatBytes } from "../utils/excelImportUtils";
 import { toast } from "sonner";
 import api from "../../../../services/api";
 import { useNavigate } from "react-router-dom";
+import { getAllDepartments } from "../../../../services/usersApi/workflowCommonApi";
 
 const { Dragger } = Upload;
 
@@ -75,20 +75,59 @@ export default function EquipmentImportPanel({
 
   const navigate = useNavigate();
 
-const dashboardRoutes = {
-  master_instrument: "/user/equipment-dashboard",
-  field_instrument_master: "/user/field-instruments-dashboard",
-  spare_instrument_master:
-    "/user/spare-instrument-calibration-master-dashboard",
-};
+  /* ───────── Department Logic ───────── */
+  const isEquipmentMaster = masterKey === "equipment_master";
+  const [departments, setDepartments] = useState([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
+  const [selectedDeptId, setSelectedDeptId] = useState(undefined);
 
-const navigateToDashboard = () => {
-  const dashboardRoute = dashboardRoutes[masterKey];
+  useEffect(() => {
+    if (!isEquipmentMaster) return;
 
-  if (dashboardRoute) {
-    navigate(dashboardRoute, { replace: true });
-  }
-};
+    let isMounted = true;
+    const fetchDepartments = async () => {
+      setDepartmentsLoading(true);
+      try {
+        const response = await getAllDepartments();
+        const data = response?.data?.data ?? [];
+        if (isMounted) setDepartments(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Failed to fetch departments:", err);
+        if (isMounted) setDepartments([]);
+      } finally {
+        if (isMounted) setDepartmentsLoading(false);
+      }
+    };
+
+    fetchDepartments();
+    return () => {
+      isMounted = false;
+    };
+  }, [isEquipmentMaster]);
+
+  const departmentOptions = departments.map((dept, idx) => ({
+    label:
+      dept.name ||
+      dept.department_name ||
+      dept.dept_name ||
+      "Unnamed Department",
+    value: dept.id || dept.department_id || dept.dept_id || idx,
+  }));
+
+  const dashboardRoutes = {
+    master_instrument: "/user/equipment-dashboard",
+    equipment_master: "/user/equipment-master-dashboard",
+    field_instrument_master: "/user/field-instruments-dashboard",
+    spare_instrument_master:
+      "/user/spare-instrument-calibration-master-dashboard",
+  };
+
+  const navigateToDashboard = () => {
+    const dashboardRoute = dashboardRoutes[masterKey];
+    if (dashboardRoute) {
+      navigate(dashboardRoute, { replace: true });
+    }
+  };
 
   // Reset selected file and related state.
   const reset = () => {
@@ -124,7 +163,7 @@ const navigateToDashboard = () => {
     if (!validExtension) {
       setFile(null);
       setError(
-        "Please select a valid Excel file with .xlsx or .xls extension.",
+        "Please select a valid Excel file with .xlsx or .xls extension."
       );
       return false;
     }
@@ -144,11 +183,9 @@ const navigateToDashboard = () => {
     setFile(actualFile);
 
     toast.success(
-      `Excel file selected: ${actualFile.name} is ready to upload.`,
+      `Excel file selected: ${actualFile.name} is ready to upload.`
     );
 
-    // Stop Ant Design's automatic upload.
-    // The file is uploaded after the user confirms.
     return false;
   };
 
@@ -172,23 +209,20 @@ const navigateToDashboard = () => {
       setImportProgress(data);
       setImportErrors(Array.isArray(data.errors) ? data.errors : []);
 
-
       if (["completed", "failed"].includes(data.status)) {
-  pollingRef.current = false;
-  clearTimeout(timerRef.current);
-  setImporting(false);
+        pollingRef.current = false;
+        clearTimeout(timerRef.current);
+        setImporting(false);
 
-  if (data.status === "completed") {
-    toast.success("Excel import completed successfully.");
+        if (data.status === "completed") {
+          toast.success("Excel import completed successfully.");
+          navigateToDashboard();
+        } else {
+          toast.error("Excel import failed. Check the import errors.");
+        }
 
-    // Navigate only after the import is completed successfully.
-    navigateToDashboard();
-  } else {
-    toast.error("Excel import failed. Check the import errors.");
-  }
-
-  return;
-}
+        return;
+      }
 
       timerRef.current = setTimeout(() => {
         checkImportStatus(importId);
@@ -214,6 +248,11 @@ const navigateToDashboard = () => {
       return;
     }
 
+    if (isEquipmentMaster && !selectedDeptId) {
+      toast.error("Please select a department.");
+      return;
+    }
+
     try {
       setImporting(true);
       setError("");
@@ -226,6 +265,22 @@ const navigateToDashboard = () => {
       formData.append("euipmentMasterType", masterKey);
       formData.append("file", file, file.name);
 
+      // Append department_id and department_name only for Equipment Master
+      if (isEquipmentMaster) {
+        const selectedDept = departments.find(
+          (d) =>
+            String(d.id || d.department_id || d.dept_id) ===
+            String(selectedDeptId)
+        );
+        const deptName =
+          selectedDept?.name ||
+          selectedDept?.department_name ||
+          selectedDept?.dept_name ||
+          "";
+
+        formData.append("department_id", selectedDeptId);
+        formData.append("department_name", deptName);
+      }
 
       const response = await api.post(
         "/user/instrment-excel-import",
@@ -235,7 +290,7 @@ const navigateToDashboard = () => {
             "Content-Type": "multipart/form-data",
           },
           timeout: 0,
-        },
+        }
       );
 
       const result = response.data;
@@ -244,18 +299,18 @@ const navigateToDashboard = () => {
 
       const importId = result?.data?.import_id;
 
-if (!importId) {
-  setImporting(false);
-  setConfirmOpen(false);
+      if (!importId) {
+        setImporting(false);
+        setConfirmOpen(false);
 
-  toast.success(
-    result.message || "Import request submitted successfully.",
-  );
+        toast.success(
+          result.message || "Import request submitted successfully."
+        );
 
-  navigateToDashboard();
+        navigateToDashboard();
 
-  return;
-}
+        return;
+      }
 
       setConfirmOpen(false);
       setImportProgress(result.data);
@@ -292,7 +347,9 @@ if (!importId) {
   const totalRows = importProgress?.total_rows || 0;
   const processedRows = importProgress?.processed_rows || 0;
   const percent =
-    totalRows > 0 ? Math.min(100, Math.round((processedRows / totalRows) * 100)) : 0;
+    totalRows > 0
+      ? Math.min(100, Math.round((processedRows / totalRows) * 100))
+      : 0;
   const statusStyle =
     STATUS_STYLES[importProgress?.status] || STATUS_STYLES.default;
 
@@ -316,7 +373,6 @@ if (!importId) {
             </li>
           ))}
         </ol>
-
       </section>
 
       {/* Upload area */}
@@ -332,6 +388,28 @@ if (!importId) {
             Master: {masterLabel}
           </span>
         </div>
+
+        {/* ─────────────── DEPARTMENT DROPDOWN ─────────────── */}
+        {isEquipmentMaster && (
+          <div className="mb-5">
+            <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+              Select Department <span className="text-red-500">*</span>
+            </label>
+            <Select
+              className="w-full"
+              placeholder="Select a department"
+              loading={departmentsLoading}
+              value={selectedDeptId}
+              onChange={(val) => setSelectedDeptId(val)}
+              options={departmentOptions}
+              showSearch
+              optionFilterProp="label"
+              allowClear={false}
+              disabled={importing}
+            />
+          </div>
+        )}
+        {/* ─────────────────────────────────────────────────── */}
 
         {!file ? (
           <Dragger {...uploadProps} className="equipment-import-dragger">
@@ -459,19 +537,6 @@ if (!importId) {
                     message="Excel import failed."
                   />
                 )}
-
-                {/* {importErrors.length > 0 && (
-                  <div className="mt-4">
-                    <h5 className="mb-2 flex items-center gap-2 text-sm font-semibold text-red-700">
-                      <WarningOutlined />
-                      Import Errors ({importErrors.length})
-                    </h5>
-
-                    <pre className="max-h-60 overflow-auto rounded-lg border border-red-100 bg-red-50/40 p-3 text-xs text-gray-700">
-                      {JSON.stringify(importErrors, null, 2)}
-                    </pre>
-                  </div>
-                )} */}
               </div>
             )}
 
@@ -479,7 +544,7 @@ if (!importId) {
               <Button
                 type="primary"
                 icon={<UploadOutlined />}
-                disabled={importing}
+                disabled={importing || (isEquipmentMaster && !selectedDeptId)}
                 loading={importing}
                 onClick={() => setConfirmOpen(true)}
               >
@@ -519,7 +584,9 @@ if (!importId) {
         okText="Confirm and Upload"
         cancelText="Cancel"
         confirmLoading={importing}
-        okButtonProps={{ disabled: !file || importing }}
+        okButtonProps={{
+          disabled: !file || importing || (isEquipmentMaster && !selectedDeptId),
+        }}
         cancelButtonProps={{ disabled: importing }}
         destroyOnClose
       >

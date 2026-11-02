@@ -12,11 +12,13 @@ import DashboardActionBar from "../../../components/common/DashboardActionBar/Da
 import MasterInstrumentImport from "./masters/MasterInstrumentImport";
 import FieldInstrumentMasterImport from "./masters/FieldInstrumentMasterImport";
 import SpareInstrumentMasterImport from "./masters/SpareInstrumentMasterImport";
+import EquipmentMasterImport from "./masters/EquipmentMasterImport";
 
 const equipmentMasterOptions = [
   { label: "Master Instrument", value: "master_instrument" },
   { label: "Field Instrument Master", value: "field_instrument_master" },
   { label: "Spare Instrument Master", value: "spare_instrument_master" },
+  { label: "Equipment Master", value: "equipment_master" },
 ];
 
 const steps = [
@@ -127,6 +129,10 @@ export default function ImportMasterEquipmentData() {
 
         {selectedMaster === "spare_instrument_master" && (
           <SpareInstrumentMasterImport />
+        )}
+
+        {selectedMaster === "equipment_master" && (
+          <EquipmentMasterImport />
         )}
 
         {/* Empty state */}

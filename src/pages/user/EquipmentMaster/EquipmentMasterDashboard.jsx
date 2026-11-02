@@ -8,7 +8,7 @@ import DashboardActionBar from "../../../components/common/DashboardActionBar/Da
 import { getInstrumentReport } from "../../../services/usersApi/equipmentApi";
 import DataTable from "../../../components/common/DataTable/DataTable";
 import { useAuthStore } from "../../../store/authStore";
-import { getAllSpareInstrumentRecords } from "../../../services/usersApi/dashboardAllApi";
+import { getAllEquipmentMasterRecords } from "../../../services/usersApi/dashboardAllApi";
 
 /* ───────────────────────── Report window templates ───────────────────────── */
 
@@ -138,7 +138,7 @@ const EquipmentMasterDashboard = () => {
             if (filters.category) params.category = filters.category;
             if (filters.status)   params.status   = filters.status;
 
-            const response = await getAllSpareInstrumentRecords(params);
+            const response = await getAllEquipmentMasterRecords(params);
 
             const paginationData = response?.data?.data;
             const equipmentData = paginationData?.data || [];
@@ -216,9 +216,9 @@ const EquipmentMasterDashboard = () => {
     // ================================================================
     const columns = useMemo(
         () => [
-            // EQUIPMENT / INSTRUMENT CODE (clickable)
+            // EQUIPMENT CODE (clickable)
             {
-                accessorKey: "instrument_id_no",
+                accessorKey: "equipment_id_no",
                 header: "Equipment Code",
                 cell: ({ row, getValue }) => {
                     const value = getValue();
@@ -241,11 +241,11 @@ const EquipmentMasterDashboard = () => {
 
             // EQUIPMENT / INSTRUMENT NAME (with Model as subtitle)
             {
-                accessorKey: "instrument_name",
+                accessorKey: "equipment_name",
                 header: "Equipment / Instrument",
-                cell: ({ row }) => {
-                    const name = row.original?.instrument_name || "-";
-                    const model = row.original?.model || "-";
+                cell: ({ getValue, row }) => {
+                    const name = getValue() || "-";
+                    const model = row.original?.equipment_model || "-";
                     return (
                         <div className="flex min-w-0 items-center gap-3">
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] border border-[#D5E0DB] bg-[#F1F5F3] text-[#56766D]">
@@ -269,11 +269,7 @@ const EquipmentMasterDashboard = () => {
                 accessorKey: "department.name",
                 header: "Department",
                 cell: ({ row }) => {
-                    const deptName =
-                        row.original?.department?.name ||
-                        row.original?.department_name ||
-                        row.original?.dept_name ||
-                        "-";
+                    const deptName = row.original?.department?.name || "-";
                     return (
                         <div className="flex items-center gap-2">
                             <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] border border-[#D5E0DB] bg-[#F7FAF8] text-[#56766D]">
@@ -289,7 +285,7 @@ const EquipmentMasterDashboard = () => {
 
             // MAKE
             {
-                accessorKey: "make",
+                accessorKey: "equipment_make",
                 header: "Make",
                 cell: ({ getValue }) => (
                     <span className="text-[11.5px] font-semibold text-[#566560]">
@@ -300,7 +296,7 @@ const EquipmentMasterDashboard = () => {
 
             // LOCATION
             {
-                accessorKey: "location",
+                accessorKey: "equipment_location",
                 header: "Location",
                 cell: ({ getValue }) => (
                     <span className="text-[11.5px] font-semibold text-[#566560]">

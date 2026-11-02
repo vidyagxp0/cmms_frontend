@@ -95,4 +95,20 @@ export const getFieldInstrumentReport = (id) => {
 
 
 //All Equipment Master APis
+export const getEquipmentMasterDetail = (id) =>
+    api.get(`/user/department-equipment-master-detail/${id}`);
+
+export const addEquipmentMaster = (payload) =>
+    api.post("/user/store-department-equipment-master", payload);
+
+export const updateEquipmentMaster = (id, payload) =>
+    api.put(`/user/update-master-department-equipment/${id}`, payload);
+
+
+export const executeEquipmentMasterActivity = (id, payload) =>
+    api.post(`/user/department-equipment-record-stage/${id}`, payload);
+
+export const getAllEquipmentMasterPermissions = (recordId) => {
+    return api.get(`/user/department-equipment-record-permission/${recordId}`);
+};
 

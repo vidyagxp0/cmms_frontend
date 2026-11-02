@@ -115,7 +115,7 @@ function UserRoutes() {
         {/* Equipment Master Routes*/}
         <Route path="equipment-master-dashboard" element={<EquipmentMasterDashboard />} />
         <Route path="equipment-master-create" element={<EquipmentMasterCreate />} />
-        <Route path="equipment-master-panel/:recordId" element={<EquipmentMasterPanel />} /> 
+        <Route path="equipment-master-panel/:id" element={<EquipmentMasterPanel />} /> 
         <Route path="equipment-master-audit/:recordId" element={<EquipmentMasterAudit />} /> 
 
         

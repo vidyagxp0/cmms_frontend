@@ -42,3 +42,9 @@ export const getAllDashboardData = () => {
     return api.get("/user/dashboard-count");
 }
 
+
+export const getAllEquipmentMasterRecords = (params = {}) => {
+    return api.get("/user/department-equipment-master-listing", {
+        params,
+    });
+};

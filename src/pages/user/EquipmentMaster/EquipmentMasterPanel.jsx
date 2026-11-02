@@ -35,24 +35,24 @@ import {
 } from "../../../services/usersApi/workflowCommonApi";
 import ChecklistConfiguration from "../../../components/checklist/ChecklistConfig";
 import {
-  executeSpareInstrumentActivity,
-  getAllPermissionsSpareInstrument,
-  getSpareInstrumentMasterDetail,
-  updateSpareInstrumentMaster,
-} from "../../../services/usersApi/spareInstrumentApi";
+  executeEquipmentMasterActivity,
+  getAllEquipmentMasterPermissions,
+  getEquipmentMasterDetail,
+  updateEquipmentMaster,
+} from "../../../services/usersApi/equipmentApi";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
 const TABS = [
-  { id: "instrument", label: "General Information", stageId: 45 },
+  { id: "instrument", label: "General Information", stageId: 50 },
   { id: "checklist", label: "Checklist Configuration" },
-  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 46 },
-  { id: "qa-review", label: "QA Approval Review", stageId: 47 },
-  { id: "activity", label: "Activity Log", stageId: 48 },
-  { id: "cancellation", label: "Cancellation", stageId: 49 },
+  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 51 },
+  { id: "qa-review", label: "QA Approval Review", stageId: 52 },
+  { id: "activity", label: "Activity Log", stageId: 53 },
+  { id: "cancellation", label: "Cancellation", stageId: 54 },
 ];
 
-const MASTER_INSTRUMENT_PROCESS_ID = 9;
+const MASTER_INSTRUMENT_PROCESS_ID = 10;
 
 const EMPTY_CHECKLIST = {
   checklist_name: "",
@@ -290,10 +290,10 @@ const EquipmentMasterPanel = () => {
     canPerformActivity === true &&
     permissionsLoading === false;
 
-  const isInstrumentEditable = isStageEditable(45);
-  const isHodEditable = isStageEditable(46);
-  const isQaReviewEditable = isStageEditable(47);
-  const isCancellationEditable = isStageEditable(49);
+  const isInstrumentEditable = isStageEditable(50);
+  const isHodEditable = isStageEditable(51);
+  const isQaReviewEditable = isStageEditable(52);
+  const isCancellationEditable = isStageEditable(54);
 
   /* ───────── Profile ───────── */
   useEffect(() => {
@@ -315,7 +315,7 @@ const EquipmentMasterPanel = () => {
   const fetchDetail = useCallback(
     async (isInitial = false) => {
       if (!id) {
-        toast.error("Instrument ID is missing.");
+        toast.error("Equipment ID is missing.");
         navigate(-1);
         return;
       }
@@ -325,7 +325,7 @@ const EquipmentMasterPanel = () => {
       try {
         if (isInitial) setIsLoading(true);
 
-        const response = await getSpareInstrumentMasterDetail(id);
+        const response = await getEquipmentMasterDetail(id);
         const data = response?.data?.data;
 
         if (!data) {
@@ -361,12 +361,18 @@ const EquipmentMasterPanel = () => {
 
         form.setFieldsValue({
           department_id: deptId,
-          instrument_name: data.instrument_name || data.name || "",
-          instrument_id_no: data.instrument_id_no || data.equipment_id || "",
-          location: data.location || "",
+          /* Prefer new keys, fall back to old keys for legacy records */
+          instrument_name:
+            data.equipment_name || data.instrument_name || data.name || "",
+          instrument_id_no:
+            data.equipment_id_no ||
+            data.instrument_id_no ||
+            data.equipment_id ||
+            "",
+          location: data.equipment_location || data.location || "",
           asset_code: data.asset_code || "",
-          make: data.make || "",
-          model: data.model || data.sr_no_model_no || "",
+          make: data.equipment_make || data.make || "",
+          model: data.equipment_model || data.model || data.sr_no_model_no || "",
           capacity: data.capacity || "",
           stage_id: data.stage_id?.id || data.stage_id || null,
           process_id: data.process_id || null,
@@ -468,7 +474,7 @@ const EquipmentMasterPanel = () => {
     }
     try {
       setPermissionsLoading(true);
-      const response = await getAllPermissionsSpareInstrument(id);
+      const response = await getAllEquipmentMasterPermissions(id);
       const canPerform =
         response?.data?.data?.permission?.can_perform_action === true;
       setCanPerformActivity(canPerform);
@@ -524,7 +530,7 @@ const EquipmentMasterPanel = () => {
   useEffect(() => {
     if (!activeStageId) return;
 
-    if (isImportedRef.current && Number(activeStageId) === 48) return;
+    if (isImportedRef.current && Number(activeStageId) === 53) return;
 
     const matchingTab = TABS.find(
       (tab) => Number(tab.stageId) === Number(activeStageId)
@@ -650,18 +656,27 @@ const EquipmentMasterPanel = () => {
       },
     };
 
+    /* ── Resolve department name from options (includes fallback) ── */
+    const selectedDeptOption = departmentOptions.find(
+      (opt) => String(opt.value) === String(values.department_id)
+    );
+    const selectedDepartmentName = selectedDeptOption?.label || "";
+
     try {
       setIsSaving(true);
 
       const payload = {
         department_id: values.department_id ?? null,
-        instrument_name: values.instrument_name?.trim() || "",
-        instrument_id_no: values.instrument_id_no?.trim() || "",
-        location: values.location?.trim() || "",
+        department_name: selectedDepartmentName,
+
+        equipment_name: values.instrument_name?.trim() || "",
+        equipment_id_no: values.instrument_id_no?.trim() || "",
+        equipment_make: values.make?.trim() || "",
+        equipment_model: values.model?.trim() || "",
+        equipment_location: values.location?.trim() || "",
         asset_code: values.asset_code?.trim() || "",
-        make: values.make?.trim() || "",
-        model: values.model?.trim() || "",
         capacity: values.capacity?.trim() || "",
+
         checklist_config: cleanedChecklistConfig,
 
         hod_review_comments: values.hodReviewComments || "",
@@ -670,7 +685,7 @@ const EquipmentMasterPanel = () => {
         cancellation_attachment: values.cancellationAttachment || [],
       };
 
-      await updateSpareInstrumentMaster(id, payload);
+      await updateEquipmentMaster(id, payload);
 
       toast.success("Equipment Master updated successfully.");
 
@@ -710,7 +725,7 @@ const EquipmentMasterPanel = () => {
   };
 
   /* ───────── Visible tabs ───────── */
-  const isCancellationStageActive = Number(activeStageId) === 81;
+  const isCancellationStageActive = Number(activeStageId) === 54;
 
   let visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")
@@ -739,7 +754,7 @@ const EquipmentMasterPanel = () => {
           stages={workflowStages}
           activeStageId={activeStageId}
           loading={workflowLoading}
-          cancelledStageId={49}
+          cancelledStageId={54}
         />
 
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
@@ -761,7 +776,7 @@ const EquipmentMasterPanel = () => {
               loading={activitiesLoading}
               recordId={id}
               userId={loginUserId}
-              activityApi={executeSpareInstrumentActivity}
+              activityApi={executeEquipmentMasterActivity}
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}

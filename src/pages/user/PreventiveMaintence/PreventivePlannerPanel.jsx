@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Form } from "antd";
+import { Form, Select } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
@@ -34,6 +34,7 @@ import {
   getAllActivityLogs,
   getAllPermissions,
   getAllStages,
+  getAllDepartments,
 } from "../../../services/usersApi/workflowCommonApi";
 import PreventiveGrid, {
   getRowBiggestFrequency,
@@ -54,6 +55,7 @@ const TABS = [
 
 const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
+  { name: "selectedDeptId", label: "Select Department" },
 ];
 
 const getProcessValue = (processData = [], key) => {
@@ -93,10 +95,6 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
   });
 };
 
-// ─────────────────────────────────────────────────────────────
-// NEW: Build a single PreventiveGrid row from a raw equipment item.
-// Mirrors the field mapping inside PreventiveGrid.updateRow().
-// ─────────────────────────────────────────────────────────────
 const buildRowFromEquipment = (item = {}) => ({
   equipmentDbId:
     item.id !== undefined && item.id !== null ? String(item.id) : "",
@@ -113,8 +111,14 @@ const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({
     key: field.name,
     label: field.label,
-    value: values?.[field.name] || "",
+    value: values?.[field.name] || field.value || "",
   })),
+  // ADDED: New master_department field object
+  {
+    key: "master_department",
+    label: "Select Department",
+    value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
+  },
   {
     key: "short_description",
     label: "Short Description",
@@ -210,16 +214,18 @@ const PreventivePlannerPanel = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
   const isFetchingRef = useRef(false);
-  const requiredValuesRef = useRef({ shortDescription: "" });
+  const requiredValuesRef = useRef({ shortDescription: "", selectedDeptId: "" });
 
-  // ─────────────────────────────────────────────────────────────
-  // NEW refs — one-shot auto-populate on initial mount only.
-  // ─────────────────────────────────────────────────────────────
-  const equipmentDataRef = useRef([]);                 // raw equipment list
-  const hasInitialDetailLoadedRef = useRef(false);     // record API done?
-  const hasInitialEquipmentLoadedRef = useRef(false);  // equipment API done?
-  const savedRowsCountRef = useRef(0);                 // rows that came from backend
-  const autoPopulateDoneRef = useRef(false);           // fires at most once
+  // New Department States for Dropdown
+  const [departments, setDepartments] = useState([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
+
+  // Auto-populate refs
+  const equipmentDataRef = useRef([]);                 
+  const hasInitialDetailLoadedRef = useRef(false);     
+  const hasInitialEquipmentLoadedRef = useRef(false);  
+  const savedRowsCountRef = useRef(0);                 
+  const autoPopulateDoneRef = useRef(false);           
 
   const canCreateChild =
     Number(activeStageId) === 11 &&
@@ -240,16 +246,11 @@ const PreventivePlannerPanel = () => {
   const isQaReviewEditable = isStageEditable(10);
   const isCancellationEditable = isStageEditable(11);
 
-  // ─────────────────────────────────────────────────────────────
-  // NEW: Auto-populate once both APIs finish, only if the record
-  // had ZERO saved rows. Guarded to run at most once.
-  // ─────────────────────────────────────────────────────────────
   const tryAutoPopulateOnInitial = useCallback(() => {
     if (autoPopulateDoneRef.current) return;
     if (!hasInitialDetailLoadedRef.current) return;
     if (!hasInitialEquipmentLoadedRef.current) return;
 
-    // If the backend already had rows, respect them.
     if (savedRowsCountRef.current > 0) {
       autoPopulateDoneRef.current = true;
       return;
@@ -278,13 +279,29 @@ const PreventivePlannerPanel = () => {
   }, []);
 
   useEffect(() => {
+    const fetchDepartments = async () => {
+      setDepartmentsLoading(true);
+      try {
+        const response = await getAllDepartments();
+        const data = response?.data?.data ?? [];
+        setDepartments(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to fetch departments:", error);
+        toast.error("Could not load departments.");
+      } finally {
+        setDepartmentsLoading(false);
+      }
+    };
+    fetchDepartments();
+  }, []);
+
+  useEffect(() => {
     const fetchEquipment = async () => {
       try {
         setEquipmentLoading(true);
         const response = await getAllEquipmentData();
         const data = response?.data?.data || [];
 
-        // ONLY the name is used here
         const options = data.map((item) => ({
           value: String(item.id),
           label: item.instrument_name || "",
@@ -299,14 +316,12 @@ const PreventivePlannerPanel = () => {
         setEquipmentMap(map);
         equipmentMapRef.current = map;
 
-        // NEW: stash raw data + trigger auto-populate check.
         equipmentDataRef.current = data;
         hasInitialEquipmentLoadedRef.current = true;
         tryAutoPopulateOnInitial();
       } catch (error) {
         console.error("Failed to fetch equipment:", error);
         toast.error("Could not load equipment list.");
-        // Still mark as loaded so detail API can finish normally.
         hasInitialEquipmentLoadedRef.current = true;
         tryAutoPopulateOnInitial();
       } finally {
@@ -353,6 +368,10 @@ const PreventivePlannerPanel = () => {
         const processDepartment = getProcessValue(
           processData,
           "initiationDepartment"
+        );
+        const masterDepartmentId = getProcessValue(
+          processData,
+          "master_department"
         );
         const shortDescription = getProcessValue(
           processData,
@@ -408,20 +427,16 @@ const PreventivePlannerPanel = () => {
         const backendInitiatorName =
           responseData?.initiator?.name ?? processInitiator ?? "";
 
+        // Leave these exactly as they were for the System Field
         setInitiatorId(backendInitiatorId);
         setInitiator(backendInitiatorName);
-        setDepartmentId(
-          responseData?.department?.id || responseData?.department_id || ""
-        );
-        setInitiationDepartment(
-          responseData?.department?.name || processDepartment || ""
-        );
-        setDateOfInitiation(
-          processDateOfInitiation || responseData?.initiation_date || ""
-        );
+        setDepartmentId(responseData?.department?.id || responseData?.department_id || "");
+        setInitiationDepartment(responseData?.department?.name || processDepartment || "");
+        setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
 
         requiredValuesRef.current = {
           shortDescription: shortDescription || "",
+          selectedDeptId: masterDepartmentId || null,
         };
 
         form.setFieldsValue({
@@ -433,8 +448,8 @@ const PreventivePlannerPanel = () => {
           dateOfInitiation:
             processDateOfInitiation || responseData?.initiation_date || "",
           dueDate,
-          initiationDepartment:
-            responseData?.department?.name || processDepartment || "",
+          initiationDepartment: responseData?.department?.name || processDepartment || "",
+          selectedDeptId: masterDepartmentId || null, // Set the new master dropdown
           shortDescription,
           comments,
           attachment: attachment || [],
@@ -480,7 +495,6 @@ const PreventivePlannerPanel = () => {
           newRow.preventiveFrequencyStartDate =
             row.preventiveFrequencyStartDate || "";
 
-          // Keep the instrument_name (what the Select expects) — do NOT convert to id
           if (
             newRow.equipmentInstrumentName &&
             typeof newRow.equipmentInstrumentName === "string" &&
@@ -512,15 +526,12 @@ const PreventivePlannerPanel = () => {
           return newRow;
         });
 
-        // ── NEW: record initial-load info BEFORE setting state. ──
         if (isInitial && !hasInitialDetailLoadedRef.current) {
           hasInitialDetailLoadedRef.current = true;
           savedRowsCountRef.current = normalizedRows.length;
         }
 
         setPreventiveRows(normalizedRows);
-
-        // ── NEW: try auto-populate (no-op if already done / has rows). ──
         tryAutoPopulateOnInitial();
       } catch (error) {
         console.error("Failed to fetch preventive planner detail:", error);
@@ -528,7 +539,6 @@ const PreventivePlannerPanel = () => {
           error?.response?.data?.message ||
             "Failed to load Preventive Planner record."
         );
-        // Mark as loaded so equipment fetch can proceed normally.
         if (isInitial) hasInitialDetailLoadedRef.current = true;
         tryAutoPopulateOnInitial();
       } finally {
@@ -654,16 +664,17 @@ const PreventivePlannerPanel = () => {
     if (matchingTab) setActiveTab(matchingTab.id);
   }, [activeStageId]);
 
+  // Kept exactly the same as it was originally
   const systemFields = [
     {
-    name: "documentNumber",
-    label: "Document Number",
-    value: "SMLJ/ENG/SOP-GEN/OO3/T01-01",
+      name: "documentNumber",
+      label: "Document Number",
+      value: "SMLJ/ENG/SOP-GEN/OO3/T01-01",
     },
     {
-        name: "documentType",
-        label: "Document Type",
-        value: "Formats",
+      name: "documentType",
+      label: "Document Type",
+      value: "Formats",
     },
     {
       name: "recordNumber",
@@ -724,21 +735,21 @@ const PreventivePlannerPanel = () => {
   };
 
   const handleSaveBeforeActivity = async () => {
-  if (isSaving || isLoading || !recordId) {
-    return false;
-  }
-  try {
-    const values = form.getFieldsValue(true);
-    const saved = await handleSubmit(values);
-    if (saved !== true) {
+    if (isSaving || isLoading || !recordId) {
       return false;
     }
-    return true;
-  } catch (error) {
-    toast.error("Save before activity failed:", error);
-    return false;
-  }
-};
+    try {
+      const values = form.getFieldsValue(true);
+      const saved = await handleSubmit(values);
+      if (saved !== true) {
+        return false;
+      }
+      return true;
+    } catch (error) {
+      toast.error("Save before activity failed:", error);
+      return false;
+    }
+  };
 
   const handleSubmit = async (values) => {
     if (isSaving || !recordId) return;
@@ -754,10 +765,18 @@ const PreventivePlannerPanel = () => {
       const processData = buildProcessData(mergedValues, systemFields);
       const gridData = buildGridPayload(preventiveRows, equipmentMap);
 
+      // Resolve the name for the root payload based on the new dropdown
+      const selectedDeptObj = departments.find(
+        (d) => String(d.id || d.department_id || d.dept_id) === String(mergedValues.selectedDeptId)
+      );
+      const selectedDeptName = selectedDeptObj?.name || selectedDeptObj?.department_name || selectedDeptObj?.dept_name || "";
+
       const payload = {
         process_id: Number(processId),
         stage_id: Number(activeStageId),
-        department_id: Number(departmentId),
+        // Assuming you still need department_id/name at the root based on earlier req
+        department_id: mergedValues.selectedDeptId ? Number(mergedValues.selectedDeptId) : null,
+        department_name: selectedDeptName,
         initiator_id: Number(initiatorId),
         initiator_name: initiator,
         short_description: mergedValues?.shortDescription || "",
@@ -781,14 +800,14 @@ const PreventivePlannerPanel = () => {
       toast.error(
         response?.data?.message || "Failed to update Preventive Planner."
       );
-      return false
+      return false;
     } catch (error) {
       console.error("Preventive Planner update failed:", error);
       toast.error(
         error?.response?.data?.message ||
           "Failed to update Preventive Planner. Please try again."
       );
-     return false;
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -887,6 +906,8 @@ const PreventivePlannerPanel = () => {
         <section style={{ display: activeTab === "general" ? "block" : "none" }}>
           <SectionHeader title="GENERAL INFORMATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            
+            {/* System Fields - Intiation Department remains untouched here */}
             {systemFields.map((field) => (
               <Form.Item
                 key={field.name}
@@ -897,6 +918,7 @@ const PreventivePlannerPanel = () => {
                 <FormDisabledInput />
               </Form.Item>
             ))}
+
             <Form.Item
               name="shortDescription"
                label={
@@ -919,6 +941,42 @@ const PreventivePlannerPanel = () => {
                 disabled={!isGeneralEditable}
               />
             </Form.Item>
+
+            {/* NEW SEPARATE SELECT DEPARTMENT DROPDOWN */}
+            <Form.Item
+              name="selectedDeptId"
+              label={
+                <span className="inline-flex items-center">
+                  Select Department
+                  <RequiredAsterisk message="Department is required to proceed. Please select a department." />
+                </span>
+              }
+              rules={[
+                {
+                  required: true,
+                  message: "Please select a department",
+                },
+              ]}
+              className="!mb-4"
+            >
+              <Select
+                placeholder="Select a department"
+                loading={departmentsLoading}
+                options={departments.map((dept, idx) => ({
+                  label:
+                    dept.name ||
+                    dept.department_name ||
+                    dept.dept_name ||
+                    "Unnamed Department",
+                  value: dept.id || dept.department_id || dept.dept_id || idx,
+                }))}
+                showSearch
+                optionFilterProp="label"
+                allowClear={false}
+                disabled={!isGeneralEditable}
+              />
+            </Form.Item>
+
           </div>
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="PREVENTIVE PLANNER INFORMATION" />

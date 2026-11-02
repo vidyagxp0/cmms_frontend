@@ -13,9 +13,6 @@ const { TextArea } = Input;
 const InstrumentCalibrationGrid = ({
   value = [],
   onChange,
-  equipmentOptions = [],
-  equipmentMap = {},
-  equipmentLoading = false,
   name = "Field Instrument Calibration Addendum",
   description = "",
   addButtonLabel = "Add Row",
@@ -25,15 +22,15 @@ const InstrumentCalibrationGrid = ({
   disabled = false,
   showAddButton = false,
 }) => {
-  // Added descriptive placeholders so users know what to type
+  // All columns are now manual text fields (except Category which has static options)
   const mainColumns = [
-    { key: "equipmentName", title: "Equipment Name", type: "select", placeholder: "Select equipment",  minWidth: 160 },
-    { key: "instrumentName", title: "Instrument Name", type: "text", placeholder: "Enter name",  minWidth: 150 },
-    { key: "instrumentId", title: "Instrument ID No.", type: "text", placeholder: "Auto-filled",  minWidth: 140, disabled: true },
+    { key: "equipmentName", title: "Equipment Name", type: "text", placeholder: "Enter equipment name", minWidth: 160 },
+    { key: "instrumentName", title: "Instrument Name", type: "text", placeholder: "Enter name", minWidth: 150 },
+    { key: "instrumentId", title: "Instrument ID No.", type: "text", placeholder: "Enter ID", minWidth: 140 },
     { key: "make", title: "Make", type: "text", placeholder: "Enter make", minWidth: 100 },
     { key: "modelNo", title: "Sr. No./ Model No.", type: "text", placeholder: "Enter Sr. No.", minWidth: 130 },
     { key: "leastCount", title: "Least Count", type: "text", placeholder: "Enter count", minWidth: 100 },
-    { key: "location", title: "Location", type: "text", placeholder: "Auto-filled", minWidth: 150, disabled: true },
+    { key: "location", title: "Location", type: "text", placeholder: "Enter location", minWidth: 150 },
     { key: "accuracy", title: "Accuracy", type: "text", placeholder: "Enter accuracy", minWidth: 100 },
     { key: "instrumentRange", title: "Instrument Range", type: "text", placeholder: "Enter range", minWidth: 120 },
     { key: "operatingRange", title: "Operating Range", type: "text", placeholder: "Enter range", minWidth: 120 },
@@ -94,68 +91,17 @@ const InstrumentCalibrationGrid = ({
     const updated = [...rows];
     const row = { ...updated[rowIndex] };
     row[key] = newValue;
-
-    // Auto-populate all fields when an Equipment is selected
-    if (key === "equipmentName") {
-      const equipmentId = newValue;
-      if (equipmentId && equipmentMap[equipmentId]) {
-        const eq = equipmentMap[equipmentId];
-        
-        row.instrumentName = eq.instrument_name || "";
-        row.instrumentId = eq.instrument_id_no || eq.equipment_id || "";
-        row.make = eq.make || "";
-        row.modelNo = eq.sr_no_model_no || "";
-        row.leastCount = eq.least_count || "";
-        row.location = eq.location || "";
-        row.accuracy = eq.accuracy || "";
-        row.instrumentRange = eq.instrument_range || "";
-        row.operatingRange = eq.operating_range || "";
-        row.calibrationTestPoint = eq.calibration_test_points || "";
-        
-        // Map category safely to the values expected by the dropdown (critical, non-critical, indicative)
-        if (eq.category) {
-          const catLower = eq.category.toLowerCase();
-          if (catLower.includes("non")) {
-            row.category = "non-critical";
-          } else if (catLower.includes("critical")) {
-            row.category = "critical";
-          } else if (catLower.includes("indicative")) {
-            row.category = "indicative";
-          } else {
-            row.category = eq.category;
-          }
-        } else {
-          row.category = "";
-        }
-
-      } else {
-        // Clear all fields if equipment selection is cleared
-        row.instrumentName = "";
-        row.instrumentId = "";
-        row.make = "";
-        row.modelNo = "";
-        row.leastCount = "";
-        row.location = "";
-        row.accuracy = "";
-        row.instrumentRange = "";
-        row.operatingRange = "";
-        row.calibrationTestPoint = "";
-        row.category = "";
-      }
-    }
-
     updated[rowIndex] = row;
     onChange(updated);
   };
 
   const renderField = (column, row, rowIndex) => {
-    const { key, type, placeholder, options: colOptions, disabled: columnDisabled } = column;
+    const { key, type, placeholder, options: colOptions } = column;
     const fieldValue = row[key] ?? "";
     const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
-    const isDisabled = disabled || columnDisabled;
     
     const commonProps = {
-      disabled: isDisabled,
+      disabled: disabled,
       className: "!w-full !rounded-none !shadow-none disabled:!cursor-not-allowed disabled:!bg-transparent disabled:!text-[#65746E]",
     };
 
@@ -164,12 +110,10 @@ const InstrumentCalibrationGrid = ({
         <Select
           {...commonProps}
           value={fieldValue || undefined}
-          placeholder={equipmentLoading ? "Loading..." : placeholder}
+          placeholder={placeholder}
           onChange={handleChange}
-          options={key === "equipmentName" ? equipmentOptions : colOptions}
-          disabled={isDisabled || (key === "equipmentName" && equipmentLoading)}
-          showSearch={key === "equipmentName"}
-          filterOption={(input, option) => (option?.label ?? "").toLowerCase().includes(input.toLowerCase())}
+          options={colOptions}
+          disabled={disabled}
           className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1]"
         />
       );
@@ -242,28 +186,24 @@ const InstrumentCalibrationGrid = ({
                   className="border border-[#D5DFDB] px-2 py-2 text-left align-middle text-[10px] font-bold text-[#43564F]"
                 >
                   <div className="flex items-center gap-1">
-                {column.title}
-                {column.key === "equipmentName" && (
-                  <RequiredAsterisk
-                    message="Equipment Name is required. Please select an equipment item to continue."
-                  />
-                )}
-
-                {column.key !== "equipmentName" && column.required && (
-                  <span className="text-red-500">*</span>
-                )}
-              </div>
+                    {column.title}
+                    {column.key === "equipmentName" && (
+                      <RequiredAsterisk
+                        message="Equipment Name is required. Please enter the equipment name."
+                      />
+                    )}
+                  </div>
                 </th>
               ))}
               
-          <th className="w-[180px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
-            <div className="flex items-center justify-center gap-1">
-              Calibration Next Due Date
-              <RequiredAsterisk
-                message="Calibration Next Due Date is required. Please select the next due date."
-              />
-            </div>
-          </th>
+              <th className="w-[180px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
+                <div className="flex items-center justify-center gap-1">
+                  Calibration Next Due Date
+                  <RequiredAsterisk
+                    message="Calibration Next Due Date is required. Please select the next due date."
+                  />
+                </div>
+              </th>
               <th className="w-[140px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Calibration Done Date</th>
               
               <th className="w-[150px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Remarks</th>

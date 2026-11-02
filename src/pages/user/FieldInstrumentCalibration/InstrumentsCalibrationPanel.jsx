@@ -19,15 +19,12 @@ import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import "../../../components/ui/disabledFields.css";
 
 import { getProfile } from "../../../services/authApi";
-// Replaced old APIs with the new Instrument Calibration APIs
 import {
   getInstrumentCalibrationDetail,
   executeInstrumentCalibrationActivity,
   updateInstrumentCalibration,
-  getAllFieldsInstrumentMasters
 } from "../../../services/usersApi/instrumentCalibration"; 
-
-import { getCalibrationUser } from "../../../services/usersApi/calibrationApi"; // Kept for equipment dropdown and users
+import { getCalibrationUser } from "../../../services/usersApi/calibrationApi";
 import { addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
 import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
 import InstrumentCalibrationGrid from "./InstrumentCalibrationGrid";
@@ -46,7 +43,6 @@ const TABS = [
 
 const REQUIRED_FIELDS = [{ name: "shortDescription", label: "Short Description" }];
 
-// Updated labels to match the new 2-date column grid
 const GRID_LABELS = {
   equipmentName: "Equipment Name",
   instrumentName: "Instrument Name",
@@ -78,17 +74,13 @@ const getProcessValue = (processData = [], key) => {
   return "";
 };
 
-const buildGridPayload = (rows = [], equipmentMap = {}) => {
+const buildGridPayload = (rows = []) => {
   return rows.map((row, index) => {
     const rowData = { row_id: index + 1 };
     Object.keys(row).forEach((key) => {
       let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
       
-      if (key === "equipmentName") {
-        if (value && equipmentMap[value]) {
-          value = equipmentMap[value]?.equipment_name || value;
-        }
-      } else if (["calibrationNextDueDate", "calibrationDoneDate"].includes(key) && value) {
+      if (["calibrationNextDueDate", "calibrationDoneDate"].includes(key) && value) {
         value = dayjs(value).format("DD/MM/YYYY");
       }
       
@@ -142,13 +134,8 @@ const InstrumentCalibrationPanel = () => {
   const [canPerformActivity, setCanPerformActivity] = useState(false);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   
-  // Renamed to calibrationRows to match context
   const [calibrationRows, setCalibrationRows] = useState([]);
   
-  const [equipmentOptions, setEquipmentOptions] = useState([]);
-  const [equipmentMap, setEquipmentMap] = useState({});
-  const equipmentMapRef = useRef(equipmentMap);
-  const [equipmentLoading, setEquipmentLoading] = useState(false);
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
   const [loginUserId, setLoginUserId] = useState("");
@@ -164,8 +151,6 @@ const InstrumentCalibrationPanel = () => {
   const { recordId } = useParams();
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "" });
-
-  useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
 
   const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
   const isGeneralEditable = isStageEditable(39);
@@ -187,26 +172,6 @@ const InstrumentCalibrationPanel = () => {
       }
     };
     fetchProfile();
-  }, []);
-
-  useEffect(() => {
-    const fetchEquipment = async () => {
-      try {
-        setEquipmentLoading(true);
-        // Using the standard equipment data API
-        const response = await getAllFieldsInstrumentMasters();
-        const data = response?.data?.data || [];
-        const options = data.map((item) => ({ value: item.id, label: item.equipment_name || item.name }));
-        const map = {};
-        data.forEach((item) => { map[item.id] = item; });
-        setEquipmentOptions(options);
-        setEquipmentMap(map);
-      } catch (error) {
-        console.error("Failed to fetch equipment:", error);
-        toast.error("Could not load equipment list.");
-      } finally { setEquipmentLoading(false); }
-    };
-    fetchEquipment();
   }, []);
 
   useEffect(() => {
@@ -234,7 +199,6 @@ const InstrumentCalibrationPanel = () => {
     try {
       if (isInitial) setIsLoading(true);
       
-      // Using new detail API
       const response = await getInstrumentCalibrationDetail(recordId);
       const responseData = response?.data?.data;
       if (!responseData) { toast.error("Field Instrument Calibration record not found."); return; }
@@ -302,7 +266,6 @@ const InstrumentCalibrationPanel = () => {
         cancellationAttachment: cancellationAttachment || [],
       });
 
-      const currentEquipmentMap = equipmentMapRef.current;
       const gridRows = (responseData?.grid_records || []).flatMap((record) => record?.grid_data || []);
       
       const rawRows = gridRows.map((item) => {
@@ -315,16 +278,9 @@ const InstrumentCalibrationPanel = () => {
         return row;
       });
 
-      // Parse grid dates and instrument names for the updated Field Instrument Grid
       const normalizedRows = rawRows.map((row) => {
         const newRow = { ...row };
         
-        // Handle Equipment Name mapping
-        if (newRow.equipmentName && typeof newRow.equipmentName === "string") {
-          const found = Object.values(currentEquipmentMap).find((eq) => eq.equipment_name === newRow.equipmentName);
-          if (found) newRow.equipmentName = found.id;
-        }
-
         // Convert DD/MM/YYYY strings back to YYYY-MM-DD for the specific DatePickers
         Object.keys(newRow).forEach((k) => {
           if (k === "calibrationNextDueDate" || k === "calibrationDoneDate") {
@@ -447,24 +403,18 @@ const InstrumentCalibrationPanel = () => {
   };
 
   const handleSaveBeforeActivity = async () => {
-  if (isSaving || isLoading || !recordId) {
-    return false;
-  }
-  try {
-    const values = form.getFieldsValue(true);
-
-    const saved = await handleSubmit(values);
-
-    return saved === true;
-  } catch (error) {
-    console.error(
-      "Failed to save Calibration Addendum before activity:",
-      error
-    );
-
-    return false;
-  }
-};
+    if (isSaving || isLoading || !recordId) {
+      return false;
+    }
+    try {
+      const values = form.getFieldsValue(true);
+      const saved = await handleSubmit(values);
+      return saved === true;
+    } catch (error) {
+      console.error("Failed to save Calibration Addendum before activity:", error);
+      return false;
+    }
+  };
 
   const handleSubmit = async (values) => {
     if (isSaving || !recordId) return;
@@ -476,7 +426,7 @@ const InstrumentCalibrationPanel = () => {
         if (!mergedValues[name] && requiredValuesRef.current[name]) mergedValues[name] = requiredValuesRef.current[name];
       });
       const processData = buildProcessData(mergedValues, systemFields);
-      const gridData = buildGridPayload(calibrationRows, equipmentMap);
+      const gridData = buildGridPayload(calibrationRows);
       const payload = {
         process_id: Number(processId),
         stage_id: Number(activeStageId),
@@ -490,7 +440,6 @@ const InstrumentCalibrationPanel = () => {
         checklistData: [],
       };
       
-      // Using new update API
       const response = await updateInstrumentCalibration(recordId, payload);
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Field Instrument Calibration Addendum updated successfully.");
@@ -535,7 +484,7 @@ const InstrumentCalibrationPanel = () => {
     );
   }
 
-  const isCancellationStageActive = Number(activeStageId) === 6;
+  const isCancellationStageActive = Number(activeStageId) === 44;
 
   const visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")
@@ -559,7 +508,6 @@ const InstrumentCalibrationPanel = () => {
               loading={activitiesLoading}
               recordId={recordId}
               userId={loginUserId}
-              // Using new activity API
               activityApi={executeInstrumentCalibrationActivity}
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
@@ -647,14 +595,10 @@ const InstrumentCalibrationPanel = () => {
           </div>
           
           <div className="mt-5">
-            {/* Updated InstrumentCalibrationGrid */}
             <InstrumentCalibrationGrid
               name="Field Instrument Calibration Addendum"
               value={calibrationRows}
               onChange={setCalibrationRows}
-              equipmentOptions={equipmentOptions}
-              equipmentMap={equipmentMap}
-              equipmentLoading={equipmentLoading}
               recordId={recordId}
               disabled={!isGeneralEditable}
               showAddButton={isGeneralEditable} 

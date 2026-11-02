@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Activity } from "lucide-react";
-import { Form } from "antd";
+import { Form, Select } from "antd";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -14,6 +14,7 @@ import SectionHeader from "../../../components/common/SectionHeader/SectionHeade
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import { getProfile } from "../../../services/authApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import { getAllDepartments } from "../../../services/usersApi/workflowCommonApi";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
@@ -27,6 +28,7 @@ const TABS = [
 /* ───────────────────────── Required fields for tab validation ───────────────────────── */
 
 const REQUIRED_FIELDS = [
+    { name: "department_id", label: "Department" }, // 👈 Added for validation
     { name: "instrument_name", label: "Instrument Name" },
     { name: "instrument_id_no", label: "Instrument ID No." },
     { name: "make", label: "Make" },
@@ -90,43 +92,71 @@ const CreateEquipment = () => {
     const [activeTab, setActiveTab] = useState("instrument");
     const [loginUserId, setLoginUserId] = useState("");
     
-        useEffect(() => {
-            const fetchProfile = async () => {
+    // New States for Department Dropdown
+    const [departments, setDepartments] = useState([]);
+    const [departmentsLoading, setDepartmentsLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+        try {
+            const response = await getProfile();
+            const profile = response?.data?.data;
+            if (!profile) return;
+            setLoginUserId(profile?.id || "");
+        } catch (error) {
+            console.error("Failed to fetch profile:", error);
+        }
+        };
+        fetchProfile();
+    }, []);
+
+    // Fetch Departments
+    useEffect(() => {
+        let isMounted = true;
+        const fetchDepartments = async () => {
+            setDepartmentsLoading(true);
             try {
-                const response = await getProfile();
-                const profile = response?.data?.data;
-                if (!profile) return;
-                setLoginUserId(profile?.id || "");
+                const response = await getAllDepartments();
+                const data = response?.data?.data ?? [];
+                if (isMounted) {
+                    setDepartments(Array.isArray(data) ? data : []);
+                }
             } catch (error) {
-                console.error("Failed to fetch profile:", error);
+                console.error("Failed to fetch departments:", error);
+                if (isMounted) setDepartments([]);
+            } finally {
+                if (isMounted) setDepartmentsLoading(false);
             }
-            };
-            fetchProfile();
-        }, []);
+        };
+        fetchDepartments();
+        return () => { isMounted = false; };
+    }, []);
 
-
+    const departmentOptions = departments.map((dept, idx) => ({
+        label: dept.name || dept.department_name || dept.dept_name || "Unnamed Department",
+        value: dept.id || dept.department_id || dept.dept_id || idx,
+    }));
 
     /* ───────── Tab switch with validation ───────── */
 
+    const handleTabChange = (tabId) => {
+        const RESTRICTED_TABS = ["hod", "qa-review"];
 
-const handleTabChange = (tabId) => {
-    const RESTRICTED_TABS = ["hod", "qa-review"];
+        if (RESTRICTED_TABS.includes(tabId)) {
+            const missingFields = validateInstrumentForm(form);
 
-    if (RESTRICTED_TABS.includes(tabId)) {
-        const missingFields = validateInstrumentForm(form);
+            if (missingFields.length > 0) {
+                toast.warning(
+                    "Please complete all mandatory fields in Instrument Information and save the record before accessing the other tabs."
+                );
 
-        if (missingFields.length > 0) {
-            toast.warning(
-                "Please complete all mandatory fields in Instrument Information and save the record before accessing the other tabs."
-            );
-
-            setActiveTab("instrument");
-            return;
+                setActiveTab("instrument");
+                return;
+            }
         }
-    }
 
-    setActiveTab(tabId);
-};
+        setActiveTab(tabId);
+    };
 
     /* ───────── Submit ───────── */
 
@@ -259,12 +289,20 @@ const handleTabChange = (tabId) => {
             },
         };
 
+        /* ── Resolve Department Name ── */
+        const selectedDeptOption = departmentOptions.find(
+            (opt) => String(opt.value) === String(values.department_id)
+        );
+        const selectedDepartmentName = selectedDeptOption?.label || "";
+
         /* ───────── Submit ───────── */
 
         try {
             setIsSaving(true);
 
             const payload = {
+                department_id: values.department_id || null, // 👈 Added Department ID
+                department_name: selectedDepartmentName,     // 👈 Added Department Name
                 instrument_name: values.instrument_name.trim(),
                 instrument_id_no: values.instrument_id_no.trim(),
                 make: values.make.trim(),
@@ -376,6 +414,35 @@ const handleTabChange = (tabId) => {
                         <SectionHeader title="INSTRUMENT INFORMATION" />
 
                         <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+                            
+                            {/* 👈 NEW: SELECT DEPARTMENT */}
+                            <Form.Item
+                                name="department_id"
+                                label={
+                                    <span className="inline-flex items-center">
+                                        Select Department
+                                        <RequiredAsterisk message="Department is required. Please select a department." />
+                                    </span>
+                                }
+                                rules={[
+                                    {
+                                        required: true,
+                                        message: "Please select a department",
+                                    },
+                                ]}
+                                className="!mb-4"
+                            >
+                                <Select
+                                    placeholder="Select a department"
+                                    options={departmentOptions}
+                                    loading={departmentsLoading}
+                                    showSearch
+                                    optionFilterProp="label"
+                                    allowClear={false}
+                                    style={{ width: "100%" }}
+                                />
+                            </Form.Item>
+
                             {/* INSTRUMENT NAME */}
                             <Form.Item
                                 name="instrument_name"

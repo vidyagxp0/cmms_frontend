@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   Activity,
   Wrench,
@@ -12,8 +12,9 @@ import {
   Gauge,
   SlidersHorizontal,
   ClipboardList,
+  Building2, // 👈 Added icon
 } from "lucide-react";
-import { Form } from "antd";
+import { Form, Select } from "antd"; // 👈 Added Select
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -41,6 +42,7 @@ import {
   getAllActivites,
   getAllActivityLogs,
   getAllStages,
+  getAllDepartments, // 👈 Added API
 } from "../../../services/usersApi/workflowCommonApi";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
@@ -228,12 +230,62 @@ const EquipmentPanel = () => {
   const [userRoles, setUserRoles] = useState([]);
   const [processName, setProcessName] = useState("Master Instrument");
 
-  /* ── NEW: track is_imported from getEquipmentDetail ── */
+  /* ── track is_imported from getEquipmentDetail ── */
   const [isImported, setIsImported] = useState(false);
   const isImportedRef = useRef(false);
-  /* ─────────────────────────────────────────────────── */
 
   const isFetchingRef = useRef(false);
+
+  /* ───────── 👈 NEW: Departments State & Fetch ───────── */
+  const [departments, setDepartments] = useState([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
+  const [currentDeptFallback, setCurrentDeptFallback] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchDepartments = async () => {
+      setDepartmentsLoading(true);
+      try {
+        const response = await getAllDepartments();
+        const data = response?.data?.data ?? [];
+        if (isMounted) setDepartments(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to fetch departments:", error);
+        if (isMounted) setDepartments([]);
+      } finally {
+        if (isMounted) setDepartmentsLoading(false);
+      }
+    };
+
+    fetchDepartments();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const departmentOptions = useMemo(() => {
+    const base = departments.map((dept, idx) => ({
+      label:
+        dept.name ||
+        dept.department_name ||
+        dept.dept_name ||
+        "Unnamed Department",
+      value: dept.id || dept.department_id || dept.dept_id || idx,
+    }));
+
+    if (
+      currentDeptFallback &&
+      !base.some(
+        (opt) => String(opt.value) === String(currentDeptFallback.value)
+      )
+    ) {
+      base.unshift(currentDeptFallback);
+    }
+
+    return base;
+  }, [departments, currentDeptFallback]);
+  /* ─────────────────────────────────────────────────── */
 
   const isStageEditable = (stageId) =>
     Number(activeStageId) === Number(stageId) &&
@@ -282,16 +334,33 @@ const EquipmentPanel = () => {
           return;
         }
 
-        /* ── NEW: capture is_imported before any downstream effect runs ── */
         const imported =
           data.is_imported === 1 ||
           data.is_imported === true ||
           data.is_imported === "1";
         isImportedRef.current = imported;
         setIsImported(imported);
-        /* ─────────────────────────────────────────────────────────────── */
+
+        /* 👈 NEW: Resolve department info for Select display */
+        const deptId =
+          data.department_id ||
+          data.department?.id ||
+          data.department?.department_id ||
+          null;
+        const deptName =
+          data.department?.name ||
+          data.department_name ||
+          data.dept_name ||
+          null;
+
+        if (deptId && deptName) {
+          setCurrentDeptFallback({ label: deptName, value: deptId });
+        } else {
+          setCurrentDeptFallback(null);
+        }
 
         form.setFieldsValue({
+          department_id: deptId, // 👈 NEW
           instrument_name: data.instrument_name || data.name || "",
           instrument_id_no: data.instrument_id_no || data.equipment_id || "",
           make: data.make || "",
@@ -422,14 +491,12 @@ const EquipmentPanel = () => {
   }, [fetchPermissions]);
 
   const fetchActivityLogs = useCallback(async () => {
-    /* ── NEW: wait for getEquipmentDetail to settle, then skip if imported ── */
     if (isLoading) return;
     if (isImportedRef.current) {
       setActivityLogs([]);
       setActivityLogsLoading(false);
       return;
     }
-    /* ────────────────────────────────────────────────────────────────────── */
 
     if (!id) {
       setActivityLogs([]);
@@ -457,9 +524,7 @@ const EquipmentPanel = () => {
   useEffect(() => {
     if (!activeStageId) return;
 
-    /* ── NEW: don't auto-select the Activity tab when the record is imported ── */
     if (isImportedRef.current && Number(activeStageId) === 26) return;
-    /* ──────────────────────────────────────────────────────────────────────── */
 
     const matchingTab = TABS.find(
       (tab) => Number(tab.stageId) === Number(activeStageId)
@@ -583,10 +648,19 @@ const EquipmentPanel = () => {
       },
     };
 
+    /* 👈 NEW: Resolve Department Name */
+    const selectedDeptOption = departmentOptions.find(
+      (opt) => String(opt.value) === String(values.department_id)
+    );
+    const selectedDepartmentName = selectedDeptOption?.label || "";
+
     try {
       setIsSaving(true);
 
       const payload = {
+        department_id: values.department_id ?? null, // 👈 NEW
+        department_name: selectedDepartmentName,     // 👈 NEW
+
         instrument_name: values.instrument_name?.trim() || "",
         instrument_id_no: values.instrument_id_no?.trim() || "",
         make: values.make?.trim() || "",
@@ -655,13 +729,10 @@ const EquipmentPanel = () => {
     ? TABS.filter((tab) => tab.id === "cancellation")
     : TABS.filter((tab) => tab.id !== "cancellation");
 
-  /* ── NEW: hide Activity Log tab for imported records ── */
   if (isImported) {
     visibleTabs = visibleTabs.filter((tab) => tab.id !== "activity");
   }
-  /* ───────────────────────────────────────────────────── */
 
-  /* ───────── Loading state (matches Calibration panel) ───────── */
   if (isLoading) {
     return (
       <div className="w-full space-y-6">
@@ -671,10 +742,8 @@ const EquipmentPanel = () => {
     );
   }
 
-  /* ───────── Render ───────── */
   return (
     <div className="w-full">
-      {/* ═══════════════ WORKFLOW: STAGES + ACTIVITIES ═══════════════ */}
       <div className="mb-2 space-y-2">
         <ProcessStage
           stages={workflowStages}
@@ -713,7 +782,6 @@ const EquipmentPanel = () => {
         </div>
       </div>
 
-      {/* ═══════════════ TABS ═══════════════ */}
       <div className="mb-6">
         <ProcessTabs
           tabs={visibleTabs}
@@ -722,7 +790,6 @@ const EquipmentPanel = () => {
         />
       </div>
 
-      {/* ═══════════════ FORM — plain sections, no cards (matches Calibration panel) ═══════════════ */}
       <Form
         form={form}
         preserve={true}
@@ -735,6 +802,31 @@ const EquipmentPanel = () => {
         <section style={{ display: activeTab === "instrument" ? "block" : "none" }}>
           <SectionHeader title="INSTRUMENT INFORMATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            
+            {/* 👈 NEW: SELECT DEPARTMENT */}
+            <Form.Item
+              name="department_id"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <Building2 size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Select Department
+                </span>
+              }
+              rules={[{ required: true, message: "Please select a department" }]}
+              className="!mb-4"
+            >
+              <Select
+                placeholder="Select a department"
+                options={departmentOptions}
+                loading={departmentsLoading}
+                showSearch
+                optionFilterProp="label"
+                allowClear={false}
+                style={{ width: "100%" }}
+                disabled={!isInstrumentEditable}
+              />
+            </Form.Item>
+
             <Form.Item
               name="instrument_name"
               label={
@@ -1117,7 +1209,6 @@ const EquipmentPanel = () => {
         </section>
       </Form>
 
-      {/* ═══════════════ FLOATING ACTIONS ═══════════════ */}
       <FloatingActionButtons
         onSave={() => form.submit()}
         onCancel={handleCancel}

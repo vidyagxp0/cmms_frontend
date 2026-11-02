@@ -57,6 +57,16 @@ export const DASHBOARD_NAV_ITEMS = [
     hiddenFromNav: true,
     group: "equipment",
   },
+
+  {
+    id: "equipment-master-dashboard",
+    label: "Equipment Master Dashboard",
+    path: "/user/equipment-master-dashboard",
+    icon: Compass,
+    hiddenFromNav: true,
+    group: "equipment",
+  },
+
   {
     id: "import-master-equipment-data",
     label: "Import Master Data",

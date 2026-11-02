@@ -43,6 +43,10 @@ import SpareInstrumentCreate from "../pages/user/SpareInstrumentMaster/SpareInst
 import SpareInstrumentPanel from "../pages/user/SpareInstrumentMaster/SpareInstrumentPanel";
 import SpareInstrumentAudit from "../pages/user/SpareInstrumentMaster/SpareInstrumentAudit";
 import ImportMasterEquipmentData from "../pages/user/ImportMasterEquipmentData/ImportMasterEquipmentData";
+import EquipmentMasterDashboard from "../pages/user/EquipmentMaster/EquipmentMasterDashboard";
+import EquipmentMasterCreate from "../pages/user/EquipmentMaster/EquipmentMasterCreate";
+import EquipmentMasterPanel from "../pages/user/EquipmentMaster/EquipmentMasterPanel";
+import EquipmentMasterAudit from "../pages/user/EquipmentMaster/EquipmentMasterAudit";
 
 function UserRoutes() {
   return (
@@ -107,6 +111,12 @@ function UserRoutes() {
         <Route path="spare-instrument-calibration-master-create" element={<SpareInstrumentCreate />} />
         <Route path="spare-instrument-calibration-master-panel/:id" element={<SpareInstrumentPanel />} /> 
         <Route path="spare-instrument-calibration-master-audit/:recordId" element={<SpareInstrumentAudit />} /> 
+
+        {/* Equipment Master Routes*/}
+        <Route path="equipment-master-dashboard" element={<EquipmentMasterDashboard />} />
+        <Route path="equipment-master-create" element={<EquipmentMasterCreate />} />
+        <Route path="equipment-master-panel/:recordId" element={<EquipmentMasterPanel />} /> 
+        <Route path="equipment-master-audit/:recordId" element={<EquipmentMasterAudit />} /> 
 
         
         {/* Import Master Equipment Data Routes*/}

@@ -92,3 +92,7 @@ export const getFieldInstrumentReport = (id) => {
         responseType: "blob",
     });
 };
+
+
+//All Equipment Master APis
+

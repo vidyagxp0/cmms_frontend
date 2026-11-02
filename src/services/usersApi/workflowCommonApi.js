@@ -19,3 +19,9 @@ export const getRecordNumber = (processId) => {
 export const getAllStages = (processId) => {
     return api.get(`/user/stages-list/${processId}`);
 };
+
+export const getAllDepartments = () => {
+    return api.get("/user/user-departments-listing");
+};
+
+

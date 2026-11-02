@@ -22,7 +22,7 @@ export const DASHBOARD_NAV_ITEMS = [
   // Parent (visible in sidebar)
   {
     id: "equipment",
-    label: "Master Dashboard",
+    label: "Masters",
     path: "/user/equipment-dashboard",
     icon: Wrench,
     group: "equipment",
@@ -31,7 +31,7 @@ export const DASHBOARD_NAV_ITEMS = [
   // Child pill #1 (hidden from sidebar, shown in ActionBar)
   {
     id: "instrument-dashboard",
-    label: "Master Instrument Dashboard",
+    label: "Master Instrument",
     path: "/user/equipment-dashboard",
     icon: Gauge,
     hiddenFromNav: true,
@@ -41,7 +41,7 @@ export const DASHBOARD_NAV_ITEMS = [
   // Child pill #2 (hidden from sidebar, shown in ActionBar)
   {
     id: "field-instruments-dashboard",
-    label: "Field Instrument Dashboard",
+    label: "Field Instrument",
     path: "/user/field-instruments-dashboard",
     icon: Compass,
     hiddenFromNav: true,
@@ -51,7 +51,7 @@ export const DASHBOARD_NAV_ITEMS = [
   // Child pill #2 (hidden from sidebar, shown in ActionBar)
   {
     id: "spare-instruments-dashboard",
-    label: "Spare Instrument Dashboard",
+    label: "Spare Instrument",
     path: "/user/spare-instrument-calibration-master-dashboard",
     icon: Compass,
     hiddenFromNav: true,
@@ -60,7 +60,7 @@ export const DASHBOARD_NAV_ITEMS = [
 
   {
     id: "equipment-master-dashboard",
-    label: "Equipment Master Dashboard",
+    label: "Equipment Master",
     path: "/user/equipment-master-dashboard",
     icon: Compass,
     hiddenFromNav: true,

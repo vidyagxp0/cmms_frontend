@@ -401,7 +401,7 @@ const EquipDashboard = () => {
                         />
 
                         {/* Category Select - Very Small Width */}
-                        <Select
+                        {/* <Select
                             size="middle"
                             placeholder="Category"
                             value={categoryFilter || undefined}
@@ -410,7 +410,7 @@ const EquipDashboard = () => {
                             allowClear
                             className="w-32 text-sm font-medium shadow-sm"
                             popupClassName="rounded-lg"
-                        />
+                        /> */}
 
                         {/* Status Select - Static STAGE_OPTIONS */}
                         <Select

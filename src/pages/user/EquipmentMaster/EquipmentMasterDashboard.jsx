@@ -438,7 +438,7 @@ const EquipmentMasterDashboard = () => {
                             }}
                         />
 
-                        <Select
+                        {/* <Select
                             size="middle"
                             placeholder="Category"
                             value={categoryFilter || undefined}
@@ -447,7 +447,7 @@ const EquipmentMasterDashboard = () => {
                             allowClear
                             className="w-32 text-sm font-medium shadow-sm"
                             popupClassName="rounded-lg"
-                        />
+                        /> */}
 
                         <Select
                             size="middle"

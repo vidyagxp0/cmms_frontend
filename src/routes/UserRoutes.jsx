@@ -47,6 +47,10 @@ import EquipmentMasterDashboard from "../pages/user/EquipmentMaster/EquipmentMas
 import EquipmentMasterCreate from "../pages/user/EquipmentMaster/EquipmentMasterCreate";
 import EquipmentMasterPanel from "../pages/user/EquipmentMaster/EquipmentMasterPanel";
 import EquipmentMasterAudit from "../pages/user/EquipmentMaster/EquipmentMasterAudit";
+import AddendumPreventivePlannerDashboard from "../pages/user/AddendumPreventivePlanner/AddendumPreventivePlannerDashboard";
+import AddendumPreventivePlannerCreate from "../pages/user/AddendumPreventivePlanner/AddendumPreventivePlannerCreate";
+import AddendumPreventivePlannerPanel from "../pages/user/AddendumPreventivePlanner/AddendumPreventivePlannerPanel";
+import AddendumPreventivePlannerAudit from "../pages/user/AddendumPreventivePlanner/AddendumPreventivePlannerAudit";
 
 function UserRoutes() {
   return (
@@ -117,6 +121,12 @@ function UserRoutes() {
         <Route path="equipment-master-create" element={<EquipmentMasterCreate />} />
         <Route path="equipment-master-panel/:id" element={<EquipmentMasterPanel />} /> 
         <Route path="equipment-master-audit/:recordId" element={<EquipmentMasterAudit />} /> 
+
+        {/*  Addendum Preventive Planner Routes*/}
+        <Route path="addendum-preventive-planner-dashboard" element={<AddendumPreventivePlannerDashboard />} />
+        <Route path="addendum-preventive-planner-create/:processId" element={<AddendumPreventivePlannerCreate />} />
+        <Route path="addendum-preventive-planner-panel/:recordId" element={<AddendumPreventivePlannerPanel />} /> 
+        <Route path="addendum-preventive-planner-audit/:recordId" element={<AddendumPreventivePlannerAudit />} /> 
 
         
         {/* Import Master Equipment Data Routes*/}

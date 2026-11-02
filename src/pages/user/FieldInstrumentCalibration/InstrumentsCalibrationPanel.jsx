@@ -514,7 +514,7 @@ const InstrumentCalibrationPanel = () => {
               permissionsLoading={permissionsLoading}
               onBeforeActivity={handleSaveBeforeActivity}
               auditRoute={"/user/field-instrument-calibration-addendum-audit"}
-              onExit={() => navigate("/user/engineering-dashboard")}
+              onExit={() => navigate("/user/field-instrument-calibration-addendum-dashboard")}
             />
           </div>
         </div>

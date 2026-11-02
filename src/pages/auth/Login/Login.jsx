@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  Eye,
-  EyeOff,
-  User,
-  LockKeyhole,
-  ArrowRight,
-  ShieldCheck,
-} from "lucide-react";
+import { Eye, EyeOff, User, LockKeyhole, ArrowRight, ShieldCheck } from "lucide-react";
 
 import { login } from "../../../services/authApi";
 import { useNavigate } from "react-router-dom";
@@ -110,10 +103,7 @@ const Login = () => {
       });
     } catch (error) {
       setLoginErrors(true);
-
-      toast.error(
-        error.response?.data?.message || "Invalid username or password",
-      );
+      toast.error(error.response?.data?.message || "Invalid username or password");
     } finally {
       setLoading(false);
     }
@@ -122,9 +112,7 @@ const Login = () => {
   return (
     <div
       className="relative min-h-screen w-full overflow-x-hidden bg-[#e9e6dc]"
-      style={{
-        fontFamily: "'Inter', system-ui, sans-serif",
-      }}
+      style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
     >
       {/* =====================================================
           PAGE BACKGROUND GRID
@@ -134,15 +122,8 @@ const Login = () => {
         className="pointer-events-none absolute inset-0 z-0 opacity-[0.12]"
         style={{
           backgroundImage: `
-            linear-gradient(
-              rgba(74, 83, 86, 0.18) 1px,
-              transparent 1px
-            ),
-            linear-gradient(
-              90deg,
-              rgba(74, 83, 86, 0.18) 1px,
-              transparent 1px
-            )
+            linear-gradient(rgba(74, 83, 86, 0.18) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(74, 83, 86, 0.18) 1px, transparent 1px)
           `,
           backgroundSize: "46px 46px",
         }}
@@ -169,26 +150,7 @@ const Login = () => {
             RIGHT SIDE - LOGIN AREA
         ===================================================== */}
 
-        <div
-          className="
-            relative
-            flex
-            min-h-screen
-            w-full
-            items-center
-            justify-center
-            overflow-x-hidden
-            overflow-y-auto
-            px-4
-            py-6
-            sm:px-6
-            sm:py-8
-            lg:min-h-screen
-            lg:w-[46%]
-            lg:px-8
-            lg:py-6
-          "
-        >
+        <div className="relative flex min-h-screen w-full items-center justify-center overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 lg:min-h-screen lg:w-[46%] lg:px-8 lg:py-6">
           {/* =================================================
               MOBILE-ONLY BACKGROUND PHOTO
               (desktop keeps the plain bg color; EquipmentScene
@@ -220,64 +182,23 @@ const Login = () => {
           ================================================= */}
 
           <motion.div
-            initial={{
-              opacity: 0,
-              y: 20,
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-            }}
-            transition={{
-              duration: 0.7,
-              ease: [0.22, 1, 0.36, 1],
-            }}
-            className="
-              relative
-              z-20
-              w-full
-              max-w-[470px]
-              overflow-hidden
-              rounded-[28px]
-              border
-              border-[#d8dde0]
-              bg-white/95
-              shadow-[0_24px_65px_rgba(32,45,52,0.12)]
-              backdrop-blur-xl
-            "
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="relative z-20 w-full max-w-[470px] overflow-hidden rounded-[28px] border border-[#d8dde0] bg-white/95 shadow-[0_24px_65px_rgba(32,45,52,0.12)] backdrop-blur-xl"
           >
             {/* =================================================
                 CARD TOP BRAND AREA
             ================================================= */}
 
-            <div
-              className="
-                relative
-                flex
-                flex-wrap
-                items-start
-                justify-between
-                gap-3
-                px-5
-                pb-2
-                pt-5
-                sm:px-7
-                sm:pt-6
-              "
-            >
+            <div className="relative flex flex-wrap items-start justify-between gap-3 px-5 pb-2 pt-5 sm:px-7 sm:pt-6">
               {/* TOP LEFT - SHILPA */}
 
               <div className="flex min-h-[56px] items-center sm:min-h-[68px]">
                 <img
                   src="/shilpaimage.png"
                   alt="Shilpa"
-                  className="
-                    h-auto
-                    w-[78px]
-                    object-contain
-                    sm:w-[100px]
-                    lg:w-[108px]
-                  "
+                  className="h-auto w-[78px] object-contain sm:w-[100px] lg:w-[108px]"
                   draggable="false"
                 />
               </div>
@@ -288,13 +209,7 @@ const Login = () => {
                 <img
                   src="/vidyagxp_logo.png"
                   alt="VidyaGxP"
-                  className="
-                    h-auto
-                    w-[108px]
-                    object-contain
-                    sm:w-[140px]
-                    lg:w-[150px]
-                  "
+                  className="h-auto w-[108px] object-contain sm:w-[140px] lg:w-[150px]"
                   draggable="false"
                 />
               </div>
@@ -325,18 +240,8 @@ const Login = () => {
                 </div>
 
                 <h2
-                  className="
-                    text-[24px]
-                    font-extrabold
-                    leading-tight
-                    tracking-[-1px]
-                    text-[#132735]
-                    sm:text-[28px]
-                    lg:text-[30px]
-                  "
-                  style={{
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  }}
+                  className="text-[24px] font-extrabold leading-tight tracking-[-1px] text-[#132735] sm:text-[28px] lg:text-[30px]"
+                  style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                 >
                   Sign in to CMMS
                 </h2>
@@ -361,37 +266,16 @@ const Login = () => {
                   </label>
 
                   <div
-                    className={`
-                      group
-                      flex
-                      h-[52px]
-                      items-center
-                      rounded-[14px]
-                      border
-                      bg-[#f7f8f7]
-                      transition-all
-                      duration-200
-                      ${
-                        focusField === "username"
-                          ? "border-[#8daeb2] bg-white shadow-[0_0_0_4px_rgba(141,174,178,0.10)]"
-                          : "border-[#dde1df] hover:border-[#c8cfcc] hover:bg-white"
-                      }
-                    `}
+                    className={`group flex h-[52px] items-center rounded-[14px] border bg-[#f7f8f7] transition-all duration-200 ${
+                      focusField === "username"
+                        ? "border-[#8daeb2] bg-white shadow-[0_0_0_4px_rgba(141,174,178,0.10)]"
+                        : "border-[#dde1df] hover:border-[#c8cfcc] hover:bg-white"
+                    }`}
                   >
                     <User
-                      className={`
-                        ml-4
-                        h-[17px]
-                        w-[17px]
-                        shrink-0
-                        transition-colors
-                        duration-200
-                        ${
-                          focusField === "username"
-                            ? "text-[#668e93]"
-                            : "text-[#9ba5a8]"
-                        }
-                      `}
+                      className={`ml-4 h-[17px] w-[17px] shrink-0 transition-colors duration-200 ${
+                        focusField === "username" ? "text-[#668e93]" : "text-[#9ba5a8]"
+                      }`}
                     />
 
                     <input
@@ -402,19 +286,7 @@ const Login = () => {
                       placeholder="Enter your username"
                       onFocus={() => setFocusField("username")}
                       onBlur={() => setFocusField(null)}
-                      className="
-                        h-full
-                        w-full
-                        min-w-0
-                        bg-transparent
-                        px-3
-                        text-[16px]
-                        font-medium
-                        text-[#26363e]
-                        outline-none
-                        placeholder:text-[#a6adb0]
-                        sm:text-[14px]
-                      "
+                      className="h-full w-full min-w-0 bg-transparent px-3 text-[16px] font-medium text-[#26363e] outline-none placeholder:text-[#a6adb0] sm:text-[14px]"
                     />
                   </div>
                 </div>
@@ -429,37 +301,16 @@ const Login = () => {
                   </label>
 
                   <div
-                    className={`
-                      group
-                      flex
-                      h-[52px]
-                      items-center
-                      rounded-[14px]
-                      border
-                      bg-[#f7f8f7]
-                      transition-all
-                      duration-200
-                      ${
-                        focusField === "password"
-                          ? "border-[#8daeb2] bg-white shadow-[0_0_0_4px_rgba(141,174,178,0.10)]"
-                          : "border-[#dde1df] hover:border-[#c8cfcc] hover:bg-white"
-                      }
-                    `}
+                    className={`group flex h-[52px] items-center rounded-[14px] border bg-[#f7f8f7] transition-all duration-200 ${
+                      focusField === "password"
+                        ? "border-[#8daeb2] bg-white shadow-[0_0_0_4px_rgba(141,174,178,0.10)]"
+                        : "border-[#dde1df] hover:border-[#c8cfcc] hover:bg-white"
+                    }`}
                   >
                     <LockKeyhole
-                      className={`
-                        ml-4
-                        h-[17px]
-                        w-[17px]
-                        shrink-0
-                        transition-colors
-                        duration-200
-                        ${
-                          focusField === "password"
-                            ? "text-[#668e93]"
-                            : "text-[#9ba5a8]"
-                        }
-                      `}
+                      className={`ml-4 h-[17px] w-[17px] shrink-0 transition-colors duration-200 ${
+                        focusField === "password" ? "text-[#668e93]" : "text-[#9ba5a8]"
+                      }`}
                     />
 
                     <input
@@ -470,38 +321,15 @@ const Login = () => {
                       placeholder="Enter your password"
                       onFocus={() => setFocusField("password")}
                       onBlur={() => setFocusField(null)}
-                      className="
-                        h-full
-                        w-full
-                        min-w-0
-                        bg-transparent
-                        px-3
-                        text-[16px]
-                        font-medium
-                        text-[#26363e]
-                        outline-none
-                        placeholder:text-[#a6adb0]
-                        sm:text-[14px]
-                      "
+                      className="h-full w-full min-w-0 bg-transparent px-3 text-[16px] font-medium text-[#26363e] outline-none placeholder:text-[#a6adb0] sm:text-[14px]"
                     />
 
                     <motion.button
                       type="button"
                       whileTap={{ scale: 0.9 }}
                       onClick={() => setShowPassword(!showPassword)}
-                      className="
-                        mr-2.5
-                        shrink-0
-                        rounded-xl
-                        p-2
-                        text-[#98a2a5]
-                        transition-all
-                        hover:bg-[#eef1ef]
-                        hover:text-[#526267]
-                      "
-                      aria-label={
-                        showPassword ? "Hide password" : "Show password"
-                      }
+                      className="mr-2.5 shrink-0 rounded-xl p-2 text-[#98a2a5] transition-all hover:bg-[#eef1ef] hover:text-[#526267]"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? (
                         <EyeOff className="h-[17px] w-[17px]" />
@@ -540,20 +368,9 @@ const Login = () => {
                     />
 
                     <motion.span
-                      animate={{
-                        scale: remember ? 1 : 0.96,
-                      }}
+                      animate={{ scale: remember ? 1 : 0.96 }}
                       className={`
-                        flex
-                        h-[18px]
-                        w-[18px]
-                        shrink-0
-                        items-center
-                        justify-center
-                        rounded-md
-                        border
-                        transition-all
-                        duration-200
+                        flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border transition-all duration-200
                         ${
                           remember
                             ? "border-[#78999d] bg-[#78999d]"
@@ -562,11 +379,7 @@ const Login = () => {
                       `}
                     >
                       {remember && (
-                        <svg
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          className="h-3.5 w-3.5 text-white"
-                        >
+                        <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5 text-white">
                           <path
                             d="M5 10.5L8.5 14L15.5 6.5"
                             stroke="currentColor"
@@ -596,46 +409,11 @@ const Login = () => {
                 ================================================= */}
 
                 <motion.button
-                  whileHover={
-                    !loading
-                      ? {
-                          scale: 1.01,
-                          y: -1,
-                        }
-                      : {}
-                  }
-                  whileTap={
-                    !loading
-                      ? {
-                          scale: 0.985,
-                        }
-                      : {}
-                  }
+                  whileHover={!loading ? { scale: 1.01, y: -1 } : {}}
+                  whileTap={!loading ? { scale: 0.985 } : {}}
                   disabled={loading}
                   type="submit"
-                  className="
-                    group
-                    relative
-                    mt-1.5
-                    flex
-                    h-[54px]
-                    w-full
-                    items-center
-                    justify-center
-                    overflow-hidden
-                    rounded-[14px]
-                    bg-[#143344]
-                    text-[14px]
-                    font-bold
-                    text-white
-                    shadow-[0_10px_24px_rgba(20,51,68,0.16)]
-                    transition-all
-                    duration-300
-                    hover:bg-[#193d51]
-                    hover:shadow-[0_14px_28px_rgba(20,51,68,0.20)]
-                    disabled:cursor-not-allowed
-                    disabled:opacity-70
-                  "
+                  className="group relative mt-1.5 flex h-[54px] w-full items-center justify-center overflow-hidden rounded-[14px] bg-[#143344] text-[14px] font-bold text-white shadow-[0_10px_24px_rgba(20,51,68,0.16)] transition-all duration-300 hover:bg-[#193d51] hover:shadow-[0_14px_28px_rgba(20,51,68,0.20)] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {/* Button highlight */}
 
@@ -646,13 +424,11 @@ const Login = () => {
                   {loading ? (
                     <div className="relative flex items-center gap-3">
                       <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/25 border-t-white" />
-
                       <span>Log in...</span>
                     </div>
                   ) : (
                     <div className="relative flex items-center gap-2">
                       <span>Log In</span>
-
                       <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                     </div>
                   )}
@@ -665,11 +441,9 @@ const Login = () => {
 
               <div className="mt-5 flex items-center justify-center gap-2">
                 <div className="h-px w-5 bg-[#e1e5e3]" />
-
                 <span className="text-[9px] font-medium uppercase tracking-[0.18em] text-[#a2aaab]">
                   Maintenance Intelligence
                 </span>
-
                 <div className="h-px w-5 bg-[#e1e5e3]" />
               </div>
             </div>

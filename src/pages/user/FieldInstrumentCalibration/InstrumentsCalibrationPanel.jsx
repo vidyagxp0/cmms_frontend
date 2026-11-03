@@ -892,7 +892,7 @@ const InstrumentCalibrationPanel = () => {
               onChange={setCalibrationRows}
               recordId={recordId}
               disabled={!isGeneralEditable}
-              showAddButton={isGeneralEditable}
+              showAddButton={false}
               // ✅ NEW: pass equipment data
               equipmentOptions={equipmentOptions}
               equipmentMap={equipmentMap}

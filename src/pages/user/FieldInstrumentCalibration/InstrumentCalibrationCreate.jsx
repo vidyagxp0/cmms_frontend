@@ -211,7 +211,7 @@ const InstrumentCalibrationCreate = () => {
                     documentNumber: "SMLJ/ENG/SOP-GEN/005/F15-02",
                     documentType: "Formats",
                     recordNumber: generatedRecordNumber,
-                    instrumentType: "Field Instrument", // Default value
+                    // instrumentType: "Field Instrument", // Default value
                 });
 
                 if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
@@ -444,6 +444,7 @@ const InstrumentCalibrationCreate = () => {
                                                 { label: "Master Instrument", value: "Master Instrument" },
                                                 { label: "Field Instrument", value: "Field Instrument" },
                                                 { label: "Spare Instrument", value: "Spare Instrument" },
+                                                { label: "Equipment Master", value: "Equipment Master" },
                                             ]}
                                         />
                                     </Form.Item>

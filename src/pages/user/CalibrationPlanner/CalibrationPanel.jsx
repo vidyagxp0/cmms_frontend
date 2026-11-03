@@ -23,7 +23,7 @@ import "../../../components/ui/disabledFields.css";
 import { getProfile } from "../../../services/authApi";
 import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration,  getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
 import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
-import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
+import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages, getAllDepartments } from "../../../services/usersApi/workflowCommonApi";
 import { getAllFieldInstrumentPlannerData, getAllSpareInstrumentMasterData } from "../../../services/usersApi/fieldInstrumentPlanerApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
@@ -38,7 +38,10 @@ const TABS = [
   { id: "cancellation", label: "Cancellation", stageId: 6 },
 ];
 
-const REQUIRED_FIELDS = [{ name: "shortDescription", label: "Short Description" }];
+const REQUIRED_FIELDS = [
+  { name: "shortDescription", label: "Short Description" },
+  { name: "selectedDeptId", label: "Select Department" },
+];
 
 const getProcessValue = (processData = [], key) => {
   if (Array.isArray(processData)) {
@@ -92,6 +95,12 @@ const buildRowFromInstrument = (item = {}) => ({
 
 const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({ key: field.name, label: field.label, value: values?.[field.name] || "" })),
+  // NEW: master_department field
+  {
+    key: "master_department",
+    label: "Select Department",
+    value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
+  },
   { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
   { key: "year", label: "Year", value: values?.year || "" },
   { key: "block", label: "Block", value: values?.block || "" },
@@ -159,7 +168,11 @@ const CreateCalibrationPanel = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
   const isFetchingRef = useRef(false);
-  const requiredValuesRef = useRef({ shortDescription: "" });
+  const requiredValuesRef = useRef({ shortDescription: "", selectedDeptId: "" });
+
+  // New Department States
+  const [departments, setDepartments] = useState([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
   // When true → the next instrument fetch REPLACES grid rows with one
   // pre-filled row per returned instrument. Only set by Select onChange
@@ -221,6 +234,23 @@ const CreateCalibrationPanel = () => {
     fetchProfile();
   }, []);
 
+  // Fetch Departments for the new field
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      setDepartmentsLoading(true);
+      try {
+        const response = await getAllDepartments();
+        const data = response?.data?.data ?? [];
+        setDepartments(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to fetch departments:", error);
+        toast.error("Could not load departments.");
+      } finally {
+        setDepartmentsLoading(false);
+      }
+    };
+    fetchDepartments();
+  }, []);
 
 useEffect(() => {
   let isCurrent = true;
@@ -376,6 +406,7 @@ useEffect(() => {
       const processDateOfInitiation = getProcessValue(processData, "dateOfInitiation");
       const dueDate = getProcessValue(processData, "dueDate");
       const processDepartment = getProcessValue(processData, "initiationDepartment");
+      const masterDepartmentId = getProcessValue(processData, "master_department");
       const shortDescription = getProcessValue(processData, "short_description");
       const comments = getProcessValue(processData, "comment");
       const attachment = getProcessValue(processData, "attachment");
@@ -410,7 +441,10 @@ useEffect(() => {
       setInitiationDepartment(responseData?.department?.name || processDepartment || "");
       setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
 
-      requiredValuesRef.current = { shortDescription: shortDescription || "" };
+      requiredValuesRef.current = {
+        shortDescription: shortDescription || "",
+        selectedDeptId: masterDepartmentId || null,
+      };
 
       form.setFieldsValue({
         recordNumber,
@@ -420,6 +454,7 @@ useEffect(() => {
         dateOfInitiation: processDateOfInitiation || responseData?.initiation_date || "",
         dueDate,
         initiationDepartment: responseData?.department?.name || processDepartment || "",
+        selectedDeptId: masterDepartmentId || null,
         shortDescription,
         year,
         block,
@@ -760,6 +795,7 @@ useEffect(() => {
             >
               <FormInput placeholder="Enter short description" disabled={!isGeneralEditable} />
             </Form.Item>
+
           </div>
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="CALIBRATION INFORMATION" />
@@ -854,6 +890,37 @@ useEffect(() => {
                   ]}
                 />
               </Form.Item>
+
+              {/* NEW SELECT DEPARTMENT DROPDOWN */}
+            <Form.Item
+              name="selectedDeptId"
+              label={
+                <span className="inline-flex items-center">
+                  Select Department
+                  <RequiredAsterisk message="Department is required to proceed. Please select a department." />
+                </span>
+              }
+              rules={[
+                {
+                  required: true,
+                  message: "Please select a department",
+                },
+              ]}
+              className="!mb-4"
+            >
+              <Select
+                placeholder="Select a department"
+                loading={departmentsLoading}
+                options={departments.map((dept) => ({
+                  label: dept.name || "Unnamed Department",
+                  value: dept.id,
+                }))}
+                showSearch
+                optionFilterProp="label"
+                allowClear={false}
+                disabled={!isGeneralEditable}
+              />
+            </Form.Item>
 
           </div>
           <div className="mt-5">

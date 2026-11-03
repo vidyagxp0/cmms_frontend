@@ -21,10 +21,10 @@ import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import "../../../components/ui/disabledFields.css";
 
 import { getProfile } from "../../../services/authApi";
-import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration,  getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
+// Note: Make sure getAllDepartmentMasters is imported from the correct API file
+import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration } from "../../../services/usersApi/calibrationApi";
 import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
-import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages, getAllDepartments } from "../../../services/usersApi/workflowCommonApi";
-import { getAllFieldInstrumentPlannerData, getAllSpareInstrumentMasterData } from "../../../services/usersApi/fieldInstrumentPlanerApi";
+import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages, getAllDepartments, getAllDepartmentMasters } from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 dayjs.extend(customParseFormat);
@@ -77,7 +77,7 @@ if (key === "equipmentInstrumentName" && value && equipmentMap[value]) value = e
 
 // Build a single CalibrationGrid row from a normalized instrument.
 const buildRowFromInstrument = (item = {}) => ({
-  equipmentInstrumentName: item.id ?? "",
+  equipmentInstrumentName: item.id ?? "", // The ID links the row to the dropdown
   equipmentInstrumentId: item.instrument_id_no || "",
   make: item.make || "",
   model: item.sr_no_model_no || "",
@@ -87,7 +87,7 @@ const buildRowFromInstrument = (item = {}) => ({
   instrumentrange: item.instrument_range || "",
   operatingrange: item.operating_range || "",
   calibrationTestPoints: item.calibration_test_points || "",
-  category: "",
+  category: item.category || "", // <--- FIXED: Pulls "NC" from your JSON
   plannedDate: "",
   calibrationDoneDate: "",
   remark: "",
@@ -173,6 +173,9 @@ const CreateCalibrationPanel = () => {
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
+  // Watch the Department field to trigger API fetch when it changes
+  const selectedDeptIdWatch = Form.useWatch("selectedDeptId", form);
+
   const autoPopulateRowsRef = useRef(false);
 
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
@@ -251,7 +254,23 @@ useEffect(() => {
     setEquipmentMap({});
     equipmentMapRef.current = {};
 
-    if (!selectedInstrumentType) {
+    // Require both Instrument Type AND Department to be selected
+    if (!selectedInstrumentType || !selectedDeptIdWatch) {
+      setEquipmentLoading(false);
+      return;
+    }
+
+    // Map the dropdown label to the API type string
+    const typeMap = {
+      "Master Instrument": "instrument_masters",
+      "Field Instrument": "field_instrument_master",
+      "Spare Instrument": "spare_instrument_master",
+      "Equipment Master": "equipment_master",
+    };
+
+    const apiType = typeMap[selectedInstrumentType];
+
+    if (!apiType) {
       setEquipmentLoading(false);
       return;
     }
@@ -259,16 +278,8 @@ useEffect(() => {
     try {
       setEquipmentLoading(true);
 
-      let response;
-
-      if (selectedInstrumentType === "Master Instrument") {
-        response = await getAllEquipmentData();
-      } else if (selectedInstrumentType === "Field Instrument") {
-        response = await getAllFieldInstrumentPlannerData();
-      }
-      else if (selectedInstrumentType === "Spare Instrument") {
-        response = await getAllSpareInstrumentMasterData();
-      }
+      // NEW: Call the dynamic API with selected department and mapped type
+      const response = await getAllDepartmentMasters(selectedDeptIdWatch, apiType);
 
       if (!isCurrent) return;
 
@@ -350,7 +361,7 @@ useEffect(() => {
   return () => {
     isCurrent = false;
   };
-}, [selectedInstrumentType]);
+}, [selectedInstrumentType, selectedDeptIdWatch]);
 
 
   useEffect(() => {
@@ -902,6 +913,10 @@ useEffect(() => {
                 optionFilterProp="label"
                 allowClear={false}
                 disabled={!isGeneralEditable}
+                onChange={() => {
+                  // Clear rows when department changes
+                  setCalibrationRows([]);
+                }}
               />
             </Form.Item>
 

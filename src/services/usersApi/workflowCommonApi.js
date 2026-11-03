@@ -24,4 +24,6 @@ export const getAllDepartments = () => {
     return api.get("/user/user-departments-listing");
 };
 
-
+export const getAllDepartmentMasters = (departmentId, type) => {
+    return api.get(`/user/get-master-data/${departmentId}/${type}`);
+};

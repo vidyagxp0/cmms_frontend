@@ -45,6 +45,7 @@ import FormAttachment from "../../../components/common/Attachment/FormAttachment
 import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import CalibrationGrid from "../CalibrationPlanner/CalibrationGrid";
+import AddendumPreventivePlannerGrid from "./AddendumPreventivePlannerGrid";
 
 const TABS = [
     {
@@ -1381,7 +1382,7 @@ const AddendumPreventivePlannerCreate = () => {
 
                                 {/* CALIBRATION GRID */}
                                 <div className="mt-1">
-                                    <CalibrationGrid
+                                    <AddendumPreventivePlannerGrid
                                         value={
                                             calibrationRows
                                         }

@@ -95,7 +95,7 @@ const buildRowFromInstrument = (item = {}) => ({
 
 const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({ key: field.name, label: field.label, value: values?.[field.name] || "" })),
-  // NEW: master_department field
+  // master_department field
   {
     key: "master_department",
     label: "Select Department",
@@ -111,7 +111,6 @@ const buildProcessData = (values, systemFields) => [
   value: values?.instrumentType || "",
   },
   { key: "comment", label: "Comments", value: values?.comments || "" },
-  // { key: "attachment", label: "Attachment", value: values?.attachment || [] },
   { key: "attachment", label: "Attachment", value:[] },
   { key: "hod_review_comments", label: "HOD / Designee Review Comments", value: values?.hodReviewComments || "" },
   { key: "hod_review_attachment", label: "HOD / Designee Review Attachment", value: [] },
@@ -174,18 +173,10 @@ const CreateCalibrationPanel = () => {
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
-  // When true → the next instrument fetch REPLACES grid rows with one
-  // pre-filled row per returned instrument. Only set by Select onChange
-  // (i.e. when the USER changes the type).
   const autoPopulateRowsRef = useRef(false);
 
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
 
-  // ─────────────────────────────────────────────────────────────
-  // RE-HYDRATE — convert saved instrument NAMES back into IDs once
-  // the instrument map is available. Fixes the "saved rows show blank
-  // in the dropdown after reload" bug.
-  // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!equipmentMap || Object.keys(equipmentMap).length === 0) return;
 
@@ -193,8 +184,8 @@ const CreateCalibrationPanel = () => {
       let changed = false;
       const next = prev.map((row) => {
         const current = row.equipmentInstrumentName;
-        if (!current) return row;                          // empty row — skip
-        if (equipmentMap[current]) return row;             // already a valid ID
+        if (!current) return row;
+        if (equipmentMap[current]) return row;
 
         const match = Object.values(equipmentMap).find(
           (eq) => eq.instrument_name === current
@@ -204,7 +195,7 @@ const CreateCalibrationPanel = () => {
         changed = true;
         return { ...row, equipmentInstrumentName: match.id };
       });
-      return changed ? next : prev;                        // avoid needless rerenders
+      return changed ? next : prev;
     });
   }, [equipmentMap]);
 
@@ -256,7 +247,6 @@ useEffect(() => {
   let isCurrent = true;
 
   const fetchInstruments = async () => {
-    // Clear old options whenever instrument type changes.
     setEquipmentOptions([]);
     setEquipmentMap({});
     equipmentMapRef.current = {};
@@ -284,7 +274,6 @@ useEffect(() => {
 
       const data = response?.data?.data || [];
 
-      // Normalize both API responses to the same grid structure.
       const normalizedData = data.map((item) => ({
         ...item,
         instrument_name:
@@ -337,7 +326,6 @@ useEffect(() => {
       setEquipmentMap(map);
       equipmentMapRef.current = map;
 
-      // AUTO-POPULATE — only when the USER changed the dropdown.
       if (autoPopulateRowsRef.current) {
         setCalibrationRows(normalizedData.map(buildRowFromInstrument));
       }
@@ -351,8 +339,6 @@ useEffect(() => {
       );
     } finally {
       if (isCurrent) {
-        // Reset only for the CURRENT run — a stale fetch cannot cancel
-        // the auto-populate of a newer fetch.
         autoPopulateRowsRef.current = false;
         setEquipmentLoading(false);
       }
@@ -647,7 +633,6 @@ useEffect(() => {
         const values = await form.validateFields();
         return await handleSubmit(values);
     } catch (error) {
-        // NEW: Extract the AntD validation error and show it as a toast
         const firstError = error?.errorFields?.[0]?.errors?.[0];
         if (firstError) {
             toast.error(firstError);
@@ -864,14 +849,8 @@ useEffect(() => {
                   allowClear
                   onChange={(type) => {
                     const nextType = type || "";
-
-                    // Mark that this change should auto-populate the grid
-                    // with one row per returned instrument.
                     autoPopulateRowsRef.current = Boolean(nextType);
-
                     setSelectedInstrumentType(nextType);
-
-                    // Clear immediately — the effect will refill.
                     setCalibrationRows([]);
                   }}
                   options={[
@@ -891,7 +870,7 @@ useEffect(() => {
                 />
               </Form.Item>
 
-              {/* NEW SELECT DEPARTMENT DROPDOWN */}
+              {/* SELECT DEPARTMENT DROPDOWN (Correctly placed after Instrument Type) */}
             <Form.Item
               name="selectedDeptId"
               label={

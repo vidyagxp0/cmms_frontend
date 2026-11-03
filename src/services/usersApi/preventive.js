@@ -54,3 +54,28 @@ export const getPreventiveMaintenanceSingleReport = (id) => {
         responseType: "blob",
     });
 };
+
+
+// All Addendum Preventive Planner APIs
+
+export const getAddendumPreventiveDetail = (id) =>
+    api.get(`/user/preventive-addendum-detail/${id}`);
+
+export const addAddendumPreventive = (payload) =>
+    api.post("/user/store-preventive-addendum", payload);
+
+export const updateAddendumPreventive = (id, payload) =>
+    api.put(`/user/update-preventive-addendum/${id}`, payload);
+
+export const executeAddendumPreventiveActivity = (id, payload) =>
+    api.post(`/user/preventive-addendum-record-stage/${id}`, payload);
+
+export const getAddendumPreventivePlannerSingleReport = (id) => {
+    return api.get(`/user/preventive-addendum-report/${id}`, {
+        responseType: "blob",
+    });
+};
+
+export const getAddendumPreventiveAuditListing = (id, params = {}) => {
+    return api.get(`/user/preventive-addendum/audit-trail/${id}`, {params});
+};

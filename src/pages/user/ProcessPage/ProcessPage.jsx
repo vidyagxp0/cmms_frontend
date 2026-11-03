@@ -13,6 +13,7 @@ const ProcessPage = () => {
     const [processName, setProcessName] = useState("");
 
     const { sourceType } = location.state || {};
+    console.log("ProcessPage sourceType:", sourceType);
 
     useEffect(() => {
         let isMounted = true;
@@ -24,6 +25,7 @@ const ProcessPage = () => {
             try {
                 const response = await getAllProcess();
                 const processData = response?.data?.data ?? [];
+                console.log("Fetched processes:", processData);
 
                 let filteredProcesses = Array.isArray(processData)
                     ? processData.filter(
@@ -56,6 +58,14 @@ const ProcessPage = () => {
                         (process) =>
                             process.name?.toLowerCase() ===
                             "field instrument calibration addendum"
+                    );
+                }
+
+                else if (sourceType === "preventive-addendum") {
+                    filteredProcesses = filteredProcesses.filter(
+                        (process) =>
+                            process.name?.toLowerCase() ===
+                            "preventive addendum"
                     );
                 }
 
@@ -98,6 +108,11 @@ const ProcessPage = () => {
                         case "instrument-calibration":
                             navigate(
                                 `/user/field-instrument-calibration-addendum-create/${targetProcess.id}`
+                            );
+                            break;
+                        case "preventive-addendum":
+                            navigate(
+                                `/user/addendum-preventive-planner-create/${targetProcess.id}`
                             );
                             break;
                         default:

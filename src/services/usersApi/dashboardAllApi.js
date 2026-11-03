@@ -48,3 +48,10 @@ export const getAllEquipmentMasterRecords = (params = {}) => {
         params,
     });
 };
+
+
+export const getAllAddendumPreventiveRecords = (params = {}) => {
+    return api.get("/user/preventive-addendum-listing", {
+        params,
+    });
+};

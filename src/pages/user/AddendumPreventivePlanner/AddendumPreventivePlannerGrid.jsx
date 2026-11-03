@@ -27,67 +27,7 @@ const MONTHS = [
   { key: "dec", label: "December" },
 ];
 
-/* -------------------- Frequency helpers -------------------- */
-export const FREQUENCY_PRIORITY = { Y: 4, Q: 3, H: 2, M: 1 };
-
-export const FREQUENCY_LABEL_BY_CODE = {
-  Y: "yearly",
-  Q: "quarterly",
-  H: "half-yearly",
-  M: "monthly",
-};
-
-const WORD_PATTERNS = [
-  [/HALF[\s-]?YEARLY|HALF[\s-]?YEAR/g, "H"],
-  [/YEARLY|ANNUAL(LY)?/g, "Y"],
-  [/QUARTERLY|QUARTER/g, "Q"],
-  [/MONTHLY|MONTH/g, "M"],
-];
-
-const extractFrequencyTokens = (raw) => {
-  if (raw === undefined || raw === null) return [];
-  let str = String(raw).trim().toUpperCase();
-  if (!str) return [];
-
-  const tokens = new Set();
-
-  WORD_PATTERNS.forEach(([re, code]) => {
-    if (re.test(str)) tokens.add(code);
-    str = str.replace(re, " ");
-  });
-
-  const letters = str.replace(/[^A-Z]/g, "");
-  for (const ch of letters) {
-    if (FREQUENCY_PRIORITY[ch] !== undefined) tokens.add(ch);
-  }
-
-  return [...tokens];
-};
-
-export const getRowBiggestFrequency = (row) => {
-  const codes = [];
-  
-  if (row?.weeklyPreventive && typeof row.weeklyPreventive === "object") {
-    Object.values(row.weeklyPreventive).forEach((weeks) => {
-      if (!Array.isArray(weeks)) return;
-      weeks.forEach((week) => {
-        if (!week) return;
-        extractFrequencyTokens(week.planned).forEach((c) => codes.push(c));
-        extractFrequencyTokens(week.actual).forEach((c) => codes.push(c));
-      });
-    });
-  }
-
-  if (codes.length === 0) return { code: "", label: "" };
-
-  const code = codes.reduce((best, cur) =>
-    FREQUENCY_PRIORITY[cur] > FREQUENCY_PRIORITY[best] ? cur : best
-  );
-
-  return { code, label: FREQUENCY_LABEL_BY_CODE[code] || "" };
-};
-
-/* -------------------- Weekly/Flat data helpers -------------------- */
+/* -------------------- Weekly/Flat data helper -------------------- */
 export const createEmptyWeeklyData = () => {
   const data = {};
   MONTHS.forEach(({ key }) => {
@@ -104,16 +44,13 @@ const AddendumPreventivePlannerGrid = ({
   equipmentOptions = [],
   equipmentMap = {},
   equipmentLoading = false,
-  name = "Preventive Maintenance Planner",
+  name = "Addendum Preventive Information",
   description = "",
   addButtonLabel = "Add Row",
   minRows = 0,
   maxRows,
-  onViewChild,
-  viewChildLabel = "Child",
   recordId,
   disabled = false,
-  canCreateChild = false,
   showAddButton = true,
 }) => {
   const mainColumns = [
@@ -157,13 +94,12 @@ const AddendumPreventivePlannerGrid = ({
     newRow.equipmentDbId = "";
     newRow.make = "";
     newRow.model = "";
-    
-    // Initialize flat month dates
+
     MONTHS.forEach((m) => {
       newRow[`${m.key}_planned`] = "";
       newRow[`${m.key}_executed`] = "";
     });
-    
+
     newRow.remark = "";
 
     onChange([...rows, newRow]);
@@ -248,16 +184,13 @@ const AddendumPreventivePlannerGrid = ({
 
     const fieldValue = row[key] ?? "";
     const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
-    
-    // Check if the specific column was populated from the API
+
     const isRowFromApi = row.isFromApi === true;
     const apiColumns = ["equipmentInstrumentName", "equipmentInstrumentId", "location"];
     const isApiColumn = apiColumns.includes(key);
-    
-    // Disable ONLY the API columns if the row is from the API
+
     const isDisabled = disabled || columnDisabled || (isRowFromApi && isApiColumn);
 
-    // Updated disabled styling for visibility
     const commonProps = {
       disabled: isDisabled,
       className:
@@ -324,16 +257,16 @@ const AddendumPreventivePlannerGrid = ({
         format="DD/MM/YYYY"
         variant="borderless"
         className="!h-8 !w-full !px-1 !text-[10px] !font-medium !text-[#263B35] hover:bg-[#F3F6F4] cursor-pointer disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
-        disabled={disabled} // <--- Dates remain enabled for API rows
+        disabled={disabled}
         placeholder="DD/MM/YYYY"
       />
     );
   };
 
   const visibleColumns = mainColumns.filter((column) => column.hidden !== true);
-  const showChildColumn = typeof onViewChild === "function";
-  
-  const emptyColSpan = 1 + visibleColumns.length + 1 + MONTHS.length + 1 + (showChildColumn ? 1 : 0) + 1;
+
+  // Cols: Sr.No(1) + visibleColumns(N) + CalibrationDates(1) + Months(12) + Remark(1) + Action(1)
+  const emptyColSpan = 1 + visibleColumns.length + 1 + MONTHS.length + 1 + 1;
 
   /* -------------------- Render -------------------- */
   return (
@@ -420,11 +353,6 @@ const AddendumPreventivePlannerGrid = ({
               <th className="w-[150px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
                 Remark
               </th>
-              {showChildColumn && (
-                <th className="w-[70px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
-                  {viewChildLabel}
-                </th>
-              )}
               <th className="w-[60px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
                 Action
               </th>
@@ -460,11 +388,6 @@ const AddendumPreventivePlannerGrid = ({
                     <td className="border border-[#D5DFDB] px-2 py-2 align-middle">
                       <div className="h-6 w-full animate-pulse rounded bg-[#E5EBE8]" />
                     </td>
-                    {showChildColumn && (
-                      <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
-                        <div className="mx-auto h-7 w-12 animate-pulse rounded bg-[#E5EBE8]" />
-                      </td>
-                    )}
                     <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
                       <div className="mx-auto h-4 w-4 animate-pulse rounded bg-[#E5EBE8]" />
                     </td>
@@ -524,37 +447,16 @@ const AddendumPreventivePlannerGrid = ({
                         onChange={(e) => updateRemark(rowIndex, e.target.value)}
                         rows={2}
                         className="!h-full !min-h-[64px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
-                        disabled={disabled} // <--- Remarks remain enabled for API rows
+                        disabled={disabled}
                         placeholder="Enter remark"
                       />
                     </td>
-
-                    {showChildColumn && (
-                      <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!canCreateChild) return;
-                            onViewChild(rowIndex, row, getRowBiggestFrequency(row));
-                          }}
-                          disabled={!canCreateChild} // <--- Child button remains enabled based on permissions
-                          className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${
-                            canCreateChild
-                              ? "bg-[#3d606d] hover:bg-[#2B5577] hover:shadow-md active:scale-95"
-                              : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
-                          }`}
-                          title={canCreateChild ? "Create child preventive record" : "Child creation is available only to Initiator at Close Done stage"}
-                        >
-                          {viewChildLabel}
-                        </button>
-                      </td>
-                    )}
 
                     <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
                       <button
                         type="button"
                         onClick={() => handleDeleteRow(rowIndex)}
-                        disabled={disabled || rows.length <= minRows} // <--- Delete button remains enabled
+                        disabled={disabled || rows.length <= minRows}
                         className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
                         aria-label="Delete row"
                       >

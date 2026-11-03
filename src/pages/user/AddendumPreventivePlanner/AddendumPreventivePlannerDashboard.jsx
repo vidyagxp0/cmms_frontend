@@ -9,7 +9,7 @@ import DataTable from "../../../components/common/DataTable/DataTable";
 import {
     getCalibrationSingleReport,
 } from "../../../services/usersApi/calibrationApi";
-import { getAllCalibrationPlannerRecords } from "../../../services/usersApi/dashboardAllApi";
+import { getAllAddendumPreventiveRecords } from "../../../services/usersApi/dashboardAllApi";
 import { useAuthStore } from "../../../store/authStore";
 
 const { RangePicker } = DatePicker;
@@ -71,7 +71,7 @@ const AddendumPreventivePlannerDashboard = () => {
             if (filters.start_date) params.start_date = filters.start_date;
             if (filters.end_date)   params.end_date   = filters.end_date;
 
-            const response = await getAllCalibrationPlannerRecords(params);
+            const response = await getAllAddendumPreventiveRecords(params);
 
             const paginationData = response?.data?.data;
             const recordsData = paginationData?.data || [];
@@ -237,7 +237,7 @@ const AddendumPreventivePlannerDashboard = () => {
                         if (record.is_child === 1) {
                             navigate(`/user/calibration-management-panel/${5}/${record.id}`);
                         } else {
-                            navigate(`/user/calibration-planner-panel/${record.id}`);
+                            navigate(`/user/addendum-preventive-planner-panel/${record.id}`);
                         }
                     };
 
@@ -395,11 +395,11 @@ const AddendumPreventivePlannerDashboard = () => {
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white">
             {/* DARK SECONDARY ACTION BAR */}
             <DashboardActionBar
-                title="Engineering Dashboard"
+                title="Addendum Dashboard"
                 buttonName="Create Record"
                 navigationRoute="/user/create-record"
-                sourceRoute="/user/engineering-dashboard"
-                sourceType="engineering"
+                sourceRoute="/user/addendum-preventive-planner-dashboard"
+                sourceType="preventive-addendum"
                 showCreateButton={showCreateButton}
             />
 

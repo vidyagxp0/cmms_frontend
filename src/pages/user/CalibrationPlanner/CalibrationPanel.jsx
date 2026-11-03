@@ -612,6 +612,11 @@ useEffect(() => {
         const values = await form.validateFields();
         return await handleSubmit(values);
     } catch (error) {
+        // NEW: Extract the AntD validation error and show it as a toast
+        const firstError = error?.errorFields?.[0]?.errors?.[0];
+        if (firstError) {
+            toast.error(firstError);
+        }
         return false;
     }
 };
@@ -727,6 +732,12 @@ useEffect(() => {
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
+        onFinishFailed={({ errorFields }) => {
+          if (errorFields && errorFields.length > 0) {
+            const firstError = errorFields[0]?.errors?.[0];
+            if (firstError) toast.error(firstError);
+          }
+        }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
         <section style={{ display: activeTab === "general" ? "block" : "none" }}>

@@ -632,6 +632,12 @@ const CalibrationChildPanel = () => {
     // Validation failed; do not execute the activity.
     if (error?.errorFields) {
       const firstError = error.errorFields[0];
+
+      // NEW: Show toast for the validation error
+      if (firstError?.errors?.[0]) {
+        toast.error(firstError.errors[0]);
+      }
+
       if (firstError?.name?.length) {
         const fieldName = firstError.name[0];
         if (
@@ -696,21 +702,6 @@ const CalibrationChildPanel = () => {
       return false;
     } finally { setIsSaving(false); }
   };
-
-  // const handleActivitySuccess = async (response, selectedActivity) => {
-  //   try {
-  //     const values = form.getFieldsValue(true);
-  //     const esignComment = response?.data?.data?.activity?.comment || response?.config?.data ? JSON.parse(response?.config?.data || "{}")?.comment : "";
-  //     if (activeTab === "implementor" && esignComment && !values.implementorComments) {
-  //       values.implementorComments = esignComment;
-  //       form.setFieldValue("implementorComments", esignComment);
-  //     } else if (activeTab === "qa-review" && esignComment && !values.qaReviewComments) {
-  //       values.qaReviewComments = esignComment;
-  //       form.setFieldValue("qaReviewComments", esignComment);
-  //     }
-  //     await handleSubmit(values);
-  //   } catch (error) { console.error("Failed to save after activity:", error); }
-  // };
 
   const handleActivitySuccess = async (response, selectedActivity) => {
     try {
@@ -777,6 +768,12 @@ const CalibrationChildPanel = () => {
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
+        onFinishFailed={({ errorFields }) => {
+          if (errorFields && errorFields.length > 0) {
+            const firstError = errorFields[0]?.errors?.[0];
+            if (firstError) toast.error(firstError);
+          }
+        }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
         {/* Management tab - always mounted */}

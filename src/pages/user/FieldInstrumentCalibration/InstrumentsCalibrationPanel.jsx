@@ -411,7 +411,13 @@ const InstrumentCalibrationPanel = () => {
       const saved = await handleSubmit(values);
       return saved === true;
     } catch (error) {
-      console.error("Failed to save Calibration Addendum before activity:", error);
+    
+       const firstError = error?.errorFields?.[0]?.errors?.[0];
+      if (firstError) {
+        toast.error(firstError);
+      } else {
+        console.error("Failed to save Calibration Addendum before activity:", error);
+      }
       return false;
     }
   };
@@ -530,6 +536,12 @@ const InstrumentCalibrationPanel = () => {
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
+         onFinishFailed={({ errorFields }) => {
+          if (errorFields && errorFields.length > 0) {
+            const firstError = errorFields[0]?.errors?.[0];
+            if (firstError) toast.error(firstError);
+          }
+        }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
         {/* General Information */}

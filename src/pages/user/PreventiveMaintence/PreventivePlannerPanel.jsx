@@ -739,14 +739,19 @@ const PreventivePlannerPanel = () => {
       return false;
     }
     try {
-      const values = form.getFieldsValue(true);
-      const saved = await handleSubmit(values);
-      if (saved !== true) {
-        return false;
-      }
-      return true;
+      // NEW: Validate Ant Design fields to catch required fields like shortDescription
+      const validatedValues = await form.validateFields();
+      const saved = await handleSubmit(validatedValues);
+      return saved === true;
     } catch (error) {
-      toast.error("Save before activity failed:", error);
+      // NEW: Extract the AntD validation error and show it as a toast
+      const firstError = error?.errorFields?.[0]?.errors?.[0];
+      if (firstError) {
+        toast.error(firstError);
+      } else {
+        toast.error("Save before activity failed");
+        console.error(error);
+      }
       return false;
     }
   };
@@ -900,6 +905,12 @@ const PreventivePlannerPanel = () => {
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
+        onFinishFailed={({ errorFields }) => {
+          if (errorFields && errorFields.length > 0) {
+            const firstError = errorFields[0]?.errors?.[0];
+            if (firstError) toast.error(firstError);
+          }
+        }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
         {/* General Information */}
@@ -989,7 +1000,7 @@ const PreventivePlannerPanel = () => {
               equipmentLoading={equipmentLoading}
               recordId={recordId}
               disabled={!isGeneralEditable}
-              showAddButton={false}
+              showAddButton={true}
               canCreateChild={canCreateChild}
               onViewChild={handleViewChild}
               weekDates={headerWeekDates}

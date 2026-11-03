@@ -265,7 +265,6 @@ useEffect(() => {
       "Master Instrument": "instrument_masters",
       "Field Instrument": "field_instrument_master",
       "Spare Instrument": "spare_instrument_master",
-      "Equipment Master": "equipment_master",
     };
 
     const apiType = typeMap[selectedInstrumentType];
@@ -876,10 +875,6 @@ useEffect(() => {
                     {
                       label: "Spare Instrument",
                       value: "Spare Instrument",
-                    },
-                    {
-                      label: "Equipment Master",
-                      value: "Equipment Master",
                     },
                   ]}
                 />

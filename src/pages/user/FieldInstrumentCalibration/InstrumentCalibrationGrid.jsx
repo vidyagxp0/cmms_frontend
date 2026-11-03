@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Trash2, Table2 } from "lucide-react";
+import { Plus, Trash2, Table2, Loader2 } from "lucide-react";
 import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import UserModal from "../../../components/common/UserModal/UserModal";
@@ -21,10 +21,13 @@ const InstrumentCalibrationGrid = ({
   recordId,
   disabled = false,
   showAddButton = false,
+  // ✅ NEW
+  equipmentOptions = [],
+  equipmentMap = {},
+  equipmentLoading = false,
 }) => {
-  // All columns are now manual text fields (except Category which has static options)
   const mainColumns = [
-    { key: "equipmentName", title: "Equipment Name", type: "text", placeholder: "Enter equipment name", minWidth: 160 },
+    { key: "equipmentName", title: "Equipment Name", type: "equipment-select", placeholder: "Select equipment", minWidth: 200 },
     { key: "instrumentName", title: "Instrument Name", type: "text", placeholder: "Enter name", minWidth: 150 },
     { key: "instrumentId", title: "Instrument ID No.", type: "text", placeholder: "Enter ID", minWidth: 140 },
     { key: "make", title: "Make", type: "text", placeholder: "Enter make", minWidth: 100 },
@@ -38,6 +41,13 @@ const InstrumentCalibrationGrid = ({
     { key: "category", title: "Category", type: "select", placeholder: "Select", minWidth: 100, options: [{ value: "critical", label: "Critical" }, { value: "non-critical", label: "Non-Critical" }, { value: "indicative", label: "Indicative" }] },
   ];
 
+  // Columns auto-filled from API — locked for API-loaded rows
+  const API_POPULATED_COLUMNS = [
+    "equipmentName", "instrumentName", "instrumentId", "make", "modelNo",
+    "leastCount", "location", "accuracy", "instrumentRange",
+    "operatingRange", "calibrationTestPoint",
+  ];
+
   const rows = Array.isArray(value) ? value : [];
   const [deleteRowIndex, setDeleteRowIndex] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -47,15 +57,11 @@ const InstrumentCalibrationGrid = ({
     if (disabled) return;
     if (maxRows !== undefined && rows.length >= maxRows) return;
     const newRow = {};
-    
-    // Initialize main columns
     mainColumns.forEach((column) => { newRow[column.key] = ""; });
-    
-    // Initialize the 2 specific date fields and remarks
+    newRow.equipmentDbId = "";
     newRow.calibrationNextDueDate = "";
     newRow.calibrationDoneDate = "";
     newRow.remark = "";
-
     onChange([...rows, newRow]);
   };
 
@@ -95,25 +101,87 @@ const InstrumentCalibrationGrid = ({
     onChange(updated);
   };
 
+  // ✅ NEW: when user picks an equipment, auto-fill related fields
+  const handleEquipmentSelect = (rowIndex, equipmentId) => {
+    if (disabled) return;
+    const equipment = equipmentMap[String(equipmentId)];
+    const updated = [...rows];
+    const row = { ...updated[rowIndex] };
+
+    if (equipment) {
+      row.equipmentDbId = String(equipment.id);
+      row.equipmentName = equipment.equipment_name || equipment.instrument_name || equipment.name || "";
+      row.instrumentName = equipment.instrument_name || equipment.equipment_name || equipment.name || "";
+      row.instrumentId = equipment.instrument_id_no || equipment.equipment_id || "";
+      row.make = equipment.make || "";
+      row.modelNo = equipment.sr_no_model_no || equipment.model || "";
+      row.leastCount = equipment.least_count || "";
+      row.location = equipment.location || "";
+      row.accuracy = equipment.accuracy || "";
+      row.instrumentRange = equipment.instrument_range || "";
+      row.operatingRange = equipment.operating_range || "";
+      row.calibrationTestPoint = equipment.calibration_test_point || "";
+      row.category = equipment.category || row.category || "";
+    } else {
+      row.equipmentDbId = "";
+      row.equipmentName = "";
+      row.instrumentName = "";
+      row.instrumentId = "";
+      row.make = "";
+      row.modelNo = "";
+      row.leastCount = "";
+      row.location = "";
+      row.accuracy = "";
+      row.instrumentRange = "";
+      row.operatingRange = "";
+      row.calibrationTestPoint = "";
+    }
+
+    updated[rowIndex] = row;
+    onChange(updated);
+  };
+
   const renderField = (column, row, rowIndex) => {
     const { key, type, placeholder, options: colOptions } = column;
     const fieldValue = row[key] ?? "";
-    const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
-    
-    const commonProps = {
-      disabled: disabled,
-      className: "!w-full !rounded-none !shadow-none disabled:!cursor-not-allowed disabled:!bg-transparent disabled:!text-[#65746E]",
-    };
 
+    const isRowFromApi = row.isFromApi === true;
+    const isApiColumn = API_POPULATED_COLUMNS.includes(key);
+    const isDisabled = disabled || (isRowFromApi && isApiColumn);
+
+    // Equipment Select
+    if (type === "equipment-select") {
+      const selectValue =
+        row.equipmentDbId !== undefined && row.equipmentDbId !== null && row.equipmentDbId !== ""
+          ? String(row.equipmentDbId)
+          : (equipmentOptions.find((opt) => opt.label === row.equipmentName)?.value || undefined);
+
+      return (
+        <Select
+          value={selectValue}
+          placeholder={equipmentLoading ? "Loading..." : placeholder}
+          onChange={(id) => handleEquipmentSelect(rowIndex, id)}
+          options={equipmentOptions}
+          disabled={isDisabled || equipmentLoading}
+          showSearch
+          optionFilterProp="label"
+          filterOption={(input, option) =>
+            (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+          }
+          className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1] disabled:[&_.ant-select-selector]:!bg-[#F9FAF9]"
+        />
+      );
+    }
+
+    // Generic Select
     if (type === "select") {
       return (
         <Select
-          {...commonProps}
           value={fieldValue || undefined}
           placeholder={placeholder}
-          onChange={handleChange}
+          onChange={(v) => updateRow(rowIndex, key, v)}
           options={colOptions}
-          disabled={disabled}
+          disabled={isDisabled}
           className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1]"
         />
       );
@@ -121,11 +189,11 @@ const InstrumentCalibrationGrid = ({
 
     return (
       <Input
-        {...commonProps}
         value={fieldValue}
         placeholder={placeholder}
-        onChange={(e) => handleChange(e.target.value)}
-        className="!h-8 !w-full !rounded-none !border-transparent !bg-transparent !px-2 !text-[11px] !font-medium !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!bg-white"
+        onChange={(e) => updateRow(rowIndex, key, e.target.value)}
+        disabled={isDisabled}
+        className="!h-8 !w-full !rounded-none !border-transparent !bg-transparent !px-2 !text-[11px] !font-medium !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!bg-white disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
       />
     );
   };
@@ -138,7 +206,7 @@ const InstrumentCalibrationGrid = ({
         onChange={(date) => updateRow(rowIndex, key, date ? date.format("YYYY-MM-DD") : "")}
         format="DD-MM-YYYY"
         variant="borderless"
-        className="!h-8 !w-full !px-2 !text-[11px] !font-medium !text-[#263B35] hover:bg-[#F3F6F4] cursor-pointer"
+        className="!h-8 !w-full !px-2 !text-[11px] !font-medium !text-[#263B35] hover:bg-[#F3F6F4] cursor-pointer disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
         disabled={disabled}
         placeholder="DD/MM/YYYY"
       />
@@ -148,23 +216,64 @@ const InstrumentCalibrationGrid = ({
   // Total columns = 1 (Sr No) + 12 (Main) + 2 (Dates) + 1 (Remarks) + 1 (Action) = 17
   const totalColumns = 17;
 
+  /* ── Loading skeleton rows ── */
+  const renderSkeletonRows = () =>
+    Array.from({ length: 3 }).map((_, idx) => (
+      <tr key={`skel-${idx}`} className="bg-white">
+        <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+          <div className="mx-auto h-4 w-5 animate-pulse rounded bg-[#E5EBE8]" />
+        </td>
+        {mainColumns.map((c) => (
+          <td key={c.key} className="border border-[#D5DFDB] px-2 py-2 align-middle">
+            <div
+              className="h-4 animate-pulse rounded bg-[#E5EBE8]"
+              style={{ width: `${55 + ((idx * 13) % 45)}%` }}
+            />
+          </td>
+        ))}
+        <td className="border border-[#D5DFDB] px-2 py-2 align-middle">
+          <div className="mx-auto h-6 w-24 animate-pulse rounded bg-[#E5EBE8]" />
+        </td>
+        <td className="border border-[#D5DFDB] px-2 py-2 align-middle">
+          <div className="mx-auto h-6 w-20 animate-pulse rounded bg-[#E5EBE8]" />
+        </td>
+        <td className="border border-[#D5DFDB] px-2 py-2 align-middle">
+          <div className="h-6 w-full animate-pulse rounded bg-[#E5EBE8]" />
+        </td>
+        <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+          <div className="mx-auto h-4 w-4 animate-pulse rounded bg-[#E5EBE8]" />
+        </td>
+      </tr>
+    ));
+
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
       <div className="flex min-h-[60px] items-center justify-between gap-5 border-b border-[#D7E0DC] bg-[#F7F9F8] px-5">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#D5E0DF] bg-white text-[#4E7585] shadow-[0_2px_7px_rgba(38,53,46,0.05)]">
-            <Table2 size={17} strokeWidth={1.8} />
+            {equipmentLoading ? (
+              <Loader2 size={17} strokeWidth={1.8} className="animate-spin" />
+            ) : (
+              <Table2 size={17} strokeWidth={1.8} />
+            )}
           </div>
           <div className="min-w-0">
             <h3 className="truncate text-[14px] font-bold tracking-[-0.01em] text-[#263B35]">{name}</h3>
-            {description && <p className="mt-0.5 truncate text-[11px] font-medium text-[#899690]">{description}</p>}
+            {equipmentLoading ? (
+              <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-[#4E7585]">
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#4E7585]" />
+                Loading instruments…
+              </p>
+            ) : description ? (
+              <p className="mt-0.5 truncate text-[11px] font-medium text-[#899690]">{description}</p>
+            ) : null}
           </div>
         </div>
         {showAddButton && (
           <button
             type="button"
             onClick={addRow}
-            disabled={disabled || (maxRows !== undefined && rows.length >= maxRows)}
+            disabled={disabled || equipmentLoading || (maxRows !== undefined && rows.length >= maxRows)}
             className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[#2B5577] px-3.5 text-[11px] font-semibold text-white shadow-[0_4px_12px_rgba(43,85,119,0.20)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-[#234766] hover:shadow-[0_7px_16px_rgba(43,85,119,0.25)] active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
           >
             <Plus size={14} strokeWidth={2} className="transition-transform duration-200 group-hover:rotate-90" />
@@ -178,55 +287,47 @@ const InstrumentCalibrationGrid = ({
           <thead className="sticky top-0 z-[5]">
             <tr className="bg-[#EEF3F1]">
               <th className="w-[50px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Sr. No.</th>
-              
               {mainColumns.map((column) => (
-                <th 
-                  key={column.key} 
-                  style={{ minWidth: column.minWidth || 120 }} 
+                <th
+                  key={column.key}
+                  style={{ minWidth: column.minWidth || 120 }}
                   className="border border-[#D5DFDB] px-2 py-2 text-left align-middle text-[10px] font-bold text-[#43564F]"
                 >
                   <div className="flex items-center gap-1">
                     {column.title}
                     {column.key === "equipmentName" && (
-                      <RequiredAsterisk
-                        message="Equipment Name is required. Please enter the equipment name."
-                      />
+                      <RequiredAsterisk message="Equipment Name is required. Please select an equipment." />
                     )}
                   </div>
                 </th>
               ))}
-              
               <th className="w-[180px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
                 <div className="flex items-center justify-center gap-1">
                   Calibration Next Due Date
-                  <RequiredAsterisk
-                    message="Calibration Next Due Date is required. Please select the next due date."
-                  />
+                  <RequiredAsterisk message="Calibration Next Due Date is required. Please select the next due date." />
                 </div>
               </th>
               <th className="w-[140px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Calibration Done Date</th>
-              
               <th className="w-[150px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Remarks</th>
               <th className="w-[60px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Action</th>
             </tr>
           </thead>
           <tbody>
-            {rows.length > 0 ? (
+            {equipmentLoading ? (
+              renderSkeletonRows()
+            ) : rows.length > 0 ? (
               rows.map((row, rowIndex) => (
                 <tr key={rowIndex} className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                  {/* Sr. No. */}
                   <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle min-h-[40px]">
                     <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">{rowIndex + 1}.</span>
                   </td>
-                  
-                  {/* Main Columns */}
+
                   {mainColumns.map((column) => (
                     <td key={column.key} className="border border-[#D5DFDB] p-0 align-middle min-h-[40px]">
                       {renderField(column, row, rowIndex)}
                     </td>
                   ))}
 
-                  {/* The 2 date columns */}
                   <td className="border border-[#D5DFDB] p-0 align-middle min-h-[40px]">
                     {renderDateField(row, "calibrationNextDueDate", rowIndex)}
                   </td>
@@ -234,7 +335,6 @@ const InstrumentCalibrationGrid = ({
                     {renderDateField(row, "calibrationDoneDate", rowIndex)}
                   </td>
 
-                  {/* Remarks */}
                   <td className="border border-[#D5DFDB] p-0 align-middle min-h-[40px]">
                     <TextArea
                       value={row.remark ?? ""}
@@ -246,7 +346,6 @@ const InstrumentCalibrationGrid = ({
                     />
                   </td>
 
-                  {/* Delete Action */}
                   <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle min-h-[40px]">
                     <button
                       type="button"
@@ -263,7 +362,7 @@ const InstrumentCalibrationGrid = ({
             ) : (
               <tr>
                 <td colSpan={totalColumns} className="h-[80px] border border-[#D5DFDB] px-5 text-center text-[11px] font-medium text-[#899690]">
-                  No rows added yet. Click "Add Row" to begin.
+                  No rows added yet. Select Instrument Type &amp; Department to auto-load equipment, or click &quot;Add Row&quot;.
                 </td>
               </tr>
             )}
@@ -272,8 +371,12 @@ const InstrumentCalibrationGrid = ({
       </CustomScrollContainer>
 
       <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">
-        <span className="text-[10px] font-medium text-[#899690]">{rows.length} {rows.length === 1 ? "row" : "rows"}</span>
-        {maxRows !== undefined && <span className="text-[10px] font-medium text-[#899690]">{rows.length} / {maxRows} rows</span>}
+        <span className="text-[10px] font-medium text-[#899690]">
+          {equipmentLoading ? "Fetching instruments…" : `${rows.length} ${rows.length === 1 ? "row" : "rows"}`}
+        </span>
+        {maxRows !== undefined && !equipmentLoading && (
+          <span className="text-[10px] font-medium text-[#899690]">{rows.length} / {maxRows} rows</span>
+        )}
       </div>
 
       <UserModal isOpen={isDeleteModalOpen} onClose={handleCancelDelete} title="Delete Row" description="Please confirm this action before continuing." width="max-w-[420px]">

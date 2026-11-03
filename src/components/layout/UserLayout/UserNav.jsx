@@ -1,3 +1,4 @@
+
 import { useNavigate, useLocation } from "react-router-dom";
 import {
     USER_NAV_ITEMS,
@@ -18,7 +19,7 @@ const UserNav = () => {
                 right-0
                 top-[74px]
                 z-40
-                h-[64px]
+                h-[65px]
                 border-b
                 border-[#DCEBE2]
                 bg-[#F4FAF7]
@@ -34,41 +35,28 @@ const UserNav = () => {
                     lg:px-8
                 "
             >
-                <div
-                    className="
-                        flex
-                        h-full
-                        items-center
-                        gap-1
-                    "
-                >
+                <div className="flex h-full items-center gap-0.5">
                     {navItems.map((item) => {
-                        const Icon =
-                            item.icon;
+                        const Icon = item.icon;
 
-                        const isActive =
-                            isNavItemActive(
-                                location.pathname,
-                                item
-                            );
+                        const isActive = isNavItemActive(
+                            location.pathname,
+                            item
+                        );
 
                         return (
                             <button
                                 key={item.id}
                                 type="button"
-                                onClick={() =>
-                                    navigate(
-                                        item.path
-                                    )
-                                }
+                                onClick={() => navigate(item.path)}
                                 className={`
                                     group
                                     relative
                                     flex
                                     h-full
                                     items-center
-                                    gap-2.5
-                                    px-5
+                                    gap-1
+                                    px-4
                                     transition-all
                                     duration-200
                                     ease-out
@@ -88,11 +76,12 @@ const UserNav = () => {
                                 <span
                                     className={`
                                         flex
-                                        h-8
-                                        w-8
+                                        h-7
+                                        w-7
+                                        shrink-0
                                         items-center
                                         justify-center
-                                        rounded-[9px]
+                                        rounded-[8px]
                                         transition-all
                                         duration-200
 
@@ -104,12 +93,8 @@ const UserNav = () => {
                                     `}
                                 >
                                     <Icon
-                                        size={17}
-                                        strokeWidth={
-                                            isActive
-                                                ? 2
-                                                : 1.75
-                                        }
+                                        size={16}
+                                        strokeWidth={isActive ? 2 : 1.75}
                                     />
                                 </span>
 
@@ -118,14 +103,12 @@ const UserNav = () => {
                                     className="
                                         whitespace-nowrap
                                         font-[var(--font-display)]
-                                        text-[13px]
+                                        text-[12px]
                                         font-semibold
-                                        tracking-[-0.025em]
+                                        tracking-[-0.02em]
                                     "
                                 >
-                                    {
-                                        item.label
-                                    }
+                                    {item.label}
                                 </span>
 
                                 {/* ACTIVE INDICATOR */}
@@ -143,7 +126,7 @@ const UserNav = () => {
 
                                         ${
                                             isActive
-                                                ? "w-[42px] opacity-100"
+                                                ? "w-[36px] opacity-100"
                                                 : "w-0 opacity-0"
                                         }
                                     `}

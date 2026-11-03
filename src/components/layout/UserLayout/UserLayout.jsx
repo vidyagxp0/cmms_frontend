@@ -39,7 +39,7 @@ function UserLayout() {
             <main
                 className={
                     showNav
-                        ? "h-screen pt-[138px]"
+                        ? "h-screen pt-[130px]"
                         : "pt-[74px]"
                 }
             >

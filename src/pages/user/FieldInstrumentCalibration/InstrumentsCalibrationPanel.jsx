@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Form, Input } from "antd";
+import { Form, Input, Select } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
@@ -26,7 +26,7 @@ import {
 } from "../../../services/usersApi/instrumentCalibration"; 
 import { getCalibrationUser } from "../../../services/usersApi/calibrationApi";
 import { addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
-import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
+import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages, getAllDepartments } from "../../../services/usersApi/workflowCommonApi";
 import InstrumentCalibrationGrid from "./InstrumentCalibrationGrid";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
@@ -41,7 +41,11 @@ const TABS = [
   { id: "cancellation", label: "Cancellation", stageId: 44 },
 ];
 
-const REQUIRED_FIELDS = [{ name: "shortDescription", label: "Short Description" }];
+const REQUIRED_FIELDS = [
+  { name: "shortDescription", label: "Short Description" },
+  { name: "instrumentType", label: "Instrument Type" },
+  { name: "selectedDeptId", label: "Select Department" },
+];
 
 const GRID_LABELS = {
   equipmentName: "Equipment Name",
@@ -92,6 +96,16 @@ const buildGridPayload = (rows = []) => {
 
 const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({ key: field.name, label: field.label, value: values?.[field.name] || "" })),
+  {
+    key: "master_department",
+    label: "Select Department",
+    value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
+  },
+  {
+    key: "instrumentType",
+    label: "Instrument Type",
+    value: values?.instrumentType || "",
+  },
   { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
   { key: "year", label: "Year", value: values?.year || "" },
   { key: "block", label: "Block", value: values?.block || "" },
@@ -150,7 +164,11 @@ const InstrumentCalibrationPanel = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
   const isFetchingRef = useRef(false);
-  const requiredValuesRef = useRef({ shortDescription: "" });
+  const requiredValuesRef = useRef({ shortDescription: "", selectedDeptId: "", instrumentType: "" });
+
+  // New Department States
+  const [departments, setDepartments] = useState([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
   const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
   const isGeneralEditable = isStageEditable(39);
@@ -172,6 +190,24 @@ const InstrumentCalibrationPanel = () => {
       }
     };
     fetchProfile();
+  }, []);
+
+  // Fetch Departments
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      setDepartmentsLoading(true);
+      try {
+        const response = await getAllDepartments();
+        const data = response?.data?.data ?? [];
+        setDepartments(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to fetch departments:", error);
+        toast.error("Could not load departments.");
+      } finally {
+        setDepartmentsLoading(false);
+      }
+    };
+    fetchDepartments();
   }, []);
 
   useEffect(() => {
@@ -216,6 +252,8 @@ const InstrumentCalibrationPanel = () => {
       const processDateOfInitiation = getProcessValue(processData, "dateOfInitiation");
       const dueDate = getProcessValue(processData, "dueDate");
       const processDepartment = getProcessValue(processData, "initiationDepartment");
+      const masterDepartmentId = getProcessValue(processData, "master_department");
+      const instrumentType = getProcessValue(processData, "instrumentType");
       const shortDescription = getProcessValue(processData, "short_description");
       const comments = getProcessValue(processData, "comment");
       const attachment = getProcessValue(processData, "attachment");
@@ -240,7 +278,11 @@ const InstrumentCalibrationPanel = () => {
       setInitiationDepartment(responseData?.department?.name || processDepartment || "");
       setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
 
-      requiredValuesRef.current = { shortDescription: shortDescription || "" };
+      requiredValuesRef.current = { 
+        shortDescription: shortDescription || "",
+        selectedDeptId: masterDepartmentId || null,
+        instrumentType: instrumentType || ""
+      };
 
       form.setFieldsValue({
         recordNumber,
@@ -250,6 +292,8 @@ const InstrumentCalibrationPanel = () => {
         dateOfInitiation: processDateOfInitiation || responseData?.initiation_date || "",
         dueDate,
         initiationDepartment: responseData?.department?.name || processDepartment || "",
+        selectedDeptId: masterDepartmentId || null,
+        instrumentType: instrumentType || null,
         shortDescription,
         year,
         block,
@@ -407,11 +451,10 @@ const InstrumentCalibrationPanel = () => {
       return false;
     }
     try {
-      const values = form.getFieldsValue(true);
+      const values = await form.validateFields();
       const saved = await handleSubmit(values);
       return saved === true;
     } catch (error) {
-    
        const firstError = error?.errorFields?.[0]?.errors?.[0];
       if (firstError) {
         toast.error(firstError);
@@ -603,6 +646,55 @@ const InstrumentCalibrationPanel = () => {
           }
             className="!mb-4">
               <Input placeholder="Enter Area" disabled={!isGeneralEditable} />
+            </Form.Item>
+            
+            {/* NEW FIELDS - ENABLED AND VALIDATED IN PANEL */}
+            <Form.Item
+              name="instrumentType"
+              label={
+                <span className="inline-flex items-center">
+                  Select Instrument Type
+                  <RequiredAsterisk message="Instrument Type is required. Please select an instrument type to proceed." />
+                </span>
+              }
+              rules={[{ required: true, message: "Please select instrument type" }]}
+              className="!mb-4"
+            >
+              <Select
+                placeholder="Select Instrument Type"
+                disabled={!isGeneralEditable}
+                options={[
+                  { label: "Master Instrument", value: "Master Instrument" },
+                  { label: "Field Instrument", value: "Field Instrument" },
+                  { label: "Spare Instrument", value: "Spare Instrument" },
+                  {label: "Equipment Master", value: "Equipment Master" },
+                ]}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="selectedDeptId"
+              label={
+                <span className="inline-flex items-center">
+                  Select Department
+                  <RequiredAsterisk message="Department is required to proceed. Please select a department." />
+                </span>
+              }
+              rules={[{ required: true, message: "Please select a department" }]}
+              className="!mb-4"
+            >
+              <Select
+                placeholder="Select a department"
+                loading={departmentsLoading}
+                options={departments.map((dept) => ({
+                  label: dept.name || "Unnamed Department",
+                  value: dept.id,
+                }))}
+                showSearch
+                optionFilterProp="label"
+                allowClear={false}
+                disabled={!isGeneralEditable}
+              />
             </Form.Item>
           </div>
           

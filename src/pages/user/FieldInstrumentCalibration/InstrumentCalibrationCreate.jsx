@@ -4,7 +4,7 @@ import {
     MapPin,
     Workflow,
 } from "lucide-react";
-import { Form, Input } from "antd";
+import { Form, Input, Select } from "antd";
 import {
     useLocation,
     useNavigate,
@@ -38,7 +38,7 @@ import {
     addMultipleAttachments,
 } from "../../../components/common/Attachment/attachmentApi";
 
-import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
+import { getRecordNumber, getAllDepartments } from "../../../services/usersApi/workflowCommonApi";
 import InstrumentCalibrationGrid from "./InstrumentCalibrationGrid";
 import { addInstrumentCalibration } from "../../../services/usersApi/instrumentCalibration";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
@@ -101,6 +101,17 @@ const buildProcessData = (values, systemFields) => [
         label: field.label,
         value: values?.[field.name] || "",
     })),
+    // NEW: master_department & instrumentType
+    {
+        key: "master_department",
+        label: "Select Department",
+        value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
+    },
+    {
+        key: "instrumentType",
+        label: "Instrument Type",
+        value: values?.instrumentType || "",
+    },
     { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
     { key: "comment", label: "Comments", value: values?.comments || "" },
     { key: "attachment", label: "Attachment", value: [] },
@@ -141,6 +152,11 @@ const InstrumentCalibrationCreate = () => {
     const [dateOfInitiation] = useState(() => formatDateTime(new Date()));
     const [hodUsers, setHodUsers] = useState([]);
     const [qaReviewers, setQaReviewers] = useState([]);
+
+    // New Department States
+    const [departments, setDepartments] = useState([]);
+    const [departmentsLoading, setDepartmentsLoading] = useState(false);
+
     const [form] = Form.useForm();
     const location = useLocation();
     const navigate = useNavigate();
@@ -154,13 +170,15 @@ const InstrumentCalibrationCreate = () => {
             setIsLoading(true);
             setEquipmentLoading(true);
             setUsersLoading(true);
+            setDepartmentsLoading(true);
 
             try {
-                const [profileRes, recordNumRes, equipmentRes, usersRes] = await Promise.allSettled([
+                const [profileRes, recordNumRes, equipmentRes, usersRes, deptRes] = await Promise.allSettled([
                     getProfile(),
                     processId ? getRecordNumber(processId) : Promise.resolve(null),
                     getAllEquipmentData(),
                     getCalibrationUser(),
+                    getAllDepartments(),
                 ]);
 
                 if (!isMounted) return;
@@ -193,6 +211,7 @@ const InstrumentCalibrationCreate = () => {
                     documentNumber: "SMLJ/ENG/SOP-GEN/005/F15-02",
                     documentType: "Formats",
                     recordNumber: generatedRecordNumber,
+                    instrumentType: "Field Instrument", // Default value
                 });
 
                 if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
@@ -212,6 +231,10 @@ const InstrumentCalibrationCreate = () => {
                     setHodUsers(data?.hod || []);
                     setQaReviewers(data?.qa_reviewer || []);
                 }
+
+                if (deptRes.status === "fulfilled" && deptRes.value?.data?.data) {
+                    setDepartments(deptRes.value.data.data || []);
+                }
             } catch (error) {
                 console.error("Error loading initial data:", error);
             } finally {
@@ -219,6 +242,7 @@ const InstrumentCalibrationCreate = () => {
                     setIsLoading(false);
                     setEquipmentLoading(false);
                     setUsersLoading(false);
+                    setDepartmentsLoading(false);
                 }
             }
         };
@@ -334,15 +358,6 @@ const InstrumentCalibrationCreate = () => {
                     {/* CONTEXT */}
                     <div className="flex shrink-0 items-center gap-3 rounded-none border-0 bg-transparent px-0 py-0">
                         <div className="flex items-center gap-2 rounded-none bg-transparent px-0 py-0">
-                            {/* <span className="flex h-[26px] w-[26px] items-center justify-center rounded-[8px] bg-[#EAF1ED] text-[#58776C]">
-                                <MapPin size={12} strokeWidth={1.9} />
-                            </span> */}
-                            {/* <div>
-                                <p className="font-[var(--font-display)] text-[7.5px] font-extrabold uppercase tracking-[0.12em] text-[#82928B]">Site</p>
-                                <p className="max-w-[110px] truncate font-[var(--font-display)] text-[10.5px] font-bold tracking-[-0.01em] text-[#344A43]">
-                                    {siteName || "Unit IV"}
-                                </p>
-                            </div> */}
                         </div>
                         <div className="mx-1 h-7 w-px bg-[#DCE5E0]" />
                         <div className="flex items-center gap-2 rounded-none bg-transparent px-0 py-0">
@@ -418,6 +433,34 @@ const InstrumentCalibrationCreate = () => {
                                     </Form.Item>
                                     <Form.Item name="area" label="Area" className="!mb-3">
                                         <Input placeholder="Enter Area" />
+                                    </Form.Item>
+                                    
+                                    {/* NEW FIELDS - DISABLED ON CREATE */}
+                                    <Form.Item name="instrumentType" label="Select Instrument Type" className="!mb-3">
+                                        <Select
+                                            placeholder="Select Instrument Type"
+                                            disabled
+                                            options={[
+                                                { label: "Master Instrument", value: "Master Instrument" },
+                                                { label: "Field Instrument", value: "Field Instrument" },
+                                                { label: "Spare Instrument", value: "Spare Instrument" },
+                                            ]}
+                                        />
+                                    </Form.Item>
+                                    
+                                    <Form.Item name="selectedDeptId" label="Select Department" className="!mb-3">
+                                        <Select
+                                            placeholder="Select a department"
+                                            loading={departmentsLoading}
+                                            options={departments.map((dept) => ({
+                                                label: dept.name || "Unnamed Department",
+                                                value: dept.id,
+                                            }))}
+                                            showSearch
+                                            optionFilterProp="label"
+                                            allowClear={false}
+                                            disabled
+                                        />
                                     </Form.Item>
                                 </div>
 

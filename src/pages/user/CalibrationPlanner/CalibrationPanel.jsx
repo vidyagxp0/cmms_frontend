@@ -866,6 +866,10 @@ useEffect(() => {
                       label: "Spare Instrument",
                       value: "Spare Instrument",
                     },
+                    {
+                      label: "Equipment Master",
+                      value: "Equipment Master",
+                    },
                   ]}
                 />
               </Form.Item>

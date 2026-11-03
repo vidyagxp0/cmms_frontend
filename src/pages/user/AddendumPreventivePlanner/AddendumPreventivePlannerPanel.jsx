@@ -56,9 +56,9 @@ const TABS = [
   { id: "cancellation", label: "Cancellation", stageId: 59 },
 ];
 
+// ✅ instrumentType removed
 const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
-  { name: "instrumentType", label: "Instrument Type" },
   { name: "selectedDeptId", label: "Select Department" },
 ];
 
@@ -96,44 +96,19 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
   });
 };
 
-const buildRowFromEquipment = (item = {}) => {
-  const newRow = {
-    equipmentDbId: item.id !== undefined && item.id !== null ? String(item.id) : "",
-    equipmentInstrumentName: item.equipment_name || item.instrument_name || item.name || "",
-    equipmentInstrumentId: item.instrument_id_no || item.equipment_id || "",
-    location: item.location || "",
-    make: item.make || "",
-    model: item.sr_no_model_no || item.model || "",
-    remark: "",
-    isFromApi: true,
-  };
-
-  MONTHS.forEach((m) => {
-    newRow[`${m.key}_planned`] = "";
-    newRow[`${m.key}_executed`] = "";
-  });
-
-  return newRow;
-};
-
+// ✅ instrumentType removed from process_data
 const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({
     key: field.name,
     label: field.label,
     value: values?.[field.name] || field.value || "",
   })),
-  // ✅ NEW: Year & Block
   { key: "year", label: "Year", value: values?.year || "" },
   { key: "block", label: "Block", value: values?.block || "" },
   {
     key: "master_department",
     label: "Select Department",
     value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
-  },
-  {
-    key: "instrumentType",
-    label: "Instrument Type",
-    value: values?.instrumentType || "",
   },
   {
     key: "short_description",
@@ -219,10 +194,11 @@ const AddendumPreventivePlannerPanel = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
   const isFetchingRef = useRef(false);
+
+  // ✅ instrumentType removed from required fallbacks
   const requiredValuesRef = useRef({
     shortDescription: "",
     selectedDeptId: "",
-    instrumentType: "",
     year: "",
     block: "",
   });
@@ -230,16 +206,8 @@ const AddendumPreventivePlannerPanel = () => {
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
-  const userChangedDropdownRef = useRef(false);
-
-  const instrumentTypeWatch = Form.useWatch("instrumentType", form);
+  // ✅ Only watch department now
   const selectedDeptIdWatch = Form.useWatch("selectedDeptId", form);
-
-  const equipmentDataRef = useRef([]);
-  const hasInitialDetailLoadedRef = useRef(false);
-  const hasInitialEquipmentLoadedRef = useRef(false);
-  const savedRowsCountRef = useRef(0);
-  const autoPopulateDoneRef = useRef(false);
 
   useEffect(() => {
     equipmentMapRef.current = equipmentMap;
@@ -254,23 +222,6 @@ const AddendumPreventivePlannerPanel = () => {
   const isHodEditable = isStageEditable(56);
   const isQaReviewEditable = isStageEditable(57);
   const isCancellationEditable = isStageEditable(59);
-
-  const tryAutoPopulateOnInitial = useCallback(() => {
-    if (autoPopulateDoneRef.current) return;
-    if (!hasInitialDetailLoadedRef.current) return;
-    if (!hasInitialEquipmentLoadedRef.current) return;
-
-    if (savedRowsCountRef.current > 0) {
-      autoPopulateDoneRef.current = true;
-      return;
-    }
-
-    const equipment = equipmentDataRef.current;
-    if (!Array.isArray(equipment) || equipment.length === 0) return;
-
-    autoPopulateDoneRef.current = true;
-    setPreventiveRows(equipment.map(buildRowFromEquipment));
-  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -303,7 +254,7 @@ const AddendumPreventivePlannerPanel = () => {
     fetchDepartments();
   }, []);
 
-  // Dynamic API Fetch based on Instrument Type & Department
+  // ✅ Fetch equipment — ONLY based on Department, always "equipment_master"
   useEffect(() => {
     let isCurrent = true;
 
@@ -312,34 +263,14 @@ const AddendumPreventivePlannerPanel = () => {
       setEquipmentMap({});
       equipmentMapRef.current = {};
 
-      if (!instrumentTypeWatch || !selectedDeptIdWatch) {
-        equipmentDataRef.current = [];
-        hasInitialEquipmentLoadedRef.current = true;
-        setPreventiveRows([]);
-        setEquipmentLoading(false);
-        return;
-      }
-
-      const typeMap = {
-        "Master Instrument": "instrument_masters",
-        "Field Instrument": "field_instrument_master",
-        "Spare Instrument": "spare_instrument_master",
-        "Equipment Master": "equipment_master",
-      };
-
-      const apiType = typeMap[instrumentTypeWatch];
-
-      if (!apiType) {
-        equipmentDataRef.current = [];
-        hasInitialEquipmentLoadedRef.current = true;
-        setPreventiveRows([]);
+      if (!selectedDeptIdWatch) {
         setEquipmentLoading(false);
         return;
       }
 
       try {
         setEquipmentLoading(true);
-        const response = await getAllDepartmentMasters(selectedDeptIdWatch, apiType);
+        const response = await getAllDepartmentMasters(selectedDeptIdWatch, "equipment_master");
 
         if (!isCurrent) return;
 
@@ -358,22 +289,11 @@ const AddendumPreventivePlannerPanel = () => {
         setEquipmentOptions(options);
         setEquipmentMap(map);
         equipmentMapRef.current = map;
-
-        equipmentDataRef.current = data;
-        hasInitialEquipmentLoadedRef.current = true;
-
-        if (userChangedDropdownRef.current) {
-          setPreventiveRows(data.map(buildRowFromEquipment));
-          userChangedDropdownRef.current = false;
-        } else {
-          tryAutoPopulateOnInitial();
-        }
+        // ✅ No auto-populate: user will click "Add Row" and pick from the dropdown
       } catch (error) {
         if (!isCurrent) return;
         console.error("Failed to fetch equipment:", error);
         toast.error("Could not load equipment list.");
-        hasInitialEquipmentLoadedRef.current = true;
-        tryAutoPopulateOnInitial();
       } finally {
         if (isCurrent) {
           setEquipmentLoading(false);
@@ -386,7 +306,7 @@ const AddendumPreventivePlannerPanel = () => {
     return () => {
       isCurrent = false;
     };
-  }, [instrumentTypeWatch, selectedDeptIdWatch, tryAutoPopulateOnInitial]);
+  }, [selectedDeptIdWatch]);
 
   const fetchPreventiveDetail = useCallback(
     async (isInitial = false) => {
@@ -432,8 +352,7 @@ const AddendumPreventivePlannerPanel = () => {
         const dueDate = getProcessValue(processData, "dueDate");
         const processDepartment = getProcessValue(processData, "initiationDepartment");
         const masterDepartmentId = getProcessValue(processData, "master_department");
-        const instrumentType = getProcessValue(processData, "instrumentType");
-        // ✅ NEW
+        // ✅ instrumentType removed
         const year = getProcessValue(processData, "year");
         const block = getProcessValue(processData, "block");
         const shortDescription = getProcessValue(processData, "short_description");
@@ -467,14 +386,15 @@ const AddendumPreventivePlannerPanel = () => {
         setInitiationDepartment(responseData?.department?.name || processDepartment || "");
         setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
 
+        // ✅ instrumentType removed from required fallbacks
         requiredValuesRef.current = {
           shortDescription: shortDescription || "",
           selectedDeptId: masterDepartmentId || null,
-          instrumentType: instrumentType || "",
           year: year || "",
           block: block || "",
         };
 
+        // ✅ instrumentType removed from setFieldsValue
         form.setFieldsValue({
           documentNumber: documentNumber || "SMLJ/ENG/SOP-GEN/OO3/T01-01",
           documentType: documentType || "Formats",
@@ -485,11 +405,9 @@ const AddendumPreventivePlannerPanel = () => {
             processDateOfInitiation || responseData?.initiation_date || "",
           dueDate,
           initiationDepartment: responseData?.department?.name || processDepartment || "",
-          // ✅ NEW
           year: year || "",
           block: block || "",
           selectedDeptId: masterDepartmentId || null,
-          instrumentType: instrumentType || null,
           shortDescription,
           comments,
           attachment: attachment || [],
@@ -560,27 +478,19 @@ const AddendumPreventivePlannerPanel = () => {
           return newRow;
         });
 
-        if (isInitial && !hasInitialDetailLoadedRef.current) {
-          hasInitialDetailLoadedRef.current = true;
-          savedRowsCountRef.current = normalizedRows.length;
-        }
-
         setPreventiveRows(normalizedRows);
-        tryAutoPopulateOnInitial();
       } catch (error) {
         console.error("Failed to fetch addendum preventive detail:", error);
         toast.error(
           error?.response?.data?.message ||
             "Failed to load Addendum Preventive record."
         );
-        if (isInitial) hasInitialDetailLoadedRef.current = true;
-        tryAutoPopulateOnInitial();
       } finally {
         setIsLoading(false);
         isFetchingRef.current = false;
       }
     },
-    [recordId, form, tryAutoPopulateOnInitial]
+    [recordId, form]
   );
 
   useEffect(() => {
@@ -937,7 +847,6 @@ const AddendumPreventivePlannerPanel = () => {
               />
             </Form.Item>
 
-            {/* ✅ NEW: Year (text) */}
             <Form.Item name="year" label="Year" className="!mb-4">
               <FormInput
                 placeholder="Enter year"
@@ -945,7 +854,6 @@ const AddendumPreventivePlannerPanel = () => {
               />
             </Form.Item>
 
-            {/* ✅ NEW: Block (text) */}
             <Form.Item name="block" label="Block" className="!mb-4">
               <FormInput
                 placeholder="Enter block"
@@ -953,34 +861,7 @@ const AddendumPreventivePlannerPanel = () => {
               />
             </Form.Item>
 
-            <Form.Item
-              name="instrumentType"
-              label={
-                <span className="inline-flex items-center">
-                  Select Instrument Type
-                  <RequiredAsterisk message="Instrument Type is required. Please select an instrument type to proceed." />
-                </span>
-              }
-              rules={[{ required: true, message: "Please select instrument type" }]}
-              className="!mb-4"
-            >
-              <Select
-                placeholder="Select Instrument Type"
-                disabled={!isGeneralEditable}
-                allowClear
-                options={[
-                  { label: "Master Instrument", value: "Master Instrument" },
-                  { label: "Field Instrument", value: "Field Instrument" },
-                  { label: "Spare Instrument", value: "Spare Instrument" },
-                  { label: "Equipment Master", value: "Equipment Master" },
-                ]}
-                onChange={() => {
-                  userChangedDropdownRef.current = true;
-                  savedRowsCountRef.current = 0;
-                  setPreventiveRows([]);
-                }}
-              />
-            </Form.Item>
+            {/* ✅ Select Instrument Type field REMOVED */}
 
             <Form.Item
               name="selectedDeptId"
@@ -1008,11 +889,6 @@ const AddendumPreventivePlannerPanel = () => {
                 optionFilterProp="label"
                 allowClear={false}
                 disabled={!isGeneralEditable}
-                onChange={() => {
-                  userChangedDropdownRef.current = true;
-                  savedRowsCountRef.current = 0;
-                  setPreventiveRows([]);
-                }}
               />
             </Form.Item>
           </div>
@@ -1027,7 +903,8 @@ const AddendumPreventivePlannerPanel = () => {
               equipmentLoading={equipmentLoading}
               recordId={recordId}
               disabled={!isGeneralEditable}
-              showAddButton={false}
+              // ✅ Enabled — user must click "Add Row" manually
+              showAddButton={isGeneralEditable}
               weekDates={headerWeekDates}
               onWeekDatesChange={setHeaderWeekDates}
             />

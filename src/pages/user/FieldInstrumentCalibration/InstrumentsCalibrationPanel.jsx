@@ -32,7 +32,7 @@ import {
   getAllPermissions,
   getAllStages,
   getAllDepartments,
-  getAllDepartmentMasters, // ✅ NEW
+  getAllDepartmentMasters,
 } from "../../../services/usersApi/workflowCommonApi";
 import InstrumentCalibrationGrid from "./InstrumentCalibrationGrid";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
@@ -85,7 +85,6 @@ const getProcessValue = (processData = [], key) => {
   return "";
 };
 
-// ✅ Updated: skip isFromApi (UI-only flag)
 const buildGridPayload = (rows = []) => {
   return rows.map((row, index) => {
     const rowData = { row_id: index + 1 };
@@ -101,29 +100,6 @@ const buildGridPayload = (rows = []) => {
     });
     return rowData;
   });
-};
-
-// ✅ NEW: build a calibration row from an equipment API item
-const buildRowFromEquipment = (item = {}) => {
-  return {
-    equipmentDbId: item.id !== undefined && item.id !== null ? String(item.id) : "",
-    equipmentName: item.equipment_name || item.instrument_name || item.name || "",
-    instrumentName: item.instrument_name || item.equipment_name || item.name || "",
-    instrumentId: item.instrument_id_no || item.equipment_id || "",
-    make: item.make || "",
-    modelNo: item.sr_no_model_no || item.model || "",
-    leastCount: item.least_count || "",
-    location: item.location || "",
-    accuracy: item.accuracy || "",
-    instrumentRange: item.instrument_range || "",
-    operatingRange: item.operating_range || "",
-    calibrationTestPoint: item.calibration_test_point || "",
-    category: item.category || "",
-    calibrationNextDueDate: "",
-    calibrationDoneDate: "",
-    remark: "",
-    isFromApi: true,
-  };
 };
 
 const buildProcessData = (values, systemFields) => [
@@ -182,7 +158,7 @@ const InstrumentCalibrationPanel = () => {
 
   const [calibrationRows, setCalibrationRows] = useState([]);
 
-  // ✅ NEW: Equipment state
+  // Equipment state — only used to populate the Equipment Name dropdown
   const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [equipmentMap, setEquipmentMap] = useState({});
   const [equipmentLoading, setEquipmentLoading] = useState(false);
@@ -207,17 +183,8 @@ const InstrumentCalibrationPanel = () => {
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
-  // ✅ NEW: watch dropdowns
   const instrumentTypeWatch = Form.useWatch("instrumentType", form);
   const selectedDeptIdWatch = Form.useWatch("selectedDeptId", form);
-
-  // ✅ NEW: auto-populate refs
-  const userChangedDropdownRef = useRef(false);
-  const equipmentDataRef = useRef([]);
-  const hasInitialDetailLoadedRef = useRef(false);
-  const hasInitialEquipmentLoadedRef = useRef(false);
-  const savedRowsCountRef = useRef(0);
-  const autoPopulateDoneRef = useRef(false);
 
   useEffect(() => {
     equipmentMapRef.current = equipmentMap;
@@ -229,24 +196,6 @@ const InstrumentCalibrationPanel = () => {
   const isUserDeptEditable = isStageEditable(41);
   const isQaReviewEditable = isStageEditable(42);
   const isCancellationEditable = isStageEditable(44);
-
-  // ✅ NEW: auto-populate on initial load (only if no saved rows)
-  const tryAutoPopulateOnInitial = useCallback(() => {
-    if (autoPopulateDoneRef.current) return;
-    if (!hasInitialDetailLoadedRef.current) return;
-    if (!hasInitialEquipmentLoadedRef.current) return;
-
-    if (savedRowsCountRef.current > 0) {
-      autoPopulateDoneRef.current = true;
-      return;
-    }
-
-    const equipment = equipmentDataRef.current;
-    if (!Array.isArray(equipment) || equipment.length === 0) return;
-
-    autoPopulateDoneRef.current = true;
-    setCalibrationRows(equipment.map(buildRowFromEquipment));
-  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -300,7 +249,7 @@ const InstrumentCalibrationPanel = () => {
     fetchCalibrationUsers();
   }, []);
 
-  // ✅ NEW: fetch equipment when Instrument Type + Department are selected
+  // ✅ Fetch equipment — ONLY populate dropdown options (NO auto-populate rows)
   useEffect(() => {
     let isCurrent = true;
 
@@ -310,8 +259,6 @@ const InstrumentCalibrationPanel = () => {
       equipmentMapRef.current = {};
 
       if (!instrumentTypeWatch || !selectedDeptIdWatch) {
-        equipmentDataRef.current = [];
-        hasInitialEquipmentLoadedRef.current = true;
         setEquipmentLoading(false);
         return;
       }
@@ -320,13 +267,11 @@ const InstrumentCalibrationPanel = () => {
         "Master Instrument": "instrument_masters",
         "Field Instrument": "field_instrument_master",
         "Spare Instrument": "spare_instrument_master",
-        "Equipment Master": "equipment_master",
+        // "Equipment Master": "equipment_master" — removed from selection
       };
 
       const apiType = typeMap[instrumentTypeWatch];
       if (!apiType) {
-        equipmentDataRef.current = [];
-        hasInitialEquipmentLoadedRef.current = true;
         setEquipmentLoading(false);
         return;
       }
@@ -351,21 +296,11 @@ const InstrumentCalibrationPanel = () => {
         setEquipmentOptions(options);
         setEquipmentMap(map);
         equipmentMapRef.current = map;
-        equipmentDataRef.current = data;
-        hasInitialEquipmentLoadedRef.current = true;
-
-        if (userChangedDropdownRef.current) {
-          setCalibrationRows(data.map(buildRowFromEquipment));
-          userChangedDropdownRef.current = false;
-        } else {
-          tryAutoPopulateOnInitial();
-        }
+        // ✅ No auto-populate: user will click "Add Row" and pick from the dropdown
       } catch (error) {
         if (!isCurrent) return;
         console.error("Failed to fetch equipment:", error);
         toast.error("Could not load equipment list.");
-        hasInitialEquipmentLoadedRef.current = true;
-        tryAutoPopulateOnInitial();
       } finally {
         if (isCurrent) setEquipmentLoading(false);
       }
@@ -373,7 +308,7 @@ const InstrumentCalibrationPanel = () => {
 
     fetchEquipment();
     return () => { isCurrent = false; };
-  }, [instrumentTypeWatch, selectedDeptIdWatch, tryAutoPopulateOnInitial]);
+  }, [instrumentTypeWatch, selectedDeptIdWatch]);
 
   const fetchCalibrationDetail = useCallback(
     async (isInitial = false) => {
@@ -474,7 +409,6 @@ const InstrumentCalibrationPanel = () => {
         const normalizedRows = rawRows.map((row) => {
           const newRow = { ...row, isFromApi: true };
 
-          // Match equipment by name → fill equipmentDbId
           if (!newRow.equipmentDbId && newRow.equipmentName && currentEquipmentMap) {
             const found = Object.values(currentEquipmentMap).find(
               (eq) =>
@@ -485,7 +419,6 @@ const InstrumentCalibrationPanel = () => {
             if (found) newRow.equipmentDbId = String(found.id);
           }
 
-          // Convert DD/MM/YYYY → YYYY-MM-DD for DatePickers
           Object.keys(newRow).forEach((k) => {
             if (k === "calibrationNextDueDate" || k === "calibrationDoneDate") {
               if (newRow[k]) {
@@ -498,24 +431,16 @@ const InstrumentCalibrationPanel = () => {
           return newRow;
         });
 
-        if (isInitial && !hasInitialDetailLoadedRef.current) {
-          hasInitialDetailLoadedRef.current = true;
-          savedRowsCountRef.current = normalizedRows.length;
-        }
-
         setCalibrationRows(normalizedRows);
-        tryAutoPopulateOnInitial();
       } catch (error) {
         console.error("Failed to fetch detail:", error);
         toast.error(error?.response?.data?.message || "Failed to load record.");
-        if (isInitial) hasInitialDetailLoadedRef.current = true;
-        tryAutoPopulateOnInitial();
       } finally {
         setIsLoading(false);
         isFetchingRef.current = false;
       }
     },
-    [recordId, form, tryAutoPopulateOnInitial]
+    [recordId, form]
   );
 
   useEffect(() => { fetchCalibrationDetail(true); }, [fetchCalibrationDetail]);
@@ -643,7 +568,6 @@ const InstrumentCalibrationPanel = () => {
       const processData = buildProcessData(mergedValues, systemFields);
       const gridData = buildGridPayload(calibrationRows);
 
-      // ✅ Resolve department name from selection
       const selectedDeptObj = departments.find(
         (d) => String(d.id || d.department_id || d.dept_id) === String(mergedValues.selectedDeptId)
       );
@@ -843,14 +767,8 @@ const InstrumentCalibrationPanel = () => {
                   { label: "Master Instrument", value: "Master Instrument" },
                   { label: "Field Instrument", value: "Field Instrument" },
                   { label: "Spare Instrument", value: "Spare Instrument" },
-                  { label: "Equipment Master", value: "Equipment Master" },
+                  // ✅ "Equipment Master" removed
                 ]}
-                onChange={() => {
-                  // ✅ user changed → clear rows & auto-populate on next load
-                  userChangedDropdownRef.current = true;
-                  savedRowsCountRef.current = 0;
-                  setCalibrationRows([]);
-                }}
               />
             </Form.Item>
 
@@ -876,11 +794,6 @@ const InstrumentCalibrationPanel = () => {
                 optionFilterProp="label"
                 allowClear={false}
                 disabled={!isGeneralEditable}
-                onChange={() => {
-                  userChangedDropdownRef.current = true;
-                  savedRowsCountRef.current = 0;
-                  setCalibrationRows([]);
-                }}
               />
             </Form.Item>
           </div>
@@ -892,8 +805,9 @@ const InstrumentCalibrationPanel = () => {
               onChange={setCalibrationRows}
               recordId={recordId}
               disabled={!isGeneralEditable}
-              showAddButton={false}
-              // ✅ NEW: pass equipment data
+              // ✅ Enabled — user must click "Add Row" manually
+              showAddButton={isGeneralEditable}
+              // ✅ Equipment options flow into the Equipment Name dropdown
               equipmentOptions={equipmentOptions}
               equipmentMap={equipmentMap}
               equipmentLoading={equipmentLoading}

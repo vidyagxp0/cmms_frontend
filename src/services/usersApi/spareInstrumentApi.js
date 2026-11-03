@@ -21,3 +21,9 @@ export const getSpareInstrumentAuditRecord = (id, params = {}) => {
 export const getAllPermissionsSpareInstrument = (recordId) => {
     return api.post(`/user/spare-instrument-record-permission/${recordId}`);
 };
+
+export const getSpareInstrumentReport = (id) => {
+    return api.get(`/user/spare-instrument-singleReport/${id}`, {
+        responseType: "blob",
+    });
+};

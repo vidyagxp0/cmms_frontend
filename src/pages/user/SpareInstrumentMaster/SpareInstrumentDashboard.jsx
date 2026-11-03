@@ -12,6 +12,7 @@ import {
 import DataTable from "../../../components/common/DataTable/DataTable";
 import { useAuthStore } from "../../../store/authStore";
 import { getAllSpareInstrumentRecords } from "../../../services/usersApi/dashboardAllApi";
+import { getSpareInstrumentReport } from "../../../services/usersApi/spareInstrumentApi";
 
 /* ───────────────────────── Report window templates ───────────────────────── */
 
@@ -197,7 +198,7 @@ const SpareInstrumentDashboard = () => {
             reportWindow.document.write(REPORT_LOADER_HTML);
             reportWindow.document.close();
 
-            const response = await getInstrumentReport(instrumentId);
+            const response = await getSpareInstrumentReport(instrumentId);
             const blob = new Blob([response.data], { type: "application/pdf" });
             const pdfUrl = window.URL.createObjectURL(blob);
 

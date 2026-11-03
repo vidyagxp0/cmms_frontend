@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Trash2, Table2 } from "lucide-react";
+import { Plus, Trash2, Table2, Loader2 } from "lucide-react";
 import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -67,9 +67,6 @@ const extractFrequencyTokens = (raw) => {
 export const getRowBiggestFrequency = (row) => {
   const codes = [];
   
-  // Note: Since data is now just dates, frequency calculation from strings 
-  // won't yield much unless you add a frequency dropdown.
-  // This is kept as a fallback to ensure the child button doesn't break.
   if (row?.weeklyPreventive && typeof row.weeklyPreventive === "object") {
     Object.values(row.weeklyPreventive).forEach((weeks) => {
       if (!Array.isArray(weeks)) return;
@@ -91,7 +88,6 @@ export const getRowBiggestFrequency = (row) => {
 };
 
 /* -------------------- Weekly/Flat data helpers -------------------- */
-// Updated to return flat keys so the parent's auto-populate logic works
 export const createEmptyWeeklyData = () => {
   const data = {};
   MONTHS.forEach(({ key }) => {
@@ -211,7 +207,7 @@ const PreventiveGrid = ({
 
       if (equipment) {
         row.equipmentDbId = String(equipment.id);
-        row.equipmentInstrumentName = equipment.instrument_name || "";
+        row.equipmentInstrumentName = equipment.equipment_name || equipment.instrument_name || "";
         row.equipmentInstrumentId =
           equipment.instrument_id_no || equipment.equipment_id || "";
         row.location = equipment.location || "";
@@ -252,12 +248,20 @@ const PreventiveGrid = ({
 
     const fieldValue = row[key] ?? "";
     const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
-    const isDisabled = disabled || columnDisabled;
+    
+    // Check if the specific column was populated from the API
+    const isRowFromApi = row.isFromApi === true;
+    const apiColumns = ["equipmentInstrumentName", "equipmentInstrumentId", "location"];
+    const isApiColumn = apiColumns.includes(key);
+    
+    // Disable ONLY the API columns if the row is from the API
+    const isDisabled = disabled || columnDisabled || (isRowFromApi && isApiColumn);
 
+    // Updated disabled styling for visibility
     const commonProps = {
       disabled: isDisabled,
       className:
-        "!w-full !rounded-none !border-transparent !bg-transparent !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!shadow-none disabled:!cursor-not-allowed disabled:!bg-transparent disabled:!text-[#65746E]",
+        "!w-full !rounded-none !border-transparent !bg-transparent !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!shadow-none disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]",
     };
 
     if (type === "select") {
@@ -282,7 +286,7 @@ const PreventiveGrid = ({
             filterOption={(input, option) =>
               (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
             }
-            className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1]"
+            className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1] disabled:[&_.ant-select-selector]:!bg-[#F9FAF9] disabled:[&_.ant-select-selection-item]:!text-[#263B35]"
           />
         );
       }
@@ -305,21 +309,22 @@ const PreventiveGrid = ({
         value={fieldValue}
         placeholder={placeholder}
         onChange={(e) => handleChange(e.target.value)}
-        className="!h-8 !w-full !rounded-none !border-transparent !bg-transparent !px-2 !text-[11px] !font-medium !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1]"
+        className="!h-8 !w-full !rounded-none !border-transparent !bg-transparent !px-2 !text-[11px] !font-medium !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
       />
     );
   };
 
   const renderDateField = (row, key, rowIndex) => {
     const val = row[key];
+
     return (
       <DatePicker
         value={val ? dayjs(val) : null}
         onChange={(date) => updateRow(rowIndex, key, date ? date.format("YYYY-MM-DD") : "")}
         format="DD/MM/YYYY"
         variant="borderless"
-        className="!h-8 !w-full !px-1 !text-[10px] !font-medium !text-[#263B35] hover:bg-[#F3F6F4] cursor-pointer"
-        disabled={disabled}
+        className="!h-8 !w-full !px-1 !text-[10px] !font-medium !text-[#263B35] hover:bg-[#F3F6F4] cursor-pointer disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
+        disabled={disabled} // <--- Dates remain enabled for API rows
         placeholder="DD/MM/YYYY"
       />
     );
@@ -328,7 +333,6 @@ const PreventiveGrid = ({
   const visibleColumns = mainColumns.filter((column) => column.hidden !== true);
   const showChildColumn = typeof onViewChild === "function";
   
-  // 1 (SR) + cols + 1 (Cal Dates) + 12 (Months) + 1 (Remark) + 1 (Child) + 1 (Action)
   const emptyColSpan = 1 + visibleColumns.length + 1 + MONTHS.length + 1 + (showChildColumn ? 1 : 0) + 1;
 
   /* -------------------- Render -------------------- */
@@ -338,17 +342,26 @@ const PreventiveGrid = ({
       <div className="flex min-h-[68px] items-center justify-between gap-5 border-b border-[#D7E0DC] bg-[#F7F9F8] px-5">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#D5E0DF] bg-white text-[#4E7585] shadow-[0_2px_7px_rgba(38,53,46,0.05)]">
-            <Table2 size={17} strokeWidth={1.8} />
+            {equipmentLoading ? (
+              <Loader2 size={17} strokeWidth={1.8} className="animate-spin" />
+            ) : (
+              <Table2 size={17} strokeWidth={1.8} />
+            )}
           </div>
           <div className="min-w-0">
             <h3 className="truncate text-[14px] font-bold tracking-[-0.01em] text-[#263B35]">
               {name}
             </h3>
-            {description && (
+            {equipmentLoading ? (
+              <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-[#4E7585]">
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#4E7585]" />
+                Loading instruments…
+              </p>
+            ) : description ? (
               <p className="mt-0.5 truncate text-[11px] font-medium text-[#899690]">
                 {description}
               </p>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -357,7 +370,7 @@ const PreventiveGrid = ({
             type="button"
             onClick={addRow}
             disabled={
-              disabled || (maxRows !== undefined && rows.length >= maxRows)
+              disabled || equipmentLoading || (maxRows !== undefined && rows.length >= maxRows)
             }
             className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[#2B5577] px-3.5 text-[11px] font-semibold text-white shadow-[0_4px_12px_rgba(43,85,119,0.20)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-[#234766] hover:shadow-[0_7px_16px_rgba(43,85,119,0.25)] active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
           >
@@ -419,7 +432,57 @@ const PreventiveGrid = ({
           </thead>
 
           <tbody>
-            {rows.length > 0 ? (
+            {equipmentLoading ? (
+              /* ─── SKELETON LOADER ROWS ─── */
+              Array.from({ length: 3 }).map((_, idx) => (
+                <React.Fragment key={`skeleton-${idx}`}>
+                  {/* Skeleton Planned Row */}
+                  <tr className="bg-white">
+                    <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+                      <div className="mx-auto h-4 w-5 animate-pulse rounded bg-[#E5EBE8]" />
+                    </td>
+                    {visibleColumns.map((column) => (
+                      <td key={column.key} className="border border-[#D5DFDB] px-2 py-2 align-middle">
+                        <div
+                          className="h-4 animate-pulse rounded bg-[#E5EBE8]"
+                          style={{ width: `${55 + ((idx * 13) % 45)}%` }}
+                        />
+                      </td>
+                    ))}
+                    <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+                      <div className="mx-auto h-4 w-10 animate-pulse rounded bg-[#E5EBE8]" />
+                    </td>
+                    {MONTHS.map((month) => (
+                      <td key={`${month.key}_skel_p`} className="border border-[#D5DFDB] px-1 py-2 align-middle">
+                        <div className="h-6 w-full animate-pulse rounded bg-[#E5EBE8]" />
+                      </td>
+                    ))}
+                    <td className="border border-[#D5DFDB] px-2 py-2 align-middle">
+                      <div className="h-6 w-full animate-pulse rounded bg-[#E5EBE8]" />
+                    </td>
+                    {showChildColumn && (
+                      <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+                        <div className="mx-auto h-7 w-12 animate-pulse rounded bg-[#E5EBE8]" />
+                      </td>
+                    )}
+                    <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+                      <div className="mx-auto h-4 w-4 animate-pulse rounded bg-[#E5EBE8]" />
+                    </td>
+                  </tr>
+                  {/* Skeleton Executed Row */}
+                  <tr className="bg-white">
+                    <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+                      <div className="mx-auto h-4 w-8 animate-pulse rounded bg-[#E5EBE8]" />
+                    </td>
+                    {MONTHS.map((month) => (
+                      <td key={`${month.key}_skel_e`} className="border border-[#D5DFDB] px-1 py-2 align-middle">
+                        <div className="h-6 w-full animate-pulse rounded bg-[#E5EBE8]" />
+                      </td>
+                    ))}
+                  </tr>
+                </React.Fragment>
+              ))
+            ) : rows.length > 0 ? (
               rows.map((row, rowIndex) => (
                 <React.Fragment key={rowIndex}>
                   {/* Spacer between logical rows */}
@@ -460,8 +523,8 @@ const PreventiveGrid = ({
                         value={row.remark ?? ""}
                         onChange={(e) => updateRemark(rowIndex, e.target.value)}
                         rows={2}
-                        className="!h-full !min-h-[64px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1]"
-                        disabled={disabled}
+                        className="!h-full !min-h-[64px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
+                        disabled={disabled} // <--- Remarks remain enabled for API rows
                         placeholder="Enter remark"
                       />
                     </td>
@@ -474,7 +537,7 @@ const PreventiveGrid = ({
                             if (!canCreateChild) return;
                             onViewChild(rowIndex, row, getRowBiggestFrequency(row));
                           }}
-                          disabled={!canCreateChild}
+                          disabled={!canCreateChild} // <--- Child button remains enabled based on permissions
                           className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${
                             canCreateChild
                               ? "bg-[#3d606d] hover:bg-[#2B5577] hover:shadow-md active:scale-95"
@@ -491,7 +554,7 @@ const PreventiveGrid = ({
                       <button
                         type="button"
                         onClick={() => handleDeleteRow(rowIndex)}
-                        disabled={disabled || rows.length <= minRows}
+                        disabled={disabled || rows.length <= minRows} // <--- Delete button remains enabled
                         className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
                         aria-label="Delete row"
                       >
@@ -533,9 +596,11 @@ const PreventiveGrid = ({
       {/* Footer */}
       <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">
         <span className="text-[10px] font-medium text-[#899690]">
-          {rows.length} {rows.length === 1 ? "row" : "rows"}
+          {equipmentLoading
+            ? "Fetching instruments…"
+            : `${rows.length} ${rows.length === 1 ? "row" : "rows"}`}
         </span>
-        {maxRows !== undefined && (
+        {maxRows !== undefined && !equipmentLoading && (
           <span className="text-[10px] font-medium text-[#899690]">
             {rows.length} / {maxRows} rows
           </span>

@@ -19,7 +19,6 @@ import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import "../../../components/ui/disabledFields.css";
 
 import { getProfile } from "../../../services/authApi";
-import { getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
 import {
   executePreventiveActivity,
   getPreventiveDetail,
@@ -35,6 +34,7 @@ import {
   getAllPermissions,
   getAllStages,
   getAllDepartments,
+  getAllDepartmentMasters,
 } from "../../../services/usersApi/workflowCommonApi";
 import PreventiveGrid, {
   getRowBiggestFrequency,
@@ -43,6 +43,12 @@ import PreventiveGrid, {
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 dayjs.extend(customParseFormat);
+
+const MONTHS = [
+  { key: "jan" }, { key: "feb" }, { key: "mar" }, { key: "apr" },
+  { key: "may" }, { key: "jun" }, { key: "jul" }, { key: "aug" },
+  { key: "sep" }, { key: "oct" }, { key: "nov" }, { key: "dec" },
+];
 
 const TABS = [
   { id: "general", label: "General Information", stageId: 7 },
@@ -76,37 +82,42 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
   return rows.map((row, index) => {
     const rowData = { row_id: index + 1 };
     Object.keys(row).forEach((key) => {
-      if (
-        key === "monthlyPreventive" ||
-        key === "preventiveFrequencyStartDate"
-      ) {
-        rowData[key] = row[key];
-        return;
-      }
+      if (key === "isFromApi" || key === "weeklyPreventive") return;
+      
       let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
       if (key === "previousPreventiveDate" && value)
         value = dayjs(value).format("DD/MM/YYYY");
       else if (key === "nextPreventiveDate" && value)
         value = dayjs(value).format("DD/MM/YYYY");
+      
       if (key === "equipmentInstrumentName" && value && equipmentMap[value])
-        value = equipmentMap[value]?.instrument_name || equipmentMap[value]?.name || value;
+        value = equipmentMap[value]?.equipment_name || equipmentMap[value]?.instrument_name || equipmentMap[value]?.name || value;
+        
       rowData[key] = { key, label: key, value };
     });
     return rowData;
   });
 };
 
-const buildRowFromEquipment = (item = {}) => ({
-  equipmentDbId:
-    item.id !== undefined && item.id !== null ? String(item.id) : "",
-  equipmentInstrumentName: item.instrument_name || item.name || "",
-  equipmentInstrumentId: item.instrument_id_no || item.equipment_id || "",
-  location: item.location || "",
-  make: item.make || "",
-  model: item.sr_no_model_no || item.model || "",
-  weeklyPreventive: createEmptyWeeklyData(),
-  remark: "",
-});
+const buildRowFromEquipment = (item = {}) => {
+  const newRow = {
+    equipmentDbId: item.id !== undefined && item.id !== null ? String(item.id) : "",
+    equipmentInstrumentName: item.equipment_name || item.instrument_name || item.name || "",
+    equipmentInstrumentId: item.instrument_id_no || item.equipment_id || "",
+    location: item.location || "",
+    make: item.make || "",
+    model: item.sr_no_model_no || item.model || "",
+    remark: "",
+    isFromApi: true,
+  };
+
+  MONTHS.forEach((m) => {
+    newRow[`${m.key}_planned`] = "";
+    newRow[`${m.key}_executed`] = "";
+  });
+
+  return newRow;
+};
 
 const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({
@@ -114,7 +125,6 @@ const buildProcessData = (values, systemFields) => [
     label: field.label,
     value: values?.[field.name] || field.value || "",
   })),
-  // ADDED: master_department field object
   {
     key: "master_department",
     label: "Select Department",
@@ -226,6 +236,13 @@ const PreventivePlannerPanel = () => {
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
+  // NEW: Track when user manually changes a dropdown
+  const userChangedDropdownRef = useRef(false);
+
+  // Watch the dropdowns to trigger dynamic API fetch
+  const instrumentTypeWatch = Form.useWatch("instrumentType", form);
+  const selectedDeptIdWatch = Form.useWatch("selectedDeptId", form);
+
   // Auto-populate refs
   const equipmentDataRef = useRef([]);                 
   const hasInitialDetailLoadedRef = useRef(false);     
@@ -301,16 +318,52 @@ const PreventivePlannerPanel = () => {
     fetchDepartments();
   }, []);
 
+  // Dynamic API Fetch based on Instrument Type & Department
   useEffect(() => {
+    let isCurrent = true;
+
     const fetchEquipment = async () => {
+      setEquipmentOptions([]);
+      setEquipmentMap({});
+      equipmentMapRef.current = {};
+
+      if (!instrumentTypeWatch || !selectedDeptIdWatch) {
+        equipmentDataRef.current = [];
+        hasInitialEquipmentLoadedRef.current = true;
+        setPreventiveRows([]);
+        setEquipmentLoading(false);
+        return;
+      }
+
+      const typeMap = {
+        "Master Instrument": "instrument_masters",
+        "Field Instrument": "field_instrument_master",
+        "Spare Instrument": "spare_instrument_master",
+        "Equipment Master": "equipment_master",
+      };
+
+      const apiType = typeMap[instrumentTypeWatch];
+
+      if (!apiType) {
+        equipmentDataRef.current = [];
+        hasInitialEquipmentLoadedRef.current = true;
+        setPreventiveRows([]);
+        setEquipmentLoading(false);
+        return;
+      }
+
       try {
         setEquipmentLoading(true);
-        const response = await getAllEquipmentData();
+        const response = await getAllDepartmentMasters(selectedDeptIdWatch, apiType);
+        
+        if (!isCurrent) return;
+
         const data = response?.data?.data || [];
 
+        // Prioritize equipment_name in the dropdown label
         const options = data.map((item) => ({
           value: String(item.id),
-          label: item.instrument_name || "",
+          label: item.equipment_name || item.instrument_name || item.name || "",
         }));
 
         const map = {};
@@ -324,19 +377,35 @@ const PreventivePlannerPanel = () => {
 
         equipmentDataRef.current = data;
         hasInitialEquipmentLoadedRef.current = true;
-        tryAutoPopulateOnInitial();
+
+        // FIX: Only populate rows when:
+        // 1. User explicitly changed a dropdown (userChangedDropdownRef = true), OR
+        // 2. This is the initial load with no saved rows (tryAutoPopulateOnInitial handles it)
+        if (userChangedDropdownRef.current) {
+          setPreventiveRows(data.map(buildRowFromEquipment));
+          userChangedDropdownRef.current = false;
+        } else {
+          tryAutoPopulateOnInitial();
+        }
       } catch (error) {
+        if (!isCurrent) return;
         console.error("Failed to fetch equipment:", error);
         toast.error("Could not load equipment list.");
         hasInitialEquipmentLoadedRef.current = true;
         tryAutoPopulateOnInitial();
       } finally {
-        setEquipmentLoading(false);
+        if (isCurrent) {
+          setEquipmentLoading(false);
+        }
       }
     };
+
     fetchEquipment();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [instrumentTypeWatch, selectedDeptIdWatch, tryAutoPopulateOnInitial]);
 
   const fetchPreventiveDetail = useCallback(
     async (isInitial = false) => {
@@ -349,18 +418,33 @@ const PreventivePlannerPanel = () => {
       try {
         if (isInitial) setIsLoading(true);
         const response = await getPreventiveDetail(recordId);
-        const responseData = response?.data?.data;
-        if (!responseData) {
+        
+        // Handle both possible API shapes
+        let responseData = response?.data?.data;
+        let gridRecords = [];
+        let processData = [];
+
+        if (Array.isArray(responseData)) {
+          // API returned an array (grid records directly)
+          gridRecords = responseData;
+          processData = [];
+        } else if (responseData) {
+          // Standard object shape
+          processData = responseData?.process_data || [];
+          gridRecords = responseData?.grid_records || [];
+        } else {
           toast.error("Preventive Planner record not found.");
           return;
         }
-        setProcessId(responseData?.process_id || null);
-        const backendStageId =
-          responseData?.stage?.id || responseData?.stage_id || null;
-        setActiveStageId(backendStageId);
-        setProcessName(responseData?.process?.name || "");
 
-        const processData = responseData?.process_data || [];
+        if (!Array.isArray(responseData)) {
+          setProcessId(responseData?.process_id || null);
+          const backendStageId =
+            responseData?.stage?.id || responseData?.stage_id || null;
+          setActiveStageId(backendStageId);
+          setProcessName(responseData?.process?.name || "");
+        }
+
         const documentNumber = getProcessValue(processData, "documentNumber");
         const documentType = getProcessValue(processData, "documentType");
         const recordNumber = getProcessValue(processData, "recordNumber");
@@ -419,14 +503,14 @@ const PreventivePlannerPanel = () => {
           "cancellation_attachment"
         );
 
+        const firstGridRecord = gridRecords[0] || null;
         const savedHeaderDates =
-          responseData?.grid_records?.[0]?.week_dates_data ||
+          firstGridRecord?.week_dates_data ||
           responseData?.headerWeekDates ||
           getProcessValue(processData, "headerWeekDates") ||
           {};
 
         setHeaderWeekDates(savedHeaderDates);
-
         setSiteLocationCode(locationCode || "");
 
         const backendInitiatorId =
@@ -434,7 +518,6 @@ const PreventivePlannerPanel = () => {
         const backendInitiatorName =
           responseData?.initiator?.name ?? processInitiator ?? "";
 
-        // Leave these exactly as they were for the System Field
         setInitiatorId(backendInitiatorId);
         setInitiator(backendInitiatorName);
         setDepartmentId(responseData?.department?.id || responseData?.department_id || "");
@@ -473,17 +556,13 @@ const PreventivePlannerPanel = () => {
         });
 
         const currentEquipmentMap = equipmentMapRef.current;
-        const gridRows = (responseData?.grid_records || []).flatMap(
-          (record) => record?.grid_data || []
-        );
+        const gridRows = gridRecords.flatMap((record) => record?.grid_data || []);
+        
         const rawRows = gridRows.map((item) => {
           const row = {};
           Object.keys(item).forEach((key) => {
             if (key === "row_id") row.row_id = item.row_id;
-            else if (key === "monthlyPreventive")
-              row.monthlyPreventive = item[key] || {};
-            else if (key === "preventiveFrequencyStartDate")
-              row.preventiveFrequencyStartDate = item[key] || "";
+            else if (key === "weeklyPreventive") return;
             else if (
               item[key] &&
               typeof item[key] === "object" &&
@@ -496,13 +575,13 @@ const PreventivePlannerPanel = () => {
         });
 
         const normalizedRows = rawRows.map((row) => {
-          const newRow = { ...row };
-          newRow.monthlyPreventive =
-            row.monthlyPreventive && typeof row.monthlyPreventive === "object"
-              ? row.monthlyPreventive
-              : {};
-          newRow.preventiveFrequencyStartDate =
-            row.preventiveFrequencyStartDate || "";
+          // FIX: Mark API-loaded rows so their fields stay disabled
+          const newRow = { ...row, isFromApi: true };
+          
+          MONTHS.forEach(({ key }) => {
+            if (newRow[`${key}_planned`] === undefined || newRow[`${key}_planned`] === null) newRow[`${key}_planned`] = "";
+            if (newRow[`${key}_executed`] === undefined || newRow[`${key}_executed`] === null) newRow[`${key}_executed`] = "";
+          });
 
           if (
             newRow.equipmentInstrumentName &&
@@ -511,13 +590,14 @@ const PreventivePlannerPanel = () => {
           ) {
             const found = Object.values(currentEquipmentMap).find(
               (eq) =>
+                eq.equipment_name === newRow.equipmentInstrumentName ||
                 eq.instrument_name === newRow.equipmentInstrumentName ||
                 eq.name === newRow.equipmentInstrumentName ||
                 String(eq.id) === String(newRow.equipmentInstrumentName)
             );
             if (found) {
               newRow.equipmentInstrumentName =
-                found.instrument_name ?? found.name ?? newRow.equipmentInstrumentName;
+                found.equipment_name ?? found.instrument_name ?? found.name ?? newRow.equipmentInstrumentName;
               newRow.equipmentDbId = found.id || newRow.equipmentDbId || "";
             }
           } else if (currentEquipmentMap[newRow.equipmentInstrumentName]) {
@@ -673,34 +753,13 @@ const PreventivePlannerPanel = () => {
     if (matchingTab) setActiveTab(matchingTab.id);
   }, [activeStageId]);
 
-  // Kept exactly the same as it was originally
   const systemFields = [
-    {
-      name: "documentNumber",
-      label: "Document Number",
-      value: "SMLJ/ENG/SOP-GEN/OO3/T01-01",
-    },
-    {
-      name: "documentType",
-      label: "Document Type",
-      value: "Formats",
-    },
-    {
-      name: "recordNumber",
-      label: "Record Number",
-      value: form.getFieldValue("recordNumber") || "",
-    },
+    { name: "documentNumber", label: "Document Number", value: "SMLJ/ENG/SOP-GEN/OO3/T01-01" },
+    { name: "documentType", label: "Document Type", value: "Formats" },
+    { name: "recordNumber", label: "Record Number", value: form.getFieldValue("recordNumber") || "" },
     { name: "initiator", label: "Initiator", value: initiator },
-    {
-      name: "dateOfInitiation",
-      label: "Date of Initiation",
-      value: dateOfInitiation,
-    },
-    {
-      name: "initiationDepartment",
-      label: "Initiation Department",
-      value: initiationDepartment,
-    },
+    { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
+    { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
 
   const handleViewChild = (rowIndex, rowData, biggestFrequency) => {
@@ -748,12 +807,10 @@ const PreventivePlannerPanel = () => {
       return false;
     }
     try {
-      // NEW: Validate Ant Design fields to catch required fields like shortDescription
       const validatedValues = await form.validateFields();
       const saved = await handleSubmit(validatedValues);
       return saved === true;
     } catch (error) {
-      // NEW: Extract the AntD validation error and show it as a toast
       const firstError = error?.errorFields?.[0]?.errors?.[0];
       if (firstError) {
         toast.error(firstError);
@@ -779,7 +836,6 @@ const PreventivePlannerPanel = () => {
       const processData = buildProcessData(mergedValues, systemFields);
       const gridData = buildGridPayload(preventiveRows, equipmentMap);
 
-      // Resolve the name for the root payload based on the new dropdown
       const selectedDeptObj = departments.find(
         (d) => String(d.id || d.department_id || d.dept_id) === String(mergedValues.selectedDeptId)
       );
@@ -788,7 +844,6 @@ const PreventivePlannerPanel = () => {
       const payload = {
         process_id: Number(processId),
         stage_id: Number(activeStageId),
-        // Assuming you still need department_id/name at the root based on earlier req
         department_id: mergedValues.selectedDeptId ? Number(mergedValues.selectedDeptId) : null,
         department_name: selectedDeptName,
         initiator_id: Number(initiatorId),
@@ -926,8 +981,6 @@ const PreventivePlannerPanel = () => {
         <section style={{ display: activeTab === "general" ? "block" : "none" }}>
           <SectionHeader title="GENERAL INFORMATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            
-            {/* System Fields - Intiation Department remains untouched here */}
             {systemFields.map((field) => (
               <Form.Item
                 key={field.name}
@@ -941,19 +994,13 @@ const PreventivePlannerPanel = () => {
 
             <Form.Item
               name="shortDescription"
-               label={
+              label={
                 <span className="inline-flex items-center">
-                Short Description
-                <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
-              </span>
+                  Short Description
+                  <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
+                </span>
               }
-              rules={[
-                {
-                  required: true,
-                  whitespace: true,
-                  message: "Please enter Short Description",
-                },
-              ]}
+              rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
               className="!mb-4"
             >
               <FormInput
@@ -962,7 +1009,6 @@ const PreventivePlannerPanel = () => {
               />
             </Form.Item>
 
-            {/* NEW INSTRUMENT TYPE DROPDOWN */}
             <Form.Item
               name="instrumentType"
               label={
@@ -977,16 +1023,22 @@ const PreventivePlannerPanel = () => {
               <Select
                 placeholder="Select Instrument Type"
                 disabled={!isGeneralEditable}
+                allowClear
                 options={[
                   { label: "Master Instrument", value: "Master Instrument" },
                   { label: "Field Instrument", value: "Field Instrument" },
                   { label: "Spare Instrument", value: "Spare Instrument" },
                   { label: "Equipment Master", value: "Equipment Master" },
                 ]}
+                onChange={() => {
+                  // NEW: Mark as user-initiated change so rows get repopulated
+                  userChangedDropdownRef.current = true;
+                  savedRowsCountRef.current = 0;
+                  setPreventiveRows([]);
+                }}
               />
             </Form.Item>
 
-            {/* NEW SEPARATE SELECT DEPARTMENT DROPDOWN */}
             <Form.Item
               name="selectedDeptId"
               label={
@@ -995,12 +1047,7 @@ const PreventivePlannerPanel = () => {
                   <RequiredAsterisk message="Department is required to proceed. Please select a department." />
                 </span>
               }
-              rules={[
-                {
-                  required: true,
-                  message: "Please select a department",
-                },
-              ]}
+              rules={[{ required: true, message: "Please select a department" }]}
               className="!mb-4"
             >
               <Select
@@ -1018,9 +1065,13 @@ const PreventivePlannerPanel = () => {
                 optionFilterProp="label"
                 allowClear={false}
                 disabled={!isGeneralEditable}
+                onChange={() => {
+                  userChangedDropdownRef.current = true;
+                  savedRowsCountRef.current = 0;
+                  setPreventiveRows([]);
+                }}
               />
             </Form.Item>
-
           </div>
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="PREVENTIVE PLANNER INFORMATION" />
@@ -1033,18 +1084,14 @@ const PreventivePlannerPanel = () => {
               equipmentLoading={equipmentLoading}
               recordId={recordId}
               disabled={!isGeneralEditable}
-              showAddButton={true}
+              showAddButton={false}
               canCreateChild={canCreateChild}
               onViewChild={handleViewChild}
               weekDates={headerWeekDates}
               onWeekDatesChange={setHeaderWeekDates}
             />
           </div>
-          <Form.Item
-            name="comments"
-            label="Comments"
-            className="!mb-4 md:col-span-2"
-          >
+          <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
             <FormTextArea
               rows={5}
               placeholder="Enter comments..."
@@ -1074,19 +1121,15 @@ const PreventivePlannerPanel = () => {
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
               name="hodReviewComments"
-               label={
-              <span className="inline-flex items-center">
-                Comments
-                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
-              </span>
-            }
+              label={
+                <span className="inline-flex items-center">
+                  Comments
+                  <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+                </span>
+              }
               className="!mb-4 md:col-span-2"
             >
-              <FormTextArea
-                rows={5}
-                placeholder="Enter comments..."
-                disabled={!isHodEditable}
-              />
+              <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isHodEditable} />
             </Form.Item>
             <Form.Item
               name="hodReviewAttachment"
@@ -1107,26 +1150,20 @@ const PreventivePlannerPanel = () => {
         </section>
 
         {/* QA Review */}
-        <section
-          style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}
-        >
+        <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
           <SectionHeader title="QA REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
               name="userDeptReviewComments"
-               label={
-              <span className="inline-flex items-center">
-                Comments
-                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
-              </span>
-            }
+              label={
+                <span className="inline-flex items-center">
+                  Comments
+                  <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+                </span>
+              }
               className="!mb-4 md:col-span-2"
             >
-              <FormTextArea
-                rows={5}
-                placeholder="Enter comments..."
-                disabled={!isUserDeptEditable}
-              />
+              <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isUserDeptEditable} />
             </Form.Item>
             <Form.Item
               name="userDeptReviewAttachment"
@@ -1152,19 +1189,15 @@ const PreventivePlannerPanel = () => {
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
               name="qaReviewComments"
-               label={
-              <span className="inline-flex items-center">
-                Comments
-                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
-              </span>
-            }
+              label={
+                <span className="inline-flex items-center">
+                  Comments
+                  <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+                </span>
+              }
               className="!mb-4 md:col-span-2"
             >
-              <FormTextArea
-                rows={5}
-                placeholder="Enter comments..."
-                disabled={!isQaReviewEditable}
-              />
+              <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isQaReviewEditable} />
             </Form.Item>
             <Form.Item
               name="qaReviewAttachment"
@@ -1185,20 +1218,11 @@ const PreventivePlannerPanel = () => {
         </section>
 
         {/* Cancellation */}
-        <section
-          style={{ display: activeTab === "cancellation" ? "block" : "none" }}
-        >
+        <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
           <SectionHeader title="CANCELLATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item
-              name="cancellationRemark"
-              label="Remark"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormTextArea
-                rows={5}
-                placeholder="Enter cancellation remark..."
-              />
+            <Form.Item name="cancellationRemark" label="Remark" className="!mb-4 md:col-span-2">
+              <FormTextArea rows={5} placeholder="Enter cancellation remark..." />
             </Form.Item>
             <Form.Item
               name="cancellationAttachment"
@@ -1230,47 +1254,28 @@ const PreventivePlannerPanel = () => {
               </div>
             ) : (
               activityLogs.map((log) => (
-                <div
-                  key={log.id}
-                  className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
-                >
+                <div key={log.id} className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]">
                   <div className="mb-5">
-                    <p className="text-[13px] font-semibold text-[#3E4A5C]">
-                      Activity Name
-                    </p>
-                    <p className="mt-1 text-[14px] font-semibold text-[#182234]">
-                      {log.activity_name || "—"}
-                    </p>
+                    <p className="text-[13px] font-semibold text-[#3E4A5C]">Activity Name</p>
+                    <p className="mt-1 text-[14px] font-semibold text-[#182234]">{log.activity_name || "—"}</p>
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div>
-                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
-                        Performed By
-                      </p>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Performed By</p>
                       <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                        <span className="text-[14px] text-[#526071]">
-                          {log.performed_by || "—"}
-                        </span>
+                        <span className="text-[14px] text-[#526071]">{log.performed_by || "—"}</span>
                       </div>
                     </div>
                     <div>
-                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
-                        Date Performed
-                      </p>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Date Performed</p>
                       <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
-                        <span className="text-[14px] text-[#526071]">
-                          {log.performed_at || "—"}
-                        </span>
+                        <span className="text-[14px] text-[#526071]">{log.performed_at || "—"}</span>
                       </div>
                     </div>
                     <div>
-                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">
-                        Comments
-                      </p>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Comments</p>
                       <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
-                        <p className="break-words text-[14px] leading-5 text-[#526071]">
-                          {log.comment || "—"}
-                        </p>
+                        <p className="break-words text-[14px] leading-5 text-[#526071]">{log.comment || "—"}</p>
                       </div>
                     </div>
                   </div>

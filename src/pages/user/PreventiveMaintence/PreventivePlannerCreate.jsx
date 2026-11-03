@@ -79,7 +79,7 @@ const buildPreventivePlannerProcessData = (values, systemFields) => [
   {
     key: "instrumentType",
     label: "Instrument Type",
-    value: values?.instrumentType || "",
+    value: values?.instrumentType || null,
   },
   { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
   { key: "comment", label: "Comments", value: values?.comments || "" },
@@ -200,6 +200,9 @@ const PreventivePlannerCreate = () => {
           );
         }
 
+        // 1. Force clear any preserved state for these fields
+        form.resetFields(["instrumentType", "selectedDeptId"]);
+
         form.setFieldsValue({
           documentNumber: "SMLJ/ENG/SOP-GEN/OO3/T01-01",
           documentType: "Formats",
@@ -207,7 +210,10 @@ const PreventivePlannerCreate = () => {
           initiationDepartment: departmentName,
           dateOfInitiation,
           recordNumber: generatedRecordNumber,
-          instrumentType: "Master Instrument", // Default value
+          
+          // 2. Explicitly set to undefined to show placeholders
+          instrumentType: undefined, 
+          selectedDeptId: undefined,
         });
 
         if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
@@ -460,7 +466,7 @@ const PreventivePlannerCreate = () => {
                   <FormInput placeholder="Enter short description" />
                 </Form.Item>
 
-                {/* NEW FIELDS - DISABLED ON CREATE */}
+                {/* FIELDS - DISABLED ON CREATE */}
                 <Form.Item
                   name="instrumentType"
                   label="Select Instrument Type"
@@ -509,8 +515,8 @@ const PreventivePlannerCreate = () => {
                 equipmentMap={equipmentMap}
                 equipmentLoading={equipmentLoading}
                 showAddButton={false}
-                weekDates={headerWeekDates}           // NEW
-                onWeekDatesChange={setHeaderWeekDates} // NEW
+                weekDates={headerWeekDates}
+                onWeekDatesChange={setHeaderWeekDates}
               />
 
               <Form.Item

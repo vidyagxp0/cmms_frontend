@@ -59,9 +59,9 @@ const TABS = [
   { id: "cancellation", label: "Cancellation", stageId: 12 },
 ];
 
+// ✅ instrumentType removed
 const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
-  { name: "instrumentType", label: "Instrument Type" },
   { name: "selectedDeptId", label: "Select Department" },
 ];
 
@@ -83,16 +83,16 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
     const rowData = { row_id: index + 1 };
     Object.keys(row).forEach((key) => {
       if (key === "isFromApi" || key === "weeklyPreventive") return;
-      
+
       let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
       if (key === "previousPreventiveDate" && value)
         value = dayjs(value).format("DD/MM/YYYY");
       else if (key === "nextPreventiveDate" && value)
         value = dayjs(value).format("DD/MM/YYYY");
-      
+
       if (key === "equipmentInstrumentName" && value && equipmentMap[value])
         value = equipmentMap[value]?.equipment_name || equipmentMap[value]?.instrument_name || equipmentMap[value]?.name || value;
-        
+
       rowData[key] = { key, label: key, value };
     });
     return rowData;
@@ -119,6 +119,7 @@ const buildRowFromEquipment = (item = {}) => {
   return newRow;
 };
 
+// ✅ instrumentType removed from process_data
 const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({
     key: field.name,
@@ -129,11 +130,6 @@ const buildProcessData = (values, systemFields) => [
     key: "master_department",
     label: "Select Department",
     value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
-  },
-  {
-    key: "instrumentType",
-    label: "Instrument Type",
-    value: values?.instrumentType || "",
   },
   {
     key: "short_description",
@@ -230,7 +226,9 @@ const PreventivePlannerPanel = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
   const isFetchingRef = useRef(false);
-  const requiredValuesRef = useRef({ shortDescription: "", selectedDeptId: "", instrumentType: "" });
+
+  // ✅ instrumentType removed
+  const requiredValuesRef = useRef({ shortDescription: "", selectedDeptId: "" });
 
   // New Department States for Dropdown
   const [departments, setDepartments] = useState([]);
@@ -239,16 +237,15 @@ const PreventivePlannerPanel = () => {
   // NEW: Track when user manually changes a dropdown
   const userChangedDropdownRef = useRef(false);
 
-  // Watch the dropdowns to trigger dynamic API fetch
-  const instrumentTypeWatch = Form.useWatch("instrumentType", form);
+  // ✅ Only watch department now
   const selectedDeptIdWatch = Form.useWatch("selectedDeptId", form);
 
   // Auto-populate refs
-  const equipmentDataRef = useRef([]);                 
-  const hasInitialDetailLoadedRef = useRef(false);     
-  const hasInitialEquipmentLoadedRef = useRef(false);  
-  const savedRowsCountRef = useRef(0);                 
-  const autoPopulateDoneRef = useRef(false);           
+  const equipmentDataRef = useRef([]);
+  const hasInitialDetailLoadedRef = useRef(false);
+  const hasInitialEquipmentLoadedRef = useRef(false);
+  const savedRowsCountRef = useRef(0);
+  const autoPopulateDoneRef = useRef(false);
 
   const canCreateChild =
     Number(activeStageId) === 11 &&
@@ -318,7 +315,7 @@ const PreventivePlannerPanel = () => {
     fetchDepartments();
   }, []);
 
-  // Dynamic API Fetch based on Instrument Type & Department
+  // ✅ Dynamic API fetch — ONLY based on Department (always "equipment_master")
   useEffect(() => {
     let isCurrent = true;
 
@@ -327,7 +324,7 @@ const PreventivePlannerPanel = () => {
       setEquipmentMap({});
       equipmentMapRef.current = {};
 
-      if (!instrumentTypeWatch || !selectedDeptIdWatch) {
+      if (!selectedDeptIdWatch) {
         equipmentDataRef.current = [];
         hasInitialEquipmentLoadedRef.current = true;
         setPreventiveRows([]);
@@ -335,32 +332,17 @@ const PreventivePlannerPanel = () => {
         return;
       }
 
-      const typeMap = {
-        "Master Instrument": "instrument_masters",
-        "Field Instrument": "field_instrument_master",
-        "Spare Instrument": "spare_instrument_master",
-        "Equipment Master": "equipment_master",
-      };
-
-      const apiType = typeMap[instrumentTypeWatch];
-
-      if (!apiType) {
-        equipmentDataRef.current = [];
-        hasInitialEquipmentLoadedRef.current = true;
-        setPreventiveRows([]);
-        setEquipmentLoading(false);
-        return;
-      }
+      // ✅ Always use "equipment_master" — instrument type is no longer a field
+      const apiType = "equipment_master";
 
       try {
         setEquipmentLoading(true);
         const response = await getAllDepartmentMasters(selectedDeptIdWatch, apiType);
-        
+
         if (!isCurrent) return;
 
         const data = response?.data?.data || [];
 
-        // Prioritize equipment_name in the dropdown label
         const options = data.map((item) => ({
           value: String(item.id),
           label: item.equipment_name || item.instrument_name || item.name || "",
@@ -378,9 +360,6 @@ const PreventivePlannerPanel = () => {
         equipmentDataRef.current = data;
         hasInitialEquipmentLoadedRef.current = true;
 
-        // FIX: Only populate rows when:
-        // 1. User explicitly changed a dropdown (userChangedDropdownRef = true), OR
-        // 2. This is the initial load with no saved rows (tryAutoPopulateOnInitial handles it)
         if (userChangedDropdownRef.current) {
           setPreventiveRows(data.map(buildRowFromEquipment));
           userChangedDropdownRef.current = false;
@@ -405,7 +384,7 @@ const PreventivePlannerPanel = () => {
     return () => {
       isCurrent = false;
     };
-  }, [instrumentTypeWatch, selectedDeptIdWatch, tryAutoPopulateOnInitial]);
+  }, [selectedDeptIdWatch, tryAutoPopulateOnInitial]);
 
   const fetchPreventiveDetail = useCallback(
     async (isInitial = false) => {
@@ -418,18 +397,15 @@ const PreventivePlannerPanel = () => {
       try {
         if (isInitial) setIsLoading(true);
         const response = await getPreventiveDetail(recordId);
-        
-        // Handle both possible API shapes
+
         let responseData = response?.data?.data;
         let gridRecords = [];
         let processData = [];
 
         if (Array.isArray(responseData)) {
-          // API returned an array (grid records directly)
           gridRecords = responseData;
           processData = [];
         } else if (responseData) {
-          // Standard object shape
           processData = responseData?.process_data || [];
           gridRecords = responseData?.grid_records || [];
         } else {
@@ -450,58 +426,22 @@ const PreventivePlannerPanel = () => {
         const recordNumber = getProcessValue(processData, "recordNumber");
         const locationCode = getProcessValue(processData, "siteLocationCode");
         const processInitiator = getProcessValue(processData, "initiator");
-        const processDateOfInitiation = getProcessValue(
-          processData,
-          "dateOfInitiation"
-        );
+        const processDateOfInitiation = getProcessValue(processData, "dateOfInitiation");
         const dueDate = getProcessValue(processData, "dueDate");
-        const processDepartment = getProcessValue(
-          processData,
-          "initiationDepartment"
-        );
-        const masterDepartmentId = getProcessValue(
-          processData,
-          "master_department"
-        );
-        const instrumentType = getProcessValue(processData, "instrumentType");
-        const shortDescription = getProcessValue(
-          processData,
-          "short_description"
-        );
+        const processDepartment = getProcessValue(processData, "initiationDepartment");
+        const masterDepartmentId = getProcessValue(processData, "master_department");
+        // ✅ instrumentType removed
+        const shortDescription = getProcessValue(processData, "short_description");
         const comments = getProcessValue(processData, "comment");
         const attachment = getProcessValue(processData, "attachment");
-        const hodReviewComments = getProcessValue(
-          processData,
-          "hod_review_comments"
-        );
-        const hodReviewAttachment = getProcessValue(
-          processData,
-          "hod_review_attachment"
-        );
-        const userDeptReviewComments = getProcessValue(
-          processData,
-          "user_dept_review_comments"
-        );
-        const userDeptReviewAttachment = getProcessValue(
-          processData,
-          "user_dept_review_attachment"
-        );
-        const qaReviewComments = getProcessValue(
-          processData,
-          "qa_review_comments"
-        );
-        const qaReviewAttachment = getProcessValue(
-          processData,
-          "qa_review_attachment"
-        );
-        const cancellationRemark = getProcessValue(
-          processData,
-          "cancellation_remark"
-        );
-        const cancellationAttachment = getProcessValue(
-          processData,
-          "cancellation_attachment"
-        );
+        const hodReviewComments = getProcessValue(processData, "hod_review_comments");
+        const hodReviewAttachment = getProcessValue(processData, "hod_review_attachment");
+        const userDeptReviewComments = getProcessValue(processData, "user_dept_review_comments");
+        const userDeptReviewAttachment = getProcessValue(processData, "user_dept_review_attachment");
+        const qaReviewComments = getProcessValue(processData, "qa_review_comments");
+        const qaReviewAttachment = getProcessValue(processData, "qa_review_attachment");
+        const cancellationRemark = getProcessValue(processData, "cancellation_remark");
+        const cancellationAttachment = getProcessValue(processData, "cancellation_attachment");
 
         const firstGridRecord = gridRecords[0] || null;
         const savedHeaderDates =
@@ -524,12 +464,13 @@ const PreventivePlannerPanel = () => {
         setInitiationDepartment(responseData?.department?.name || processDepartment || "");
         setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
 
+        // ✅ instrumentType removed
         requiredValuesRef.current = {
           shortDescription: shortDescription || "",
           selectedDeptId: masterDepartmentId || null,
-          instrumentType: instrumentType || "",
         };
 
+        // ✅ instrumentType removed
         form.setFieldsValue({
           documentNumber: documentNumber || "SMLJ/ENG/SOP-GEN/OO3/T01-01",
           documentType: documentType || "Formats",
@@ -541,7 +482,6 @@ const PreventivePlannerPanel = () => {
           dueDate,
           initiationDepartment: responseData?.department?.name || processDepartment || "",
           selectedDeptId: masterDepartmentId || null,
-          instrumentType: instrumentType || null,
           shortDescription,
           comments,
           attachment: attachment || [],
@@ -557,7 +497,7 @@ const PreventivePlannerPanel = () => {
 
         const currentEquipmentMap = equipmentMapRef.current;
         const gridRows = gridRecords.flatMap((record) => record?.grid_data || []);
-        
+
         const rawRows = gridRows.map((item) => {
           const row = {};
           Object.keys(item).forEach((key) => {
@@ -575,9 +515,8 @@ const PreventivePlannerPanel = () => {
         });
 
         const normalizedRows = rawRows.map((row) => {
-          // FIX: Mark API-loaded rows so their fields stay disabled
           const newRow = { ...row, isFromApi: true };
-          
+
           MONTHS.forEach(({ key }) => {
             if (newRow[`${key}_planned`] === undefined || newRow[`${key}_planned`] === null) newRow[`${key}_planned`] = "";
             if (newRow[`${key}_executed`] === undefined || newRow[`${key}_executed`] === null) newRow[`${key}_executed`] = "";
@@ -1009,35 +948,7 @@ const PreventivePlannerPanel = () => {
               />
             </Form.Item>
 
-            <Form.Item
-              name="instrumentType"
-              label={
-                <span className="inline-flex items-center">
-                  Select Instrument Type
-                  <RequiredAsterisk message="Instrument Type is required. Please select an instrument type to proceed." />
-                </span>
-              }
-              rules={[{ required: true, message: "Please select instrument type" }]}
-              className="!mb-4"
-            >
-              <Select
-                placeholder="Select Instrument Type"
-                disabled={!isGeneralEditable}
-                allowClear
-                options={[
-                  { label: "Master Instrument", value: "Master Instrument" },
-                  { label: "Field Instrument", value: "Field Instrument" },
-                  { label: "Spare Instrument", value: "Spare Instrument" },
-                  { label: "Equipment Master", value: "Equipment Master" },
-                ]}
-                onChange={() => {
-                  // NEW: Mark as user-initiated change so rows get repopulated
-                  userChangedDropdownRef.current = true;
-                  savedRowsCountRef.current = 0;
-                  setPreventiveRows([]);
-                }}
-              />
-            </Form.Item>
+            {/* ✅ Instrument Type field removed */}
 
             <Form.Item
               name="selectedDeptId"

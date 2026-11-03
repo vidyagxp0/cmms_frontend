@@ -40,7 +40,13 @@ const CalibrationGrid = ({
     { key: "operatingrange", title: "Operating Range", type: "text", placeholder: "", minWidth: 160, disabled: true },
     { key: "calibrationTestPoints", title: "Calibration test points", type: "text", placeholder: "", minWidth: 160, disabled: true },
     { key: "category", title: "Category", type: "select", placeholder: "Select", minWidth: 110, options: [{ value: "critical", label: "Critical" }, { value: "non-critical", label: "Non-Critical" }, { value: "indicative", label: "Indicative" }] },
+
+    // ✅ EXISTING — UNTOUCHED
     { key: "plannedDate", title: "Planned date / Calibration Done on", type: "dualDate", minWidth: 320 },
+
+    // ✅ NEW — added right after the existing column
+    { key: "nextPlannedDate", title: "Next Planned date / Next Calibration Done on", type: "dualDateNext", minWidth: 340 },
+
     { key: "remark", title: "Remarks", type: "textarea", placeholder: "Enter remarks", minWidth: 200 },
   ];
 
@@ -55,6 +61,7 @@ const CalibrationGrid = ({
     const newRow = {};
     columns.forEach((column) => { newRow[column.key] = ""; });
     newRow.calibrationDoneDate = "";
+    newRow.nextCalibrationDoneDate = ""; // ✅ NEW
     onChange([...rows, newRow]);
   };
 
@@ -117,6 +124,7 @@ const CalibrationGrid = ({
       }
     }
 
+    // ✅ EXISTING behaviour — untouched
     if (key === "plannedDate") {
       if (
         newValue &&
@@ -124,6 +132,17 @@ const CalibrationGrid = ({
         dayjs(row.calibrationDoneDate).isBefore(dayjs(newValue), "day")
       ) {
         row.calibrationDoneDate = "";
+      }
+    }
+
+    // ✅ NEW — same rule for the new pair
+    if (key === "nextPlannedDate") {
+      if (
+        newValue &&
+        row.nextCalibrationDoneDate &&
+        dayjs(row.nextCalibrationDoneDate).isBefore(dayjs(newValue), "day")
+      ) {
+        row.nextCalibrationDoneDate = "";
       }
     }
 
@@ -158,6 +177,7 @@ const CalibrationGrid = ({
       );
     }
 
+    // ✅ EXISTING — UNTOUCHED
     if (type === "dualDate") {
       const plannedDayjs = row.plannedDate ? dayjs(row.plannedDate) : null;
 
@@ -183,6 +203,37 @@ const CalibrationGrid = ({
               return current && current.isBefore(plannedDayjs, "day");
             }}
             defaultPickerValue={plannedDayjs || undefined}
+          />
+        </div>
+      );
+    }
+
+    // ✅ NEW — new pair renderer
+    if (type === "dualDateNext") {
+      const nextPlannedDayjs = row.nextPlannedDate ? dayjs(row.nextPlannedDate) : null;
+
+      return (
+        <div className="flex flex-row gap-1.5 p-1">
+          <DatePicker
+            value={nextPlannedDayjs}
+            placeholder="Next plan date"
+            onChange={(date) => updateRow(rowIndex, "nextPlannedDate", date ? date.format("YYYY-MM-DD") : "")}
+            format="DD-MM-YYYY"
+            className="!h-8 !w-[150px] !rounded !border-[#D1DBD7] !bg-white !px-2 !text-[10px] !font-medium !text-[#263B35] !shadow-none"
+            disabled={isDisabled}
+          />
+          <DatePicker
+            value={row.nextCalibrationDoneDate ? dayjs(row.nextCalibrationDoneDate) : null}
+            placeholder="Next done on"
+            onChange={(date) => updateRow(rowIndex, "nextCalibrationDoneDate", date ? date.format("YYYY-MM-DD") : "")}
+            format="DD-MM-YYYY"
+            className="!h-8 !w-[150px] !rounded !border-[#D1DBD7] !bg-white !px-2 !text-[10px] !font-medium !text-[#263B35] !shadow-none"
+            disabled={isDisabled}
+            disabledDate={(current) => {
+              if (!nextPlannedDayjs) return false;
+              return current && current.isBefore(nextPlannedDayjs, "day");
+            }}
+            defaultPickerValue={nextPlannedDayjs || undefined}
           />
         </div>
       );
@@ -294,7 +345,6 @@ const CalibrationGrid = ({
           </thead>
           <tbody>
             {equipmentLoading ? (
-              /* ─── SKELETON LOADER ROWS ─── */
               Array.from({ length: 5 }).map((_, idx) => (
                 <tr key={`skeleton-${idx}`} className="bg-white">
                   <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">

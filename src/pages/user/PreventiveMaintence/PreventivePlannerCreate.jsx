@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Activity } from "lucide-react";
-import { Form } from "antd";
+import { Form, Select } from "antd";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -19,7 +19,7 @@ import { formatDate, formatDateTime } from "../../../utils/date";
 
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import { addPreventive } from "../../../services/usersApi/preventive";
-import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
+import { getRecordNumber, getAllDepartments } from "../../../services/usersApi/workflowCommonApi";
 import PreventiveGrid from "./PreventiveGrid";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
@@ -70,6 +70,17 @@ const buildPreventivePlannerProcessData = (values, systemFields) => [
     label: field.label,
     value: values?.[field.name] || "",
   })),
+  // NEW: master_department & instrumentType
+  {
+    key: "master_department",
+    label: "Select Department",
+    value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
+  },
+  {
+    key: "instrumentType",
+    label: "Instrument Type",
+    value: values?.instrumentType || "",
+  },
   { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
   { key: "comment", label: "Comments", value: values?.comments || "" },
   { key: "attachment", label: "Attachment", value: values?.attachment || [] },
@@ -134,6 +145,10 @@ const PreventivePlannerCreate = () => {
   const [recordNumber, setRecordNumber] = useState("");
   const [dateOfInitiation] = useState(() => formatDateTime(new Date()));
 
+  // New Department States
+  const [departments, setDepartments] = useState([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
+
   const [form] = Form.useForm();
   const location = useLocation();
   const navigate = useNavigate();
@@ -146,12 +161,14 @@ const PreventivePlannerCreate = () => {
     const loadInitialData = async () => {
       setIsLoading(true);
       setEquipmentLoading(true);
+      setDepartmentsLoading(true);
 
       try {
-        const [profileRes, recordNumRes, equipmentRes] = await Promise.allSettled([
+        const [profileRes, recordNumRes, equipmentRes, deptRes] = await Promise.allSettled([
           getProfile(),
           processId ? getRecordNumber(processId) : Promise.resolve(null),
           getAllEquipmentData(),
+          getAllDepartments(),
         ]);
 
         if (!isMounted) return;
@@ -189,8 +206,8 @@ const PreventivePlannerCreate = () => {
           initiator: userName,
           initiationDepartment: departmentName,
           dateOfInitiation,
-          // siteLocationCode: "Unit IV",
           recordNumber: generatedRecordNumber,
+          instrumentType: "Master Instrument", // Default value
         });
 
         if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
@@ -208,12 +225,19 @@ const PreventivePlannerCreate = () => {
           console.error("Failed to fetch equipment:", equipmentRes.reason);
           toast.error("Could not load equipment list.");
         }
+
+        if (deptRes.status === "fulfilled" && deptRes.value?.data?.data) {
+          setDepartments(deptRes.value.data.data || []);
+        } else if (deptRes.status === "rejected") {
+          console.error("Failed to fetch departments:", deptRes.reason);
+        }
       } catch (error) {
         console.error("Error loading initial data:", error);
       } finally {
         if (isMounted) {
           setIsLoading(false);
           setEquipmentLoading(false);
+          setDepartmentsLoading(false);
         }
       }
     };
@@ -237,7 +261,6 @@ const PreventivePlannerCreate = () => {
         value: "Formats",
     },
     { name: "recordNumber", label: "Record Number", value: recordNumber },
-    // { name: "siteLocationCode", label: "Site / Location Code", value: "Unit IV" },
     { name: "initiator", label: "Initiator", value: initiator },
     { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
     {
@@ -364,15 +387,6 @@ const PreventivePlannerCreate = () => {
         </div>
 
         <div className="flex items-center gap-8 border-l border-slate-200 pl-6">
-          {/* <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">
-              Site
-            </p>
-            <p className="text-sm font-semibold text-[#344A43]">
-              {siteName || "Unit IV"}
-            </p>
-          </div> */}
-
           <div className="h-9 w-px bg-slate-200" />
 
           <div>
@@ -399,6 +413,12 @@ const PreventivePlannerCreate = () => {
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
+        onFinishFailed={({ errorFields }) => {
+          if (errorFields && errorFields.length > 0) {
+            const firstError = errorFields[0]?.errors?.[0];
+            if (firstError) toast.error(firstError);
+          }
+        }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
         {activeTab === "general" && (
@@ -438,6 +458,43 @@ const PreventivePlannerCreate = () => {
                   className="!mb-4"
                 >
                   <FormInput placeholder="Enter short description" />
+                </Form.Item>
+
+                {/* NEW FIELDS - DISABLED ON CREATE */}
+                <Form.Item
+                  name="instrumentType"
+                  label="Select Instrument Type"
+                  className="!mb-4"
+                >
+                  <Select
+                    placeholder="Select Instrument Type"
+                    disabled
+                    options={[
+                      { label: "Master Instrument", value: "Master Instrument" },
+                      { label: "Field Instrument", value: "Field Instrument" },
+                      { label: "Spare Instrument", value: "Spare Instrument" },
+                      { label: "Equipment Master", value: "Equipment Master" },
+                    ]}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  name="selectedDeptId"
+                  label="Select Department"
+                  className="!mb-4"
+                >
+                  <Select
+                    placeholder="Select a department"
+                    loading={departmentsLoading}
+                    options={departments.map((dept) => ({
+                      label: dept.name || "Unnamed Department",
+                      value: dept.id,
+                    }))}
+                    showSearch
+                    optionFilterProp="label"
+                    allowClear={false}
+                    disabled
+                  />
                 </Form.Item>
               </div>
             )}

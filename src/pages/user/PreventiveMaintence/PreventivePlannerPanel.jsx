@@ -55,6 +55,7 @@ const TABS = [
 
 const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
+  { name: "instrumentType", label: "Instrument Type" },
   { name: "selectedDeptId", label: "Select Department" },
 ];
 
@@ -113,11 +114,16 @@ const buildProcessData = (values, systemFields) => [
     label: field.label,
     value: values?.[field.name] || field.value || "",
   })),
-  // ADDED: New master_department field object
+  // ADDED: master_department field object
   {
     key: "master_department",
     label: "Select Department",
     value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
+  },
+  {
+    key: "instrumentType",
+    label: "Instrument Type",
+    value: values?.instrumentType || "",
   },
   {
     key: "short_description",
@@ -214,7 +220,7 @@ const PreventivePlannerPanel = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
   const isFetchingRef = useRef(false);
-  const requiredValuesRef = useRef({ shortDescription: "", selectedDeptId: "" });
+  const requiredValuesRef = useRef({ shortDescription: "", selectedDeptId: "", instrumentType: "" });
 
   // New Department States for Dropdown
   const [departments, setDepartments] = useState([]);
@@ -373,6 +379,7 @@ const PreventivePlannerPanel = () => {
           processData,
           "master_department"
         );
+        const instrumentType = getProcessValue(processData, "instrumentType");
         const shortDescription = getProcessValue(
           processData,
           "short_description"
@@ -437,6 +444,7 @@ const PreventivePlannerPanel = () => {
         requiredValuesRef.current = {
           shortDescription: shortDescription || "",
           selectedDeptId: masterDepartmentId || null,
+          instrumentType: instrumentType || "",
         };
 
         form.setFieldsValue({
@@ -449,7 +457,8 @@ const PreventivePlannerPanel = () => {
             processDateOfInitiation || responseData?.initiation_date || "",
           dueDate,
           initiationDepartment: responseData?.department?.name || processDepartment || "",
-          selectedDeptId: masterDepartmentId || null, // Set the new master dropdown
+          selectedDeptId: masterDepartmentId || null,
+          instrumentType: instrumentType || null,
           shortDescription,
           comments,
           attachment: attachment || [],
@@ -950,6 +959,30 @@ const PreventivePlannerPanel = () => {
               <FormInput
                 placeholder="Enter short description"
                 disabled={!isGeneralEditable}
+              />
+            </Form.Item>
+
+            {/* NEW INSTRUMENT TYPE DROPDOWN */}
+            <Form.Item
+              name="instrumentType"
+              label={
+                <span className="inline-flex items-center">
+                  Select Instrument Type
+                  <RequiredAsterisk message="Instrument Type is required. Please select an instrument type to proceed." />
+                </span>
+              }
+              rules={[{ required: true, message: "Please select instrument type" }]}
+              className="!mb-4"
+            >
+              <Select
+                placeholder="Select Instrument Type"
+                disabled={!isGeneralEditable}
+                options={[
+                  { label: "Master Instrument", value: "Master Instrument" },
+                  { label: "Field Instrument", value: "Field Instrument" },
+                  { label: "Spare Instrument", value: "Spare Instrument" },
+                  { label: "Equipment Master", value: "Equipment Master" },
+                ]}
               />
             </Form.Item>
 

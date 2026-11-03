@@ -76,14 +76,12 @@ export default function EquipmentImportPanel({
   const navigate = useNavigate();
 
   /* ───────── Department Logic ───────── */
-  const isEquipmentMaster = masterKey === "equipment_master";
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
   const [selectedDeptId, setSelectedDeptId] = useState(undefined);
 
+  // Fetch departments for ALL masters now
   useEffect(() => {
-    if (!isEquipmentMaster) return;
-
     let isMounted = true;
     const fetchDepartments = async () => {
       setDepartmentsLoading(true);
@@ -103,7 +101,7 @@ export default function EquipmentImportPanel({
     return () => {
       isMounted = false;
     };
-  }, [isEquipmentMaster]);
+  }, []);
 
   const departmentOptions = departments.map((dept, idx) => ({
     label:
@@ -152,6 +150,12 @@ export default function EquipmentImportPanel({
 
     setError("");
     setServerResult(null);
+
+    // Check if department is selected (safety check)
+    if (!selectedDeptId) {
+      toast.error("Please select a department first.");
+      return false;
+    }
 
     if (!actualFile) {
       setError("Please select an Excel file.");
@@ -248,7 +252,8 @@ export default function EquipmentImportPanel({
       return;
     }
 
-    if (isEquipmentMaster && !selectedDeptId) {
+    // Validate department for ALL masters
+    if (!selectedDeptId) {
       toast.error("Please select a department.");
       return;
     }
@@ -265,22 +270,20 @@ export default function EquipmentImportPanel({
       formData.append("euipmentMasterType", masterKey);
       formData.append("file", file, file.name);
 
-      // Append department_id and department_name only for Equipment Master
-      if (isEquipmentMaster) {
-        const selectedDept = departments.find(
-          (d) =>
-            String(d.id || d.department_id || d.dept_id) ===
-            String(selectedDeptId)
-        );
-        const deptName =
-          selectedDept?.name ||
-          selectedDept?.department_name ||
-          selectedDept?.dept_name ||
-          "";
+      // Append department_id and department_name for ALL masters
+      const selectedDept = departments.find(
+        (d) =>
+          String(d.id || d.department_id || d.dept_id) ===
+          String(selectedDeptId)
+      );
+      const deptName =
+        selectedDept?.name ||
+        selectedDept?.department_name ||
+        selectedDept?.dept_name ||
+        "";
 
-        formData.append("department_id", selectedDeptId);
-        formData.append("department_name", deptName);
-      }
+      formData.append("department_id", selectedDeptId);
+      formData.append("department_name", deptName);
 
       const response = await api.post(
         "/user/instrment-excel-import",
@@ -340,7 +343,8 @@ export default function EquipmentImportPanel({
     maxCount: 1,
     showUploadList: false,
     beforeUpload,
-    disabled: importing,
+    // Disable if importing OR if no department is selected
+    disabled: importing || !selectedDeptId, 
   };
 
   // Derived display values (presentation only)
@@ -389,50 +393,59 @@ export default function EquipmentImportPanel({
           </span>
         </div>
 
-        {/* ─────────────── DEPARTMENT DROPDOWN ─────────────── */}
-        {isEquipmentMaster && (
-          <div className="mb-5">
-            <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-              Select Department <span className="text-red-500">*</span>
-            </label>
-            <Select
-              className="w-full"
-              placeholder="Select a department"
-              loading={departmentsLoading}
-              value={selectedDeptId}
-              onChange={(val) => setSelectedDeptId(val)}
-              options={departmentOptions}
-              showSearch
-              optionFilterProp="label"
-              allowClear={false}
-              disabled={importing}
-            />
-          </div>
-        )}
+        {/* ─────────────── DEPARTMENT DROPDOWN (FOR ALL MASTERS) ─────────────── */}
+        <div className="mb-5">
+          <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+            Select Department <span className="text-red-500">*</span>
+          </label>
+          <Select
+            className="w-full"
+            placeholder="Select a department"
+            loading={departmentsLoading}
+            value={selectedDeptId}
+            onChange={(val) => setSelectedDeptId(val)}
+            options={departmentOptions}
+            showSearch
+            optionFilterProp="label"
+            allowClear={false}
+            disabled={importing}
+          />
+        </div>
         {/* ─────────────────────────────────────────────────── */}
 
         {!file ? (
-          <Dragger {...uploadProps} className="equipment-import-dragger">
-            <div className="px-2 py-10">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
-                <CloudUploadOutlined className="text-3xl text-blue-600" />
-              </div>
+          <Tooltip
+            title={!selectedDeptId ? "Please select department first" : ""}
+          >
+            <div className={!selectedDeptId ? "cursor-not-allowed" : ""}>
+              <Dragger
+                {...uploadProps}
+                className={`equipment-import-dragger ${
+                  !selectedDeptId ? "opacity-60" : ""
+                }`}
+              >
+                <div className="px-2 py-10">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
+                    <CloudUploadOutlined className="text-3xl text-blue-600" />
+                  </div>
 
-              <p className="mt-4 text-sm font-semibold text-gray-900">
-                Click or drag your Excel file here
-              </p>
+                  <p className="mt-4 text-sm font-semibold text-gray-900">
+                    Click or drag your Excel file here
+                  </p>
 
-              <p className="mt-1 text-xs text-gray-500">
-                Supports .xlsx and .xls · Maximum size 50 MB
-              </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Supports .xlsx and .xls · Maximum size 50 MB
+                  </p>
 
-              <div className="mt-5">
-                <span className="inline-block rounded-md bg-blue-600 px-5 py-2 text-xs font-medium text-white shadow-sm">
-                  Browse Excel File
-                </span>
-              </div>
+                  <div className="mt-5">
+                    <span className="inline-block rounded-md bg-blue-600 px-5 py-2 text-xs font-medium text-white shadow-sm">
+                      Browse Excel File
+                    </span>
+                  </div>
+                </div>
+              </Dragger>
             </div>
-          </Dragger>
+          </Tooltip>
         ) : (
           <div className="space-y-4">
             {/* Selected file card */}
@@ -544,7 +557,7 @@ export default function EquipmentImportPanel({
               <Button
                 type="primary"
                 icon={<UploadOutlined />}
-                disabled={importing || (isEquipmentMaster && !selectedDeptId)}
+                disabled={importing || !selectedDeptId}
                 loading={importing}
                 onClick={() => setConfirmOpen(true)}
               >
@@ -585,7 +598,7 @@ export default function EquipmentImportPanel({
         cancelText="Cancel"
         confirmLoading={importing}
         okButtonProps={{
-          disabled: !file || importing || (isEquipmentMaster && !selectedDeptId),
+          disabled: !file || importing || !selectedDeptId,
         }}
         cancelButtonProps={{ disabled: importing }}
         destroyOnClose

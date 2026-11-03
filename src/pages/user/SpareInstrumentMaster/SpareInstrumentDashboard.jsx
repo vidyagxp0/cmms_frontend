@@ -5,10 +5,10 @@ import { Eye, Wrench, ArrowUpRight, Search, Filter } from "lucide-react";
 import { Input, Select, Button } from "antd";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
-// import CreateEquipmentModal from "./CreateEquipmentModal";
 import {
     getInstrumentReport,
 } from "../../../services/usersApi/equipmentApi";
+import { getAllDepartments } from "../../../services/usersApi/workflowCommonApi"; // ✅ NEW
 import DataTable from "../../../components/common/DataTable/DataTable";
 import { useAuthStore } from "../../../store/authStore";
 import { getAllSpareInstrumentRecords } from "../../../services/usersApi/dashboardAllApi";
@@ -86,7 +86,6 @@ const CATEGORY_OPTIONS = [
     { label: "Indicative",   value: "indicative"   },
 ];
 
-// 🔥 STATIC STAGES ADDED HERE
 const STAGE_OPTIONS = [
     { label: "Opened",             value: "Opened" },
     { label: "HOD Review",         value: "HOD Review" },
@@ -126,11 +125,33 @@ const SpareInstrumentDashboard = () => {
     const [categoryFilter, setCategoryFilter]   = useState("");
     const [statusFilter, setStatusFilter]       = useState("");
 
+    // ✅ NEW: Department filter state
+    const [departments, setDepartments] = useState([]);
+    const [departmentsLoading, setDepartmentsLoading] = useState(false);
+    const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
+
     // Debounce search
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 400);
         return () => clearTimeout(t);
     }, [searchTerm]);
+
+    // ✅ NEW: Fetch all departments on mount
+    useEffect(() => {
+        const fetchDepartments = async () => {
+            setDepartmentsLoading(true);
+            try {
+                const response = await getAllDepartments();
+                const data = response?.data?.data ?? [];
+                setDepartments(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error("Failed to fetch departments:", error);
+            } finally {
+                setDepartmentsLoading(false);
+            }
+        };
+        fetchDepartments();
+    }, []);
 
     // ================================================================
     // FETCH EQUIPMENT
@@ -140,9 +161,10 @@ const SpareInstrumentDashboard = () => {
             setLoading(true);
 
             const params = { page, per_page: perPage };
-            if (filters.search)   params.search   = filters.search;
-            if (filters.category) params.category = filters.category;
-            if (filters.status)   params.status   = filters.status;
+            if (filters.search)     params.search        = filters.search;
+            if (filters.category)   params.category      = filters.category;
+            if (filters.status)     params.status        = filters.status;
+            if (filters.department) params.department_id = filters.department; // ✅ NEW
 
             const response = await getAllSpareInstrumentRecords(params);
 
@@ -171,15 +193,16 @@ const SpareInstrumentDashboard = () => {
         }
     }, []);
 
-    // Trigger fetch on filters change
+    // ✅ Trigger fetch on filters change (now includes department)
     useEffect(() => {
         fetchEquipment(1, pagination.perPage, {
-            search:   debouncedSearch,
-            category: categoryFilter,
-            status:   statusFilter,
+            search:     debouncedSearch,
+            category:   categoryFilter,
+            status:     statusFilter,
+            department: selectedDepartmentId,
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedSearch, categoryFilter, statusFilter, fetchEquipment]);
+    }, [debouncedSearch, categoryFilter, statusFilter, selectedDepartmentId, fetchEquipment]);
 
     // ================================================================
     // VIEW REPORT
@@ -354,11 +377,18 @@ const SpareInstrumentDashboard = () => {
         [navigate, handleViewReport]
     );
 
-    const hasActiveFilters = Boolean(searchTerm) || Boolean(categoryFilter) || Boolean(statusFilter);
+    // ✅ Include department in active filters check
+    const hasActiveFilters =
+        Boolean(searchTerm) ||
+        Boolean(categoryFilter) ||
+        Boolean(statusFilter) ||
+        Boolean(selectedDepartmentId);
+
     const clearFilters = () => {
         setSearchTerm("");
         setCategoryFilter("");
         setStatusFilter("");
+        setSelectedDepartmentId(""); // ✅ NEW
     };
 
     return (
@@ -376,10 +406,64 @@ const SpareInstrumentDashboard = () => {
             {/* MAIN CONTENT */}
             <main className="min-h-0 flex-1 overflow-hidden px-0 pb-0 pt-[58px]">
                 <section className="flex h-full min-h-0 flex-col overflow-hidden bg-transparent">
-                    
-                    {/* ───────────── SIDE-BY-SIDE COMPACT FILTER BAR ───────────── */}
+
+                    {/* ───────────── ✅ NEW: DEPARTMENT TABS (pill chips) ───────────── */}
+                    <div className="shrink-0 border-b border-gray-100 bg-white px-4 py-2.5 overflow-x-auto">
+                        <div className="flex items-center gap-2 min-w-max">
+                            <span className="mr-1 shrink-0 text-[10px] font-bold uppercase tracking-[0.08em] text-[#8A9992]">
+                                Department
+                            </span>
+
+                            {/* ALL chip */}
+                            <button
+                                type="button"
+                                onClick={() => setSelectedDepartmentId("")}
+                                className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition-all duration-150 ${
+                                    !selectedDepartmentId
+                                        ? "bg-[#2B5577] text-white shadow-[0_2px_6px_rgba(43,85,119,0.25)]"
+                                        : "border border-[#D5E0DB] bg-[#F1F5F3] text-[#56766D] hover:border-[#B7CAC2] hover:bg-[#E5EEEA]"
+                                }`}
+                            >
+                                All
+                            </button>
+
+                            {/* Department chips */}
+                            {departmentsLoading ? (
+                                <span className="text-[11px] font-medium text-[#8A9691]">Loading departments…</span>
+                            ) : departments.length === 0 ? (
+                                <span className="text-[11px] font-medium text-[#8A9691]">No departments</span>
+                            ) : (
+                                departments.map((dept) => {
+                                    const deptId = String(dept.id || dept.department_id || dept.dept_id || "");
+                                    const deptName =
+                                        dept.name ||
+                                        dept.department_name ||
+                                        dept.dept_name ||
+                                        "Unnamed Department";
+                                    const isActive = selectedDepartmentId === deptId;
+                                    return (
+                                        <button
+                                            key={deptId || deptName}
+                                            type="button"
+                                            onClick={() => setSelectedDepartmentId(deptId)}
+                                            title={deptName}
+                                            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold transition-all duration-150 ${
+                                                isActive
+                                                    ? "bg-[#2B5577] text-white shadow-[0_2px_6px_rgba(43,85,119,0.25)]"
+                                                    : "border border-[#D5E0DB] bg-[#F1F5F3] text-[#56766D] hover:border-[#B7CAC2] hover:bg-[#E5EEEA]"
+                                            }`}
+                                        >
+                                            {deptName}
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+
+                    {/* ───────────── EXISTING COMPACT FILTER BAR ───────────── */}
                     <div className="flex shrink-0 flex-nowrap items-center gap-2 px-4 py-3 border-b border-gray-100 bg-[#FAFBFA] overflow-x-auto">
-                        
+
                         {/* Search Input - Strict Fixed Width */}
                         <Input
                             size="small"
@@ -397,18 +481,6 @@ const SpareInstrumentDashboard = () => {
                                 fontSize: "12px",
                             }}
                         />
-
-                        {/* Category Select - Very Small Width */}
-                        {/* <Select
-                            size="middle"
-                            placeholder="Category"
-                            value={categoryFilter || undefined}
-                            onChange={(val) => setCategoryFilter(val || "")}
-                            options={CATEGORY_OPTIONS}
-                            allowClear
-                            className="w-32 text-sm font-medium shadow-sm"
-                            popupClassName="rounded-lg"
-                        /> */}
 
                         {/* Status Select - Static STAGE_OPTIONS */}
                         <Select
@@ -441,21 +513,18 @@ const SpareInstrumentDashboard = () => {
                             data={equipment}
                             columns={columns}
                             loading={loading}
-                            
-                            /* Removes the gap & internal toolbar */
+
                             toolbar={false}
                             searchable={false}
-                            
-                            /* Makes the table completely flat and stretches to edges */
+
                             className="!rounded-none !border-0 !shadow-none !h-full"
-                            
+
                             pagination
                             pageSize={pagination.perPage}
                             pageSizeOptions={[10, 20, 50]}
                             sortable
                             hoverable
-                            
-                            /* Backend pagination */
+
                             manualPagination
                             pageCount={pagination.lastPage}
                             totalRows={pagination.total}
@@ -464,9 +533,10 @@ const SpareInstrumentDashboard = () => {
                                 const nextPage = pageSizeChanged ? 1 : pageIndex + 1;
 
                                 fetchEquipment(nextPage, pageSize, {
-                                    search:   debouncedSearch,
-                                    category: categoryFilter,
-                                    status:   statusFilter,
+                                    search:     debouncedSearch,
+                                    category:   categoryFilter,
+                                    status:     statusFilter,
+                                    department: selectedDepartmentId, // ✅ NEW
                                 });
                             }}
                             emptyTitle="No Spare Instrument Master Found"
@@ -475,12 +545,6 @@ const SpareInstrumentDashboard = () => {
                     </div>
                 </section>
             </main>
-
-            {/* <CreateEquipmentModal
-                open={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onSuccess={fetchEquipment}
-            /> */}
         </div>
     );
 };

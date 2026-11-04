@@ -4,16 +4,18 @@ import { Input, Select, Button, DatePicker } from "antd";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 
-import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
 import DataTable from "../../../components/common/DataTable/DataTable";
 
 import {
+    getAddendumChildSingleReport,
     getAllRecords,
     getCalibrationSingleReport,
 } from "../../../services/usersApi/calibrationApi";
 
 import { useAuthStore } from "../../../store/authStore";
 import { getAllInstrumentCalibrationData, getInstrumentCalibrationReport } from "../../../services/usersApi/instrumentCalibration";
+import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
+import { getAllAddendumCalibrationChildRecords, } from "../../../services/usersApi/dashboardAllApi";
 
 const { RangePicker } = DatePicker;
 
@@ -74,7 +76,7 @@ const AddendumCalibrationChildDashboard = () => {
             if (filters.start_date) params.start_date = filters.start_date;
             if (filters.end_date)   params.end_date   = filters.end_date;
 
-            const response = await getAllInstrumentCalibrationData(params);
+            const response = await getAllAddendumCalibrationChildRecords(params);
 
             const paginationData = response?.data?.data;
             const recordsData = paginationData?.data || [];
@@ -88,7 +90,7 @@ const AddendumCalibrationChildDashboard = () => {
                 total: paginationData?.total || 0,
             });
         } catch (error) {
-            console.error("Failed to fetch instrument calibration records:", error);
+            console.error("Failed to fetch addendum calibration child records:", error);
             setRecords([]);
             setPagination({
                 currentPage: 1,
@@ -163,7 +165,7 @@ const AddendumCalibrationChildDashboard = () => {
 
             reportWindow.document.close();
 
-            const response = await getInstrumentCalibrationReport(recordId);
+            const response = await getAddendumChildSingleReport(recordId);
 
             const blob = new Blob([response.data], { type: "application/pdf" });
             const pdfUrl = window.URL.createObjectURL(blob);
@@ -238,7 +240,7 @@ const AddendumCalibrationChildDashboard = () => {
                     const record = row.original;
                     const handleClick = () => {
                         if (!record?.id) return;
-                        navigate(`/user/field-instrument-calibration-addendum-panel/${record.id}`);
+                        navigate(`/user/addendum-calibration-management-panel/${record.id}`);
                     };
 
                     return (
@@ -400,7 +402,7 @@ const AddendumCalibrationChildDashboard = () => {
                 navigationRoute="/user/create-record"
                 sourceRoute="/user/field-instrument-calibration-addendum-dashboard"
                 sourceType="instrument-calibration"
-                showCreateButton={showCreateButton}
+                showCreateButton={false}
             />
 
             {/* MAIN CONTENT */}

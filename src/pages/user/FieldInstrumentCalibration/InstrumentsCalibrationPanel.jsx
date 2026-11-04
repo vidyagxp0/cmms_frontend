@@ -532,20 +532,21 @@ const InstrumentCalibrationPanel = () => {
   ];
 
   // 👇 NEW — Child navigation (same URL & payload as CalibrationGrid, only childType differs)
-  const handleViewChild = (rowIndex, rowData) => {
-    const shortDesc = form.getFieldValue("shortDescription") || "";
-    const rowId = rowData?.row_id ?? rowIndex + 1;
-    navigate(`/user/calibration-management-create/${5}/${recordId}`, {
-      state: {
-        rowData,
-        shortDescription: shortDesc,
-        processId: 5,
-        parentId: recordId,
-        rowId,
-        childType: "addendum-calibration-management",
-      },
-    });
-  };
+const handleViewChild = (rowIndex, rowData) => {
+  const shortDesc = form.getFieldValue("shortDescription") || "";
+  const rowId = rowData?.row_id ?? rowIndex + 1;
+  navigate(`/user/addendum-calibration-management-create/12`, {
+    state: {
+      rowData,
+      shortDescription: shortDesc,
+      processId: 12,                                   // 👈 addendum child process
+      parentId: recordId,
+      rowId,
+      childType: "addendum-calibration-management",
+      processName: "Addendum Calibration Management",  // 👈 shown on child header
+    },
+  });
+};
 
   const handleSave = async () => {
     if (isSaving || isLoading || usersLoading) return;

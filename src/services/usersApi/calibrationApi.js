@@ -65,3 +65,28 @@ export const getCalibrationChildSingleReport = (id) => {
 export const getCalibrationManagementAudit = (id, params = {}) => {
     return api.get(`/user/calibration-management-audit/${id}`, {params});
 };
+
+
+// Calibration Addendum Child  API
+
+export const getAddendumChildDetail = (id) =>
+    api.get(`/user/show-addendum-calibration-management-record/${id}`);
+
+export const addAddendumChild = (payload) =>
+    api.post("/user/store-addendum-calibration-management-record", payload);
+
+export const updateAddendumChild = (id, payload) =>
+    api.put(`/user/update-addendum-calibration-management-record/${id}`, payload);
+
+export const executeAddendumActivityChild = (id, payload) =>
+    api.post(`/user/addendumCalibrationManagement-record-stage/${id}`, payload);
+
+export const getAddendumChildSingleReport = (id) => {
+    return api.get(`/user/addendum-calibration-management-singleReport/${id}`, {
+        responseType: "blob",
+    });
+};
+
+export const getAddendumManagementAudit = (id, params = {}) => {
+    return api.get(`/user/calibration-management-audit/${id}`, {params});
+};

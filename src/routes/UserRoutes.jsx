@@ -51,7 +51,10 @@ import AddendumPreventivePlannerDashboard from "../pages/user/AddendumPreventive
 import AddendumPreventivePlannerCreate from "../pages/user/AddendumPreventivePlanner/AddendumPreventivePlannerCreate";
 import AddendumPreventivePlannerPanel from "../pages/user/AddendumPreventivePlanner/AddendumPreventivePlannerPanel";
 import AddendumPreventivePlannerAudit from "../pages/user/AddendumPreventivePlanner/AddendumPreventivePlannerAudit";
-import AddendumCalibrationChildDashboard from "../pages/user/AddendumChild/AddendumCalibrationChildDashboard";
+import AddendumCalibrationChildAudit from "../pages/user/AddendumChildCalibration/AddendumCalibrationChildAudit";
+import AddendumCalibrationChildCreate from "../pages/user/AddendumChildCalibration/AddendumCalibrationChildCreate";
+import AddendumCalibrationChildPanel from "../pages/user/AddendumChildCalibration/AddendumCalibrationChildPanel";
+import AddendumCalibrationChildDashboard from "../pages/user/AddendumChildCalibration/AddendumCalibrationChildDashboard";
 
 function UserRoutes() {
   return (
@@ -129,9 +132,13 @@ function UserRoutes() {
         <Route path="addendum-preventive-planner-panel/:recordId" element={<AddendumPreventivePlannerPanel />} /> 
         <Route path="addendum-preventive-planner-audit/:recordId" element={<AddendumPreventivePlannerAudit />} /> 
 
-        {/*  Addendum Calibration  Routes*/}
+        {/*  Addendum Calibration Child Routes*/}
         <Route path="addendum-calibration-management-dashboard" element={<AddendumCalibrationChildDashboard />} />
+        <Route path="addendum-calibration-management-create/:processId" element={<AddendumCalibrationChildCreate />} />
+        <Route path="addendum-calibration-management-panel/:recordId" element={<AddendumCalibrationChildPanel />} /> 
+        <Route path="addendum-calibration-management-audit/:recordId" element={<AddendumCalibrationChildAudit />} /> 
 
+        
         {/* Import Master Equipment Data Routes*/}
         <Route path="import-master-equipment-data" element={<ImportMasterEquipmentData />} />
 

@@ -9,7 +9,6 @@ import {
     getAllEquipment,
     getInstrumentReport,
 } from "../../../services/usersApi/equipmentApi";
-import { getAllDepartments } from "../../../services/usersApi/workflowCommonApi"; // ✅ NEW
 import DataTable from "../../../components/common/DataTable/DataTable";
 import { useAuthStore } from "../../../store/authStore";
 
@@ -130,32 +129,10 @@ const EquipDashboard = () => {
     const [categoryFilter, setCategoryFilter]   = useState("");
     const [statusFilter, setStatusFilter]       = useState("");
 
-    // ✅ NEW: Department filter state
-    const [departments, setDepartments] = useState([]);
-    const [departmentsLoading, setDepartmentsLoading] = useState(false);
-    const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
-
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 400);
         return () => clearTimeout(t);
     }, [searchTerm]);
-
-    // ✅ NEW: Fetch all departments on mount
-    useEffect(() => {
-        const fetchDepartments = async () => {
-            setDepartmentsLoading(true);
-            try {
-                const response = await getAllDepartments();
-                const data = response?.data?.data ?? [];
-                setDepartments(Array.isArray(data) ? data : []);
-            } catch (error) {
-                console.error("Failed to fetch departments:", error);
-            } finally {
-                setDepartmentsLoading(false);
-            }
-        };
-        fetchDepartments();
-    }, []);
 
     // ================================================================
     // FETCH EQUIPMENT
@@ -168,7 +145,6 @@ const EquipDashboard = () => {
             if (filters.search)     params.search     = filters.search;
             if (filters.category)   params.category   = filters.category;
             if (filters.status)     params.status     = filters.status;
-            if (filters.department) params.department_id = filters.department; // ✅ NEW
 
             const response = await getAllEquipment(params);
 
@@ -197,16 +173,15 @@ const EquipDashboard = () => {
         }
     }, []);
 
-    // ✅ Trigger fetch on filters change (now includes department)
+    // Trigger fetch on filters change
     useEffect(() => {
         fetchEquipment(1, pagination.perPage, {
             search:     debouncedSearch,
             category:   categoryFilter,
             status:     statusFilter,
-            department: selectedDepartmentId,
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedSearch, categoryFilter, statusFilter, selectedDepartmentId, fetchEquipment]);
+    }, [debouncedSearch, categoryFilter, statusFilter, fetchEquipment]);
 
     // ================================================================
     // VIEW REPORT
@@ -381,18 +356,16 @@ const EquipDashboard = () => {
         [navigate, handleViewReport]
     );
 
-    // ✅ Include department in active filters check
+    // Active filters check
     const hasActiveFilters =
         Boolean(searchTerm) ||
         Boolean(categoryFilter) ||
-        Boolean(statusFilter) ||
-        Boolean(selectedDepartmentId);
+        Boolean(statusFilter);
 
     const clearFilters = () => {
         setSearchTerm("");
         setCategoryFilter("");
         setStatusFilter("");
-        setSelectedDepartmentId(""); // ✅ NEW
     };
 
     return (
@@ -408,60 +381,6 @@ const EquipDashboard = () => {
 
             <main className="min-h-0 flex-1 overflow-hidden px-0 pb-0 pt-[58px]">
                 <section className="flex h-full min-h-0 flex-col overflow-hidden bg-transparent">
-
-                    {/* ───────────── ✅ NEW: DEPARTMENT TABS (pill chips) ───────────── */}
-                    <div className="shrink-0 border-b border-gray-100 bg-white px-4 py-2.5 overflow-x-auto">
-                        <div className="flex items-center gap-2 min-w-max">
-                            <span className="mr-1 shrink-0 text-[10px] font-bold uppercase tracking-[0.08em] text-[#8A9992]">
-                                Department
-                            </span>
-
-                            {/* ALL chip */}
-                            <button
-                                type="button"
-                                onClick={() => setSelectedDepartmentId("")}
-                                className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition-all duration-150 ${
-                                    !selectedDepartmentId
-                                        ? "bg-[#2B5577] text-white shadow-[0_2px_6px_rgba(43,85,119,0.25)]"
-                                        : "border border-[#D5E0DB] bg-[#F1F5F3] text-[#56766D] hover:border-[#B7CAC2] hover:bg-[#E5EEEA]"
-                                }`}
-                            >
-                                All
-                            </button>
-
-                            {/* Department chips */}
-                            {departmentsLoading ? (
-                                <span className="text-[11px] font-medium text-[#8A9691]">Loading departments…</span>
-                            ) : departments.length === 0 ? (
-                                <span className="text-[11px] font-medium text-[#8A9691]">No departments</span>
-                            ) : (
-                                departments.map((dept) => {
-                                    const deptId = String(dept.id || dept.department_id || dept.dept_id || "");
-                                    const deptName =
-                                        dept.name ||
-                                        dept.department_name ||
-                                        dept.dept_name ||
-                                        "Unnamed Department";
-                                    const isActive = selectedDepartmentId === deptId;
-                                    return (
-                                        <button
-                                            key={deptId || deptName}
-                                            type="button"
-                                            onClick={() => setSelectedDepartmentId(deptId)}
-                                            title={deptName}
-                                            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold transition-all duration-150 ${
-                                                isActive
-                                                    ? "bg-[#2B5577] text-white shadow-[0_2px_6px_rgba(43,85,119,0.25)]"
-                                                    : "border border-[#D5E0DB] bg-[#F1F5F3] text-[#56766D] hover:border-[#B7CAC2] hover:bg-[#E5EEEA]"
-                                            }`}
-                                        >
-                                            {deptName}
-                                        </button>
-                                    );
-                                })
-                            )}
-                        </div>
-                    </div>
 
                     {/* ───────────── EXISTING COMPACT FILTER BAR ───────────── */}
                     <div className="flex shrink-0 flex-nowrap items-center gap-2 px-4 py-3 border-b border-gray-100 bg-[#FAFBFA] overflow-x-auto">
@@ -535,7 +454,6 @@ const EquipDashboard = () => {
                                     search:     debouncedSearch,
                                     category:   categoryFilter,
                                     status:     statusFilter,
-                                    department: selectedDepartmentId, // ✅ NEW
                                 });
                             }}
                             emptyTitle="No instruments found"

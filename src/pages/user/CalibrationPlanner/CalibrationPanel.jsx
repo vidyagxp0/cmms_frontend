@@ -58,7 +58,8 @@ const getProcessValue = (processData = [], key) => {
 
 const buildGridPayload = (rows = [], equipmentMap = {}) => {
   return rows.map((row, index) => {
-    const rowData = { row_id: index + 1 };
+    // const rowData = { row_id: index + 1 };
+    const rowData = { row_id: row.row_id ?? index + 1 };
     Object.keys(row).forEach((key) => {
       if (key === "monthlyCalibration" || key === "calibrationFrequencyStartDate") {
         rowData[key] = row[key];

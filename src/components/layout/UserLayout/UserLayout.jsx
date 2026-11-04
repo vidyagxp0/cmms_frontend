@@ -22,7 +22,8 @@ function UserLayout() {
             location.pathname === "/user/spare-instrument-calibration-master-dashboard" ||
             location.pathname === "/user/import-master-equipment-data" || 
             location.pathname === "/user/equipment-master-dashboard" ||
-            location.pathname === "/user/addendum-preventive-planner-dashboard";
+            location.pathname === "/user/addendum-preventive-planner-dashboard" ||
+            location.pathname === "/user/addendum-calibration-management-dashboard";
 
     return (
         <div

@@ -51,6 +51,7 @@ import AddendumPreventivePlannerDashboard from "../pages/user/AddendumPreventive
 import AddendumPreventivePlannerCreate from "../pages/user/AddendumPreventivePlanner/AddendumPreventivePlannerCreate";
 import AddendumPreventivePlannerPanel from "../pages/user/AddendumPreventivePlanner/AddendumPreventivePlannerPanel";
 import AddendumPreventivePlannerAudit from "../pages/user/AddendumPreventivePlanner/AddendumPreventivePlannerAudit";
+import AddendumCalibrationChildDashboard from "../pages/user/AddendumChild/AddendumCalibrationChildDashboard";
 
 function UserRoutes() {
   return (
@@ -128,7 +129,9 @@ function UserRoutes() {
         <Route path="addendum-preventive-planner-panel/:recordId" element={<AddendumPreventivePlannerPanel />} /> 
         <Route path="addendum-preventive-planner-audit/:recordId" element={<AddendumPreventivePlannerAudit />} /> 
 
-        
+        {/*  Addendum Calibration  Routes*/}
+        <Route path="addendum-calibration-management-dashboard" element={<AddendumCalibrationChildDashboard />} />
+
         {/* Import Master Equipment Data Routes*/}
         <Route path="import-master-equipment-data" element={<ImportMasterEquipmentData />} />
 

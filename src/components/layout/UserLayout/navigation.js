@@ -110,6 +110,15 @@ export const DASHBOARD_NAV_ITEMS = [
         hiddenFromNav: true,
     },
 
+    {
+        id: "addendum-calibration-management",
+        label: "Addendum Calibration Management",
+        path: "/user/addendum-calibration-management-dashboard",
+        icon: FileCheck,
+        group: "engineering",
+        hiddenFromNav: true,
+    },
+
     // ─── Preventive Maintenance group ───────────────────────────────
     {
         id: "maintenance",

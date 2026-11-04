@@ -9,7 +9,7 @@ import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import { addEquipment } from "../../../services/usersApi/equipmentApi";
-import ChecklistConfiguration from "./ChecklistConfig";
+// import ChecklistConfiguration from "./ChecklistConfig";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import { getProfile } from "../../../services/authApi";
@@ -20,7 +20,7 @@ import { getAllDepartments } from "../../../services/usersApi/workflowCommonApi"
 
 const TABS = [
     { id: "instrument", label: "Instrument Information" },
-    { id: "checklist", label: "Checklist Configuration" },
+    // { id: "checklist", label: "Checklist Configuration" },
     { id: "hod", label: "HOD / Designee Review (Engineering Dept)" },
     { id: "qa-review", label: "QA Approval Review" },
 ];
@@ -800,13 +800,13 @@ const CreateEquipment = () => {
 
             {/* ═══════════════ TAB 2: CHECKLIST CONFIGURATION (outside Form) ═══════════════ */}
 
-            {activeTab === "checklist" && (
+            {/* {activeTab === "checklist" && (
                 <ChecklistConfiguration
                     value={checklistConfig}
                     onChange={setChecklistConfig}
                     description="Build a flexible multi-question inspection checklist with configurable response fields."
                 />
-            )}
+            )} */}
 
             {/* ═══════════════ FLOATING ACTIONS ═══════════════ */}
 

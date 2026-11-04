@@ -42,14 +42,14 @@ import {
   getAllStages,
   getAllDepartments, // 👈 Added API
 } from "../../../services/usersApi/workflowCommonApi";
-import ChecklistConfiguration from "../../../components/checklist/ChecklistConfig";
+// import ChecklistConfiguration from "../../../components/checklist/ChecklistConfig";
 import { executeSpareInstrumentActivity, getAllPermissionsSpareInstrument, getSpareInstrumentMasterDetail, updateSpareInstrumentMaster } from "../../../services/usersApi/spareInstrumentApi";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
 const TABS = [
   { id: "instrument", label: "Instrument Information", stageId: 45 },
-  { id: "checklist", label: "Checklist Configuration" },
+  // { id: "checklist", label: "Checklist Configuration" },
   { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 46 },
   { id: "qa-review", label: "QA Approval Review", stageId: 47 },
   { id: "activity", label: "Activity Log", stageId: 48 },
@@ -1107,7 +1107,7 @@ const SpareInstrumentPanel = () => {
         </section>
 
         {/* ─── TAB 4: CHECKLIST CONFIGURATION ─── */}
-        <section style={{ display: activeTab === "checklist" ? "block" : "none" }}>
+        {/* <section style={{ display: activeTab === "checklist" ? "block" : "none" }}>
           <SectionHeader title="CHECKLIST CONFIGURATION" />
           <div className="mt-5">
             <ChecklistConfiguration
@@ -1116,7 +1116,7 @@ const SpareInstrumentPanel = () => {
               description="Define categorical inspection checkpoints for the field engineers."
             />
           </div>
-        </section>
+        </section> */}
 
         {/* ─── TAB 5: ACTIVITY LOG ─── */}
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>

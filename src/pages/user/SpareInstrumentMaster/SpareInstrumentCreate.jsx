@@ -12,7 +12,7 @@ import { addEquipment } from "../../../services/usersApi/equipmentApi";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import { getProfile } from "../../../services/authApi";
-import ChecklistConfiguration from "../../../components/checklist/ChecklistConfig";
+// import ChecklistConfiguration from "../../../components/checklist/ChecklistConfig";
 import { addSpareInstrumentMaster } from "../../../services/usersApi/spareInstrumentApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import { getAllDepartments } from "../../../services/usersApi/workflowCommonApi"; // 👈 NEW
@@ -21,7 +21,7 @@ import { getAllDepartments } from "../../../services/usersApi/workflowCommonApi"
 
 const TABS = [
     { id: "instrument", label: "Instrument Information" },
-    { id: "checklist", label: "Checklist Configuration" },
+    // { id: "checklist", label: "Checklist Configuration" },
     { id: "hod", label: "HOD / Designee Review (Engineering Dept)" },
     { id: "qa-review", label: "QA Approval Review" },
 ];
@@ -765,14 +765,14 @@ const SpareInstrumentCreate = () => {
             </Form>
 
             {/* ═══════════════ TAB 2: CHECKLIST CONFIGURATION ═══════════════ */}
-
+{/* 
             {activeTab === "checklist" && (
                 <ChecklistConfiguration
                     value={checklistConfig}
                     onChange={setChecklistConfig}
                     description="Build a flexible multi-question inspection checklist with configurable response fields."
                 />
-            )}
+            )} */}
 
             {/* ═══════════════ FLOATING ACTIONS ═══════════════ */}
 

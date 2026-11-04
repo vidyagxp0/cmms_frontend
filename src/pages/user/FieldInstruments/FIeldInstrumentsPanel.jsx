@@ -24,7 +24,7 @@ import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
-import ChecklistConfigField from "./ChecklistConfigField";
+// import ChecklistConfigField from "./ChecklistConfigField";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import ProcessStage from "../../../components/common/ProcesStageTabs/ProcessStage";
 import ProcessActivities from "../../../components/common/ProcesStageTabs/ProcessActivities";
@@ -50,7 +50,7 @@ import {
 
 const TABS = [
   { id: "instrument",   label: "Field Instrument Information",              stageId: 28 },
-  { id: "checklist",    label: "Checklist Configuration" },
+  // { id: "checklist",    label: "Checklist Configuration" },
   { id: "hod",          label: "HOD / Designee Review (Engineering Dept)",  stageId: 29 },
   { id: "qa-review",    label: "QA Approval Review",                        stageId: 30 },
   { id: "activity",     label: "Activity Log",                              stageId: 31 },
@@ -1143,7 +1143,7 @@ const FIeldInstrumentsPanel = () => {
         </section>
 
         {/* ─── TAB 4: CHECKLIST CONFIGURATION ─── */}
-        <section style={{ display: activeTab === "checklist" ? "block" : "none" }}>
+        {/* <section style={{ display: activeTab === "checklist" ? "block" : "none" }}>
           <SectionHeader title="CHECKLIST CONFIGURATION" />
           <div className="mt-5">
             <ChecklistConfigField
@@ -1152,7 +1152,7 @@ const FIeldInstrumentsPanel = () => {
               description="Define categorical inspection checkpoints for the field engineers."
             />
           </div>
-        </section>
+        </section> */}
 
         {/* ─── TAB 5: ACTIVITY LOG ─── */}
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>

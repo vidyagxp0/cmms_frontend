@@ -24,7 +24,7 @@ import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
-import ChecklistConfiguration from "./ChecklistConfig";
+// import ChecklistConfiguration from "./ChecklistConfig";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import ProcessStage from "../../../components/common/ProcesStageTabs/ProcessStage";
 import ProcessActivities from "../../../components/common/ProcesStageTabs/ProcessActivities";
@@ -49,7 +49,7 @@ import {
 
 const TABS = [
   { id: "instrument", label: "Instrument Information", stageId: 23 },
-  { id: "checklist", label: "Checklist Configuration" },
+  // { id: "checklist", label: "Checklist Configuration" },
   { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 24 },
   { id: "qa-review", label: "QA Approval Review", stageId: 25 },
   { id: "activity", label: "Activity Log", stageId: 26 },
@@ -1098,7 +1098,7 @@ const EquipmentPanel = () => {
         </section>
 
         {/* ─── TAB 4: CHECKLIST CONFIGURATION ─── */}
-        <section style={{ display: activeTab === "checklist" ? "block" : "none" }}>
+        {/* <section style={{ display: activeTab === "checklist" ? "block" : "none" }}>
           <SectionHeader title="CHECKLIST CONFIGURATION" />
           <div className="mt-5">
             <ChecklistConfiguration
@@ -1107,7 +1107,7 @@ const EquipmentPanel = () => {
               description="Define categorical inspection checkpoints for the field engineers."
             />
           </div>
-        </section>
+        </section> */}
 
         {/* ─── TAB 5: ACTIVITY LOG ─── */}
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>

@@ -75,12 +75,15 @@ export default function EquipmentImportPanel({
 
   const navigate = useNavigate();
 
+  // 👇 Only these masters require a department
+  const requiresDepartment = ["field_instrument_master", "equipment_master"].includes(masterKey);
+
   /* ───────── Department Logic ───────── */
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
   const [selectedDeptId, setSelectedDeptId] = useState(undefined);
 
-  // Fetch departments for ALL masters now
+  // Fetch departments for ALL masters now, but we'll only show it conditionally
   useEffect(() => {
     let isMounted = true;
     const fetchDepartments = async () => {
@@ -151,8 +154,8 @@ export default function EquipmentImportPanel({
     setError("");
     setServerResult(null);
 
-    // Check if department is selected (safety check)
-    if (!selectedDeptId) {
+    // 👇 Check if department is selected ONLY if required
+    if (requiresDepartment && !selectedDeptId) {
       toast.error("Please select a department first.");
       return false;
     }
@@ -252,8 +255,8 @@ export default function EquipmentImportPanel({
       return;
     }
 
-    // Validate department for ALL masters
-    if (!selectedDeptId) {
+    // 👇 Validate department for masters that require it
+    if (requiresDepartment && !selectedDeptId) {
       toast.error("Please select a department.");
       return;
     }
@@ -270,20 +273,22 @@ export default function EquipmentImportPanel({
       formData.append("euipmentMasterType", masterKey);
       formData.append("file", file, file.name);
 
-      // Append department_id and department_name for ALL masters
-      const selectedDept = departments.find(
-        (d) =>
-          String(d.id || d.department_id || d.dept_id) ===
-          String(selectedDeptId)
-      );
-      const deptName =
-        selectedDept?.name ||
-        selectedDept?.department_name ||
-        selectedDept?.dept_name ||
-        "";
+      // 👇 Append department_id and department_name ONLY if required
+      if (requiresDepartment) {
+        const selectedDept = departments.find(
+          (d) =>
+            String(d.id || d.department_id || d.dept_id) ===
+            String(selectedDeptId)
+        );
+        const deptName =
+          selectedDept?.name ||
+          selectedDept?.department_name ||
+          selectedDept?.dept_name ||
+          "";
 
-      formData.append("department_id", selectedDeptId);
-      formData.append("department_name", deptName);
+        formData.append("department_id", selectedDeptId);
+        formData.append("department_name", deptName);
+      }
 
       const response = await api.post(
         "/user/instrment-excel-import",
@@ -343,8 +348,8 @@ export default function EquipmentImportPanel({
     maxCount: 1,
     showUploadList: false,
     beforeUpload,
-    // Disable if importing OR if no department is selected
-    disabled: importing || !selectedDeptId, 
+    // 👇 Disable if importing OR if department is required but not selected
+    disabled: importing || (requiresDepartment && !selectedDeptId), 
   };
 
   // Derived display values (presentation only)
@@ -393,35 +398,37 @@ export default function EquipmentImportPanel({
           </span>
         </div>
 
-        {/* ─────────────── DEPARTMENT DROPDOWN (FOR ALL MASTERS) ─────────────── */}
-        <div className="mb-5">
-          <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-            Select Department <span className="text-red-500">*</span>
-          </label>
-          <Select
-            className="w-full"
-            placeholder="Select a department"
-            loading={departmentsLoading}
-            value={selectedDeptId}
-            onChange={(val) => setSelectedDeptId(val)}
-            options={departmentOptions}
-            showSearch
-            optionFilterProp="label"
-            allowClear={false}
-            disabled={importing}
-          />
-        </div>
+        {/* ─────────────── DEPARTMENT DROPDOWN (CONDITIONAL) ─────────────── */}
+        {requiresDepartment && (
+          <div className="mb-5">
+            <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+              Select Department <span className="text-red-500">*</span>
+            </label>
+            <Select
+              className="w-full"
+              placeholder="Select a department"
+              loading={departmentsLoading}
+              value={selectedDeptId}
+              onChange={(val) => setSelectedDeptId(val)}
+              options={departmentOptions}
+              showSearch
+              optionFilterProp="label"
+              allowClear={false}
+              disabled={importing}
+            />
+          </div>
+        )}
         {/* ─────────────────────────────────────────────────── */}
 
         {!file ? (
           <Tooltip
-            title={!selectedDeptId ? "Please select department first" : ""}
+            title={requiresDepartment && !selectedDeptId ? "Please select department first" : ""}
           >
-            <div className={!selectedDeptId ? "cursor-not-allowed" : ""}>
+            <div className={requiresDepartment && !selectedDeptId ? "cursor-not-allowed" : ""}>
               <Dragger
                 {...uploadProps}
                 className={`equipment-import-dragger ${
-                  !selectedDeptId ? "opacity-60" : ""
+                  requiresDepartment && !selectedDeptId ? "opacity-60" : ""
                 }`}
               >
                 <div className="px-2 py-10">
@@ -557,7 +564,8 @@ export default function EquipmentImportPanel({
               <Button
                 type="primary"
                 icon={<UploadOutlined />}
-                disabled={importing || !selectedDeptId}
+                // 👇 Disable if importing OR if department is required but not selected
+                disabled={importing || (requiresDepartment && !selectedDeptId)}
                 loading={importing}
                 onClick={() => setConfirmOpen(true)}
               >
@@ -598,7 +606,8 @@ export default function EquipmentImportPanel({
         cancelText="Cancel"
         confirmLoading={importing}
         okButtonProps={{
-          disabled: !file || importing || !selectedDeptId,
+          // 👇 Disable if no file, importing, OR department is required but not selected
+          disabled: !file || importing || (requiresDepartment && !selectedDeptId),
         }}
         cancelButtonProps={{ disabled: importing }}
         destroyOnClose

@@ -27,8 +27,8 @@ export default function MasterInstrumentImport() {
       instructions={[
         "Use the Master Instrument Excel template.",
         "Keep all seven column headers unchanged. Line breaks in headers are supported.",
-        "Equipment / Instrument Name and Equipment/ Instrument Code Number must be filled in.",
-        "Review the preview and correct missing required values before importing.",
+        // "Equipment / Instrument Name and Equipment/ Instrument Code Number must be filled in.",
+        // "Review the preview and correct missing required values before importing.",
       ]}
     />
   );

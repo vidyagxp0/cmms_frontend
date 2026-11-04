@@ -31,8 +31,8 @@ export default function FieldInstrumentMasterImport() {
       instructions={[
         "Use the approved Field Instrument Master Excel template.",
         "Keep the column headers exactly as they appear in the approved template.",
-        "Make sure the instrument name and tag number are provided.",
-        "Preview all records before starting the import.",
+        // "Make sure the instrument name and tag number are provided.",
+        // "Preview all records before starting the import.",
       ]}
     />
   );

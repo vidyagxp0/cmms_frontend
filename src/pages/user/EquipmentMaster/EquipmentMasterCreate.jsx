@@ -15,6 +15,7 @@ import { getAllDepartments } from "../../../services/usersApi/workflowCommonApi"
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import ChecklistConfiguration from "../../../components/checklist/ChecklistConfig";
 import { addEquipmentMaster } from "../../../services/usersApi/equipmentApi";
+import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput"; // 👈 ADDED
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
@@ -494,7 +495,7 @@ const EquipmentMasterCreate = () => {
                                 <FormInput placeholder="Enter location" />
                             </Form.Item>
 
-                            {/* ASSET CODE */}
+                            {/* 👇 SYMBOLIC INPUT — ASSET CODE 👇 */}
                             <Form.Item
                                 name="asset_code"
                                 label={
@@ -512,7 +513,10 @@ const EquipmentMasterCreate = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter Asset Code" />
+                                <SymbolicInput
+                                    placeholder="Enter Asset Code"
+                                    defaultDiscipline="Asset Code"
+                                />
                             </Form.Item>
 
                             {/* MAKE */}
@@ -557,7 +561,7 @@ const EquipmentMasterCreate = () => {
                                 <FormInput placeholder="Enter model" />
                             </Form.Item>
 
-                            {/* CAPACITY */}
+                            {/* 👇 SYMBOLIC INPUT — CAPACITY 👇 */}
                             <Form.Item
                                 name="capacity"
                                 label={
@@ -575,7 +579,10 @@ const EquipmentMasterCreate = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter capacity" />
+                                <SymbolicInput
+                                    placeholder="Enter Capacity"
+                                    defaultDiscipline="Capacity"
+                                />
                             </Form.Item>
                         </div>
                     </section>

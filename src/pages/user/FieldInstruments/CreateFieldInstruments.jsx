@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Activity, Building2 } from "lucide-react"; // 👈 Added Building2
-import { Form, Select } from "antd"; // 👈 Added Select
+import { Activity, Building2 } from "lucide-react";
+import { Form, Select } from "antd";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -11,16 +11,15 @@ import FloatingActionButtons from "../../../components/ui/FloatingActionButtons"
 import { addFieldInstrument } from "../../../services/usersApi/equipmentApi";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
-// import ChecklistConfigField from "./ChecklistConfigField";
 import { getProfile } from "../../../services/authApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
-import { getAllDepartments } from "../../../services/usersApi/workflowCommonApi"; // 👈 Added API
+import { getAllDepartments } from "../../../services/usersApi/workflowCommonApi";
+import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput"; // 👈 IMPORT ADDED
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
 const TABS = [
     { id: "instrument", label: "Field Instrument Information" },
-    // { id: "checklist", label: "Checklist Configuration" },
     { id: "hod", label: "HOD / Designee Review (Engineering Dept)" },
     { id: "qa-review", label: "QA Approval Review" },
 ];
@@ -28,7 +27,7 @@ const TABS = [
 /* ───────────────────────── Required fields for tab validation ───────────────────────── */
 
 const REQUIRED_FIELDS = [
-    { name: "department_id", label: "Department" }, // 👈 NEW
+    { name: "department_id", label: "Department" },
     { name: "equipment_name", label: "Equipment Name" },
     { name: "instrument_name", label: "Instrument Name" },
     { name: "instrument_id_no", label: "Instrument ID No." },
@@ -292,8 +291,8 @@ const CreateFieldInstruments = () => {
             setIsSaving(true);
 
             const payload = {
-                department_id: values.department_id || null, // 👈 NEW
-                department_name: selectedDepartmentName,     // 👈 NEW
+                department_id: values.department_id || null,
+                department_name: selectedDepartmentName,
 
                 equipment_name: values.equipment_name.trim(),
                 instrument_name: values.instrument_name.trim(),
@@ -545,7 +544,7 @@ const CreateFieldInstruments = () => {
                                 <FormInput placeholder="Enter Sr. No. / Model No." />
                             </Form.Item>
 
-                            {/* LEAST COUNT */}
+                            {/* 👇 SYMBOLIC INPUT REPLACEMENTS START 👇 */}
                             <Form.Item
                                 name="least_count"
                                 label={
@@ -563,10 +562,9 @@ const CreateFieldInstruments = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter least count" />
+                                <SymbolicInput placeholder="Enter least count" defaultDiscipline="Least Count" />
                             </Form.Item>
 
-                            {/* LOCATION */}
                             <Form.Item
                                 name="location"
                                 label={
@@ -587,7 +585,6 @@ const CreateFieldInstruments = () => {
                                 <FormInput placeholder="Enter location" />
                             </Form.Item>
 
-                            {/* ACCURACY */}
                             <Form.Item
                                 name="accuracy"
                                 label={
@@ -605,10 +602,9 @@ const CreateFieldInstruments = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter accuracy" />
+                                <SymbolicInput placeholder="Enter accuracy" defaultDiscipline="Accuracy" />
                             </Form.Item>
 
-                            {/* INSTRUMENT RANGE */}
                             <Form.Item
                                 name="instrument_range"
                                 label={
@@ -627,10 +623,9 @@ const CreateFieldInstruments = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter instrument range" />
+                                <SymbolicInput placeholder="Enter instrument range" defaultDiscipline="Range" />
                             </Form.Item>
 
-                            {/* OPERATING RANGE */}
                             <Form.Item
                                 name="operating_range"
                                 label={
@@ -649,10 +644,9 @@ const CreateFieldInstruments = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter operating range" />
+                                <SymbolicInput placeholder="Enter operating range" defaultDiscipline="Operating Range" />
                             </Form.Item>
 
-                            {/* CALIBRATION TEST POINTS */}
                             <Form.Item
                                 name="calibration_test_points"
                                 label={
@@ -671,10 +665,9 @@ const CreateFieldInstruments = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter calibration test points" />
+                                <SymbolicInput placeholder="Enter calibration test points" defaultDiscipline="Test Points" />
                             </Form.Item>
 
-                            {/* Asset Code */}
                             <Form.Item
                                 name="asset_code"
                                 label={
@@ -693,10 +686,9 @@ const CreateFieldInstruments = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter Asset Code" />
+                                <SymbolicInput placeholder="Enter Asset Code" defaultDiscipline="Asset Code" />
                             </Form.Item>
 
-                            {/* Capacity */}
                             <Form.Item
                                 name="capacity"
                                 label={
@@ -715,8 +707,9 @@ const CreateFieldInstruments = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter Capacity" />
+                                <SymbolicInput placeholder="Enter Capacity" defaultDiscipline="Capacity" />
                             </Form.Item>
+                            {/* 👆 SYMBOLIC INPUT REPLACEMENTS END 👆 */}
 
                             {/* CATEGORY */}
                             <Form.Item
@@ -812,16 +805,6 @@ const CreateFieldInstruments = () => {
                     </section>
                 )}
             </Form>
-
-            {/* ═══════════════ TAB 2: CHECKLIST CONFIGURATION (outside Form) ═══════════════ */}
-
-            {/* {activeTab === "checklist" && (
-                <ChecklistConfigField
-                    value={checklistConfig}
-                    onChange={setChecklistConfig}
-                    description="Build a flexible multi-question inspection checklist with configurable response fields."
-                />
-            )} */}
 
             {/* ═══════════════ FLOATING ACTIONS ═══════════════ */}
 

@@ -9,11 +9,11 @@ import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import { addEquipment } from "../../../services/usersApi/equipmentApi";
-// import ChecklistConfiguration from "./ChecklistConfig";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import { getProfile } from "../../../services/authApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput"; // 👈 IMPORT ADDED
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
@@ -242,7 +242,6 @@ const CreateEquipment = () => {
             data_columns: cleanedDataColumns,
             questions: cleanedQuestions,
 
-            // Note travels inside checklist_config under notes.
             notes: {
                 heading: checklistConfig.note?.heading?.trim() || "",
                 include_serial_number:
@@ -501,7 +500,7 @@ const CreateEquipment = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter least count" />
+                                <SymbolicInput placeholder="e.g. 0.01" defaultDiscipline="Least Count" />
                             </Form.Item>
 
                             {/* ACCURACY */}
@@ -522,7 +521,7 @@ const CreateEquipment = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter accuracy" />
+                                <SymbolicInput placeholder="e.g. ±0.5%" defaultDiscipline="Accuracy" />
                             </Form.Item>
 
                             {/* INSTRUMENT RANGE */}
@@ -544,7 +543,7 @@ const CreateEquipment = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter instrument range" />
+                                <SymbolicInput placeholder="e.g. 0-1000 V" defaultDiscipline="Range" />
                             </Form.Item>
 
                             {/* OPERATING RANGE */}
@@ -566,7 +565,7 @@ const CreateEquipment = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter operating range" />
+                                <SymbolicInput placeholder="e.g. 0-500 V" defaultDiscipline="Operating Range" />
                             </Form.Item>
 
                             {/* CALIBRATION TEST POINTS */}
@@ -588,7 +587,7 @@ const CreateEquipment = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter calibration test points" />
+                                <SymbolicInput placeholder="e.g. 0, 50, 100" defaultDiscipline="Test Points" />
                             </Form.Item>
 
                             {/* Asset Code */}
@@ -610,7 +609,7 @@ const CreateEquipment = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter Asset Code" />
+                                <SymbolicInput placeholder="Enter Asset Code" defaultDiscipline="Asset Code" />
                             </Form.Item>
 
                             {/* Capacity */}
@@ -632,7 +631,7 @@ const CreateEquipment = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter Capacity" />
+                                <SymbolicInput placeholder="Enter Capacity" defaultDiscipline="Capacity" />
                             </Form.Item>
 
                             {/* CATEGORY */}

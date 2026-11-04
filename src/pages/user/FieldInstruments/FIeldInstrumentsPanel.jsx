@@ -12,9 +12,9 @@ import {
   Gauge,
   SlidersHorizontal,
   ClipboardList,
-  Building2, // 👈 Added icon
+  Building2,
 } from "lucide-react";
-import { Form, Select } from "antd"; // 👈 Added Select
+import { Form, Select } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -24,11 +24,11 @@ import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
-// import ChecklistConfigField from "./ChecklistConfigField";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import ProcessStage from "../../../components/common/ProcesStageTabs/ProcessStage";
 import ProcessActivities from "../../../components/common/ProcesStageTabs/ProcessActivities";
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
+import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput"; // 👈 IMPORT ADDED
 
 import {
   getFieldInstrumentDetail,
@@ -43,14 +43,13 @@ import {
   getAllActivites,
   getAllActivityLogs,
   getAllStages,
-  getAllDepartments, // 👈 Added API
+  getAllDepartments,
 } from "../../../services/usersApi/workflowCommonApi";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
 const TABS = [
   { id: "instrument",   label: "Field Instrument Information",              stageId: 28 },
-  // { id: "checklist",    label: "Checklist Configuration" },
   { id: "hod",          label: "HOD / Designee Review (Engineering Dept)",  stageId: 29 },
   { id: "qa-review",    label: "QA Approval Review",                        stageId: 30 },
   { id: "activity",     label: "Activity Log",                              stageId: 31 },
@@ -231,13 +230,13 @@ const FIeldInstrumentsPanel = () => {
   const [userRoles, setUserRoles] = useState([]);
   const [processName, setProcessName] = useState("Field Instrument");
 
-  /* ── track is_imported from getFieldInstrumentDetail ── */
+  /* ── track is_imported ── */
   const [isImported, setIsImported] = useState(false);
   const isImportedRef = useRef(false);
 
   const isFetchingRef = useRef(false);
 
-  /* ───────── 👈 NEW: Departments State & Fetch ───────── */
+  /* ───────── Departments State & Fetch ───────── */
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
   const [currentDeptFallback, setCurrentDeptFallback] = useState(null);
@@ -286,7 +285,6 @@ const FIeldInstrumentsPanel = () => {
 
     return base;
   }, [departments, currentDeptFallback]);
-  /* ─────────────────────────────────────────────────── */
 
   /* ───────── Stage-based editability ───────── */
   const isStageEditable = (stageId) =>
@@ -294,10 +292,11 @@ const FIeldInstrumentsPanel = () => {
     canPerformActivity === true &&
     permissionsLoading === false;
 
-  const isInstrumentEditable   = isStageEditable(28);
-  const isHodEditable          = isStageEditable(29);
-  const isQaReviewEditable     = isStageEditable(30);
-  const isCancellationEditable = isStageEditable(32);
+  // If imported, bypass stage checks and allow editing
+  const isInstrumentEditable   = isImported || isStageEditable(28);
+  const isHodEditable          = isImported || isStageEditable(29);
+  const isQaReviewEditable     = isImported || isStageEditable(30);
+  const isCancellationEditable = isImported || isStageEditable(32);
 
   /* ───────── Profile ───────── */
   useEffect(() => {
@@ -345,7 +344,6 @@ const FIeldInstrumentsPanel = () => {
         isImportedRef.current = imported;
         setIsImported(imported);
 
-        /* 👈 NEW: Resolve department info for Select display */
         const deptId =
           data.department_id ||
           data.department?.id ||
@@ -364,7 +362,7 @@ const FIeldInstrumentsPanel = () => {
         }
 
         form.setFieldsValue({
-          department_id: deptId, // 👈 NEW
+          department_id: deptId,
           equipment_name:
             data.equipment_name || data.name || data.instrument_name || "",
           instrument_name: data.instrument_name || "",
@@ -421,7 +419,7 @@ const FIeldInstrumentsPanel = () => {
 
   /* ───────── Workflow stages ───────── */
   useEffect(() => {
-    if (!processId) return;
+    if (!processId || isImported) return;
     const fetchStages = async () => {
       try {
         setWorkflowLoading(true);
@@ -442,11 +440,11 @@ const FIeldInstrumentsPanel = () => {
       }
     };
     fetchStages();
-  }, [processId]);
+  }, [processId, isImported]);
 
   /* ───────── Activities ───────── */
   useEffect(() => {
-    if (!activeStageId) {
+    if (!activeStageId || isImported) {
       setActivities([]);
       setActivitiesLoading(false);
       return;
@@ -470,7 +468,7 @@ const FIeldInstrumentsPanel = () => {
       }
     };
     fetchActivities();
-  }, [activeStageId]);
+  }, [activeStageId, isImported]);
 
   /* ───────── Permissions ───────── */
   const fetchPermissions = useCallback(async () => {
@@ -664,7 +662,6 @@ const FIeldInstrumentsPanel = () => {
       },
     };
 
-    /* 👈 NEW: Resolve Department Name */
     const selectedDeptOption = departmentOptions.find(
       (opt) => String(opt.value) === String(values.department_id)
     );
@@ -674,8 +671,8 @@ const FIeldInstrumentsPanel = () => {
       setIsSaving(true);
 
       const payload = {
-        department_id: values.department_id ?? null, // 👈 NEW
-        department_name: selectedDepartmentName,     // 👈 NEW
+        department_id: values.department_id ?? null,
+        department_name: selectedDepartmentName,
 
         equipment_name: values.equipment_name?.trim() || "",
         instrument_name: values.instrument_name?.trim() || "",
@@ -722,7 +719,6 @@ const FIeldInstrumentsPanel = () => {
     }
   };
 
-  /* ───────── Activity success callback ───────── */
   const handleActivitySuccess = async () => {
     try {
       if (canPerformActivity) {
@@ -746,7 +742,6 @@ const FIeldInstrumentsPanel = () => {
     navigate("/user/field-instruments-dashboard");
   };
 
-  /* ───────── Visible tabs (hide cancellation unless on its stage) ───────── */
   const isCancellationStageActive = Number(activeStageId) === 86;
 
   let visibleTabs = isCancellationStageActive
@@ -754,10 +749,9 @@ const FIeldInstrumentsPanel = () => {
     : TABS.filter((tab) => tab.id !== "cancellation");
 
   if (isImported) {
-    visibleTabs = visibleTabs.filter((tab) => tab.id !== "activity");
+    visibleTabs = visibleTabs.filter((tab) => !["activity", "cancellation"].includes(tab.id));
   }
 
-  /* ───────── Loading state ───────── */
   if (isLoading) {
     return (
       <div className="w-full space-y-6">
@@ -767,49 +761,63 @@ const FIeldInstrumentsPanel = () => {
     );
   }
 
-  /* ───────── Render ───────── */
   return (
     <div className="w-full">
-      {/* ═══════════════ WORKFLOW: STAGES + ACTIVITIES ═══════════════ */}
-      <div className="mb-2 space-y-2">
-        <ProcessStage
-          stages={workflowStages}
-          activeStageId={activeStageId}
-          loading={workflowLoading}
-          cancelledStageId={32}
-        />
-
-        <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
-          <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
-            <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />
-            <div className="min-w-0 flex-1">
-              <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">
-                Process
-              </p>
-              <p className="truncate text-[11px] font-semibold text-[#344A43]">
-                {processName || "—"}
+      {/* 👇 CONDITIONAL WORKFLOW HEADER */}
+      {isImported ? (
+        <div className="mb-6 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F59E0B]/10 text-[#B45309]">
+              <ClipboardList size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#B45309]">Imported Instrument / Equipment</h3>
+              <p className="text-xs font-medium text-[#D97706]">
+                This is an Instrument / Equipment. The workflow (Stages & Activities) is not available for this record. You can edit the data directly.
               </p>
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="mb-2 space-y-2">
+          <ProcessStage
+            stages={workflowStages}
+            activeStageId={activeStageId}
+            loading={workflowLoading}
+            cancelledStageId={32}
+          />
 
-          <div className="min-w-0 flex-1">
-            <ProcessActivities
-              activities={activities}
-              loading={activitiesLoading}
-              recordId={id}
-              userId={loginUserId}
-              activityApi={executeFieldInstrumentActivity}
-              onActivitySuccess={handleActivitySuccess}
-              canPerformActivity={canPerformActivity}
-              permissionsLoading={permissionsLoading}
-              auditRoute={"/user/field-instruments-audit"}
-              onExit={() => navigate("/user/field-instruments-dashboard")}
-            />
+          <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
+            <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
+              <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />
+              <div className="min-w-0 flex-1">
+                <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">
+                  Process
+                </p>
+                <p className="truncate text-[11px] font-semibold text-[#344A43]">
+                  {processName || "—"}
+                </p>
+              </div>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <ProcessActivities
+                activities={activities}
+                loading={activitiesLoading}
+                recordId={id}
+                userId={loginUserId}
+                activityApi={executeFieldInstrumentActivity}
+                onActivitySuccess={handleActivitySuccess}
+                canPerformActivity={canPerformActivity}
+                permissionsLoading={permissionsLoading}
+                auditRoute={"/user/field-instruments-audit"}
+                onExit={() => navigate("/user/field-instruments-dashboard")}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* ═══════════════ TABS ═══════════════ */}
       <div className="mb-6">
         <ProcessTabs
           tabs={visibleTabs}
@@ -818,7 +826,6 @@ const FIeldInstrumentsPanel = () => {
         />
       </div>
 
-      {/* ═══════════════ FORM — plain sections, no cards (matches Calibration panel) ═══════════════ */}
       <Form
         form={form}
         preserve={true}
@@ -832,7 +839,6 @@ const FIeldInstrumentsPanel = () => {
           <SectionHeader title="FIELD INSTRUMENT INFORMATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             
-            {/* 👈 NEW: SELECT DEPARTMENT */}
             <Form.Item
               name="department_id"
               label={
@@ -841,7 +847,7 @@ const FIeldInstrumentsPanel = () => {
                   Select Department
                 </span>
               }
-              rules={[{ required: true, message: "Please select a department" }]}
+              rules={isImported ? [] : [{ required: true, message: "Please select a department" }]}
               className="!mb-4"
             >
               <Select
@@ -864,9 +870,7 @@ const FIeldInstrumentsPanel = () => {
                   Equipment Name
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter equipment name" },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter equipment name" }]}
               className="!mb-4"
             >
               <FormInput placeholder="Enter equipment name" disabled={!isInstrumentEditable} />
@@ -880,9 +884,7 @@ const FIeldInstrumentsPanel = () => {
                   Instrument Name
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter instrument name" },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter instrument name" }]}
               className="!mb-4"
             >
               <FormInput placeholder="Enter instrument name" disabled={!isInstrumentEditable} />
@@ -896,9 +898,7 @@ const FIeldInstrumentsPanel = () => {
                   Instrument ID No.
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter instrument ID No." },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter instrument ID No." }]}
               className="!mb-4"
             >
               <FormInput placeholder="Enter instrument ID No." disabled={!isInstrumentEditable} />
@@ -912,9 +912,7 @@ const FIeldInstrumentsPanel = () => {
                   Make
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter make" },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter make" }]}
               className="!mb-4"
             >
               <FormInput placeholder="Enter make" disabled={!isInstrumentEditable} />
@@ -928,14 +926,13 @@ const FIeldInstrumentsPanel = () => {
                   Sr. No. / Model No.
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter Sr. No. / Model No." },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter Sr. No. / Model No." }]}
               className="!mb-4"
             >
               <FormInput placeholder="Enter Sr. No. / Model No." disabled={!isInstrumentEditable} />
             </Form.Item>
 
+            {/* 👇 SYMBOLIC INPUT REPLACEMENTS START 👇 */}
             <Form.Item
               name="least_count"
               label={
@@ -944,12 +941,10 @@ const FIeldInstrumentsPanel = () => {
                   Least Count
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter least count" },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter least count" }]}
               className="!mb-4"
             >
-              <FormInput placeholder="Enter least count" disabled={!isInstrumentEditable} />
+              <SymbolicInput placeholder="Enter least count" defaultDiscipline="Least Count" disabled={!isInstrumentEditable} />
             </Form.Item>
 
             <Form.Item
@@ -960,9 +955,7 @@ const FIeldInstrumentsPanel = () => {
                   Location
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter location" },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter location" }]}
               className="!mb-4"
             >
               <FormInput placeholder="Enter location" disabled={!isInstrumentEditable} />
@@ -976,12 +969,10 @@ const FIeldInstrumentsPanel = () => {
                   Accuracy
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter accuracy" },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter accuracy" }]}
               className="!mb-4"
             >
-              <FormInput placeholder="Enter accuracy" disabled={!isInstrumentEditable} />
+              <SymbolicInput placeholder="Enter accuracy" defaultDiscipline="Accuracy" disabled={!isInstrumentEditable} />
             </Form.Item>
 
             <Form.Item
@@ -992,12 +983,10 @@ const FIeldInstrumentsPanel = () => {
                   Instrument Range
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter instrument range" },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter instrument range" }]}
               className="!mb-4"
             >
-              <FormInput placeholder="Enter instrument range" disabled={!isInstrumentEditable} />
+              <SymbolicInput placeholder="Enter instrument range" defaultDiscipline="Range" disabled={!isInstrumentEditable} />
             </Form.Item>
 
             <Form.Item
@@ -1008,12 +997,10 @@ const FIeldInstrumentsPanel = () => {
                   Operating Range
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter operating range" },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter operating range" }]}
               className="!mb-4"
             >
-              <FormInput placeholder="Enter operating range" disabled={!isInstrumentEditable} />
+              <SymbolicInput placeholder="Enter operating range" defaultDiscipline="Operating Range" disabled={!isInstrumentEditable} />
             </Form.Item>
 
             <Form.Item
@@ -1024,12 +1011,10 @@ const FIeldInstrumentsPanel = () => {
                   Calibration Test Points
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter calibration test points" },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter calibration test points" }]}
               className="!mb-4"
             >
-              <FormInput placeholder="Enter calibration test points" disabled={!isInstrumentEditable} />
+              <SymbolicInput placeholder="Enter calibration test points" defaultDiscipline="Test Points" disabled={!isInstrumentEditable} />
             </Form.Item>
 
             <Form.Item
@@ -1040,14 +1025,12 @@ const FIeldInstrumentsPanel = () => {
                   Asset Code
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter Asset Code" },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter Asset Code" }]}
               className="!mb-4"
             >
-              <FormInput placeholder="Enter Asset Code" disabled={!isInstrumentEditable} />
+              <SymbolicInput placeholder="Enter Asset Code" defaultDiscipline="Asset Code" disabled={!isInstrumentEditable} />
             </Form.Item>
-            
+
             <Form.Item
               name="capacity"
               label={
@@ -1056,13 +1039,12 @@ const FIeldInstrumentsPanel = () => {
                   Capacity
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter Capacity" },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter Capacity" }]}
               className="!mb-4"
             >
-              <FormInput placeholder="Enter Capacity" disabled={!isInstrumentEditable} />
+              <SymbolicInput placeholder="Enter Capacity" defaultDiscipline="Capacity" disabled={!isInstrumentEditable} />
             </Form.Item>
+            {/* 👆 SYMBOLIC INPUT REPLACEMENTS END 👆 */}
 
             <Form.Item
               name="category"
@@ -1072,9 +1054,7 @@ const FIeldInstrumentsPanel = () => {
                   Category
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter category" },
-              ]}
+              rules={isImported ? [] : [{ required: true, whitespace: true, message: "Please enter category" }]}
               className="!mb-0"
             >
               <FormInput placeholder="Enter category" disabled={!isInstrumentEditable} />
@@ -1141,18 +1121,6 @@ const FIeldInstrumentsPanel = () => {
             </Form.Item>
           </div>
         </section>
-
-        {/* ─── TAB 4: CHECKLIST CONFIGURATION ─── */}
-        {/* <section style={{ display: activeTab === "checklist" ? "block" : "none" }}>
-          <SectionHeader title="CHECKLIST CONFIGURATION" />
-          <div className="mt-5">
-            <ChecklistConfigField
-              value={checklistConfig}
-              onChange={setChecklistConfig}
-              description="Define categorical inspection checkpoints for the field engineers."
-            />
-          </div>
-        </section> */}
 
         {/* ─── TAB 5: ACTIVITY LOG ─── */}
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
@@ -1254,7 +1222,6 @@ const FIeldInstrumentsPanel = () => {
         </section>
       </Form>
 
-      {/* ═══════════════ FLOATING ACTIONS ═══════════════ */}
       <FloatingActionButtons
         onSave={() => form.submit()}
         onCancel={handleCancel}

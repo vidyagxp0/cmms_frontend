@@ -10,7 +10,6 @@ import ProcessStage from "../../../components/common/ProcesStageTabs/ProcessStag
 import ProcessActivities from "../../../components/common/ProcesStageTabs/ProcessActivities";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import FormInput from "../../../components/common/Form/FormInput";
-import FormSelect from "../../../components/common/Form/FormSelect";
 import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
@@ -21,10 +20,17 @@ import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import "../../../components/ui/disabledFields.css";
 
 import { getProfile } from "../../../services/authApi";
-// Note: Make sure getAllDepartmentMasters is imported from the correct API file
 import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration } from "../../../services/usersApi/calibrationApi";
 import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
-import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages, getAllDepartments, getAllDepartmentMasters } from "../../../services/usersApi/workflowCommonApi";
+import { 
+  getAllActivites, 
+  getAllActivityLogs, 
+  getAllPermissions, 
+  getAllStages, 
+  getAllDepartments, 
+  getAllDepartmentMasters,
+  getAllDepartmentMastersGlobal // 👈 IMPORT ADDED
+} from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 dayjs.extend(customParseFormat);
@@ -36,11 +42,6 @@ const TABS = [
   { id: "qa-review", label: "QA Approval Review", stageId: 4 },
   { id: "activity", label: "Activity Log", stageId: 5 },
   { id: "cancellation", label: "Cancellation", stageId: 6 },
-];
-
-const REQUIRED_FIELDS = [
-  { name: "shortDescription", label: "Short Description" },
-  { name: "selectedDeptId", label: "Select Department" },
 ];
 
 const getProcessValue = (processData = [], key) => {
@@ -58,7 +59,6 @@ const getProcessValue = (processData = [], key) => {
 
 const buildGridPayload = (rows = [], equipmentMap = {}) => {
   return rows.map((row, index) => {
-    // const rowData = { row_id: index + 1 };
     const rowData = { row_id: row.row_id ?? index + 1 };
     Object.keys(row).forEach((key) => {
       if (key === "monthlyCalibration" || key === "calibrationFrequencyStartDate") {
@@ -69,16 +69,15 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
       if (key === "previousCalibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
       else if (key === "nextCalibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
       else if (key === "calibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
-if (key === "equipmentInstrumentName" && value && equipmentMap[value]) value = equipmentMap[value]?.instrument_name || value;
+      if (key === "equipmentInstrumentName" && value && equipmentMap[value]) value = equipmentMap[value]?.instrument_name || value;
       rowData[key] = { key, label: key, value };
     });
     return rowData;
   });
 };
 
-// Build a single CalibrationGrid row from a normalized instrument.
 const buildRowFromInstrument = (item = {}) => ({
-  equipmentInstrumentName: item.id ?? "", // The ID links the row to the dropdown
+  equipmentInstrumentName: item.id ?? "",
   equipmentInstrumentId: item.instrument_id_no || "",
   make: item.make || "",
   model: item.sr_no_model_no || "",
@@ -88,7 +87,7 @@ const buildRowFromInstrument = (item = {}) => ({
   instrumentrange: item.instrument_range || "",
   operatingrange: item.operating_range || "",
   calibrationTestPoints: item.calibration_test_points || "",
-  category: item.category || "", // <--- FIXED: Pulls "NC" from your JSON
+  category: item.category || "",
   plannedDate: "",
   calibrationDoneDate: "",
   remark: "",
@@ -96,7 +95,6 @@ const buildRowFromInstrument = (item = {}) => ({
 
 const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({ key: field.name, label: field.label, value: values?.[field.name] || "" })),
-  // master_department field
   {
     key: "master_department",
     label: "Select Department",
@@ -107,25 +105,35 @@ const buildProcessData = (values, systemFields) => [
   { key: "block", label: "Block", value: values?.block || "" },
   { key: "area", label: "Area", value: values?.area || "" },
   {
-  key: "instrumentType",
-  label: "Instrument Type",
-  value: values?.instrumentType || "",
+    key: "instrumentType",
+    label: "Instrument Type",
+    value: values?.instrumentType || "",
   },
   { key: "comment", label: "Comments", value: values?.comments || "" },
-  { key: "attachment", label: "Attachment", value:[] },
+  { key: "attachment", label: "Attachment", value: [] },
   { key: "hod_review_comments", label: "HOD / Designee Review Comments", value: values?.hodReviewComments || "" },
   { key: "hod_review_attachment", label: "HOD / Designee Review Attachment", value: [] },
   { key: "user_dept_review_comments", label: "User Dept Review Comments", value: values?.userDeptReviewComments || "" },
   { key: "user_dept_review_attachment", label: "User Dept Review Attachment", value: values?.userDeptReviewAttachment || [] },
   { key: "qa_review_comments", label: "QA Review Comments", value: values?.qaReviewComments || "" },
-  { key: "qa_review_attachment", label: "QA Review Attachment", value:  [] },
+  { key: "qa_review_attachment", label: "QA Review Attachment", value: [] },
   { key: "cancellation_remark", label: "Cancellation Remark", value: values?.cancellationRemark || "" },
-  { key: "cancellation_attachment", label: "Cancellation Attachment", value:[]},
+  { key: "cancellation_attachment", label: "Cancellation Attachment", value: [] },
 ];
 
-const validateCalibrationForm = (form, storedRequired) => {
+const validateCalibrationForm = (form, storedRequired, currentType) => {
   const values = form.getFieldsValue();
-  return REQUIRED_FIELDS.filter((field) => {
+
+  const fieldsToValidate = [
+    { name: "shortDescription", label: "Short Description" },
+  ];
+
+  // Only validate department if it's a Field Instrument
+  if (currentType === "Field Instrument") {
+    fieldsToValidate.push({ name: "selectedDeptId", label: "Select Department" });
+  }
+
+  return fieldsToValidate.filter((field) => {
     let value = values?.[field.name];
     if (value === undefined || value === null || value === "") value = storedRequired[field.name];
     if (typeof value === "string") return !value.trim();
@@ -170,11 +178,9 @@ const CreateCalibrationPanel = () => {
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "", selectedDeptId: "" });
 
-  // New Department States
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
-  // Watch the Department field to trigger API fetch when it changes
   const selectedDeptIdWatch = Form.useWatch("selectedDeptId", form);
 
   const autoPopulateRowsRef = useRef(false);
@@ -229,7 +235,6 @@ const CreateCalibrationPanel = () => {
     fetchProfile();
   }, []);
 
-  // Fetch Departments for the new field
   useEffect(() => {
     const fetchDepartments = async () => {
       setDepartmentsLoading(true);
@@ -247,122 +252,128 @@ const CreateCalibrationPanel = () => {
     fetchDepartments();
   }, []);
 
-useEffect(() => {
-  let isCurrent = true;
+  useEffect(() => {
+    let isCurrent = true;
 
-  const fetchInstruments = async () => {
-    setEquipmentOptions([]);
-    setEquipmentMap({});
-    equipmentMapRef.current = {};
+    const fetchInstruments = async () => {
+      setEquipmentOptions([]);
+      setEquipmentMap({});
+      equipmentMapRef.current = {};
 
-    // Require both Instrument Type AND Department to be selected
-    if (!selectedInstrumentType || !selectedDeptIdWatch) {
-      setEquipmentLoading(false);
-      return;
-    }
+      const requiresDept = selectedInstrumentType === "Field Instrument";
 
-    // Map the dropdown label to the API type string
-    const typeMap = {
-      "Master Instrument": "instrument_masters",
-      "Field Instrument": "field_instrument_master",
-      "Spare Instrument": "spare_instrument_master",
+      // Require Instrument Type. Require Department ONLY if Field Instrument.
+      if (!selectedInstrumentType || (requiresDept && !selectedDeptIdWatch)) {
+        setEquipmentLoading(false);
+        return;
+      }
+
+      const typeMap = {
+        "Master Instrument": "instrument_masters",
+        "Field Instrument": "field_instrument_master",
+        "Spare Instrument": "spare_instrument_master",
+      };
+
+      const apiType = typeMap[selectedInstrumentType];
+
+      if (!apiType) {
+        setEquipmentLoading(false);
+        return;
+      }
+
+      try {
+        setEquipmentLoading(true);
+
+        let response;
+        
+        // 👇 UPDATED: Call the correct API based on whether department is required
+        if (requiresDept) {
+          response = await getAllDepartmentMasters(selectedDeptIdWatch, apiType);
+        } else {
+          response = await getAllDepartmentMastersGlobal(apiType);
+        }
+
+        if (!isCurrent) return;
+
+        const data = response?.data?.data || [];
+
+        const normalizedData = data.map((item) => ({
+          ...item,
+          instrument_name:
+            item.instrument_name ||
+            item.field_instrument_name ||
+            item.instrumentName ||
+            item.name ||
+            "",
+          instrument_id_no:
+            item.instrument_id_no ||
+            item.equipment_id ||
+            item.field_instrument_id ||
+            item.instrument_id ||
+            "",
+          make: item.make || item.manufacturer || "",
+          sr_no_model_no:
+            item.sr_no_model_no ||
+            item.model ||
+            item.model_no ||
+            "",
+          location: item.location || item.area || "",
+          least_count: item.least_count || item.leastCount || "",
+          accuracy: item.accuracy || "",
+          instrument_range:
+            item.instrument_range ||
+            item.instrumentrange ||
+            item.range ||
+            "",
+          operating_range:
+            item.operating_range ||
+            item.operatingrange ||
+            "",
+          calibration_test_points:
+            item.calibration_test_points ||
+            item.calibrationTestPoints ||
+            "",
+        }));
+
+        const options = normalizedData.map((item) => ({
+          value: item.id,
+          label: item.instrument_name,
+        }));
+
+        const map = {};
+        normalizedData.forEach((item) => {
+          map[item.id] = item;
+        });
+
+        setEquipmentOptions(options);
+        setEquipmentMap(map);
+        equipmentMapRef.current = map;
+
+        if (autoPopulateRowsRef.current) {
+          setCalibrationRows(normalizedData.map(buildRowFromInstrument));
+        }
+      } catch (error) {
+        if (!isCurrent) return;
+
+        console.error("Failed to fetch instruments:", error);
+        toast.error(
+          error?.response?.data?.message ||
+            "Could not load instruments."
+        );
+      } finally {
+        if (isCurrent) {
+          autoPopulateRowsRef.current = false;
+          setEquipmentLoading(false);
+        }
+      }
     };
 
-    const apiType = typeMap[selectedInstrumentType];
+    fetchInstruments();
 
-    if (!apiType) {
-      setEquipmentLoading(false);
-      return;
-    }
-
-    try {
-      setEquipmentLoading(true);
-
-      // NEW: Call the dynamic API with selected department and mapped type
-      const response = await getAllDepartmentMasters(selectedDeptIdWatch, apiType);
-
-      if (!isCurrent) return;
-
-      const data = response?.data?.data || [];
-
-      const normalizedData = data.map((item) => ({
-        ...item,
-        instrument_name:
-          item.instrument_name ||
-          item.field_instrument_name ||
-          item.instrumentName ||
-          item.name ||
-          "",
-        instrument_id_no:
-          item.instrument_id_no ||
-          item.equipment_id ||
-          item.field_instrument_id ||
-          item.instrument_id ||
-          "",
-        make: item.make || item.manufacturer || "",
-        sr_no_model_no:
-          item.sr_no_model_no ||
-          item.model ||
-          item.model_no ||
-          "",
-        location: item.location || item.area || "",
-        least_count: item.least_count || item.leastCount || "",
-        accuracy: item.accuracy || "",
-        instrument_range:
-          item.instrument_range ||
-          item.instrumentrange ||
-          item.range ||
-          "",
-        operating_range:
-          item.operating_range ||
-          item.operatingrange ||
-          "",
-        calibration_test_points:
-          item.calibration_test_points ||
-          item.calibrationTestPoints ||
-          "",
-      }));
-
-      const options = normalizedData.map((item) => ({
-        value: item.id,
-        label: item.instrument_name,
-      }));
-
-      const map = {};
-      normalizedData.forEach((item) => {
-        map[item.id] = item;
-      });
-
-      setEquipmentOptions(options);
-      setEquipmentMap(map);
-      equipmentMapRef.current = map;
-
-      if (autoPopulateRowsRef.current) {
-        setCalibrationRows(normalizedData.map(buildRowFromInstrument));
-      }
-    } catch (error) {
-      if (!isCurrent) return;
-
-      console.error("Failed to fetch instruments:", error);
-      toast.error(
-        error?.response?.data?.message ||
-          "Could not load instruments."
-      );
-    } finally {
-      if (isCurrent) {
-        autoPopulateRowsRef.current = false;
-        setEquipmentLoading(false);
-      }
-    }
-  };
-
-  fetchInstruments();
-
-  return () => {
-    isCurrent = false;
-  };
-}, [selectedInstrumentType, selectedDeptIdWatch]);
-
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedInstrumentType, selectedDeptIdWatch]);
 
   useEffect(() => {
     const fetchCalibrationUsers = async () => {
@@ -487,10 +498,10 @@ useEffect(() => {
         const newRow = { ...row };
         newRow.monthlyCalibration = row.monthlyCalibration && typeof row.monthlyCalibration === "object" ? row.monthlyCalibration : {};
         newRow.calibrationFrequencyStartDate = row.calibrationFrequencyStartDate || "";
-       if (newRow.equipmentInstrumentName && typeof newRow.equipmentInstrumentName === "string") {
-  const found = Object.values(currentEquipmentMap).find((eq) => eq.instrument_name === newRow.equipmentInstrumentName);
-  if (found) newRow.equipmentInstrumentName = found.id;
-}
+        if (newRow.equipmentInstrumentName && typeof newRow.equipmentInstrumentName === "string") {
+          const found = Object.values(currentEquipmentMap).find((eq) => eq.instrument_name === newRow.equipmentInstrumentName);
+          if (found) newRow.equipmentInstrumentName = found.id;
+        }
         if (newRow.previousCalibrationDate) newRow.previousCalibrationDate = dayjs(newRow.previousCalibrationDate, "DD/MM/YYYY");
         if (newRow.nextCalibrationDate) newRow.nextCalibrationDate = dayjs(newRow.nextCalibrationDate, "DD/MM/YYYY");
         if (newRow.calibrationDate) newRow.calibrationDate = dayjs(newRow.calibrationDate, "DD/MM/YYYY");
@@ -572,9 +583,9 @@ useEffect(() => {
   }, [recordId, processId]);
 
   useEffect(() => {
-  if (!processId) return;
-  fetchActivityLogs();
-}, [processId, fetchActivityLogs]);
+    if (!processId) return;
+    fetchActivityLogs();
+  }, [processId, fetchActivityLogs]);
 
   useEffect(() => {
     if (!activeStageId) return;
@@ -601,7 +612,7 @@ useEffect(() => {
 
   const handleSave = async () => {
     if (isSaving || isLoading || usersLoading) return;
-    const missingFields = validateCalibrationForm(form, requiredValuesRef.current);
+    const missingFields = validateCalibrationForm(form, requiredValuesRef.current, selectedInstrumentType);
     if (missingFields.length > 0) {
       const missingFieldNames = missingFields.map((field) => field.label).join(", ");
       toast.error(`Required fields missing: ${missingFieldNames}`);
@@ -619,7 +630,8 @@ useEffect(() => {
 
     const missingFields = validateCalibrationForm(
         form,
-        requiredValuesRef.current
+        requiredValuesRef.current,
+        selectedInstrumentType
     );
 
     if (missingFields.length > 0) {
@@ -728,7 +740,7 @@ useEffect(() => {
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
-        <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} />
+        <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} cancelledStageId={6} />
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
           <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
             <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />
@@ -853,6 +865,7 @@ useEffect(() => {
                     <RequiredAsterisk message="Instrument Type is required. Please select an instrument type to proceed." />
                   </span>
                 }
+                rules={[{ required: true, message: "Please select instrument type" }]}
                 className="!mb-4"
               >
                 <Select
@@ -864,6 +877,11 @@ useEffect(() => {
                     autoPopulateRowsRef.current = Boolean(nextType);
                     setSelectedInstrumentType(nextType);
                     setCalibrationRows([]);
+                    
+                    // Clear department if not Field Instrument
+                    if (nextType !== "Field Instrument") {
+                      form.setFieldsValue({ selectedDeptId: null });
+                    }
                   }}
                   options={[
                     {
@@ -882,40 +900,42 @@ useEffect(() => {
                 />
               </Form.Item>
 
-              {/* SELECT DEPARTMENT DROPDOWN (Correctly placed after Instrument Type) */}
-            <Form.Item
-              name="selectedDeptId"
-              label={
-                <span className="inline-flex items-center">
-                  Select Department
-                  <RequiredAsterisk message="Department is required to proceed. Please select a department." />
-                </span>
-              }
-              rules={[
-                {
-                  required: true,
-                  message: "Please select a department",
-                },
-              ]}
-              className="!mb-4"
-            >
-              <Select
-                placeholder="Select a department"
-                loading={departmentsLoading}
-                options={departments.map((dept) => ({
-                  label: dept.name || "Unnamed Department",
-                  value: dept.id,
-                }))}
-                showSearch
-                optionFilterProp="label"
-                allowClear={false}
-                disabled={!isGeneralEditable}
-                onChange={() => {
-                  // Clear rows when department changes
-                  setCalibrationRows([]);
-                }}
-              />
-            </Form.Item>
+            {/* 👇 CONDITIONALLY RENDER DEPARTMENT DROPDOWN */}
+            {selectedInstrumentType === "Field Instrument" && (
+              <Form.Item
+                name="selectedDeptId"
+                label={
+                  <span className="inline-flex items-center">
+                    Select Department
+                    <RequiredAsterisk message="Department is required to proceed. Please select a department." />
+                  </span>
+                }
+                rules={[
+                  {
+                    required: true,
+                    message: "Please select a department",
+                  },
+                ]}
+                className="!mb-4"
+              >
+                <Select
+                  placeholder="Select a department"
+                  loading={departmentsLoading}
+                  options={departments.map((dept) => ({
+                    label: dept.name || "Unnamed Department",
+                    value: dept.id,
+                  }))}
+                  showSearch
+                  optionFilterProp="label"
+                  allowClear={false}
+                  disabled={!isGeneralEditable}
+                  onChange={() => {
+                    // Clear rows when department changes
+                    setCalibrationRows([]);
+                  }}
+                />
+              </Form.Item>
+            )}
 
           </div>
           <div className="mt-5">

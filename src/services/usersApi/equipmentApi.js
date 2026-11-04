@@ -112,3 +112,8 @@ export const getAllEquipmentMasterPermissions = (recordId) => {
     return api.get(`/user/department-equipment-record-permission/${recordId}`);
 };
 
+
+
+export const getAllDepartmentEquipmentMaster = () => {
+    return api.get("/user/all-department-equipment-masters-data");
+};

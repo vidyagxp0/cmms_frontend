@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Plus, Trash2, Table2, Loader2 } from "lucide-react";
 import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
@@ -61,7 +61,8 @@ const AddendumPreventivePlannerGrid = ({
       type: "select",
       placeholder: "Select equipment name",
       required: true,
-      minWidth: 240,
+      /* 👇 widened so "Name (Code)" fits comfortably in the cell */
+      minWidth: 380,
     },
     {
       key: "equipmentInstrumentId",
@@ -82,6 +83,34 @@ const AddendumPreventivePlannerGrid = ({
   const [deleteRowIndex, setDeleteRowIndex] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+
+  /* 👇 Combine Equipment Name + Equipment Code for the dropdown labels */
+  const combinedEquipmentOptions = useMemo(() => {
+    return equipmentOptions.map((opt) => {
+      const eq = equipmentMap?.[String(opt.value)];
+      if (!eq) return opt;
+
+      const name =
+        eq.equipment_name ||
+        eq.instrument_name ||
+        eq.instrumentName ||
+        eq.name ||
+        "";
+
+      const code =
+        eq.equipment_id_no ||
+        eq.instrument_id_no ||
+        eq.equipment_id ||
+        "";
+
+      const label =
+        code && !(opt.label || "").includes(code)
+          ? `${name || opt.label} (${code})`
+          : opt.label || name;
+
+      return { ...opt, label };
+    });
+  }, [equipmentOptions, equipmentMap]);
 
   const addRow = () => {
     if (disabled) return;
@@ -120,7 +149,7 @@ const AddendumPreventivePlannerGrid = ({
       const updatedRows = rows
         .filter((_, index) => index !== deleteRowIndex)
         .map((row, index) => ({ ...row, row_id: index + 1 }));
-      
+
       const payload = { gridData: updatedRows };
       if (selectedId) await updatePreventive(selectedId, payload);
       onChange(updatedRows);
@@ -146,13 +175,22 @@ const AddendumPreventivePlannerGrid = ({
 
       if (equipment) {
         row.equipmentDbId = String(equipment.id);
-        row.equipmentInstrumentName = equipment.equipment_name || equipment.instrument_name || "";
-        
+        row.equipmentInstrumentName =
+          equipment.equipment_name || equipment.instrument_name || "";
+
         row.equipmentInstrumentId =
-          equipment.equipment_id_no || equipment.instrument_id_no || equipment.equipment_id || "";
-        row.location = equipment.equipment_location || equipment.location || "";
+          equipment.equipment_id_no ||
+          equipment.instrument_id_no ||
+          equipment.equipment_id ||
+          "";
+        row.location =
+          equipment.equipment_location || equipment.location || "";
         row.make = equipment.equipment_make || equipment.make || "";
-        row.model = equipment.equipment_model || equipment.sr_no_model_no || equipment.model || "";
+        row.model =
+          equipment.equipment_model ||
+          equipment.sr_no_model_no ||
+          equipment.model ||
+          "";
       } else {
         row.equipmentDbId = "";
         row.equipmentInstrumentName = "";
@@ -190,7 +228,10 @@ const AddendumPreventivePlannerGrid = ({
 
     // 👇 ONLY lock the Equipment Code field if it has a value
     const isCodeField = key === "equipmentInstrumentId";
-    const hasValue = fieldValue !== undefined && fieldValue !== null && String(fieldValue).trim() !== "";
+    const hasValue =
+      fieldValue !== undefined &&
+      fieldValue !== null &&
+      String(fieldValue).trim() !== "";
     const isLockedCode = isCodeField && hasValue;
 
     const isDisabled = disabled || columnDisabled || isLockedCode;
@@ -208,20 +249,32 @@ const AddendumPreventivePlannerGrid = ({
           row.equipmentDbId !== null &&
           row.equipmentDbId !== ""
             ? String(row.equipmentDbId)
-            : undefined;
+            : combinedEquipmentOptions.find(
+                (opt) => opt.label === row.equipmentInstrumentName
+              )?.value ||
+              equipmentOptions.find(
+                (opt) => opt.label === row.equipmentInstrumentName
+              )?.value ||
+              undefined;
 
         return (
           <Select
             {...commonProps}
             value={selectValue}
             placeholder={equipmentLoading ? "Loading..." : placeholder}
-            onChange={(id) => updateRow(rowIndex, "equipmentInstrumentName", id)}
-            options={equipmentOptions}
+            onChange={(id) =>
+              updateRow(rowIndex, "equipmentInstrumentName", id)
+            }
+            options={combinedEquipmentOptions}
             disabled={isDisabled || equipmentLoading}
             showSearch
             optionFilterProp="label"
+            /* 👇 let the popup auto-widen so full "Name (Code)" is always visible */
+            popupMatchSelectWidth={false}
             filterOption={(input, option) =>
-              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              (option?.label ?? "")
+                .toLowerCase()
+                .includes(input.toLowerCase())
             }
             className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1] disabled:[&_.ant-select-selector]:!bg-[#F9FAF9] disabled:[&_.ant-select-selection-item]:!text-[#263B35]"
           />
@@ -257,7 +310,9 @@ const AddendumPreventivePlannerGrid = ({
     return (
       <DatePicker
         value={val ? dayjs(val) : null}
-        onChange={(date) => updateRow(rowIndex, key, date ? date.format("YYYY-MM-DD") : "")}
+        onChange={(date) =>
+          updateRow(rowIndex, key, date ? date.format("YYYY-MM-DD") : "")
+        }
         format="DD/MM/YYYY"
         variant="borderless"
         className="!h-8 !w-full !px-1 !text-[10px] !font-medium !text-[#263B35] hover:bg-[#F3F6F4] cursor-pointer disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
@@ -267,12 +322,13 @@ const AddendumPreventivePlannerGrid = ({
     );
   };
 
-  // 👇 UPDATED: Removed 30-day window logic. Only checks initiator + close done
+  // 👇 Removed 30-day window logic. Only checks initiator + close done
   const getChildButtonState = () => {
     if (!canCreateChild) {
       return {
         enabled: false,
-        title: "Child creation is available only to Initiator at Close Done stage.",
+        title:
+          "Child creation is available only to Initiator at Close Done stage.",
       };
     }
 
@@ -282,10 +338,19 @@ const AddendumPreventivePlannerGrid = ({
     };
   };
 
-  const visibleColumns = mainColumns.filter((column) => column.hidden !== true);
+  const visibleColumns = mainColumns.filter(
+    (column) => column.hidden !== true
+  );
   const showChildColumn = typeof onViewChild === "function";
 
-  const emptyColSpan = 1 + visibleColumns.length + 1 + MONTHS.length + 1 + (showChildColumn ? 1 : 0) + 1;
+  const emptyColSpan =
+    1 +
+    visibleColumns.length +
+    1 +
+    MONTHS.length +
+    1 +
+    (showChildColumn ? 1 : 0) +
+    1;
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
@@ -320,7 +385,9 @@ const AddendumPreventivePlannerGrid = ({
             type="button"
             onClick={addRow}
             disabled={
-              disabled || equipmentLoading || (maxRows !== undefined && rows.length >= maxRows)
+              disabled ||
+              equipmentLoading ||
+              (maxRows !== undefined && rows.length >= maxRows)
             }
             className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[#2B5577] px-3.5 text-[11px] font-semibold text-white shadow-[0_4px_12px_rgba(43,85,119,0.20)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-[#234766] hover:shadow-[0_7px_16px_rgba(43,85,119,0.25)] active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
           >
@@ -363,7 +430,10 @@ const AddendumPreventivePlannerGrid = ({
                 CALIBRATION DATES
               </th>
               {MONTHS.map((month) => (
-                <th key={month.key} className="w-[100px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold text-[#43564F]">
+                <th
+                  key={month.key}
+                  className="w-[100px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold text-[#43564F]"
+                >
                   {month.label}
                 </th>
               ))}
@@ -390,7 +460,10 @@ const AddendumPreventivePlannerGrid = ({
                       <div className="mx-auto h-4 w-5 animate-pulse rounded bg-[#E5EBE8]" />
                     </td>
                     {visibleColumns.map((column) => (
-                      <td key={column.key} className="border border-[#D5DFDB] px-2 py-2 align-middle">
+                      <td
+                        key={column.key}
+                        className="border border-[#D5DFDB] px-2 py-2 align-middle"
+                      >
                         <div
                           className="h-4 animate-pulse rounded bg-[#E5EBE8]"
                           style={{ width: `${55 + ((idx * 13) % 45)}%` }}
@@ -401,7 +474,10 @@ const AddendumPreventivePlannerGrid = ({
                       <div className="mx-auto h-4 w-10 animate-pulse rounded bg-[#E5EBE8]" />
                     </td>
                     {MONTHS.map((month) => (
-                      <td key={`${month.key}_skel_p`} className="border border-[#D5DFDB] px-1 py-2 align-middle">
+                      <td
+                        key={`${month.key}_skel_p`}
+                        className="border border-[#D5DFDB] px-1 py-2 align-middle"
+                      >
                         <div className="h-6 w-full animate-pulse rounded bg-[#E5EBE8]" />
                       </td>
                     ))}
@@ -422,7 +498,10 @@ const AddendumPreventivePlannerGrid = ({
                       <div className="mx-auto h-4 w-8 animate-pulse rounded bg-[#E5EBE8]" />
                     </td>
                     {MONTHS.map((month) => (
-                      <td key={`${month.key}_skel_e`} className="border border-[#D5DFDB] px-1 py-2 align-middle">
+                      <td
+                        key={`${month.key}_skel_e`}
+                        className="border border-[#D5DFDB] px-1 py-2 align-middle"
+                      >
                         <div className="h-6 w-full animate-pulse rounded bg-[#E5EBE8]" />
                       </td>
                     ))}
@@ -431,25 +510,38 @@ const AddendumPreventivePlannerGrid = ({
               ))
             ) : rows.length > 0 ? (
               rows.map((row, rowIndex) => {
-                const { enabled: childButtonEnabled, title: childButtonTitle } = getChildButtonState(row);
+                const {
+                  enabled: childButtonEnabled,
+                  title: childButtonTitle,
+                } = getChildButtonState(row);
 
                 return (
                   <React.Fragment key={rowIndex}>
                     {rowIndex > 0 && (
                       <tr aria-hidden="true">
-                        <td colSpan={emptyColSpan} className="!h-3 !border-0 !p-0 !bg-[#F7FAF8]" />
+                        <td
+                          colSpan={emptyColSpan}
+                          className="!h-3 !border-0 !p-0 !bg-[#F7FAF8]"
+                        />
                       </tr>
                     )}
 
                     <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                      <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+                      <td
+                        rowSpan={2}
+                        className="border border-[#D5DFDB] px-2 py-1 text-center align-middle"
+                      >
                         <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">
                           {row.row_id ?? rowIndex + 1}.
                         </span>
                       </td>
 
                       {visibleColumns.map((column) => (
-                        <td key={column.key} rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
+                        <td
+                          key={column.key}
+                          rowSpan={2}
+                          className="border border-[#D5DFDB] p-0 align-middle"
+                        >
                           {renderField(column, row, rowIndex)}
                         </td>
                       ))}
@@ -459,15 +551,27 @@ const AddendumPreventivePlannerGrid = ({
                       </td>
 
                       {MONTHS.map((month) => (
-                        <td key={`${month.key}_planned`} className="border border-[#D5DFDB] p-0 align-middle">
-                          {renderDateField(row, `${month.key}_planned`, rowIndex)}
+                        <td
+                          key={`${month.key}_planned`}
+                          className="border border-[#D5DFDB] p-0 align-middle"
+                        >
+                          {renderDateField(
+                            row,
+                            `${month.key}_planned`,
+                            rowIndex
+                          )}
                         </td>
                       ))}
 
-                      <td rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
+                      <td
+                        rowSpan={2}
+                        className="border border-[#D5DFDB] p-0 align-middle"
+                      >
                         <TextArea
                           value={row.remark ?? ""}
-                          onChange={(e) => updateRemark(rowIndex, e.target.value)}
+                          onChange={(e) =>
+                            updateRemark(rowIndex, e.target.value)
+                          }
                           rows={2}
                           className="!h-full !min-h-[64px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
                           disabled={disabled}
@@ -476,12 +580,18 @@ const AddendumPreventivePlannerGrid = ({
                       </td>
 
                       {showChildColumn && (
-                        <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+                        <td
+                          rowSpan={2}
+                          className="border border-[#D5DFDB] px-2 py-1 text-center align-middle"
+                        >
                           <button
                             type="button"
                             onClick={() => {
                               if (!childButtonEnabled) return;
-                              onViewChild(rowIndex, { ...row, row_id: row.row_id ?? rowIndex + 1 });
+                              onViewChild(rowIndex, {
+                                ...row,
+                                row_id: row.row_id ?? rowIndex + 1,
+                              });
                             }}
                             disabled={!childButtonEnabled}
                             className={`inline-flex h-7 items-center justify-center rounded px-3 text-[11px] font-medium text-white shadow-sm transition-all duration-200 focus:outline-none ${
@@ -497,7 +607,10 @@ const AddendumPreventivePlannerGrid = ({
                         </td>
                       )}
 
-                      <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+                      <td
+                        rowSpan={2}
+                        className="border border-[#D5DFDB] px-2 py-1 text-center align-middle"
+                      >
                         <button
                           type="button"
                           onClick={() => handleDeleteRow(rowIndex)}
@@ -516,8 +629,15 @@ const AddendumPreventivePlannerGrid = ({
                       </td>
 
                       {MONTHS.map((month) => (
-                        <td key={`${month.key}_executed`} className="border border-[#D5DFDB] p-0 align-middle">
-                          {renderDateField(row, `${month.key}_executed`, rowIndex)}
+                        <td
+                          key={`${month.key}_executed`}
+                          className="border border-[#D5DFDB] p-0 align-middle"
+                        >
+                          {renderDateField(
+                            row,
+                            `${month.key}_executed`,
+                            rowIndex
+                          )}
                         </td>
                       ))}
                     </tr>
@@ -560,7 +680,8 @@ const AddendumPreventivePlannerGrid = ({
       >
         <div className="space-y-5">
           <p className="text-[13px] leading-6 text-[#596760]">
-            Are you sure you want to delete this row? This action cannot be undone.
+            Are you sure you want to delete this row? This action cannot be
+            undone.
           </p>
           <div className="flex justify-end gap-3 border-t border-[#E8ECEA] pt-4">
             <button

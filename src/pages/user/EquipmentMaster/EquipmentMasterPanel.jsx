@@ -24,6 +24,7 @@ import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs"
 import ProcessStage from "../../../components/common/ProcesStageTabs/ProcessStage";
 import ProcessActivities from "../../../components/common/ProcesStageTabs/ProcessActivities";
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
+import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput"; // 👈 ADDED
 
 import { addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
 import { getProfile } from "../../../services/authApi";
@@ -32,6 +33,7 @@ import {
   getAllActivityLogs,
   getAllStages,
   getAllDepartments,
+  
 } from "../../../services/usersApi/workflowCommonApi";
 import ChecklistConfiguration from "../../../components/checklist/ChecklistConfig";
 import {
@@ -39,6 +41,7 @@ import {
   getAllEquipmentMasterPermissions,
   getEquipmentMasterDetail,
   updateEquipmentMaster,
+  getAllDepartmentEquipmentMaster
 } from "../../../services/usersApi/equipmentApi";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
@@ -236,8 +239,109 @@ const EquipmentMasterPanel = () => {
   /* ───────── Departments ───────── */
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
-  /* fallback for records loaded before option list ready */
   const [currentDeptFallback, setCurrentDeptFallback] = useState(null);
+
+
+  /* ───────── Equipment list for Checklist Import ───────── */
+  const [equipmentList, setEquipmentList] = useState([]);
+  const [equipmentListLoading, setEquipmentListLoading] = useState(false);
+  const [importEquipmentId, setImportEquipmentId] = useState(null);
+
+  // track whether we've already loaded once so we don't refetch on every tab revisit
+  const equipmentLoadedRef = useRef(false);
+
+  useEffect(() => {
+    // only fire when the user actually opens the Checklist tab
+    if (activeTab !== "checklist") return;
+
+    // already fetched once — skip
+    if (equipmentLoadedRef.current) return;
+
+    let isMounted = true;
+
+    const fetchEquipmentList = async () => {
+      setEquipmentListLoading(true);
+      try {
+        const response = await getAllDepartmentEquipmentMaster();
+        const data = response?.data?.data ?? [];
+        if (isMounted) {
+          setEquipmentList(Array.isArray(data) ? data : []);
+          equipmentLoadedRef.current = true;
+        }
+      } catch (error) {
+        console.error("Failed to fetch equipment list:", error);
+        if (isMounted) setEquipmentList([]);
+      } finally {
+        if (isMounted) setEquipmentListLoading(false);
+      }
+    };
+
+    fetchEquipmentList();
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTab]);
+
+  
+  const equipmentImportOptions = useMemo(() => {
+    return equipmentList
+      .filter((item) => String(item.id) !== String(id)) // exclude the record you're on
+      .map((item) => {
+        const name =
+          item.equipment_name ||
+          item.instrument_name ||
+          item.name ||
+          "Unnamed Equipment";
+        const code =
+          item.equipment_id_no ||
+          item.instrument_id_no ||
+          item.equipment_id ||
+          "";
+        return {
+          label: code ? `${name} (${code})` : name,
+          value: item.id,
+        };
+      });
+  }, [equipmentList, id]);
+
+    /* ───────── Import checklist from selected equipment ───────── */
+  const handleImportEquipmentChange = (value) => {
+    setImportEquipmentId(value ?? null);
+
+    if (!value) return;
+
+    const selected = equipmentList.find(
+      (item) => String(item.id) === String(value)
+    );
+    if (!selected) return;
+
+    const imported = normalizeIncomingChecklist(selected.checklist_config);
+
+    // Only import if the source actually has content — otherwise the user's
+    // current checklist would be silently wiped by an empty template.
+    const hasContent =
+      (imported.questions?.length || 0) > 0 ||
+      (imported.question_columns?.length || 0) > 0 ||
+      (imported.data_columns?.length || 0) > 0 ||
+      (imported.checklist_name || "").trim().length > 0;
+
+    if (!hasContent) {
+      toast.warning(
+        "Selected equipment has no checklist configuration to import."
+      );
+      return;
+    }
+
+    setChecklistConfig(imported);
+
+    const eqName =
+      selected.equipment_name ||
+      selected.instrument_name ||
+      selected.name ||
+      "equipment";
+    toast.success(`Checklist imported from "${eqName}".`);
+  };
+  
 
   useEffect(() => {
     let isMounted = true;
@@ -284,16 +388,16 @@ const EquipmentMasterPanel = () => {
     return base;
   }, [departments, currentDeptFallback]);
 
-  /* ───────── Stage-based editability ───────── */
+  /* ───────── Stage-based editability (with is_imported override) ───────── */
   const isStageEditable = (stageId) =>
     Number(activeStageId) === Number(stageId) &&
     canPerformActivity === true &&
     permissionsLoading === false;
 
-  const isInstrumentEditable = isStageEditable(50);
-  const isHodEditable = isStageEditable(51);
-  const isQaReviewEditable = isStageEditable(52);
-  const isCancellationEditable = isStageEditable(54);
+  const isInstrumentEditable = isImported || isStageEditable(50);
+  const isHodEditable = isImported || isStageEditable(51);
+  const isQaReviewEditable = isImported || isStageEditable(52);
+  const isCancellationEditable = isImported || isStageEditable(54);
 
   /* ───────── Profile ───────── */
   useEffect(() => {
@@ -334,12 +438,14 @@ const EquipmentMasterPanel = () => {
           return;
         }
 
+        /* ── NEW: capture is_imported before downstream effects run ── */
         const imported =
           data.is_imported === 1 ||
           data.is_imported === true ||
           data.is_imported === "1";
         isImportedRef.current = imported;
         setIsImported(imported);
+        /* ──────────────────────────────────────────────────────────── */
 
         /* Resolve department info for Select display */
         const deptId =
@@ -361,7 +467,6 @@ const EquipmentMasterPanel = () => {
 
         form.setFieldsValue({
           department_id: deptId,
-          /* Prefer new keys, fall back to old keys for legacy records */
           instrument_name:
             data.equipment_name || data.instrument_name || data.name || "",
           instrument_id_no:
@@ -390,8 +495,7 @@ const EquipmentMasterPanel = () => {
         if (data.process_id) setProcessId(data.process_id);
         setProcessName(data?.process?.name || "Equipment Master");
 
-        const backendStageId =
-          data?.stage_id?.id ?? data?.stage_id ?? null;
+        const backendStageId = data?.stage_id?.id ?? data?.stage_id ?? null;
         setActiveStageId(backendStageId);
       } catch (error) {
         console.error("Failed to fetch equipment detail:", error);
@@ -412,9 +516,9 @@ const EquipmentMasterPanel = () => {
     fetchDetail(true);
   }, [fetchDetail]);
 
-  /* ───────── Workflow stages ───────── */
+  /* ───────── Workflow stages (skip if imported) ───────── */
   useEffect(() => {
-    if (!processId) return;
+    if (!processId || isImported) return;
     const fetchStages = async () => {
       try {
         setWorkflowLoading(true);
@@ -435,11 +539,11 @@ const EquipmentMasterPanel = () => {
       }
     };
     fetchStages();
-  }, [processId]);
+  }, [processId, isImported]);
 
-  /* ───────── Activities ───────── */
+  /* ───────── Activities (skip if imported) ───────── */
   useEffect(() => {
-    if (!activeStageId) {
+    if (!activeStageId || isImported) {
       setActivities([]);
       setActivitiesLoading(false);
       return;
@@ -463,7 +567,7 @@ const EquipmentMasterPanel = () => {
       }
     };
     fetchActivities();
-  }, [activeStageId]);
+  }, [activeStageId, isImported]);
 
   /* ───────── Permissions ───────── */
   const fetchPermissions = useCallback(async () => {
@@ -494,7 +598,7 @@ const EquipmentMasterPanel = () => {
     fetchPermissions();
   }, [fetchPermissions]);
 
-  /* ───────── Activity logs ───────── */
+  /* ───────── Activity logs (skip if imported) ───────── */
   const fetchActivityLogs = useCallback(async () => {
     if (isLoading) return;
     if (isImportedRef.current) {
@@ -530,6 +634,7 @@ const EquipmentMasterPanel = () => {
   useEffect(() => {
     if (!activeStageId) return;
 
+    /* don't auto-select the Activity tab when imported */
     if (isImportedRef.current && Number(activeStageId) === 53) return;
 
     const matchingTab = TABS.find(
@@ -731,6 +836,7 @@ const EquipmentMasterPanel = () => {
     ? TABS.filter((tab) => tab.id === "cancellation")
     : TABS.filter((tab) => tab.id !== "cancellation");
 
+  /* Hide Activity tab when imported */
   if (isImported) {
     visibleTabs = visibleTabs.filter((tab) => tab.id !== "activity");
   }
@@ -748,44 +854,62 @@ const EquipmentMasterPanel = () => {
   /* ───────── Render ───────── */
   return (
     <div className="w-full">
-      {/* ═══════════════ WORKFLOW: STAGES + ACTIVITIES ═══════════════ */}
-      <div className="mb-2 space-y-2">
-        <ProcessStage
-          stages={workflowStages}
-          activeStageId={activeStageId}
-          loading={workflowLoading}
-          cancelledStageId={54}
-        />
-
-        <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
-          <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
-            <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />
-            <div className="min-w-0 flex-1">
-              <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">
-                Process
-              </p>
-              <p className="truncate text-[11px] font-semibold text-[#344A43]">
-                {processName || "—"}
+      {/* ═══════════════ WORKFLOW: STAGES + ACTIVITIES (or Imported banner) ═══════════════ */}
+      {isImported ? (
+        <div className="mb-6 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F59E0B]/10 text-[#B45309]">
+              <ClipboardList size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#B45309]">
+                Imported Equipment / Instrument
+              </h3>
+              <p className="text-xs font-medium text-[#D97706]">
+                This is an imported Equipment / Instrument. The workflow (Stages &amp; Activities) is not available for this record. You can edit the data directly.
               </p>
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="mb-2 space-y-2">
+          <ProcessStage
+            stages={workflowStages}
+            activeStageId={activeStageId}
+            loading={workflowLoading}
+            cancelledStageId={54}
+          />
 
-          <div className="min-w-0 flex-1">
-            <ProcessActivities
-              activities={activities}
-              loading={activitiesLoading}
-              recordId={id}
-              userId={loginUserId}
-              activityApi={executeEquipmentMasterActivity}
-              onActivitySuccess={handleActivitySuccess}
-              canPerformActivity={canPerformActivity}
-              permissionsLoading={permissionsLoading}
-              auditRoute={"/user/equipment-master-audit"}
-              onExit={() => navigate("/user/equipment-master-dashboard")}
-            />
+          <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
+            <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
+              <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />
+              <div className="min-w-0 flex-1">
+                <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">
+                  Process
+                </p>
+                <p className="truncate text-[11px] font-semibold text-[#344A43]">
+                  {processName || "—"}
+                </p>
+              </div>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <ProcessActivities
+                activities={activities}
+                loading={activitiesLoading}
+                recordId={id}
+                userId={loginUserId}
+                activityApi={executeEquipmentMasterActivity}
+                onActivitySuccess={handleActivitySuccess}
+                canPerformActivity={canPerformActivity}
+                permissionsLoading={permissionsLoading}
+                auditRoute={"/user/equipment-master-audit"}
+                onExit={() => navigate("/user/equipment-master-dashboard")}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ═══════════════ TABS ═══════════════ */}
       <div className="mb-6">
@@ -818,7 +942,9 @@ const EquipmentMasterPanel = () => {
                   Select Department
                 </span>
               }
-              rules={[{ required: true, message: "Please select a department" }]}
+              rules={[
+                { required: true, message: "Please select a department" },
+              ]}
               className="!mb-4"
             >
               <Select
@@ -842,9 +968,11 @@ const EquipmentMasterPanel = () => {
                   Equipment / Instrument Name
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter equipment / instrument name" },
-              ]}
+              rules={
+                isImported
+                  ? []
+                  : [{ required: true, whitespace: true, message: "Please enter equipment / instrument name" }]
+              }
               className="!mb-4"
             >
               <FormInput placeholder="Enter equipment / instrument name" disabled={!isInstrumentEditable} />
@@ -859,9 +987,11 @@ const EquipmentMasterPanel = () => {
                   Equipment / Instrument Code Number
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter equipment / instrument code number" },
-              ]}
+              rules={
+                isImported
+                  ? []
+                  : [{ required: true, whitespace: true, message: "Please enter equipment / instrument code number" }]
+              }
               className="!mb-4"
             >
               <FormInput placeholder="Enter equipment / instrument code number" disabled={!isInstrumentEditable} />
@@ -876,15 +1006,17 @@ const EquipmentMasterPanel = () => {
                   Location
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter location" },
-              ]}
+              rules={
+                isImported
+                  ? []
+                  : [{ required: true, whitespace: true, message: "Please enter location" }]
+              }
               className="!mb-4"
             >
               <FormInput placeholder="Enter location" disabled={!isInstrumentEditable} />
             </Form.Item>
 
-            {/* ASSET CODE */}
+            {/* 👇 SYMBOLIC INPUT — ASSET CODE 👇 */}
             <Form.Item
               name="asset_code"
               label={
@@ -893,12 +1025,18 @@ const EquipmentMasterPanel = () => {
                   Asset Code
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter Asset Code" },
-              ]}
+              rules={
+                isImported
+                  ? []
+                  : [{ required: true, whitespace: true, message: "Please enter Asset Code" }]
+              }
               className="!mb-4"
             >
-              <FormInput placeholder="Enter Asset Code" disabled={!isInstrumentEditable} />
+              <SymbolicInput
+                placeholder="Enter Asset Code"
+                defaultDiscipline="Asset Code"
+                disabled={!isInstrumentEditable}
+              />
             </Form.Item>
 
             {/* MAKE */}
@@ -910,9 +1048,11 @@ const EquipmentMasterPanel = () => {
                   Make
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter make" },
-              ]}
+              rules={
+                isImported
+                  ? []
+                  : [{ required: true, whitespace: true, message: "Please enter make" }]
+              }
               className="!mb-4"
             >
               <FormInput placeholder="Enter make" disabled={!isInstrumentEditable} />
@@ -927,15 +1067,17 @@ const EquipmentMasterPanel = () => {
                   Model
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter model" },
-              ]}
+              rules={
+                isImported
+                  ? []
+                  : [{ required: true, whitespace: true, message: "Please enter model" }]
+              }
               className="!mb-4"
             >
               <FormInput placeholder="Enter model" disabled={!isInstrumentEditable} />
             </Form.Item>
 
-            {/* CAPACITY */}
+            {/* 👇 SYMBOLIC INPUT — CAPACITY 👇 */}
             <Form.Item
               name="capacity"
               label={
@@ -944,12 +1086,18 @@ const EquipmentMasterPanel = () => {
                   Capacity
                 </span>
               }
-              rules={[
-                { required: true, whitespace: true, message: "Please enter capacity" },
-              ]}
+              rules={
+                isImported
+                  ? []
+                  : [{ required: true, whitespace: true, message: "Please enter capacity" }]
+              }
               className="!mb-4"
             >
-              <FormInput placeholder="Enter capacity" disabled={!isInstrumentEditable} />
+              <SymbolicInput
+                placeholder="Enter Capacity"
+                defaultDiscipline="Capacity"
+                disabled={!isInstrumentEditable}
+              />
             </Form.Item>
           </div>
         </section>
@@ -1015,8 +1163,59 @@ const EquipmentMasterPanel = () => {
         </section>
 
         {/* ─── TAB 4: CHECKLIST CONFIGURATION ─── */}
+        {/* ─── TAB 4: CHECKLIST CONFIGURATION ─── */}
         <section style={{ display: activeTab === "checklist" ? "block" : "none" }}>
           <SectionHeader title="CHECKLIST CONFIGURATION" />
+
+          {/* ───────── CHECKLIST IMPORT (new) ───────── */}
+          <div className="mt-5 rounded-lg border border-[#DCE8E2] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <ClipboardList size={16} />
+              </div>
+              <div>
+                <h3 className="text-[13px] font-semibold text-[#263B35]">
+                  Checklist Import
+                </h3>
+                <p className="text-[11px] text-[#8A9992]">
+                  Select an equipment / instrument to import an existing
+                  checklist configuration.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+              <Form.Item
+                label={
+                  <span className="flex items-center gap-1.5">
+                    <ClipboardList
+                      size={12}
+                      strokeWidth={1.9}
+                      className="text-[#56766D]"
+                    />
+                    Select Equipment / Instrument
+                  </span>
+                }
+                className="!mb-0"
+              >
+                <Select
+                  placeholder="Select an equipment / instrument"
+                  options={equipmentImportOptions}
+                  loading={equipmentListLoading}
+                  showSearch
+                  optionFilterProp="label"
+                  allowClear
+                  value={importEquipmentId}
+                  // onChange={setImportEquipmentId}
+                  onChange={handleImportEquipmentChange}
+                  style={{ width: "100%" }}
+                  disabled={!isInstrumentEditable}
+                />
+              </Form.Item>
+            </div>
+          </div>
+
+          {/* ───────── CHECKLIST CONFIGURATION ───────── */}
           <div className="mt-5">
             <ChecklistConfiguration
               value={checklistConfig}

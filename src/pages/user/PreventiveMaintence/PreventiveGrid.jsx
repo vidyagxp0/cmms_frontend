@@ -27,6 +27,16 @@ const MONTHS = [
   { key: "dec", label: "December" },
 ];
 
+/* ─────────────────── Frequency dropdown options ─────────────────── */
+const FREQUENCY_OPTIONS = [
+  { value: "Monthly",     label: "Monthly" },
+  { value: "Quarterly",   label: "Quarterly" },
+  { value: "Half Yearly", label: "Half Yearly" },
+  { value: "Yearly",      label: "Yearly" },
+  { value: "Two Yearly",  label: "Two Yearly" },
+  { value: "Five Yearly", label: "Five Yearly" },
+];
+
 /* -------------------- Frequency helpers -------------------- */
 export const FREQUENCY_PRIORITY = { Y: 4, Q: 3, H: 2, M: 1 };
 
@@ -66,7 +76,7 @@ const extractFrequencyTokens = (raw) => {
 
 export const getRowBiggestFrequency = (row) => {
   const codes = [];
-  
+
   if (row?.weeklyPreventive && typeof row.weeklyPreventive === "object") {
     Object.values(row.weeklyPreventive).forEach((weeks) => {
       if (!Array.isArray(weeks)) return;
@@ -138,6 +148,15 @@ const PreventiveGrid = ({
       placeholder: "Enter location",
       minWidth: 180,
     },
+    /* 👇 NEW: Frequency column, right after Location */
+    {
+      key: "frequency",
+      title: "Frequency",
+      type: "select",
+      placeholder: "Select frequency",
+      options: FREQUENCY_OPTIONS,
+      minWidth: 160,
+    },
   ];
 
   const rows = Array.isArray(value) ? value : [];
@@ -157,13 +176,14 @@ const PreventiveGrid = ({
     newRow.equipmentDbId = "";
     newRow.make = "";
     newRow.model = "";
-    
+    newRow.frequency = "";          // 👈 explicit init (also covered by the loop above)
+
     // Initialize flat month dates
     MONTHS.forEach((m) => {
       newRow[`${m.key}_planned`] = "";
       newRow[`${m.key}_executed`] = "";
     });
-    
+
     newRow.remark = "";
 
     onChange([...rows, newRow]);
@@ -207,7 +227,8 @@ const PreventiveGrid = ({
 
       if (equipment) {
         row.equipmentDbId = String(equipment.id);
-        row.equipmentInstrumentName = equipment.equipment_name || equipment.instrument_name || "";
+        row.equipmentInstrumentName =
+          equipment.equipment_name || equipment.instrument_name || "";
         row.equipmentInstrumentId =
           equipment.instrument_id_no || equipment.equipment_id || "";
         row.location = equipment.location || "";
@@ -248,14 +269,20 @@ const PreventiveGrid = ({
 
     const fieldValue = row[key] ?? "";
     const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
-    
+
     // Check if the specific column was populated from the API
     const isRowFromApi = row.isFromApi === true;
-    const apiColumns = ["equipmentInstrumentName", "equipmentInstrumentId", "location"];
+    const apiColumns = [
+      "equipmentInstrumentName",
+      "equipmentInstrumentId",
+      "location",
+    ];
     const isApiColumn = apiColumns.includes(key);
-    
-    // Disable ONLY the API columns if the row is from the API
-    const isDisabled = disabled || columnDisabled || (isRowFromApi && isApiColumn);
+
+    // Disable ONLY the API columns if the row is from the API.
+    // Frequency is NOT in apiColumns, so it stays editable for API rows too.
+    const isDisabled =
+      disabled || columnDisabled || (isRowFromApi && isApiColumn);
 
     // Updated disabled styling for visibility
     const commonProps = {
@@ -278,13 +305,17 @@ const PreventiveGrid = ({
             {...commonProps}
             value={selectValue}
             placeholder={equipmentLoading ? "Loading..." : placeholder}
-            onChange={(id) => updateRow(rowIndex, "equipmentInstrumentName", id)}
+            onChange={(id) =>
+              updateRow(rowIndex, "equipmentInstrumentName", id)
+            }
             options={equipmentOptions}
             disabled={isDisabled || equipmentLoading}
             showSearch
             optionFilterProp="label"
             filterOption={(input, option) =>
-              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              (option?.label ?? "")
+                .toLowerCase()
+                .includes(input.toLowerCase())
             }
             className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1] disabled:[&_.ant-select-selector]:!bg-[#F9FAF9] disabled:[&_.ant-select-selection-item]:!text-[#263B35]"
           />
@@ -320,7 +351,9 @@ const PreventiveGrid = ({
     return (
       <DatePicker
         value={val ? dayjs(val) : null}
-        onChange={(date) => updateRow(rowIndex, key, date ? date.format("YYYY-MM-DD") : "")}
+        onChange={(date) =>
+          updateRow(rowIndex, key, date ? date.format("YYYY-MM-DD") : "")
+        }
         format="DD/MM/YYYY"
         variant="borderless"
         className="!h-8 !w-full !px-1 !text-[10px] !font-medium !text-[#263B35] hover:bg-[#F3F6F4] cursor-pointer disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
@@ -332,8 +365,15 @@ const PreventiveGrid = ({
 
   const visibleColumns = mainColumns.filter((column) => column.hidden !== true);
   const showChildColumn = typeof onViewChild === "function";
-  
-  const emptyColSpan = 1 + visibleColumns.length + 1 + MONTHS.length + 1 + (showChildColumn ? 1 : 0) + 1;
+
+  const emptyColSpan =
+    1 +
+    visibleColumns.length +
+    1 +
+    MONTHS.length +
+    1 +
+    (showChildColumn ? 1 : 0) +
+    1;
 
   /* -------------------- Render -------------------- */
   return (
@@ -370,7 +410,9 @@ const PreventiveGrid = ({
             type="button"
             onClick={addRow}
             disabled={
-              disabled || equipmentLoading || (maxRows !== undefined && rows.length >= maxRows)
+              disabled ||
+              equipmentLoading ||
+              (maxRows !== undefined && rows.length >= maxRows)
             }
             className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[#2B5577] px-3.5 text-[11px] font-semibold text-white shadow-[0_4px_12px_rgba(43,85,119,0.20)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-[#234766] hover:shadow-[0_7px_16px_rgba(43,85,119,0.25)] active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
           >
@@ -413,7 +455,10 @@ const PreventiveGrid = ({
                 CALIBRATION DATES
               </th>
               {MONTHS.map((month) => (
-                <th key={month.key} className="w-[100px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold text-[#43564F]">
+                <th
+                  key={month.key}
+                  className="w-[100px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold text-[#43564F]"
+                >
                   {month.label}
                 </th>
               ))}
@@ -442,7 +487,10 @@ const PreventiveGrid = ({
                       <div className="mx-auto h-4 w-5 animate-pulse rounded bg-[#E5EBE8]" />
                     </td>
                     {visibleColumns.map((column) => (
-                      <td key={column.key} className="border border-[#D5DFDB] px-2 py-2 align-middle">
+                      <td
+                        key={column.key}
+                        className="border border-[#D5DFDB] px-2 py-2 align-middle"
+                      >
                         <div
                           className="h-4 animate-pulse rounded bg-[#E5EBE8]"
                           style={{ width: `${55 + ((idx * 13) % 45)}%` }}
@@ -453,7 +501,10 @@ const PreventiveGrid = ({
                       <div className="mx-auto h-4 w-10 animate-pulse rounded bg-[#E5EBE8]" />
                     </td>
                     {MONTHS.map((month) => (
-                      <td key={`${month.key}_skel_p`} className="border border-[#D5DFDB] px-1 py-2 align-middle">
+                      <td
+                        key={`${month.key}_skel_p`}
+                        className="border border-[#D5DFDB] px-1 py-2 align-middle"
+                      >
                         <div className="h-6 w-full animate-pulse rounded bg-[#E5EBE8]" />
                       </td>
                     ))}
@@ -475,7 +526,10 @@ const PreventiveGrid = ({
                       <div className="mx-auto h-4 w-8 animate-pulse rounded bg-[#E5EBE8]" />
                     </td>
                     {MONTHS.map((month) => (
-                      <td key={`${month.key}_skel_e`} className="border border-[#D5DFDB] px-1 py-2 align-middle">
+                      <td
+                        key={`${month.key}_skel_e`}
+                        className="border border-[#D5DFDB] px-1 py-2 align-middle"
+                      >
                         <div className="h-6 w-full animate-pulse rounded bg-[#E5EBE8]" />
                       </td>
                     ))}
@@ -488,20 +542,30 @@ const PreventiveGrid = ({
                   {/* Spacer between logical rows */}
                   {rowIndex > 0 && (
                     <tr aria-hidden="true">
-                      <td colSpan={emptyColSpan} className="!h-3 !border-0 !p-0 !bg-[#F7FAF8]" />
+                      <td
+                        colSpan={emptyColSpan}
+                        className="!h-3 !border-0 !p-0 !bg-[#F7FAF8]"
+                      />
                     </tr>
                   )}
 
                   {/* ── Row 1: Planned ── */}
                   <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                    <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+                    <td
+                      rowSpan={2}
+                      className="border border-[#D5DFDB] px-2 py-1 text-center align-middle"
+                    >
                       <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">
                         {rowIndex + 1}.
                       </span>
                     </td>
 
                     {visibleColumns.map((column) => (
-                      <td key={column.key} rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
+                      <td
+                        key={column.key}
+                        rowSpan={2}
+                        className="border border-[#D5DFDB] p-0 align-middle"
+                      >
                         {renderField(column, row, rowIndex)}
                       </td>
                     ))}
@@ -513,15 +577,23 @@ const PreventiveGrid = ({
 
                     {/* Months - Planned */}
                     {MONTHS.map((month) => (
-                      <td key={`${month.key}_planned`} className="border border-[#D5DFDB] p-0 align-middle">
+                      <td
+                        key={`${month.key}_planned`}
+                        className="border border-[#D5DFDB] p-0 align-middle"
+                      >
                         {renderDateField(row, `${month.key}_planned`, rowIndex)}
                       </td>
                     ))}
 
-                    <td rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
+                    <td
+                      rowSpan={2}
+                      className="border border-[#D5DFDB] p-0 align-middle"
+                    >
                       <TextArea
                         value={row.remark ?? ""}
-                        onChange={(e) => updateRemark(rowIndex, e.target.value)}
+                        onChange={(e) =>
+                          updateRemark(rowIndex, e.target.value)
+                        }
                         rows={2}
                         className="!h-full !min-h-[64px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
                         disabled={disabled} // <--- Remarks remain enabled for API rows
@@ -530,12 +602,19 @@ const PreventiveGrid = ({
                     </td>
 
                     {showChildColumn && (
-                      <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+                      <td
+                        rowSpan={2}
+                        className="border border-[#D5DFDB] px-2 py-1 text-center align-middle"
+                      >
                         <button
                           type="button"
                           onClick={() => {
                             if (!canCreateChild) return;
-                            onViewChild(rowIndex, row, getRowBiggestFrequency(row));
+                            onViewChild(
+                              rowIndex,
+                              row,
+                              getRowBiggestFrequency(row)
+                            );
                           }}
                           disabled={!canCreateChild} // <--- Child button remains enabled based on permissions
                           className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${
@@ -543,14 +622,21 @@ const PreventiveGrid = ({
                               ? "bg-[#3d606d] hover:bg-[#2B5577] hover:shadow-md active:scale-95"
                               : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
                           }`}
-                          title={canCreateChild ? "Create child preventive record" : "Child creation is available only to Initiator at Close Done stage"}
+                          title={
+                            canCreateChild
+                              ? "Create child preventive record"
+                              : "Child creation is available only to Initiator at Close Done stage"
+                          }
                         >
                           {viewChildLabel}
                         </button>
                       </td>
                     )}
 
-                    <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+                    <td
+                      rowSpan={2}
+                      className="border border-[#D5DFDB] px-2 py-1 text-center align-middle"
+                    >
                       <button
                         type="button"
                         onClick={() => handleDeleteRow(rowIndex)}
@@ -572,7 +658,10 @@ const PreventiveGrid = ({
 
                     {/* Months - Executed */}
                     {MONTHS.map((month) => (
-                      <td key={`${month.key}_executed`} className="border border-[#D5DFDB] p-0 align-middle">
+                      <td
+                        key={`${month.key}_executed`}
+                        className="border border-[#D5DFDB] p-0 align-middle"
+                      >
                         {renderDateField(row, `${month.key}_executed`, rowIndex)}
                       </td>
                     ))}
@@ -617,7 +706,8 @@ const PreventiveGrid = ({
       >
         <div className="space-y-5">
           <p className="text-[13px] leading-6 text-[#596760]">
-            Are you sure you want to delete this row? This action cannot be undone.
+            Are you sure you want to delete this row? This action cannot be
+            undone.
           </p>
           <div className="flex justify-end gap-3 border-t border-[#E8ECEA] pt-4">
             <button

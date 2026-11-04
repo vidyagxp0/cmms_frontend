@@ -103,21 +103,21 @@ export const DASHBOARD_NAV_ITEMS = [
     },
     {
         id: "fieldInstrument-calibration-addendum",
-        label: "Addendum Calibration",
+        label: "Addendum Planner",
         path: "/user/field-instrument-calibration-addendum-dashboard",
         icon: FileCheck,
         group: "engineering",
         hiddenFromNav: true,
     },
 
-    {
-        id: "addendum-calibration-management",
-        label: "Addendum Calibration Management",
-        path: "/user/addendum-calibration-management-dashboard",
-        icon: FileCheck,
-        group: "engineering",
-        hiddenFromNav: true,
-    },
+    // {
+    //     id: "addendum-calibration-management",
+    //     label: "Addendum Calibration Management",
+    //     path: "/user/addendum-calibration-management-dashboard",
+    //     icon: FileCheck,
+    //     group: "engineering",
+    //     hiddenFromNav: true,
+    // },
 
     // ─── Preventive Maintenance group ───────────────────────────────
     {
@@ -145,20 +145,20 @@ export const DASHBOARD_NAV_ITEMS = [
     },
     {
         id: "addendum-preventive",
-        label: "Addendum Preventive",
+        label: "Addendum planner",
         path: "/user/addendum-preventive-planner-dashboard",
         icon: ClipboardPlus,
         hiddenFromNav: true,
         group: "maintenance",
     },
-    {
-        id: "addendum-preventive-management",
-        label: "Addendum Preventive Maintenance",
-        path: "/user/addendum-preventive-management-dashboard",
-        icon: ClipboardPlus,
-        hiddenFromNav: true,
-        group: "maintenance",
-    },
+    // {
+    //     id: "addendum-preventive-management",
+    //     label: "Addendum Preventive Maintenance",
+    //     path: "/user/addendum-preventive-management-dashboard",
+    //     icon: ClipboardPlus,
+    //     hiddenFromNav: true,
+    //     group: "maintenance",
+    // },
 
     // ─── Field Instrument Planner group ───────────────────────────────
     // Commented out per request:

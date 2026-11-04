@@ -14,6 +14,7 @@ import { getProfile } from "../../../services/authApi";
 // import ChecklistConfiguration from "../../../components/checklist/ChecklistConfig";
 import { addSpareInstrumentMaster } from "../../../services/usersApi/spareInstrumentApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput"; // 👈 IMPORT ADDED
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
@@ -472,7 +473,7 @@ const SpareInstrumentCreate = () => {
                                 <FormInput placeholder="Enter location" />
                             </Form.Item>
 
-                            {/* LEAST COUNT */}
+                            {/* 👇 SYMBOLIC INPUT REPLACEMENTS START 👇 */}
                             <Form.Item
                                 name="least_count"
                                label={
@@ -490,10 +491,9 @@ const SpareInstrumentCreate = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter least count" />
+                                <SymbolicInput placeholder="Enter least count" defaultDiscipline="Least Count" />
                             </Form.Item>
 
-                            {/* ACCURACY */}
                             <Form.Item
                                 name="accuracy"
                                 label={
@@ -511,10 +511,9 @@ const SpareInstrumentCreate = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter accuracy" />
+                                <SymbolicInput placeholder="Enter accuracy" defaultDiscipline="Accuracy" />
                             </Form.Item>
 
-                            {/* INSTRUMENT RANGE */}
                             <Form.Item
                                 name="instrument_range"
                                 label={
@@ -532,10 +531,9 @@ const SpareInstrumentCreate = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter instrument range" />
+                                <SymbolicInput placeholder="Enter instrument range" defaultDiscipline="Range" />
                             </Form.Item>
 
-                            {/* OPERATING RANGE */}
                             <Form.Item
                                 name="operating_range"
                                 label={
@@ -553,10 +551,9 @@ const SpareInstrumentCreate = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter operating range" />
+                                <SymbolicInput placeholder="Enter operating range" defaultDiscipline="Operating Range" />
                             </Form.Item>
 
-                            {/* CALIBRATION TEST POINTS */}
                             <Form.Item
                                 name="calibration_test_points"
                                 label={
@@ -574,11 +571,9 @@ const SpareInstrumentCreate = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter calibration test points" />
+                                <SymbolicInput placeholder="Enter calibration test points" defaultDiscipline="Test Points" />
                             </Form.Item>
 
-
-                            {/* Asset Code */}
                             <Form.Item
                                 name="asset_code"
                                 label={
@@ -596,11 +591,9 @@ const SpareInstrumentCreate = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter Asset Code" />
+                                <SymbolicInput placeholder="Enter Asset Code" defaultDiscipline="Asset Code" />
                             </Form.Item>
 
-
-                            {/* Capacity */}
                             <Form.Item
                                 name="capacity"
                                 label={
@@ -618,8 +611,9 @@ const SpareInstrumentCreate = () => {
                                 ]}
                                 className="!mb-4"
                             >
-                                <FormInput placeholder="Enter Capacity" />
+                                <SymbolicInput placeholder="Enter Capacity" defaultDiscipline="Capacity" />
                             </Form.Item>
+                            {/* 👆 SYMBOLIC INPUT REPLACEMENTS END 👆 */}
                         </div>
                     </section>
                 )}

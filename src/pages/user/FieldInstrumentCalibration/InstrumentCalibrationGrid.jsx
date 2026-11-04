@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Plus, Trash2, Table2, Loader2 } from "lucide-react";
 import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
@@ -40,7 +40,8 @@ const InstrumentCalibrationGrid = ({
   viewChildLabel = "Child",
 }) => {
   const mainColumns = [
-    { key: "equipmentName", title: "Equipment Name", type: "equipment-select", placeholder: "Select equipment", minWidth: 200 },
+    /* 👇 widened so full "Name (ID)" is visible inside the cell */
+    { key: "equipmentName", title: "Equipment Name", type: "equipment-select", placeholder: "Select equipment", minWidth: 360 },
     { key: "instrumentName", title: "Instrument Name", type: "text", placeholder: "Enter name", minWidth: 150 },
     { key: "instrumentId", title: "Instrument ID No.", type: "text", placeholder: "Enter ID", minWidth: 140 },
     { key: "make", title: "Make", type: "text", placeholder: "Enter make", minWidth: 100 },
@@ -64,6 +65,35 @@ const InstrumentCalibrationGrid = ({
   const [deleteRowIndex, setDeleteRowIndex] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+
+  /* Combine Equipment Name + Instrument ID No. for the dropdown labels */
+  const combinedEquipmentOptions = useMemo(() => {
+    return equipmentOptions.map((opt) => {
+      const eq = equipmentMap?.[String(opt.value)];
+      if (!eq) return opt;
+
+      const name =
+        eq.equipment_name ||
+        eq.instrument_name ||
+        eq.instrumentName ||
+        eq.name ||
+        "";
+
+      const idNo =
+        eq.instrument_id_no ||
+        eq.equipment_id ||
+        eq.field_instrument_id ||
+        eq.instrument_id ||
+        "";
+
+      const label =
+        idNo && !(opt.label || "").includes(idNo)
+          ? `${name || opt.label} (${idNo})`
+          : opt.label || name;
+
+      return { ...opt, label };
+    });
+  }, [equipmentOptions, equipmentMap]);
 
   const addRow = () => {
     if (disabled) return;
@@ -183,17 +213,23 @@ const InstrumentCalibrationGrid = ({
       const selectValue =
         row.equipmentDbId !== undefined && row.equipmentDbId !== null && row.equipmentDbId !== ""
           ? String(row.equipmentDbId)
-          : (equipmentOptions.find((opt) => opt.label === row.equipmentName)?.value || undefined);
+          : (
+              combinedEquipmentOptions.find((opt) => opt.label === row.equipmentName)?.value ||
+              equipmentOptions.find((opt) => opt.label === row.equipmentName)?.value ||
+              undefined
+            );
 
       return (
         <Select
           value={selectValue}
           placeholder={equipmentLoading ? "Loading..." : placeholder}
           onChange={(id) => handleEquipmentSelect(rowIndex, id)}
-          options={equipmentOptions}
+          options={combinedEquipmentOptions}
           disabled={isDisabled || equipmentLoading}
           showSearch
           optionFilterProp="label"
+          /* 👇 let the popup auto-widen so full "Name (ID)" is always visible */
+          popupMatchSelectWidth={false}
           filterOption={(input, option) =>
             (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
           }
@@ -241,11 +277,9 @@ const InstrumentCalibrationGrid = ({
     );
   };
 
-  // 👇 NEW — Child button state derived from Calibration Next Due Date
+  // 👇 Child button state derived from Calibration Next Due Date
   //    Window = [ Next Due − 30 days (00:00) , Next Due (23:59:59) ]
-  //    Uses today's date (local, start of day) for the comparison.
   const getChildButtonState = (row) => {
-    // 1. No due date → prompt user to fill it
     if (!row.calibrationNextDueDate) {
       return {
         enabled: false,
@@ -253,7 +287,6 @@ const InstrumentCalibrationGrid = ({
       };
     }
 
-    // 2. Parse the due date (stored as YYYY-MM-DD in state; dayjs handles it)
     const nextDue = dayjs(row.calibrationNextDueDate);
     if (!nextDue.isValid()) {
       return {
@@ -266,12 +299,10 @@ const InstrumentCalibrationGrid = ({
     const windowStart = nextDueStart.subtract(30, "day").startOf("day");
     const windowEnd = nextDueStart.endOf("day");
 
-    // 3. Today must be within [windowStart, windowEnd] inclusive
     const todayStart = dayjs().startOf("day");
     const isWithinWindow =
       !todayStart.isBefore(windowStart) && !todayStart.isAfter(windowEnd);
 
-    // 4. Role / stage gate
     if (!canCreateChild) {
       return {
         enabled: false,
@@ -279,7 +310,6 @@ const InstrumentCalibrationGrid = ({
       };
     }
 
-    // 5. Date-window gate
     if (!isWithinWindow) {
       return {
         enabled: false,

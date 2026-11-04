@@ -27,3 +27,8 @@ export const getAllDepartments = () => {
 export const getAllDepartmentMasters = (departmentId, type) => {
     return api.get(`/user/get-master-data/${departmentId}/${type}`);
 };
+
+export const getAllDepartmentMastersGlobal = (type) => {
+    return api.get(`/user/get-master-data-global/${type}`);
+};
+

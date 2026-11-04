@@ -1042,6 +1042,7 @@ const AddendumPreventiveChildPanel = () => {
           stages={workflowStages}
           activeStageId={activeStageId}
           loading={workflowLoading}
+          cancelledStageId={69}
         />
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
           <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">

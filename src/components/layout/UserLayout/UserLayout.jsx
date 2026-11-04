@@ -23,7 +23,8 @@ function UserLayout() {
             location.pathname === "/user/import-master-equipment-data" || 
             location.pathname === "/user/equipment-master-dashboard" ||
             location.pathname === "/user/addendum-preventive-planner-dashboard" ||
-            location.pathname === "/user/addendum-calibration-management-dashboard";
+            location.pathname === "/user/addendum-calibration-management-dashboard" ||
+            location.pathname === "/user/addendum-preventive-management-dashboard";
 
     return (
         <div

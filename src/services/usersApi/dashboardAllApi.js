@@ -63,3 +63,9 @@ export const getAllAddendumCalibrationChildRecords = (params = {}) => {
         params,
     });
 };
+
+export const getAllAddendumPreventiveChildRecords = (params = {}) => {
+    return api.get("/user/addendum-preventive-management-records", {
+        params,
+    });
+};

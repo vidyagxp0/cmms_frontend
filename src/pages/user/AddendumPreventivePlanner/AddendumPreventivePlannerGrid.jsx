@@ -27,7 +27,6 @@ const MONTHS = [
   { key: "dec", label: "December" },
 ];
 
-/* -------------------- Weekly/Flat data helper -------------------- */
 export const createEmptyWeeklyData = () => {
   const data = {};
   MONTHS.forEach(({ key }) => {
@@ -37,7 +36,6 @@ export const createEmptyWeeklyData = () => {
   return data;
 };
 
-/* -------------------- Main component -------------------- */
 const AddendumPreventivePlannerGrid = ({
   value = [],
   onChange,
@@ -52,6 +50,9 @@ const AddendumPreventivePlannerGrid = ({
   recordId,
   disabled = false,
   showAddButton = true,
+  onViewChild,
+  canCreateChild = false,
+  viewChildLabel = "Child",
 }) => {
   const mainColumns = [
     {
@@ -82,7 +83,6 @@ const AddendumPreventivePlannerGrid = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
-  /* -------------------- Row actions -------------------- */
   const addRow = () => {
     if (disabled) return;
     if (maxRows !== undefined && rows.length >= maxRows) return;
@@ -101,6 +101,7 @@ const AddendumPreventivePlannerGrid = ({
     });
 
     newRow.remark = "";
+    newRow.row_id = rows.length + 1;
 
     onChange([...rows, newRow]);
   };
@@ -116,7 +117,10 @@ const AddendumPreventivePlannerGrid = ({
   const handleConfirmDelete = async () => {
     if (deleteRowIndex === null || rows.length <= minRows) return;
     try {
-      const updatedRows = rows.filter((_, index) => index !== deleteRowIndex);
+      const updatedRows = rows
+        .filter((_, index) => index !== deleteRowIndex)
+        .map((row, index) => ({ ...row, row_id: index + 1 }));
+      
       const payload = { gridData: updatedRows };
       if (selectedId) await updatePreventive(selectedId, payload);
       onChange(updatedRows);
@@ -132,7 +136,6 @@ const AddendumPreventivePlannerGrid = ({
     setIsDeleteModalOpen(false);
   };
 
-  /* -------------------- Cell updates -------------------- */
   const updateRow = (rowIndex, key, newValue) => {
     if (disabled) return;
     const updated = [...rows];
@@ -144,11 +147,12 @@ const AddendumPreventivePlannerGrid = ({
       if (equipment) {
         row.equipmentDbId = String(equipment.id);
         row.equipmentInstrumentName = equipment.equipment_name || equipment.instrument_name || "";
+        
         row.equipmentInstrumentId =
-          equipment.instrument_id_no || equipment.equipment_id || "";
-        row.location = equipment.location || "";
-        row.make = equipment.make || "";
-        row.model = equipment.sr_no_model_no || equipment.model || "";
+          equipment.equipment_id_no || equipment.instrument_id_no || equipment.equipment_id || "";
+        row.location = equipment.equipment_location || equipment.location || "";
+        row.make = equipment.equipment_make || equipment.make || "";
+        row.model = equipment.equipment_model || equipment.sr_no_model_no || equipment.model || "";
       } else {
         row.equipmentDbId = "";
         row.equipmentInstrumentName = "";
@@ -172,7 +176,6 @@ const AddendumPreventivePlannerGrid = ({
     onChange(updated);
   };
 
-  /* -------------------- Field renderer -------------------- */
   const renderField = (column, row, rowIndex) => {
     const {
       key,
@@ -185,11 +188,12 @@ const AddendumPreventivePlannerGrid = ({
     const fieldValue = row[key] ?? "";
     const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
 
-    const isRowFromApi = row.isFromApi === true;
-    const apiColumns = ["equipmentInstrumentName", "equipmentInstrumentId", "location"];
-    const isApiColumn = apiColumns.includes(key);
+    // 👇 ONLY lock the Equipment Code field if it has a value
+    const isCodeField = key === "equipmentInstrumentId";
+    const hasValue = fieldValue !== undefined && fieldValue !== null && String(fieldValue).trim() !== "";
+    const isLockedCode = isCodeField && hasValue;
 
-    const isDisabled = disabled || columnDisabled || (isRowFromApi && isApiColumn);
+    const isDisabled = disabled || columnDisabled || isLockedCode;
 
     const commonProps = {
       disabled: isDisabled,
@@ -263,15 +267,28 @@ const AddendumPreventivePlannerGrid = ({
     );
   };
 
+  // 👇 UPDATED: Removed 30-day window logic. Only checks initiator + close done
+  const getChildButtonState = () => {
+    if (!canCreateChild) {
+      return {
+        enabled: false,
+        title: "Child creation is available only to Initiator at Close Done stage.",
+      };
+    }
+
+    return {
+      enabled: true,
+      title: "Create child",
+    };
+  };
+
   const visibleColumns = mainColumns.filter((column) => column.hidden !== true);
+  const showChildColumn = typeof onViewChild === "function";
 
-  // Cols: Sr.No(1) + visibleColumns(N) + CalibrationDates(1) + Months(12) + Remark(1) + Action(1)
-  const emptyColSpan = 1 + visibleColumns.length + 1 + MONTHS.length + 1 + 1;
+  const emptyColSpan = 1 + visibleColumns.length + 1 + MONTHS.length + 1 + (showChildColumn ? 1 : 0) + 1;
 
-  /* -------------------- Render -------------------- */
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
-      {/* Header bar */}
       <div className="flex min-h-[68px] items-center justify-between gap-5 border-b border-[#D7E0DC] bg-[#F7F9F8] px-5">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#D5E0DF] bg-white text-[#4E7585] shadow-[0_2px_7px_rgba(38,53,46,0.05)]">
@@ -353,6 +370,11 @@ const AddendumPreventivePlannerGrid = ({
               <th className="w-[150px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
                 Remark
               </th>
+              {showChildColumn && (
+                <th className="w-[70px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
+                  {viewChildLabel}
+                </th>
+              )}
               <th className="w-[60px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
                 Action
               </th>
@@ -361,10 +383,8 @@ const AddendumPreventivePlannerGrid = ({
 
           <tbody>
             {equipmentLoading ? (
-              /* ─── SKELETON LOADER ROWS ─── */
               Array.from({ length: 3 }).map((_, idx) => (
                 <React.Fragment key={`skeleton-${idx}`}>
-                  {/* Skeleton Planned Row */}
                   <tr className="bg-white">
                     <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
                       <div className="mx-auto h-4 w-5 animate-pulse rounded bg-[#E5EBE8]" />
@@ -388,11 +408,15 @@ const AddendumPreventivePlannerGrid = ({
                     <td className="border border-[#D5DFDB] px-2 py-2 align-middle">
                       <div className="h-6 w-full animate-pulse rounded bg-[#E5EBE8]" />
                     </td>
+                    {showChildColumn && (
+                      <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+                        <div className="mx-auto h-4 w-10 animate-pulse rounded bg-[#E5EBE8]" />
+                      </td>
+                    )}
                     <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
                       <div className="mx-auto h-4 w-4 animate-pulse rounded bg-[#E5EBE8]" />
                     </td>
                   </tr>
-                  {/* Skeleton Executed Row */}
                   <tr className="bg-white">
                     <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
                       <div className="mx-auto h-4 w-8 animate-pulse rounded bg-[#E5EBE8]" />
@@ -406,81 +430,100 @@ const AddendumPreventivePlannerGrid = ({
                 </React.Fragment>
               ))
             ) : rows.length > 0 ? (
-              rows.map((row, rowIndex) => (
-                <React.Fragment key={rowIndex}>
-                  {/* Spacer between logical rows */}
-                  {rowIndex > 0 && (
-                    <tr aria-hidden="true">
-                      <td colSpan={emptyColSpan} className="!h-3 !border-0 !p-0 !bg-[#F7FAF8]" />
+              rows.map((row, rowIndex) => {
+                const { enabled: childButtonEnabled, title: childButtonTitle } = getChildButtonState(row);
+
+                return (
+                  <React.Fragment key={rowIndex}>
+                    {rowIndex > 0 && (
+                      <tr aria-hidden="true">
+                        <td colSpan={emptyColSpan} className="!h-3 !border-0 !p-0 !bg-[#F7FAF8]" />
+                      </tr>
+                    )}
+
+                    <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+                      <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+                        <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">
+                          {row.row_id ?? rowIndex + 1}.
+                        </span>
+                      </td>
+
+                      {visibleColumns.map((column) => (
+                        <td key={column.key} rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
+                          {renderField(column, row, rowIndex)}
+                        </td>
+                      ))}
+
+                      <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">
+                        Planned
+                      </td>
+
+                      {MONTHS.map((month) => (
+                        <td key={`${month.key}_planned`} className="border border-[#D5DFDB] p-0 align-middle">
+                          {renderDateField(row, `${month.key}_planned`, rowIndex)}
+                        </td>
+                      ))}
+
+                      <td rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
+                        <TextArea
+                          value={row.remark ?? ""}
+                          onChange={(e) => updateRemark(rowIndex, e.target.value)}
+                          rows={2}
+                          className="!h-full !min-h-[64px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
+                          disabled={disabled}
+                          placeholder="Enter remark"
+                        />
+                      </td>
+
+                      {showChildColumn && (
+                        <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!childButtonEnabled) return;
+                              onViewChild(rowIndex, { ...row, row_id: row.row_id ?? rowIndex + 1 });
+                            }}
+                            disabled={!childButtonEnabled}
+                            className={`inline-flex h-7 items-center justify-center rounded px-3 text-[11px] font-medium text-white shadow-sm transition-all duration-200 focus:outline-none ${
+                              childButtonEnabled
+                                ? "bg-[#3d606d] hover:bg-[#2B5577] active:scale-95"
+                                : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
+                            }`}
+                            aria-label="Create child"
+                            title={childButtonTitle}
+                          >
+                            Child
+                          </button>
+                        </td>
+                      )}
+
+                      <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRow(rowIndex)}
+                          disabled={disabled || rows.length <= minRows}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
+                          aria-label="Delete row"
+                        >
+                          <Trash2 size={14} strokeWidth={1.8} />
+                        </button>
+                      </td>
                     </tr>
-                  )}
 
-                  {/* ── Row 1: Planned ── */}
-                  <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                    <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
-                      <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">
-                        {rowIndex + 1}.
-                      </span>
-                    </td>
-
-                    {visibleColumns.map((column) => (
-                      <td key={column.key} rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
-                        {renderField(column, row, rowIndex)}
+                    <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+                      <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">
+                        Executed
                       </td>
-                    ))}
 
-                    {/* Row Label: Planned */}
-                    <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">
-                      Planned
-                    </td>
-
-                    {/* Months - Planned */}
-                    {MONTHS.map((month) => (
-                      <td key={`${month.key}_planned`} className="border border-[#D5DFDB] p-0 align-middle">
-                        {renderDateField(row, `${month.key}_planned`, rowIndex)}
-                      </td>
-                    ))}
-
-                    <td rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
-                      <TextArea
-                        value={row.remark ?? ""}
-                        onChange={(e) => updateRemark(rowIndex, e.target.value)}
-                        rows={2}
-                        className="!h-full !min-h-[64px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
-                        disabled={disabled}
-                        placeholder="Enter remark"
-                      />
-                    </td>
-
-                    <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteRow(rowIndex)}
-                        disabled={disabled || rows.length <= minRows}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
-                        aria-label="Delete row"
-                      >
-                        <Trash2 size={14} strokeWidth={1.8} />
-                      </button>
-                    </td>
-                  </tr>
-
-                  {/* ── Row 2: Executed ── */}
-                  <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                    {/* Row Label: Executed */}
-                    <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">
-                      Executed
-                    </td>
-
-                    {/* Months - Executed */}
-                    {MONTHS.map((month) => (
-                      <td key={`${month.key}_executed`} className="border border-[#D5DFDB] p-0 align-middle">
-                        {renderDateField(row, `${month.key}_executed`, rowIndex)}
-                      </td>
-                    ))}
-                  </tr>
-                </React.Fragment>
-              ))
+                      {MONTHS.map((month) => (
+                        <td key={`${month.key}_executed`} className="border border-[#D5DFDB] p-0 align-middle">
+                          {renderDateField(row, `${month.key}_executed`, rowIndex)}
+                        </td>
+                      ))}
+                    </tr>
+                  </React.Fragment>
+                );
+              })
             ) : (
               <tr>
                 <td
@@ -495,7 +538,6 @@ const AddendumPreventivePlannerGrid = ({
         </table>
       </CustomScrollContainer>
 
-      {/* Footer */}
       <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">
         <span className="text-[10px] font-medium text-[#899690]">
           {equipmentLoading
@@ -509,7 +551,6 @@ const AddendumPreventivePlannerGrid = ({
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
       <UserModal
         isOpen={isDeleteModalOpen}
         onClose={handleCancelDelete}

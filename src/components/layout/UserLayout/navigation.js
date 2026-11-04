@@ -151,6 +151,14 @@ export const DASHBOARD_NAV_ITEMS = [
         hiddenFromNav: true,
         group: "maintenance",
     },
+    {
+        id: "addendum-preventive-management",
+        label: "Addendum Preventive Maintenance",
+        path: "/user/addendum-preventive-management-dashboard",
+        icon: ClipboardPlus,
+        hiddenFromNav: true,
+        group: "maintenance",
+    },
 
     // ─── Field Instrument Planner group ───────────────────────────────
     // Commented out per request:

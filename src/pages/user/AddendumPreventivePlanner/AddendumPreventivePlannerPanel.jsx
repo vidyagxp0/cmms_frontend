@@ -56,7 +56,6 @@ const TABS = [
   { id: "cancellation", label: "Cancellation", stageId: 59 },
 ];
 
-// ✅ instrumentType removed
 const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
   { name: "selectedDeptId", label: "Select Department" },
@@ -77,8 +76,9 @@ const getProcessValue = (processData = [], key) => {
 
 const buildGridPayload = (rows = [], equipmentMap = {}) => {
   return rows.map((row, index) => {
-    const rowData = { row_id: index + 1 };
+    const rowData = { row_id: row.row_id ?? index + 1 };
     Object.keys(row).forEach((key) => {
+      if (key === "row_id") return;
       if (key === "isFromApi" || key === "weeklyPreventive") return;
 
       let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
@@ -96,7 +96,6 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
   });
 };
 
-// ✅ instrumentType removed from process_data
 const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({
     key: field.name,
@@ -185,6 +184,7 @@ const AddendumPreventivePlannerPanel = () => {
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
   const [loginUserId, setLoginUserId] = useState("");
+  const [userRoles, setUserRoles] = useState([]); // 👈 Added userRoles
   const [departmentId, setDepartmentId] = useState("");
   const [initiationDepartment, setInitiationDepartment] = useState("");
   const [dateOfInitiation, setDateOfInitiation] = useState("");
@@ -195,7 +195,6 @@ const AddendumPreventivePlannerPanel = () => {
   const { recordId } = useParams();
   const isFetchingRef = useRef(false);
 
-  // ✅ instrumentType removed from required fallbacks
   const requiredValuesRef = useRef({
     shortDescription: "",
     selectedDeptId: "",
@@ -206,7 +205,6 @@ const AddendumPreventivePlannerPanel = () => {
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
-  // ✅ Only watch department now
   const selectedDeptIdWatch = Form.useWatch("selectedDeptId", form);
 
   useEffect(() => {
@@ -223,6 +221,11 @@ const AddendumPreventivePlannerPanel = () => {
   const isQaReviewEditable = isStageEditable(57);
   const isCancellationEditable = isStageEditable(59);
 
+  // 👇 NEW — Child creation gate (Close Done = stage 58, initiator only)
+  const canCreateChild =
+    Number(activeStageId) === 58 &&
+    userRoles.some((role) => String(role).toLowerCase() === "initiator");
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -230,6 +233,7 @@ const AddendumPreventivePlannerPanel = () => {
         const profile = response?.data?.data;
         if (!profile) return;
         setLoginUserId(profile?.id || "");
+        setUserRoles(Array.isArray(profile?.roles) ? profile.roles : []); // 👈 Set userRoles
       } catch (error) {
         console.error("Failed to fetch profile:", error);
       }
@@ -254,7 +258,6 @@ const AddendumPreventivePlannerPanel = () => {
     fetchDepartments();
   }, []);
 
-  // ✅ Fetch equipment — ONLY based on Department, always "equipment_master"
   useEffect(() => {
     let isCurrent = true;
 
@@ -289,7 +292,6 @@ const AddendumPreventivePlannerPanel = () => {
         setEquipmentOptions(options);
         setEquipmentMap(map);
         equipmentMapRef.current = map;
-        // ✅ No auto-populate: user will click "Add Row" and pick from the dropdown
       } catch (error) {
         if (!isCurrent) return;
         console.error("Failed to fetch equipment:", error);
@@ -352,7 +354,6 @@ const AddendumPreventivePlannerPanel = () => {
         const dueDate = getProcessValue(processData, "dueDate");
         const processDepartment = getProcessValue(processData, "initiationDepartment");
         const masterDepartmentId = getProcessValue(processData, "master_department");
-        // ✅ instrumentType removed
         const year = getProcessValue(processData, "year");
         const block = getProcessValue(processData, "block");
         const shortDescription = getProcessValue(processData, "short_description");
@@ -386,7 +387,6 @@ const AddendumPreventivePlannerPanel = () => {
         setInitiationDepartment(responseData?.department?.name || processDepartment || "");
         setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
 
-        // ✅ instrumentType removed from required fallbacks
         requiredValuesRef.current = {
           shortDescription: shortDescription || "",
           selectedDeptId: masterDepartmentId || null,
@@ -394,7 +394,6 @@ const AddendumPreventivePlannerPanel = () => {
           block: block || "",
         };
 
-        // ✅ instrumentType removed from setFieldsValue
         form.setFieldsValue({
           documentNumber: documentNumber || "SMLJ/ENG/SOP-GEN/OO3/T01-01",
           documentType: documentType || "Formats",
@@ -438,8 +437,8 @@ const AddendumPreventivePlannerPanel = () => {
           return row;
         });
 
-        const normalizedRows = rawRows.map((row) => {
-          const newRow = { ...row, isFromApi: true };
+        const normalizedRows = rawRows.map((row, index) => {
+          const newRow = { ...row, isFromApi: true, row_id: row.row_id ?? index + 1 };
 
           MONTHS.forEach(({ key }) => {
             if (newRow[`${key}_planned`] === undefined || newRow[`${key}_planned`] === null) newRow[`${key}_planned`] = "";
@@ -616,6 +615,23 @@ const AddendumPreventivePlannerPanel = () => {
     { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
+
+  // 👇 NEW — Child navigation
+  const handleViewChild = (rowIndex, rowData) => {
+    const shortDesc = form.getFieldValue("shortDescription") || "";
+    const rowId = rowData?.row_id ?? rowIndex + 1;
+    navigate(`/user/addendum-preventive-management-create/13`, {
+      state: {
+        rowData,
+        shortDescription: shortDesc,
+        processId: 13, // 👈 Static process ID 13
+        parentId: recordId,
+        rowId,
+        childType: "addendum-preventive-management",
+        processName: "Addendum Preventive Maintenance",
+      },
+    });
+  };
 
   const handleSave = async () => {
     if (isSaving || isLoading) return;
@@ -815,7 +831,6 @@ const AddendumPreventivePlannerPanel = () => {
         }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
-        {/* General Information */}
         <section style={{ display: activeTab === "general" ? "block" : "none" }}>
           <SectionHeader title="GENERAL INFORMATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -861,8 +876,6 @@ const AddendumPreventivePlannerPanel = () => {
               />
             </Form.Item>
 
-            {/* ✅ Select Instrument Type field REMOVED */}
-
             <Form.Item
               name="selectedDeptId"
               label={
@@ -903,10 +916,12 @@ const AddendumPreventivePlannerPanel = () => {
               equipmentLoading={equipmentLoading}
               recordId={recordId}
               disabled={!isGeneralEditable}
-              // ✅ Enabled — user must click "Add Row" manually
               showAddButton={isGeneralEditable}
               weekDates={headerWeekDates}
               onWeekDatesChange={setHeaderWeekDates}
+              onViewChild={handleViewChild}          // 👈 NEW
+              canCreateChild={canCreateChild}        // 👈 NEW
+              viewChildLabel="Child"                 // 👈 NEW
             />
           </div>
           <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
@@ -933,7 +948,6 @@ const AddendumPreventivePlannerPanel = () => {
           </Form.Item>
         </section>
 
-        {/* HOD Review */}
         <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
           <SectionHeader title="HOD / DESIGNEE REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -967,7 +981,6 @@ const AddendumPreventivePlannerPanel = () => {
           </div>
         </section>
 
-        {/* QA Approval Review — Stage 57 */}
         <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
           <SectionHeader title="QA APPROVAL REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -1001,7 +1014,6 @@ const AddendumPreventivePlannerPanel = () => {
           </div>
         </section>
 
-        {/* Cancellation — Stage 59 */}
         <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
           <SectionHeader title="CANCELLATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -1026,7 +1038,6 @@ const AddendumPreventivePlannerPanel = () => {
           </div>
         </section>
 
-        {/* Activity Log — Stage 58 (Close Done) */}
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
           <SectionHeader title="ACTIVITY LOG" />
           <div className="mt-5 space-y-4">

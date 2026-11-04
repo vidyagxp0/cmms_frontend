@@ -55,6 +55,10 @@ import AddendumCalibrationChildAudit from "../pages/user/AddendumChildCalibratio
 import AddendumCalibrationChildCreate from "../pages/user/AddendumChildCalibration/AddendumCalibrationChildCreate";
 import AddendumCalibrationChildPanel from "../pages/user/AddendumChildCalibration/AddendumCalibrationChildPanel";
 import AddendumCalibrationChildDashboard from "../pages/user/AddendumChildCalibration/AddendumCalibrationChildDashboard";
+import AddendumPreventiveChildPanel from "../pages/user/AddendumPreventiveChild/AddendumPreventiveChildPanel";
+import AddendumPreventiveChildCreate from "../pages/user/AddendumPreventiveChild/AddendumPreventiveChildCreate";
+import AddendumPreventiveChildAudit from "../pages/user/AddendumPreventiveChild/AddendumPreventiveChildAudit";
+import AddendumPreventiveChildDashboard from "../pages/user/AddendumPreventiveChild/AddendumPreventiveChildDashboard";
 
 function UserRoutes() {
   return (
@@ -137,6 +141,12 @@ function UserRoutes() {
         <Route path="addendum-calibration-management-create/:processId" element={<AddendumCalibrationChildCreate />} />
         <Route path="addendum-calibration-management-panel/:recordId" element={<AddendumCalibrationChildPanel />} /> 
         <Route path="addendum-calibration-management-audit/:recordId" element={<AddendumCalibrationChildAudit />} /> 
+
+        {/*  Addendum Preventive Child Routes*/}
+        <Route path="addendum-preventive-management-dashboard" element={<AddendumPreventiveChildDashboard />} />
+        <Route path="addendum-preventive-management-create/:processId" element={<AddendumPreventiveChildCreate />} />
+        <Route path="addendum-preventive-management-panel/:recordId" element={<AddendumPreventiveChildPanel />} /> 
+        <Route path="addendum-preventive-management-audit/:recordId" element={<AddendumPreventiveChildAudit />} /> 
 
         
         {/* Import Master Equipment Data Routes*/}

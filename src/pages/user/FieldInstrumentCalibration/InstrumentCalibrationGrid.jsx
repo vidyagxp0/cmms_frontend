@@ -10,6 +10,17 @@ import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 const { TextArea } = Input;
 
+// 👇 map any category string coming from the API to the dropdown's option value
+const normalizeCategory = (raw) => {
+  if (raw === undefined || raw === null) return "";
+  const s = String(raw).trim().toLowerCase();
+  if (!s) return "";
+  if (["nc", "non-critical", "non critical", "noncritical"].includes(s)) return "non-critical";
+  if (["c", "critical"].includes(s)) return "critical";
+  if (["i", "indicative", "ind"].includes(s)) return "indicative";
+  return raw;
+};
+
 const InstrumentCalibrationGrid = ({
   value = [],
   onChange,
@@ -21,10 +32,12 @@ const InstrumentCalibrationGrid = ({
   recordId,
   disabled = false,
   showAddButton = false,
-  // ✅ NEW
   equipmentOptions = [],
   equipmentMap = {},
   equipmentLoading = false,
+  onViewChild,
+  canCreateChild = false,
+  viewChildLabel = "Child",
 }) => {
   const mainColumns = [
     { key: "equipmentName", title: "Equipment Name", type: "equipment-select", placeholder: "Select equipment", minWidth: 200 },
@@ -41,11 +54,10 @@ const InstrumentCalibrationGrid = ({
     { key: "category", title: "Category", type: "select", placeholder: "Select", minWidth: 100, options: [{ value: "critical", label: "Critical" }, { value: "non-critical", label: "Non-Critical" }, { value: "indicative", label: "Indicative" }] },
   ];
 
-  // Columns auto-filled from API — locked for API-loaded rows
   const API_POPULATED_COLUMNS = [
-    "equipmentName", "instrumentName", "instrumentId", "make", "modelNo",
+    "instrumentName", "instrumentId", "make", "modelNo",
     "leastCount", "location", "accuracy", "instrumentRange",
-    "operatingRange", "calibrationTestPoint",
+    "operatingRange", "calibrationTestPoint", "category",
   ];
 
   const rows = Array.isArray(value) ? value : [];
@@ -62,6 +74,8 @@ const InstrumentCalibrationGrid = ({
     newRow.calibrationNextDueDate = "";
     newRow.calibrationDoneDate = "";
     newRow.remark = "";
+    newRow.row_id = rows.length + 1;
+    newRow.isEquipmentLocked = false;
     onChange([...rows, newRow]);
   };
 
@@ -76,7 +90,9 @@ const InstrumentCalibrationGrid = ({
   const handleConfirmDelete = async () => {
     if (deleteRowIndex === null || rows.length <= minRows) return;
     try {
-      const updatedRows = rows.filter((_, index) => index !== deleteRowIndex);
+      const updatedRows = rows
+        .filter((_, index) => index !== deleteRowIndex)
+        .map((row, index) => ({ ...row, row_id: index + 1 }));
       const payload = { gridData: updatedRows };
       if (selectedId) await updateCalibration(selectedId, payload);
       onChange(updatedRows);
@@ -101,7 +117,6 @@ const InstrumentCalibrationGrid = ({
     onChange(updated);
   };
 
-  // ✅ NEW: when user picks an equipment, auto-fill related fields
   const handleEquipmentSelect = (rowIndex, equipmentId) => {
     if (disabled) return;
     const equipment = equipmentMap[String(equipmentId)];
@@ -109,19 +124,31 @@ const InstrumentCalibrationGrid = ({
     const row = { ...updated[rowIndex] };
 
     if (equipment) {
-      row.equipmentDbId = String(equipment.id);
-      row.equipmentName = equipment.equipment_name || equipment.instrument_name || equipment.name || "";
-      row.instrumentName = equipment.instrument_name || equipment.equipment_name || equipment.name || "";
-      row.instrumentId = equipment.instrument_id_no || equipment.equipment_id || "";
-      row.make = equipment.make || "";
-      row.modelNo = equipment.sr_no_model_no || equipment.model || "";
-      row.leastCount = equipment.least_count || "";
-      row.location = equipment.location || "";
-      row.accuracy = equipment.accuracy || "";
-      row.instrumentRange = equipment.instrument_range || "";
-      row.operatingRange = equipment.operating_range || "";
-      row.calibrationTestPoint = equipment.calibration_test_point || "";
-      row.category = equipment.category || row.category || "";
+      const name =
+        equipment.equipment_name ||
+        equipment.instrument_name ||
+        equipment.instrumentName ||
+        equipment.name ||
+        "";
+
+      row.equipmentDbId        = String(equipment.id);
+      row.equipmentName        = name;
+      row.instrumentName       = equipment.instrument_name || equipment.instrumentName || equipment.equipment_name || equipment.name || "";
+      row.instrumentId         = equipment.instrument_id_no || equipment.equipment_id || equipment.field_instrument_id || equipment.instrument_id || "";
+      row.make                 = equipment.make || equipment.manufacturer || "";
+      row.modelNo              = equipment.sr_no_model_no || equipment.model || equipment.model_no || "";
+      row.leastCount           = equipment.least_count || equipment.leastCount || "";
+      row.location             = equipment.location || equipment.area || "";
+      row.accuracy             = equipment.accuracy || "";
+      row.instrumentRange      = equipment.instrument_range || equipment.instrumentrange || equipment.range || "";
+      row.operatingRange       = equipment.operating_range || equipment.operatingrange || "";
+      row.calibrationTestPoint =
+        equipment.calibration_test_points ||
+        equipment.calibration_test_point  ||
+        equipment.calibrationTestPoints   ||
+        "";
+      row.category             = normalizeCategory(equipment.category) || row.category || "";
+      row.isEquipmentLocked    = true;
     } else {
       row.equipmentDbId = "";
       row.equipmentName = "";
@@ -135,6 +162,7 @@ const InstrumentCalibrationGrid = ({
       row.instrumentRange = "";
       row.operatingRange = "";
       row.calibrationTestPoint = "";
+      row.isEquipmentLocked = false;
     }
 
     updated[rowIndex] = row;
@@ -146,10 +174,11 @@ const InstrumentCalibrationGrid = ({
     const fieldValue = row[key] ?? "";
 
     const isRowFromApi = row.isFromApi === true;
+    const isEquipmentLocked = row.isEquipmentLocked === true;
     const isApiColumn = API_POPULATED_COLUMNS.includes(key);
-    const isDisabled = disabled || (isRowFromApi && isApiColumn);
+    const isLockedByEquipment = isEquipmentLocked && isApiColumn && key !== "equipmentName";
+    const isDisabled = disabled || (isRowFromApi && isApiColumn) || isLockedByEquipment;
 
-    // Equipment Select
     if (type === "equipment-select") {
       const selectValue =
         row.equipmentDbId !== undefined && row.equipmentDbId !== null && row.equipmentDbId !== ""
@@ -173,7 +202,6 @@ const InstrumentCalibrationGrid = ({
       );
     }
 
-    // Generic Select
     if (type === "select") {
       return (
         <Select
@@ -213,10 +241,65 @@ const InstrumentCalibrationGrid = ({
     );
   };
 
-  // Total columns = 1 (Sr No) + 12 (Main) + 2 (Dates) + 1 (Remarks) + 1 (Action) = 17
-  const totalColumns = 17;
+  // 👇 NEW — Child button state derived from Calibration Next Due Date
+  //    Window = [ Next Due − 30 days (00:00) , Next Due (23:59:59) ]
+  //    Uses today's date (local, start of day) for the comparison.
+  const getChildButtonState = (row) => {
+    // 1. No due date → prompt user to fill it
+    if (!row.calibrationNextDueDate) {
+      return {
+        enabled: false,
+        title: "Please select a Calibration Next Due Date in this row to enable child creation.",
+      };
+    }
 
-  /* ── Loading skeleton rows ── */
+    // 2. Parse the due date (stored as YYYY-MM-DD in state; dayjs handles it)
+    const nextDue = dayjs(row.calibrationNextDueDate);
+    if (!nextDue.isValid()) {
+      return {
+        enabled: false,
+        title: "Invalid Calibration Next Due Date — please re-select the date.",
+      };
+    }
+
+    const nextDueStart = nextDue.startOf("day");
+    const windowStart = nextDueStart.subtract(30, "day").startOf("day");
+    const windowEnd = nextDueStart.endOf("day");
+
+    // 3. Today must be within [windowStart, windowEnd] inclusive
+    const todayStart = dayjs().startOf("day");
+    const isWithinWindow =
+      !todayStart.isBefore(windowStart) && !todayStart.isAfter(windowEnd);
+
+    // 4. Role / stage gate
+    if (!canCreateChild) {
+      return {
+        enabled: false,
+        title: "Child creation is available only to Initiator at Close Done stage.",
+      };
+    }
+
+    // 5. Date-window gate
+    if (!isWithinWindow) {
+      return {
+        enabled: false,
+        title: `Child can only be created between ${windowStart.format(
+          "DD-MM-YYYY"
+        )} and ${windowEnd.format("DD-MM-YYYY")} (30 days before the next due date up to the next due date).`,
+      };
+    }
+
+    return {
+      enabled: true,
+      title: `Create child calibration (window: ${windowStart.format(
+        "DD-MM-YYYY"
+      )} → ${windowEnd.format("DD-MM-YYYY")})`,
+    };
+  };
+
+  const showChildColumn = typeof onViewChild === "function";
+  const totalColumns = 17 + (showChildColumn ? 1 : 0);
+
   const renderSkeletonRows = () =>
     Array.from({ length: 3 }).map((_, idx) => (
       <tr key={`skel-${idx}`} className="bg-white">
@@ -240,6 +323,11 @@ const InstrumentCalibrationGrid = ({
         <td className="border border-[#D5DFDB] px-2 py-2 align-middle">
           <div className="h-6 w-full animate-pulse rounded bg-[#E5EBE8]" />
         </td>
+        {showChildColumn && (
+          <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+            <div className="mx-auto h-4 w-10 animate-pulse rounded bg-[#E5EBE8]" />
+          </td>
+        )}
         <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
           <div className="mx-auto h-4 w-4 animate-pulse rounded bg-[#E5EBE8]" />
         </td>
@@ -309,6 +397,11 @@ const InstrumentCalibrationGrid = ({
               </th>
               <th className="w-[140px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Calibration Done Date</th>
               <th className="w-[150px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Remarks</th>
+              {showChildColumn && (
+                <th className="w-[70px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
+                  {viewChildLabel}
+                </th>
+              )}
               <th className="w-[60px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Action</th>
             </tr>
           </thead>
@@ -316,49 +409,78 @@ const InstrumentCalibrationGrid = ({
             {equipmentLoading ? (
               renderSkeletonRows()
             ) : rows.length > 0 ? (
-              rows.map((row, rowIndex) => (
-                <tr key={rowIndex} className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                  <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle min-h-[40px]">
-                    <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">{rowIndex + 1}.</span>
-                  </td>
+              rows.map((row, rowIndex) => {
+                const { enabled: childButtonEnabled, title: childButtonTitle } =
+                  getChildButtonState(row);
 
-                  {mainColumns.map((column) => (
-                    <td key={column.key} className="border border-[#D5DFDB] p-0 align-middle min-h-[40px]">
-                      {renderField(column, row, rowIndex)}
+                return (
+                  <tr key={rowIndex} className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+                    <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle min-h-[40px]">
+                      <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">
+                        {row.row_id ?? rowIndex + 1}.
+                      </span>
                     </td>
-                  ))}
 
-                  <td className="border border-[#D5DFDB] p-0 align-middle min-h-[40px]">
-                    {renderDateField(row, "calibrationNextDueDate", rowIndex)}
-                  </td>
-                  <td className="border border-[#D5DFDB] p-0 align-middle min-h-[40px]">
-                    {renderDateField(row, "calibrationDoneDate", rowIndex)}
-                  </td>
+                    {mainColumns.map((column) => (
+                      <td key={column.key} className="border border-[#D5DFDB] p-0 align-middle min-h-[40px]">
+                        {renderField(column, row, rowIndex)}
+                      </td>
+                    ))}
 
-                  <td className="border border-[#D5DFDB] p-0 align-middle min-h-[40px]">
-                    <TextArea
-                      value={row.remark ?? ""}
-                      onChange={(e) => updateRow(rowIndex, "remark", e.target.value)}
-                      rows={2}
-                      placeholder="Enter remarks"
-                      className="!h-full !min-h-[40px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!bg-white"
-                      disabled={disabled}
-                    />
-                  </td>
+                    <td className="border border-[#D5DFDB] p-0 align-middle min-h-[40px]">
+                      {renderDateField(row, "calibrationNextDueDate", rowIndex)}
+                    </td>
+                    <td className="border border-[#D5DFDB] p-0 align-middle min-h-[40px]">
+                      {renderDateField(row, "calibrationDoneDate", rowIndex)}
+                    </td>
 
-                  <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle min-h-[40px]">
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteRow(rowIndex)}
-                      disabled={disabled || rows.length <= minRows}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
-                      aria-label="Delete row"
-                    >
-                      <Trash2 size={14} strokeWidth={1.8} />
-                    </button>
-                  </td>
-                </tr>
-              ))
+                    <td className="border border-[#D5DFDB] p-0 align-middle min-h-[40px]">
+                      <TextArea
+                        value={row.remark ?? ""}
+                        onChange={(e) => updateRow(rowIndex, "remark", e.target.value)}
+                        rows={2}
+                        placeholder="Enter remarks"
+                        className="!h-full !min-h-[40px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!bg-white"
+                        disabled={disabled}
+                      />
+                    </td>
+
+                    {showChildColumn && (
+                      <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle min-h-[40px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!childButtonEnabled) return;
+                            onViewChild(rowIndex, { ...row, row_id: row.row_id ?? rowIndex + 1 });
+                          }}
+                          disabled={!childButtonEnabled}
+                          className={`inline-flex h-7 items-center justify-center rounded px-3 text-[11px] font-medium text-white shadow-sm transition-all duration-200 focus:outline-none ${
+                            childButtonEnabled
+                              ? "bg-[#3d606d] hover:bg-[#2B5577] active:scale-95"
+                              : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
+                          }`}
+                          aria-label="Create child calibration"
+                          title={childButtonTitle}
+                        >
+                          Child
+                        </button>
+                      </td>
+                    )}
+
+                    <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle min-h-[40px]">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteRow(rowIndex)}
+                        disabled={disabled || rows.length <= minRows}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
+                        aria-label="Delete row"
+                      >
+                        <Trash2 size={14} strokeWidth={1.8} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan={totalColumns} className="h-[80px] border border-[#D5DFDB] px-5 text-center text-[11px] font-medium text-[#899690]">

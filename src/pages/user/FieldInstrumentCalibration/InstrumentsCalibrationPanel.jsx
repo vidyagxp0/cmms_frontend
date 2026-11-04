@@ -87,8 +87,9 @@ const getProcessValue = (processData = [], key) => {
 
 const buildGridPayload = (rows = []) => {
   return rows.map((row, index) => {
-    const rowData = { row_id: index + 1 };
+    const rowData = { row_id: row.row_id ?? index + 1 };
     Object.keys(row).forEach((key) => {
+      if (key === "row_id") return;
       if (key === "isFromApi") return;
       let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
 
@@ -158,7 +159,6 @@ const InstrumentCalibrationPanel = () => {
 
   const [calibrationRows, setCalibrationRows] = useState([]);
 
-  // Equipment state — only used to populate the Equipment Name dropdown
   const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [equipmentMap, setEquipmentMap] = useState({});
   const [equipmentLoading, setEquipmentLoading] = useState(false);
@@ -196,6 +196,11 @@ const InstrumentCalibrationPanel = () => {
   const isUserDeptEditable = isStageEditable(41);
   const isQaReviewEditable = isStageEditable(42);
   const isCancellationEditable = isStageEditable(44);
+
+  // 👇 NEW — child creation gate (Close Done = stage 43, initiator only)
+  const canCreateChild =
+    Number(activeStageId) === 43 &&
+    userRoles.some((role) => String(role).toLowerCase() === "initiator");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -249,7 +254,6 @@ const InstrumentCalibrationPanel = () => {
     fetchCalibrationUsers();
   }, []);
 
-  // ✅ Fetch equipment — ONLY populate dropdown options (NO auto-populate rows)
   useEffect(() => {
     let isCurrent = true;
 
@@ -267,7 +271,6 @@ const InstrumentCalibrationPanel = () => {
         "Master Instrument": "instrument_masters",
         "Field Instrument": "field_instrument_master",
         "Spare Instrument": "spare_instrument_master",
-        // "Equipment Master": "equipment_master" — removed from selection
       };
 
       const apiType = typeMap[instrumentTypeWatch];
@@ -296,7 +299,6 @@ const InstrumentCalibrationPanel = () => {
         setEquipmentOptions(options);
         setEquipmentMap(map);
         equipmentMapRef.current = map;
-        // ✅ No auto-populate: user will click "Add Row" and pick from the dropdown
       } catch (error) {
         if (!isCurrent) return;
         console.error("Failed to fetch equipment:", error);
@@ -406,8 +408,8 @@ const InstrumentCalibrationPanel = () => {
           return row;
         });
 
-        const normalizedRows = rawRows.map((row) => {
-          const newRow = { ...row, isFromApi: true };
+        const normalizedRows = rawRows.map((row, index) => {
+          const newRow = { ...row, isFromApi: true, row_id: row.row_id ?? index + 1 };
 
           if (!newRow.equipmentDbId && newRow.equipmentName && currentEquipmentMap) {
             const found = Object.values(currentEquipmentMap).find(
@@ -528,6 +530,22 @@ const InstrumentCalibrationPanel = () => {
     { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
+
+  // 👇 NEW — Child navigation (same URL & payload as CalibrationGrid, only childType differs)
+  const handleViewChild = (rowIndex, rowData) => {
+    const shortDesc = form.getFieldValue("shortDescription") || "";
+    const rowId = rowData?.row_id ?? rowIndex + 1;
+    navigate(`/user/calibration-management-create/${5}/${recordId}`, {
+      state: {
+        rowData,
+        shortDescription: shortDesc,
+        processId: 5,
+        parentId: recordId,
+        rowId,
+        childType: "addendum-calibration-management",
+      },
+    });
+  };
 
   const handleSave = async () => {
     if (isSaving || isLoading || usersLoading) return;
@@ -685,7 +703,6 @@ const InstrumentCalibrationPanel = () => {
         }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
-        {/* General Information */}
         <section style={{ display: activeTab === "general" ? "block" : "none" }}>
           <SectionHeader title="GENERAL INFORMATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -767,7 +784,6 @@ const InstrumentCalibrationPanel = () => {
                   { label: "Master Instrument", value: "Master Instrument" },
                   { label: "Field Instrument", value: "Field Instrument" },
                   { label: "Spare Instrument", value: "Spare Instrument" },
-                  // ✅ "Equipment Master" removed
                 ]}
               />
             </Form.Item>
@@ -805,12 +821,13 @@ const InstrumentCalibrationPanel = () => {
               onChange={setCalibrationRows}
               recordId={recordId}
               disabled={!isGeneralEditable}
-              // ✅ Enabled — user must click "Add Row" manually
               showAddButton={isGeneralEditable}
-              // ✅ Equipment options flow into the Equipment Name dropdown
               equipmentOptions={equipmentOptions}
               equipmentMap={equipmentMap}
               equipmentLoading={equipmentLoading}
+              onViewChild={handleViewChild}          // 👈 NEW
+              canCreateChild={canCreateChild}        // 👈 NEW
+              viewChildLabel="Child"                 // 👈 NEW
             />
           </div>
 
@@ -843,7 +860,6 @@ const InstrumentCalibrationPanel = () => {
           </Form.Item>
         </section>
 
-        {/* HOD Review */}
         <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
           <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -877,7 +893,6 @@ const InstrumentCalibrationPanel = () => {
           </div>
         </section>
 
-        {/* User Dept Review */}
         <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
           <SectionHeader title="USER DEPT REVIEW (USER DEPT)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -911,7 +926,6 @@ const InstrumentCalibrationPanel = () => {
           </div>
         </section>
 
-        {/* QA Review */}
         <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
           <SectionHeader title="QA REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -945,7 +959,6 @@ const InstrumentCalibrationPanel = () => {
           </div>
         </section>
 
-        {/* Cancellation */}
         <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
           <SectionHeader title="CANCELLATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -970,7 +983,6 @@ const InstrumentCalibrationPanel = () => {
           </div>
         </section>
 
-        {/* Activity Log */}
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
           <SectionHeader title="ACTIVITY LOG" />
           <div className="mt-5 space-y-4">

@@ -132,7 +132,7 @@ const CalibrationChild = () => {
   const [form] = Form.useForm();
   const location = useLocation();
   const navigate = useNavigate();
-  const { rowData, shortDescription: parentShortDesc, processId: passedProcessId, parentId } = location.state || {};
+  const { rowData, shortDescription: parentShortDesc, processId: passedProcessId, parentId, rowId: parentRowId, childType } = location.state || {};
   const processId = passedProcessId || urlProcessId;
   const { processName, siteName } = location.state || {};
 
@@ -332,6 +332,8 @@ const CalibrationChild = () => {
         stage_id: 18,
         is_child: true,
         parent_id: Number(parentId),
+          ...(parentRowId != null ? { row_id: Number(parentRowId) } : {}),
+        childType,
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
         short_description: values.shortDescription || "",

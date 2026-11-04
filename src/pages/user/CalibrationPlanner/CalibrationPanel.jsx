@@ -592,8 +592,9 @@ useEffect(() => {
 
   const handleViewChild = (rowIndex, rowData) => {
     const shortDesc = form.getFieldValue("shortDescription") || "";
+    const rowId = rowIndex + 1;
     navigate(`/user/calibration-management-create/${5}/${recordId}`, {
-      state: { rowData, shortDescription: shortDesc, processId: 5, parentId: recordId },
+      state: { rowData, shortDescription: shortDesc, processId: 5, parentId: recordId, rowId, childType: "calibration-child" },
     });
   };
 

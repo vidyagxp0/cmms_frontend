@@ -370,15 +370,16 @@ const CalibrationGrid = ({
               ))
             ) : rows.length > 0 ? (
               rows.map((row, rowIndex) => {
+ 
                 const rowPlannedDate = row.plannedDate ? dayjs(row.plannedDate).startOf("day") : null;
-
                 let isWithinDateWindow = false;
                 let windowStart = null;
                 let windowEnd = null;
 
                 if (rowPlannedDate) {
-                  windowStart = rowPlannedDate.subtract(7, "day").startOf("day");
-                  windowEnd = rowPlannedDate.add(7, "day").endOf("day");
+                  // ✅ NEW: 30 days before the planned date, up to and including the planned date
+                  windowStart = rowPlannedDate.subtract(30, "day").startOf("day");
+                  windowEnd = rowPlannedDate.endOf("day");
 
                   isWithinDateWindow =
                     !today.isBefore(windowStart) && !today.isAfter(windowEnd);
@@ -396,7 +397,7 @@ const CalibrationGrid = ({
                 } else if (!isWithinDateWindow) {
                   childButtonTitle = `Child can only be created between ${windowStart.format(
                     "DD-MM-YYYY"
-                  )} and ${windowEnd.format("DD-MM-YYYY")} (7 days before to 7 days after the planned date).`;
+                  )} and ${windowEnd.format("DD-MM-YYYY")} (30 days before the planned date up to the planned date).`;
                 }
 
                 return (

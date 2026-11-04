@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Activity } from "lucide-react";
-import { Form, Select } from "antd";
+import { Form } from "antd";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -8,14 +8,12 @@ import FormInput from "../../../components/common/Form/FormInput";
 import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
-import { addEquipment } from "../../../services/usersApi/equipmentApi";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import { getProfile } from "../../../services/authApi";
 // import ChecklistConfiguration from "../../../components/checklist/ChecklistConfig";
 import { addSpareInstrumentMaster } from "../../../services/usersApi/spareInstrumentApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
-import { getAllDepartments } from "../../../services/usersApi/workflowCommonApi"; // 👈 NEW
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
@@ -29,7 +27,6 @@ const TABS = [
 /* ───────────────────────── Required fields for tab validation ───────────────────────── */
 
 const REQUIRED_FIELDS = [
-    { name: "department_id", label: "Department" }, // 👈 NEW
     { name: "instrument_name", label: "Instrument Name" },
     { name: "instrument_id_no", label: "Instrument ID No." },
     { name: "make", label: "Make" },
@@ -91,10 +88,6 @@ const SpareInstrumentCreate = () => {
     const [checklistConfig, setChecklistConfig] = useState(EMPTY_CHECKLIST);
     const [activeTab, setActiveTab] = useState("instrument");
     const [loginUserId, setLoginUserId] = useState("");
-    
-    // 👈 NEW: Department states
-    const [departments, setDepartments] = useState([]);
-    const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -109,31 +102,6 @@ const SpareInstrumentCreate = () => {
         };
         fetchProfile();
     }, []);
-
-    // 👈 NEW: Fetch Departments
-    useEffect(() => {
-        let isMounted = true;
-        const fetchDepartments = async () => {
-            setDepartmentsLoading(true);
-            try {
-                const response = await getAllDepartments();
-                const data = response?.data?.data ?? [];
-                if (isMounted) setDepartments(Array.isArray(data) ? data : []);
-            } catch (error) {
-                console.error("Failed to fetch departments:", error);
-                if (isMounted) setDepartments([]);
-            } finally {
-                if (isMounted) setDepartmentsLoading(false);
-            }
-        };
-        fetchDepartments();
-        return () => { isMounted = false; };
-    }, []);
-
-    const departmentOptions = departments.map((dept, idx) => ({
-        label: dept.name || dept.department_name || dept.dept_name || "Unnamed Department",
-        value: dept.id || dept.department_id || dept.dept_id || idx,
-    }));
 
     /* ───────── Tab switch with validation ───────── */
 
@@ -284,21 +252,12 @@ const SpareInstrumentCreate = () => {
             },
         };
 
-        /* 👈 NEW: Resolve Department Name */
-        const selectedDeptOption = departmentOptions.find(
-            (opt) => String(opt.value) === String(values.department_id)
-        );
-        const selectedDepartmentName = selectedDeptOption?.label || "";
-
         /* ───────── Submit ───────── */
 
         try {
             setIsSaving(true);
 
             const payload = {
-                department_id: values.department_id || null, // 👈 NEW
-                department_name: selectedDepartmentName,     // 👈 NEW
-
                 instrument_name: values.instrument_name.trim(),
                 instrument_id_no: values.instrument_id_no.trim(),
                 make: values.make.trim(),
@@ -408,34 +367,6 @@ const SpareInstrumentCreate = () => {
 
                         <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
                             
-                            {/* 👈 NEW: SELECT DEPARTMENT */}
-                            <Form.Item
-                                name="department_id"
-                                label={
-                                    <span className="inline-flex items-center">
-                                        Select Department
-                                        <RequiredAsterisk message="Department is required. Please select a department." />
-                                    </span>
-                                }
-                                rules={[
-                                    {
-                                        required: true,
-                                        message: "Please select a department",
-                                    },
-                                ]}
-                                className="!mb-4"
-                            >
-                                <Select
-                                    placeholder="Select a department"
-                                    options={departmentOptions}
-                                    loading={departmentsLoading}
-                                    showSearch
-                                    optionFilterProp="label"
-                                    allowClear={false}
-                                    style={{ width: "100%" }}
-                                />
-                            </Form.Item>
-
                             {/* INSTRUMENT NAME */}
                             <Form.Item
                                 name="instrument_name"

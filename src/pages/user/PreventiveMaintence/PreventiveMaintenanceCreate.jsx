@@ -214,7 +214,7 @@ const PreventiveMaintenanceCreate = () => {
       label: field.label,
       value: values?.[field.name] || "",
     })),
-    // 👇 NEW: Save the exact DB ID from the parent grid row
+    // Save the exact DB ID from the parent grid row inside process_data as well
     {
       key: "equipmentDbId",
       label: "Equipment DB ID",
@@ -344,6 +344,10 @@ const PreventiveMaintenanceCreate = () => {
         process_data: processData,
         gridData: [],
         checklistData: [],
+        
+        // 👇 NEW: Send Equipment ID and Frequency OUTSIDE process_data
+        equipment_id: rowEquipmentDbId ? Number(rowEquipmentDbId) : null,
+        frequency: passedFrequency || "",
       };
 
       const response = await addPreventiveMaintence(payload);

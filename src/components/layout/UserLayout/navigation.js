@@ -111,7 +111,7 @@ export const DASHBOARD_NAV_ITEMS = [
     },
      {
         id: "unplanned-calibration",
-        label: "Unplanned Calibration",
+        label: "Unplanned Planner",
         path: "/user/unplanned-calibration-dashboard",
         icon: HardHat,
         hiddenFromNav: true,

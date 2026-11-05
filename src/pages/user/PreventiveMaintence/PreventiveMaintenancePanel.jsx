@@ -377,8 +377,9 @@ const PreventiveMaintenancePanel = () => {
   const equipmentMapRef = useRef(equipmentMap);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
   
-  // 👇 NEW: Exact Equipment ID state
-  const [equipmentDbId, setEquipmentDbId] = useState("");
+  // 👇 Extract exact ID and Frequency from root payload
+  const [apiEquipmentId, setApiEquipmentId] = useState("");
+  const [apiFrequency, setApiFrequency] = useState("");
 
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
@@ -399,42 +400,11 @@ const PreventiveMaintenancePanel = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
   const location = useLocation();
-  const passedFrequency = location.state?.preventiveFrequency || "";
-  const passedFrequencyCode = location.state?.preventiveFrequencyCode || "";
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "" });
-  const hasHydratedChecklistRef = useRef(false);
 
   const equipmentNameWatch = Form.useWatch("equipmentInstrumentName", form);
   const preventiveFreqWatch = Form.useWatch("preventiveFrequency", form);
-
-  // Fallback to resolving equipmentObj if ID is missing
-  const equipmentObj = useMemo(() => {
-    if (!equipmentNameWatch) return null;
-    
-    return (
-      equipmentMap[equipmentNameWatch] ||
-      Object.values(equipmentMap).find(
-        (eq) =>
-          String(eq?.id) === String(equipmentNameWatch) ||
-          String(eq?.instrument_id_no) === String(equipmentNameWatch) ||
-          String(eq?.instrument_name) === String(equipmentNameWatch)
-      ) ||
-      null
-    );
-  }, [equipmentMap, equipmentNameWatch]);
-
-  // 👇 NEW: Prefer the saved equipmentDbId, then fallback to lookups
-  const equipmentIdForApi =
-    equipmentDbId ||
-    equipmentObj?.id ||
-    location.state?.rowData?.equipmentDbId ||
-    "";
-
-  const frequencyLabel = preventiveFreqWatch || passedFrequency || "";
-  
-  /* 👇 Send exact string to API */
-  const frequencyCodeForApi = getNormalizedFrequency(frequencyLabel);
 
   useEffect(() => {
     equipmentMapRef.current = equipmentMap;
@@ -492,11 +462,11 @@ const PreventiveMaintenancePanel = () => {
     fetchEquipment();
   }, []);
 
-  // 👇 Trigger API exactly when the Checklist tab is opened and data is ready
+  // 👇 Trigger API exactly when the Checklist tab is opened
   useEffect(() => {
     if (activeTab !== "checklist") return;
 
-    if (!equipmentIdForApi || !frequencyCodeForApi) {
+    if (!apiEquipmentId || !apiFrequency) {
       setChecklistData(null);
       return;
     }
@@ -506,10 +476,10 @@ const PreventiveMaintenancePanel = () => {
     const fetchChecklist = async () => {
       try {
         setChecklistLoading(true);
-        // Sends frequencyCodeForApi (e.g. "half-yearly") to the API
+        // Send the exact strings normalized from the backend (e.g., "half-yearly")
         const response = await getEquipmentMasterChecklist(
-          equipmentIdForApi,
-          frequencyCodeForApi
+          apiEquipmentId,
+          apiFrequency
         );
         if (cancelled) return;
         setChecklistData(response?.data?.data || null);
@@ -529,20 +499,20 @@ const PreventiveMaintenancePanel = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, equipmentIdForApi, frequencyCodeForApi]);
+  }, [activeTab, apiEquipmentId, apiFrequency]);
 
+  // 👇 Hydrate answers immediately when both master config and saved data exist
   useEffect(() => {
     if (!checklistData) return;
-    if (hasHydratedChecklistRef.current) return;
+    
     if (!savedChecklistRaw) {
-      hasHydratedChecklistRef.current = true;
+      setChecklistAnswers({});
       return;
     }
-
+    
     setChecklistAnswers(
       hydrateChecklistAnswers(savedChecklistRaw, checklistData)
     );
-    hasHydratedChecklistRef.current = true;
   }, [checklistData, savedChecklistRaw]);
 
   const fetchPreventiveMaintenceDetail = useCallback(
@@ -569,9 +539,12 @@ const PreventiveMaintenancePanel = () => {
 
         const processData = responseData?.process_data || [];
         
-        // 👇 EXACT DB ID EXTRACTION
-        const savedEquipmentDbId = getProcessValue(processData, "equipmentDbId");
-        setEquipmentDbId(savedEquipmentDbId);
+        // 👇 EXACT DB ID AND FREQUENCY FROM ROOT LEVEL
+        const rootEquipmentId = responseData?.equipment_id;
+        const rootFrequency = responseData?.frequency;
+        
+        setApiEquipmentId(rootEquipmentId || getProcessValue(processData, "equipmentDbId"));
+        setApiFrequency(getNormalizedFrequency(rootFrequency || getProcessValue(processData, "preventive_frequency")));
 
         const recordNumber = getProcessValue(processData, "recordNumber");
         const locationCode = getProcessValue(processData, "siteLocationCode");
@@ -651,10 +624,18 @@ const PreventiveMaintenancePanel = () => {
           processDateOfInitiation || responseData?.initiation_date || ""
         );
 
-        const savedChecklist =
+        // Parse string if needed
+        let savedChecklist =
           responseData?.checklist_records?.[0]?.checklist_data || null;
+        if (typeof savedChecklist === "string") {
+          try {
+            savedChecklist = JSON.parse(savedChecklist);
+          } catch (e) {
+            console.error("Failed to parse saved checklist", e);
+            savedChecklist = null;
+          }
+        }
         setSavedChecklistRaw(savedChecklist);
-        hasHydratedChecklistRef.current = false;
 
         requiredValuesRef.current = {
           shortDescription: shortDescription || "",
@@ -673,6 +654,16 @@ const PreventiveMaintenancePanel = () => {
           if (found) {
             equipmentValue =
               found.instrument_name ?? found.equipment_name ?? found.name ?? equipmentName;
+          }
+        } else if (!equipmentName && equipmentCode) {
+          // Fallback: Find equipment by code if name is null
+          const found = Object.values(currentEquipmentMap).find(
+            (eq) =>
+              eq.instrument_id_no === equipmentCode ||
+              eq.equipment_id_no === equipmentCode
+          );
+          if (found) {
+            equipmentValue = found.instrument_name || found.equipment_name;
           }
         }
 
@@ -935,10 +926,15 @@ const PreventiveMaintenancePanel = () => {
       });
 
       const processData = buildProcessData(mergedValues, systemFields);
-      const checklistPayload = buildChecklistPayload(
-        checklistData,
-        checklistAnswers
-      );
+
+      let checklistPayload;
+      if (checklistData) {
+        checklistPayload = buildChecklistPayload(checklistData, checklistAnswers);
+      } else if (savedChecklistRaw) {
+        checklistPayload = savedChecklistRaw;
+      } else {
+        checklistPayload = buildChecklistPayload(null, {});
+      }
 
       const payload = {
         process_id: Number(processId),
@@ -1019,9 +1015,7 @@ const PreventiveMaintenancePanel = () => {
       setIfEmpty("location", rowData.location);
       setIfEmpty("remark", rowData.remark);
     }
-
-    setIfEmpty("preventiveFrequency", passedFrequency);
-  }, [isLoading, location.state, passedFrequency, form]);
+  }, [isLoading, location.state, form]);
 
   if (isLoading) {
     return (
@@ -1385,9 +1379,9 @@ const PreventiveMaintenancePanel = () => {
               <Skeleton variant="form" fields={5} />
             ) : !checklistData ? (
               <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
-                {!equipmentIdForApi
+                {!apiEquipmentId
                   ? "No equipment associated with this record."
-                  : !frequencyCodeForApi
+                  : !apiFrequency
                   ? "No frequency was found on this record."
                   : "No checklist found for this equipment and frequency."}
               </div>

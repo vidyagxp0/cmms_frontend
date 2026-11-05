@@ -86,27 +86,6 @@ const getProcessValue = (processData = [], key) => {
   return "";
 };
 
-// 👇 NEW: Helper to build a row directly from the API response
-const buildRowFromInstrument = (item = {}) => ({
-  equipmentDbId: String(item.id),
-  equipmentName: item.equipment_name || item.instrument_name || item.name || "",
-  instrumentName: item.instrument_name || item.equipment_name || item.name || "",
-  instrumentId: item.instrument_id_no || item.equipment_id || item.field_instrument_id || item.instrument_id || "",
-  make: item.make || item.manufacturer || "",
-  modelNo: item.sr_no_model_no || item.model || item.model_no || "",
-  leastCount: item.least_count || item.leastCount || "",
-  location: item.location || item.area || "",
-  accuracy: item.accuracy || "",
-  instrumentRange: item.instrument_range || item.instrumentrange || item.range || "",
-  operatingRange: item.operating_range || item.operatingrange || "",
-  calibrationTestPoint: item.calibration_test_points || item.calibrationTestPoints || "",
-  category: item.category || "",
-  calibrationNextDueDate: "",
-  calibrationDoneDate: "",
-  remark: "",
-  isFromApi: false,
-});
-
 const buildGridPayload = (rows = []) => {
   return rows.map((row, index) => {
     const rowData = { row_id: row.row_id ?? index + 1 };
@@ -208,9 +187,6 @@ const InstrumentCalibrationPanel = () => {
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "", selectedDeptId: "", instrumentType: "" });
 
-  // 👇 Track if the user manually changed the dropdowns
-  const userChangedDropdownRef = useRef(false);
-
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
@@ -284,7 +260,7 @@ const InstrumentCalibrationPanel = () => {
     fetchCalibrationUsers();
   }, []);
 
-  // 👇 UPDATED: Fetch equipment logic with auto-population
+  // 👇 UPDATED: Fetch equipment logic (No auto-population)
   useEffect(() => {
     let isCurrent = true;
 
@@ -345,10 +321,9 @@ const InstrumentCalibrationPanel = () => {
         setEquipmentMap(map);
         equipmentMapRef.current = map;
 
-        // 👇 NEW: If the user changed the dropdown, populate the grid immediately
-        if (userChangedDropdownRef.current) {
-          setCalibrationRows(data.map(buildRowFromInstrument));
-        }
+        // 👇 REMOVED: Auto-population of rows
+        // The grid will remain empty until the user clicks "Add Row"
+        
       } catch (error) {
         if (!isCurrent) return;
         console.error("Failed to fetch equipment:", error);
@@ -356,7 +331,6 @@ const InstrumentCalibrationPanel = () => {
       } finally {
         if (isCurrent) {
           setEquipmentLoading(false);
-          userChangedDropdownRef.current = false; // Reset the tracker
         }
       }
     };
@@ -834,8 +808,6 @@ const InstrumentCalibrationPanel = () => {
                 placeholder="Select Instrument Type"
                 disabled={!isGeneralEditable}
                 onChange={(val) => {
-                  // 👇 Set the flag and clear rows immediately
-                  userChangedDropdownRef.current = true;
                   setCalibrationRows([]);
                   if (val !== "Field Instrument") {
                     form.setFieldsValue({ selectedDeptId: null });
@@ -873,8 +845,6 @@ const InstrumentCalibrationPanel = () => {
                   allowClear={false}
                   disabled={!isGeneralEditable}
                   onChange={() => {
-                    // 👇 Set the flag and clear rows immediately
-                    userChangedDropdownRef.current = true;
                     setCalibrationRows([]);
                   }}
                 />

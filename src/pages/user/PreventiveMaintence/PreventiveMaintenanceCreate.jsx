@@ -74,7 +74,7 @@ const PreventiveMaintenanceCreate = () => {
 
   // Prefill sources from the parent row
   const rowEquipmentName = rowData?.equipmentInstrumentName || "";
-  const rowEquipmentDbId = rowData?.equipmentDbId || ""; // 👈 EXACT DB ID PASSED FROM GRID
+  const rowEquipmentDbId = rowData?.equipmentDbId || "";
   const rowEquipmentCode = rowData?.equipmentInstrumentId || "";
   const rowBlock = rowData?.block || "";
   const rowDepartment = rowData?.department || "";
@@ -121,11 +121,12 @@ const PreventiveMaintenanceCreate = () => {
 
         let equipmentData = [];
         const map = {};
+        let options = [];
 
         if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
           equipmentData = equipmentRes.value.data.data || [];
 
-          const options = equipmentData.map((item) => ({
+          options = equipmentData.map((item) => ({
             value: item.equipment_name || item.instrument_name,
             label: item.equipment_name || item.instrument_name,
           }));
@@ -133,31 +134,28 @@ const PreventiveMaintenanceCreate = () => {
             if (item.equipment_name) map[item.equipment_name] = item;
             if (item.instrument_name) map[item.instrument_name] = item;
           });
-
-          setEquipmentOptions(options);
-          setEquipmentMap(map);
         } else if (equipmentRes.status === "rejected") {
           console.error("Failed to fetch equipment:", equipmentRes.reason);
         }
 
-        let equipmentValue = "";
-        if (rowEquipmentName && map[rowEquipmentName]) {
-          equipmentValue = rowEquipmentName;
-        } else if (rowEquipmentName) {
-          const found = equipmentData.find(
-            (item) =>
-              String(item.id) === String(rowEquipmentName) ||
-              String(item.id) === String(rowEquipmentDbId) ||
-              item.instrument_id_no === rowEquipmentName ||
-              item.instrument_id_no === rowEquipmentCode
-          );
-          if (found) equipmentValue = found.equipment_name || found.instrument_name;
-        } else if (rowEquipmentDbId) {
+        // 👇 NEW CHANGE: Directly use the rowEquipmentName passed from the grid
+        let equipmentValue = rowEquipmentName || "";
+        
+        // Fallback: If no name was passed, try to find it by the DB ID
+        if (!equipmentValue && rowEquipmentDbId) {
           const found = equipmentData.find(
             (item) => String(item.id) === String(rowEquipmentDbId)
           );
           if (found) equipmentValue = found.equipment_name || found.instrument_name;
         }
+
+        // Ensure the prefilled name exists in the options so the Select box displays it
+        if (equipmentValue && !options.some(opt => opt.value === equipmentValue)) {
+            options.push({ value: equipmentValue, label: equipmentValue });
+        }
+
+        setEquipmentOptions(options);
+        setEquipmentMap(map);
 
         form.setFieldsValue({
           recordNumber: generatedRecordNumber,
@@ -214,7 +212,6 @@ const PreventiveMaintenanceCreate = () => {
       label: field.label,
       value: values?.[field.name] || "",
     })),
-    // Save the exact DB ID from the parent grid row inside process_data as well
     {
       key: "equipmentDbId",
       label: "Equipment DB ID",
@@ -345,7 +342,7 @@ const PreventiveMaintenanceCreate = () => {
         gridData: [],
         checklistData: [],
         
-        // 👇 NEW: Send Equipment ID and Frequency OUTSIDE process_data
+        // Send Equipment ID and Frequency OUTSIDE process_data
         equipment_id: rowEquipmentDbId ? Number(rowEquipmentDbId) : null,
         frequency: passedFrequency || "",
       };

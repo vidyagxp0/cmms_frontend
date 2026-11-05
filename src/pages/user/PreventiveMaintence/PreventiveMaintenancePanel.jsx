@@ -376,6 +376,10 @@ const PreventiveMaintenancePanel = () => {
   const [equipmentMap, setEquipmentMap] = useState({});
   const equipmentMapRef = useRef(equipmentMap);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
+  
+  // 👇 NEW: Exact Equipment ID state
+  const [equipmentDbId, setEquipmentDbId] = useState("");
+
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
   const [loginUserId, setLoginUserId] = useState("");
@@ -404,7 +408,7 @@ const PreventiveMaintenancePanel = () => {
   const equipmentNameWatch = Form.useWatch("equipmentInstrumentName", form);
   const preventiveFreqWatch = Form.useWatch("preventiveFrequency", form);
 
-  // 👇 Safer equipment object resolution
+  // Fallback to resolving equipmentObj if ID is missing
   const equipmentObj = useMemo(() => {
     if (!equipmentNameWatch) return null;
     
@@ -420,10 +424,11 @@ const PreventiveMaintenancePanel = () => {
     );
   }, [equipmentMap, equipmentNameWatch]);
 
+  // 👇 NEW: Prefer the saved equipmentDbId, then fallback to lookups
   const equipmentIdForApi =
+    equipmentDbId ||
     equipmentObj?.id ||
     location.state?.rowData?.equipmentDbId ||
-    (typeof equipmentNameWatch === "number" ? equipmentNameWatch : "") ||
     "";
 
   const frequencyLabel = preventiveFreqWatch || passedFrequency || "";
@@ -563,6 +568,11 @@ const PreventiveMaintenancePanel = () => {
         setProcessName(responseData?.process?.name || "");
 
         const processData = responseData?.process_data || [];
+        
+        // 👇 EXACT DB ID EXTRACTION
+        const savedEquipmentDbId = getProcessValue(processData, "equipmentDbId");
+        setEquipmentDbId(savedEquipmentDbId);
+
         const recordNumber = getProcessValue(processData, "recordNumber");
         const locationCode = getProcessValue(processData, "siteLocationCode");
         const processInitiator = getProcessValue(processData, "initiator");

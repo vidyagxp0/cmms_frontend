@@ -48,11 +48,12 @@ const PreventiveMaintenanceCreate = () => {
     shortDescription: parentShortDescription = "",
     processId: stateProcessId,
     parentId: stateParentId,
-    preventiveFrequency: passedFrequency = "",           // ← from parent
-    preventiveFrequencyCode: passedFrequencyCode = "",   // ← from parent (unused here, kept for debug)
+    preventiveFrequency: passedFrequency = "",
+    preventiveFrequencyCode: passedFrequencyCode = "",
     childType
   } = state;
 
+  console.log("PreventiveMaintenanceCreate state:", state);
   const routeProcessId = params.processId || stateProcessId || null;
   const routeParentId =
     params.parentId || params.recordId || stateParentId || null;
@@ -72,9 +73,9 @@ const PreventiveMaintenanceCreate = () => {
   const [dateOfInitiation] = useState(() => formatDateTime(new Date()));
 
   // Prefill sources from the parent row
-  const rowEquipmentName = rowData?.equipmentInstrumentName || "";   // instrument_name string
-  const rowEquipmentDbId = rowData?.equipmentDbId || "";             // numeric id (if present)
-  const rowEquipmentCode = rowData?.equipmentInstrumentId || "";     // "INST-PRS-001"
+  const rowEquipmentName = rowData?.equipmentInstrumentName || "";
+  const rowEquipmentDbId = rowData?.equipmentDbId || ""; // 👈 EXACT DB ID PASSED FROM GRID
+  const rowEquipmentCode = rowData?.equipmentInstrumentId || "";
   const rowBlock = rowData?.block || "";
   const rowDepartment = rowData?.department || "";
   const rowLocation = rowData?.location || "";
@@ -125,11 +126,12 @@ const PreventiveMaintenanceCreate = () => {
           equipmentData = equipmentRes.value.data.data || [];
 
           const options = equipmentData.map((item) => ({
-            value: item.instrument_name,
-            label: item.instrument_name,
+            value: item.equipment_name || item.instrument_name,
+            label: item.equipment_name || item.instrument_name,
           }));
           equipmentData.forEach((item) => {
-            map[item.instrument_name] = item;
+            if (item.equipment_name) map[item.equipment_name] = item;
+            if (item.instrument_name) map[item.instrument_name] = item;
           });
 
           setEquipmentOptions(options);
@@ -149,12 +151,12 @@ const PreventiveMaintenanceCreate = () => {
               item.instrument_id_no === rowEquipmentName ||
               item.instrument_id_no === rowEquipmentCode
           );
-          if (found) equipmentValue = found.instrument_name;
+          if (found) equipmentValue = found.equipment_name || found.instrument_name;
         } else if (rowEquipmentDbId) {
           const found = equipmentData.find(
             (item) => String(item.id) === String(rowEquipmentDbId)
           );
-          if (found) equipmentValue = found.instrument_name;
+          if (found) equipmentValue = found.equipment_name || found.instrument_name;
         }
 
         form.setFieldsValue({
@@ -212,6 +214,12 @@ const PreventiveMaintenanceCreate = () => {
       label: field.label,
       value: values?.[field.name] || "",
     })),
+    // 👇 NEW: Save the exact DB ID from the parent grid row
+    {
+      key: "equipmentDbId",
+      label: "Equipment DB ID",
+      value: rowEquipmentDbId || "",
+    },
     {
       key: "short_description",
       label: "Short Description",
@@ -514,7 +522,6 @@ const PreventiveMaintenanceCreate = () => {
                 />
               </Form.Item>
 
-              {/* 👇 UPDATED OPTIONS */}
               <Form.Item
                 name="preventiveFrequency"
                 label="Preventive Frequency"

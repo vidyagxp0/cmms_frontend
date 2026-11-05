@@ -163,47 +163,23 @@ const UserHeader = ({
                     {/* NOTIFICATIONS */}
                     <button
                         type="button"
+                        onClick={() => navigate("/user/notification-list")}
                         aria-label={`Notifications (${notificationCount} unread)`}
                         className="
-                            relative
-                            flex
-                            h-[42px]
-                            w-[42px]
-                            items-center
-                            justify-center
-                            rounded-[11px]
-                            border
-                            border-[#D6D8D3]
-                            bg-[#F7F6F2]
-                            text-[#596965]
-                            shadow-[0_1px_5px_rgba(36,50,56,0.035)]
-                            transition-all
-                            duration-200
-                            hover:border-[#B8C7C0]
-                            hover:bg-[#EDF3F0]
-                            hover:text-[#4B6F66]
-                            active:scale-[0.97]
+                            relative flex h-[42px] w-[42px] items-center justify-center
+                            rounded-[11px] border border-[#D6D8D3] bg-[#F7F6F2]
+                            text-[#596965] shadow-[0_1px_5px_rgba(36,50,56,0.035)]
+                            transition-all duration-200 hover:border-[#B8C7C0]
+                            hover:bg-[#EDF3F0] hover:text-[#4B6F66] active:scale-[0.97]
                         "
                     >
-                        <Bell
-                            size={18}
-                            strokeWidth={1.8}
-                        />
+                        <Bell size={18} strokeWidth={1.8} />
 
                         {notificationCount > 0 && (
-                            <span
-                                className="
-                                    absolute
-                                    right-[5px]
-                                    top-[5px]
-                                    h-[8px]
-                                    w-[8px]
-                                    rounded-full
-                                    border-2
-                                    border-[#F7F6F2]
-                                    bg-[#A47D45]
-                                "
-                            />
+                            <span className="
+                                absolute right-[5px] top-[5px] h-[8px] w-[8px]
+                                rounded-full border-2 border-[#F7F6F2] bg-[#A47D45]
+                            " />
                         )}
                     </button>
 

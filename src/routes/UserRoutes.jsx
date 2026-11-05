@@ -59,6 +59,7 @@ import AddendumPreventiveChildPanel from "../pages/user/AddendumPreventiveChild/
 import AddendumPreventiveChildCreate from "../pages/user/AddendumPreventiveChild/AddendumPreventiveChildCreate";
 import AddendumPreventiveChildAudit from "../pages/user/AddendumPreventiveChild/AddendumPreventiveChildAudit";
 import AddendumPreventiveChildDashboard from "../pages/user/AddendumPreventiveChild/AddendumPreventiveChildDashboard";
+import NotificationList from "../pages/user/Notification/NotificationList";
 
 function UserRoutes() {
   return (
@@ -151,6 +152,7 @@ function UserRoutes() {
         
         {/* Import Master Equipment Data Routes*/}
         <Route path="import-master-equipment-data" element={<ImportMasterEquipmentData />} />
+        <Route path="notification-list" element={<NotificationList />} />
 
       </Route>
     </Routes>

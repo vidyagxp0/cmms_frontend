@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Form, Select } from "antd";
+import { Form, Input, Select } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
@@ -59,7 +59,6 @@ const TABS = [
   { id: "cancellation", label: "Cancellation", stageId: 12 },
 ];
 
-// ✅ instrumentType removed
 const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
   { name: "selectedDeptId", label: "Select Department" },
@@ -107,22 +106,18 @@ const buildRowFromEquipment = (item = {}) => {
     equipmentInstrumentName:
       item.equipment_name || item.instrument_name || item.name || "",
 
-    /* 👇 FIX: prefer equipment_id_no first */
     equipmentInstrumentId:
       item.equipment_id_no ||
       item.instrument_id_no ||
       item.equipment_id ||
       "",
 
-    /* 👇 FIX: prefer equipment_location first */
     location:
       item.equipment_location || item.location || "",
 
-    /* 👇 FIX: prefer equipment_make first */
     make:
       item.equipment_make || item.make || "",
 
-    /* 👇 FIX: prefer equipment_model first */
     model:
       item.equipment_model ||
       item.sr_no_model_no ||
@@ -141,8 +136,6 @@ const buildRowFromEquipment = (item = {}) => {
   return newRow;
 };
 
-
-// ✅ instrumentType removed from process_data
 const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({
     key: field.name,
@@ -250,20 +243,15 @@ const PreventivePlannerPanel = () => {
   const { recordId } = useParams();
   const isFetchingRef = useRef(false);
 
-  // ✅ instrumentType removed
   const requiredValuesRef = useRef({ shortDescription: "", selectedDeptId: "" });
 
-  // New Department States for Dropdown
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
-  // NEW: Track when user manually changes a dropdown
   const userChangedDropdownRef = useRef(false);
 
-  // ✅ Only watch department now
   const selectedDeptIdWatch = Form.useWatch("selectedDeptId", form);
 
-  // Auto-populate refs
   const equipmentDataRef = useRef([]);
   const hasInitialDetailLoadedRef = useRef(false);
   const hasInitialEquipmentLoadedRef = useRef(false);
@@ -338,7 +326,6 @@ const PreventivePlannerPanel = () => {
     fetchDepartments();
   }, []);
 
-  // ✅ Dynamic API fetch — ONLY based on Department (always "equipment_master")
   useEffect(() => {
     let isCurrent = true;
 
@@ -355,7 +342,6 @@ const PreventivePlannerPanel = () => {
         return;
       }
 
-      // ✅ Always use "equipment_master" — instrument type is no longer a field
       const apiType = "equipment_master";
 
       try {
@@ -453,7 +439,6 @@ const PreventivePlannerPanel = () => {
         const dueDate = getProcessValue(processData, "dueDate");
         const processDepartment = getProcessValue(processData, "initiationDepartment");
         const masterDepartmentId = getProcessValue(processData, "master_department");
-        // ✅ instrumentType removed
         const shortDescription = getProcessValue(processData, "short_description");
         const comments = getProcessValue(processData, "comment");
         const attachment = getProcessValue(processData, "attachment");
@@ -487,13 +472,11 @@ const PreventivePlannerPanel = () => {
         setInitiationDepartment(responseData?.department?.name || processDepartment || "");
         setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
 
-        // ✅ instrumentType removed
         requiredValuesRef.current = {
           shortDescription: shortDescription || "",
           selectedDeptId: masterDepartmentId || null,
         };
 
-        // ✅ instrumentType removed
         form.setFieldsValue({
           documentNumber: documentNumber || "SMLJ/ENG/SOP-GEN/OO3/T01-01",
           documentType: documentType || "Formats",
@@ -941,7 +924,6 @@ const PreventivePlannerPanel = () => {
         }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
-        {/* General Information */}
         <section style={{ display: activeTab === "general" ? "block" : "none" }}>
           <SectionHeader title="GENERAL INFORMATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -972,8 +954,6 @@ const PreventivePlannerPanel = () => {
                 disabled={!isGeneralEditable}
               />
             </Form.Item>
-
-            {/* ✅ Instrument Type field removed */}
 
             <Form.Item
               name="selectedDeptId"
@@ -1051,7 +1031,6 @@ const PreventivePlannerPanel = () => {
           </Form.Item>
         </section>
 
-        {/* HOD Review */}
         <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
           <SectionHeader title="HOD / DESIGNEE REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -1085,7 +1064,6 @@ const PreventivePlannerPanel = () => {
           </div>
         </section>
 
-        {/* QA Review */}
         <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
           <SectionHeader title="QA REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -1119,7 +1097,6 @@ const PreventivePlannerPanel = () => {
           </div>
         </section>
 
-        {/* QA Approval Review */}
         <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
           <SectionHeader title="QA APPROVAL REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -1153,7 +1130,6 @@ const PreventivePlannerPanel = () => {
           </div>
         </section>
 
-        {/* Cancellation */}
         <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
           <SectionHeader title="CANCELLATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -1178,7 +1154,6 @@ const PreventivePlannerPanel = () => {
           </div>
         </section>
 
-        {/* Activity Log */}
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
           <SectionHeader title="ACTIVITY LOG" />
           <div className="mt-5 space-y-4">

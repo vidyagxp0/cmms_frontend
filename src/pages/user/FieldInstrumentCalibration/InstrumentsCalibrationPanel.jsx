@@ -33,6 +33,7 @@ import {
   getAllStages,
   getAllDepartments,
   getAllDepartmentMasters,
+  getAllDepartmentMastersGlobal
 } from "../../../services/usersApi/workflowCommonApi";
 import InstrumentCalibrationGrid from "./InstrumentCalibrationGrid";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
@@ -85,6 +86,27 @@ const getProcessValue = (processData = [], key) => {
   return "";
 };
 
+// 👇 NEW: Helper to build a row directly from the API response
+const buildRowFromInstrument = (item = {}) => ({
+  equipmentDbId: String(item.id),
+  equipmentName: item.equipment_name || item.instrument_name || item.name || "",
+  instrumentName: item.instrument_name || item.equipment_name || item.name || "",
+  instrumentId: item.instrument_id_no || item.equipment_id || item.field_instrument_id || item.instrument_id || "",
+  make: item.make || item.manufacturer || "",
+  modelNo: item.sr_no_model_no || item.model || item.model_no || "",
+  leastCount: item.least_count || item.leastCount || "",
+  location: item.location || item.area || "",
+  accuracy: item.accuracy || "",
+  instrumentRange: item.instrument_range || item.instrumentrange || item.range || "",
+  operatingRange: item.operating_range || item.operatingrange || "",
+  calibrationTestPoint: item.calibration_test_points || item.calibrationTestPoints || "",
+  category: item.category || "",
+  calibrationNextDueDate: "",
+  calibrationDoneDate: "",
+  remark: "",
+  isFromApi: false,
+});
+
 const buildGridPayload = (rows = []) => {
   return rows.map((row, index) => {
     const rowData = { row_id: row.row_id ?? index + 1 };
@@ -133,7 +155,13 @@ const buildProcessData = (values, systemFields) => [
 
 const validateCalibrationForm = (form, storedRequired) => {
   const values = form.getFieldsValue();
+  const currentType = values?.instrumentType;
+
   return REQUIRED_FIELDS.filter((field) => {
+    if (field.name === "selectedDeptId" && currentType !== "Field Instrument") {
+      return false;
+    }
+
     let value = values?.[field.name];
     if (value === undefined || value === null || value === "") value = storedRequired[field.name];
     if (typeof value === "string") return !value.trim();
@@ -180,6 +208,9 @@ const InstrumentCalibrationPanel = () => {
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "", selectedDeptId: "", instrumentType: "" });
 
+  // 👇 Track if the user manually changed the dropdowns
+  const userChangedDropdownRef = useRef(false);
+
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
@@ -197,7 +228,6 @@ const InstrumentCalibrationPanel = () => {
   const isQaReviewEditable = isStageEditable(42);
   const isCancellationEditable = isStageEditable(44);
 
-  // 👇 NEW — child creation gate (Close Done = stage 43, initiator only)
   const canCreateChild =
     Number(activeStageId) === 43 &&
     userRoles.some((role) => String(role).toLowerCase() === "initiator");
@@ -254,6 +284,7 @@ const InstrumentCalibrationPanel = () => {
     fetchCalibrationUsers();
   }, []);
 
+  // 👇 UPDATED: Fetch equipment logic with auto-population
   useEffect(() => {
     let isCurrent = true;
 
@@ -262,7 +293,14 @@ const InstrumentCalibrationPanel = () => {
       setEquipmentMap({});
       equipmentMapRef.current = {};
 
-      if (!instrumentTypeWatch || !selectedDeptIdWatch) {
+      if (!instrumentTypeWatch) {
+        setEquipmentLoading(false);
+        return;
+      }
+
+      const requiresDept = instrumentTypeWatch === "Field Instrument";
+
+      if (requiresDept && !selectedDeptIdWatch) {
         setEquipmentLoading(false);
         return;
       }
@@ -281,7 +319,14 @@ const InstrumentCalibrationPanel = () => {
 
       try {
         setEquipmentLoading(true);
-        const response = await getAllDepartmentMasters(selectedDeptIdWatch, apiType);
+
+        let response;
+        if (requiresDept) {
+          response = await getAllDepartmentMasters(selectedDeptIdWatch, apiType);
+        } else {
+          response = await getAllDepartmentMastersGlobal(apiType);
+        }
+
         if (!isCurrent) return;
 
         const data = response?.data?.data || [];
@@ -299,12 +344,20 @@ const InstrumentCalibrationPanel = () => {
         setEquipmentOptions(options);
         setEquipmentMap(map);
         equipmentMapRef.current = map;
+
+        // 👇 NEW: If the user changed the dropdown, populate the grid immediately
+        if (userChangedDropdownRef.current) {
+          setCalibrationRows(data.map(buildRowFromInstrument));
+        }
       } catch (error) {
         if (!isCurrent) return;
         console.error("Failed to fetch equipment:", error);
         toast.error("Could not load equipment list.");
       } finally {
-        if (isCurrent) setEquipmentLoading(false);
+        if (isCurrent) {
+          setEquipmentLoading(false);
+          userChangedDropdownRef.current = false; // Reset the tracker
+        }
       }
     };
 
@@ -531,22 +584,21 @@ const InstrumentCalibrationPanel = () => {
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
 
-  // 👇 NEW — Child navigation (same URL & payload as CalibrationGrid, only childType differs)
-const handleViewChild = (rowIndex, rowData) => {
-  const shortDesc = form.getFieldValue("shortDescription") || "";
-  const rowId = rowData?.row_id ?? rowIndex + 1;
-  navigate(`/user/addendum-calibration-management-create/12`, {
-    state: {
-      rowData,
-      shortDescription: shortDesc,
-      processId: 12,                                   // 👈 addendum child process
-      parentId: recordId,
-      rowId,
-      childType: "addendum-calibration-management",
-      processName: "Addendum Calibration Management",  // 👈 shown on child header
-    },
-  });
-};
+  const handleViewChild = (rowIndex, rowData) => {
+    const shortDesc = form.getFieldValue("shortDescription") || "";
+    const rowId = rowData?.row_id ?? rowIndex + 1;
+    navigate(`/user/addendum-calibration-management-create/12`, {
+      state: {
+        rowData,
+        shortDescription: shortDesc,
+        processId: 12,
+        parentId: recordId,
+        rowId,
+        childType: "addendum-calibration-management",
+        processName: "Addendum Calibration Management",
+      },
+    });
+  };
 
   const handleSave = async () => {
     if (isSaving || isLoading || usersLoading) return;
@@ -781,6 +833,14 @@ const handleViewChild = (rowIndex, rowData) => {
               <Select
                 placeholder="Select Instrument Type"
                 disabled={!isGeneralEditable}
+                onChange={(val) => {
+                  // 👇 Set the flag and clear rows immediately
+                  userChangedDropdownRef.current = true;
+                  setCalibrationRows([]);
+                  if (val !== "Field Instrument") {
+                    form.setFieldsValue({ selectedDeptId: null });
+                  }
+                }}
                 options={[
                   { label: "Master Instrument", value: "Master Instrument" },
                   { label: "Field Instrument", value: "Field Instrument" },
@@ -789,30 +849,37 @@ const handleViewChild = (rowIndex, rowData) => {
               />
             </Form.Item>
 
-            <Form.Item
-              name="selectedDeptId"
-              label={
-                <span className="inline-flex items-center">
-                  Select Department
-                  <RequiredAsterisk message="Department is required to proceed. Please select a department." />
-                </span>
-              }
-              rules={[{ required: true, message: "Please select a department" }]}
-              className="!mb-4"
-            >
-              <Select
-                placeholder="Select a department"
-                loading={departmentsLoading}
-                options={departments.map((dept) => ({
-                  label: dept.name || "Unnamed Department",
-                  value: dept.id,
-                }))}
-                showSearch
-                optionFilterProp="label"
-                allowClear={false}
-                disabled={!isGeneralEditable}
-              />
-            </Form.Item>
+            {instrumentTypeWatch === "Field Instrument" && (
+              <Form.Item
+                name="selectedDeptId"
+                label={
+                  <span className="inline-flex items-center">
+                    Select Department
+                    <RequiredAsterisk message="Department is required to proceed. Please select a department." />
+                  </span>
+                }
+                rules={[{ required: true, message: "Please select a department" }]}
+                className="!mb-4"
+              >
+                <Select
+                  placeholder="Select a department"
+                  loading={departmentsLoading}
+                  options={departments.map((dept) => ({
+                    label: dept.name || "Unnamed Department",
+                    value: dept.id,
+                  }))}
+                  showSearch
+                  optionFilterProp="label"
+                  allowClear={false}
+                  disabled={!isGeneralEditable}
+                  onChange={() => {
+                    // 👇 Set the flag and clear rows immediately
+                    userChangedDropdownRef.current = true;
+                    setCalibrationRows([]);
+                  }}
+                />
+              </Form.Item>
+            )}
           </div>
 
           <div className="mt-5">
@@ -826,9 +893,9 @@ const handleViewChild = (rowIndex, rowData) => {
               equipmentOptions={equipmentOptions}
               equipmentMap={equipmentMap}
               equipmentLoading={equipmentLoading}
-              onViewChild={handleViewChild}          // 👈 NEW
-              canCreateChild={canCreateChild}        // 👈 NEW
-              viewChildLabel="Child"                 // 👈 NEW
+              onViewChild={handleViewChild}
+              canCreateChild={canCreateChild}
+              viewChildLabel="Child"
             />
           </div>
 

@@ -62,20 +62,17 @@ const SELECTION_TYPES = [
   "multi_select_checkbox",
 ];
 
-/* ─────────── Frequency code helpers (labels in DB → codes for API) ─────────── */
-const FREQUENCY_CODE_BY_LABEL = {
-  monthly: "M",
-  quarterly: "Q",
-  "half-yearly": "H",
-  yearly: "Y",
-};
-const VALID_FREQ_CODES = new Set(["M", "Q", "H", "Y"]);
-
-const toFrequencyCode = (value) => {
+/* 👇 NEW: Normalization to send the exact string to the API */
+const getNormalizedFrequency = (value) => {
   if (!value) return "";
-  const v = String(value).trim();
-  if (VALID_FREQ_CODES.has(v.toUpperCase())) return v.toUpperCase();
-  return FREQUENCY_CODE_BY_LABEL[v.toLowerCase()] || "";
+  const v = String(value).toLowerCase().trim();
+  if (v === "m" || v === "monthly") return "monthly";
+  if (v === "q" || v === "quarterly") return "quarterly";
+  if (v === "h" || v === "half-yearly" || v === "half yearly") return "half-yearly";
+  if (v === "y" || v === "yearly") return "yearly";
+  if (v === "two-yearly" || v === "two yearly") return "two-yearly";
+  if (v === "five-yearly" || v === "five yearly") return "five-yearly";
+  return v;
 };
 
 const getProcessValue = (processData = [], key) => {
@@ -175,8 +172,6 @@ const validatePreventiveMaintenceForm = (form, storedRequired) => {
   });
 };
 
-/* ─────────────── Required-field validation for checklist ─────────────── */
-
 const getEmptyChecklistFields = (structure, answers) => {
   if (!structure?.questions?.length) return [];
 
@@ -222,7 +217,6 @@ const getEmptyChecklistFields = (structure, answers) => {
   return missing;
 };
 
-/* ─────────────── Saved answers → ChecklistInput answer shape ─────────────── */
 const hydrateChecklistAnswers = (savedChecklist, masterChecklist) => {
   if (!savedChecklist?.questions?.length) return {};
 
@@ -266,8 +260,6 @@ const hydrateChecklistAnswers = (savedChecklist, masterChecklist) => {
 
   return out;
 };
-
-/* ───────────────────────── Checklist payload builder ───────────────────── */
 
 const buildChecklistPayload = (structure, answers) => {
   if (!structure) {
@@ -366,8 +358,6 @@ const buildChecklistPayload = (structure, answers) => {
   };
 };
 
-/* ───────────────────────── Main component ───────────────────────── */
-
 const PreventiveMaintenancePanel = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
@@ -396,7 +386,6 @@ const PreventiveMaintenancePanel = () => {
   const [processName, setProcessName] = useState("");
   const [userRoles, setUserRoles] = useState([]);
 
-  // checklist state
   const [checklistData, setChecklistData] = useState(null);
   const [checklistAnswers, setChecklistAnswers] = useState({});
   const [checklistLoading, setChecklistLoading] = useState(false);
@@ -415,8 +404,6 @@ const PreventiveMaintenancePanel = () => {
   const equipmentNameWatch = Form.useWatch("equipmentInstrumentName", form);
   const preventiveFreqWatch = Form.useWatch("preventiveFrequency", form);
 
-  // Resolve the equipment object from the map — matches by instrument_name
-  // first, then by numeric id (covers legacy records that stored the id).
   const equipmentObj =
     equipmentMap[equipmentNameWatch] ||
     Object.values(equipmentMap).find(
@@ -426,15 +413,15 @@ const PreventiveMaintenancePanel = () => {
     ) ||
     null;
 
-  // The API expects the numeric DB id — never a string code like "INST-PRS-001".
   const equipmentIdForApi =
     equipmentObj?.id ||
     location.state?.rowData?.equipmentDbId ||
     "";
 
   const frequencyLabel = preventiveFreqWatch || passedFrequency || "";
-  const frequencyCodeForApi =
-    passedFrequencyCode || toFrequencyCode(frequencyLabel);
+  
+  /* 👇 UPDATED: Send exact string to API */
+  const frequencyCodeForApi = getNormalizedFrequency(frequencyLabel);
 
   useEffect(() => {
     equipmentMapRef.current = equipmentMap;
@@ -465,7 +452,6 @@ const PreventiveMaintenancePanel = () => {
     fetchProfile();
   }, []);
 
-  // ── Fetch equipment master (feeds the disabled Select + id lookup) ──
   useEffect(() => {
     const fetchEquipment = async () => {
       try {
@@ -492,11 +478,7 @@ const PreventiveMaintenancePanel = () => {
     fetchEquipment();
   }, []);
 
-  // ── Fetch equipment master checklist as soon as id + frequency resolve ──
-  // NOTE: fires without waiting for the user to click the "Checklist" tab,
-  // so the data is already cached the first time they open it.
   useEffect(() => {
-
     if (!equipmentIdForApi || !frequencyCodeForApi) {
       setChecklistData(null);
       return;
@@ -507,6 +489,7 @@ const PreventiveMaintenancePanel = () => {
     const fetchChecklist = async () => {
       try {
         setChecklistLoading(true);
+        // 👇 Sends frequencyCodeForApi (e.g. "half-yearly") to the API
         const response = await getEquipmentMasterChecklist(
           equipmentIdForApi,
           frequencyCodeForApi
@@ -531,7 +514,6 @@ const PreventiveMaintenancePanel = () => {
     };
   }, [equipmentIdForApi, frequencyCodeForApi, equipmentNameWatch, frequencyLabel]);
 
-  // ── Once master is loaded AND saved answers exist, hydrate once ──
   useEffect(() => {
     if (!checklistData) return;
     if (hasHydratedChecklistRef.current) return;
@@ -897,15 +879,15 @@ const PreventiveMaintenancePanel = () => {
   };
 
   const handleSaveBeforeActivity = async () => {
-  if (isSaving || isLoading || !recordId) {
-    return false;
-  }
-  try {
-    const values = form.getFieldsValue(true);
-    const saved = await handleSubmit(values);
-    return saved === true;
-  } catch (error) {
-     const firstError = error?.errorFields?.[0]?.errors?.[0];
+    if (isSaving || isLoading || !recordId) {
+      return false;
+    }
+    try {
+      const values = form.getFieldsValue(true);
+      const saved = await handleSubmit(values);
+      return saved === true;
+    } catch (error) {
+      const firstError = error?.errorFields?.[0]?.errors?.[0];
       if (firstError) {
         toast.error(firstError);
       } else {
@@ -916,7 +898,7 @@ const PreventiveMaintenancePanel = () => {
       }
       return false;
     }
-};
+  };
 
   const handleSubmit = async (values) => {
     if (isSaving || !recordId) return false;
@@ -997,7 +979,6 @@ const PreventiveMaintenancePanel = () => {
     navigate(-1);
   };
 
-  // Seed form fields from the parent grid row + nav state.
   useEffect(() => {
     if (isLoading) return;
 
@@ -1094,7 +1075,6 @@ const PreventiveMaintenancePanel = () => {
         }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
-        {/* General Information */}
         <section style={{ display: activeTab === "general" ? "block" : "none" }}>
           <SectionHeader title="GENERAL INFORMATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -1155,8 +1135,7 @@ const PreventiveMaintenancePanel = () => {
 
             <Form.Item
               name="equipmentInstrumentId"
-              // label="Equipment Code"
-               label={
+              label={
                 <span className="inline-flex items-center">
                   Equipment Code
                   <RequiredAsterisk message="Equipment Code are required to proceed. Please enter your Equipment Code." />
@@ -1169,7 +1148,6 @@ const PreventiveMaintenancePanel = () => {
 
             <Form.Item 
             name="block"
-            // label="Block"
              label={
               <span className="inline-flex items-center">
                 Block
@@ -1182,7 +1160,6 @@ const PreventiveMaintenancePanel = () => {
 
             <Form.Item
             name="department"
-            // label="Department"
              label={
               <span className="inline-flex items-center">
                 Department
@@ -1198,7 +1175,6 @@ const PreventiveMaintenancePanel = () => {
 
             <Form.Item
             name="location"
-            // label="Location"
              label={
               <span className="inline-flex items-center">
                 Location
@@ -1211,7 +1187,6 @@ const PreventiveMaintenancePanel = () => {
 
             <Form.Item
               name="previousPreventiveDate"
-              // label="Previous Preventive Date"
                label={
               <span className="inline-flex items-center">
                 Previous Preventive Date
@@ -1241,6 +1216,7 @@ const PreventiveMaintenancePanel = () => {
               />
             </Form.Item>
 
+            {/* 👇 UPDATED OPTIONS */}
             <Form.Item
               name="preventiveFrequency"
               label="Preventive Frequency"
@@ -1253,6 +1229,8 @@ const PreventiveMaintenancePanel = () => {
                   { value: "quarterly", label: "Quarterly" },
                   { value: "half-yearly", label: "Half Yearly" },
                   { value: "yearly", label: "Yearly" },
+                  { value: "two-yearly", label: "Two Yearly" },
+                  { value: "five-yearly", label: "Five Yearly" },
                 ]}
                 disabled
               />
@@ -1293,7 +1271,6 @@ const PreventiveMaintenancePanel = () => {
           </Form.Item>
         </section>
 
-        {/* Review By Engineer Dept */}
         <section
           style={{
             display: activeTab === "engineer-review" ? "block" : "none",
@@ -1336,7 +1313,6 @@ const PreventiveMaintenancePanel = () => {
           </div>
         </section>
 
-        {/* QA Approval */}
         <section
           style={{ display: activeTab === "qa-approval" ? "block" : "none" }}
         >
@@ -1377,7 +1353,6 @@ const PreventiveMaintenancePanel = () => {
           </div>
         </section>
 
-        {/* Checklist */}
         <section
           style={{ display: activeTab === "checklist" ? "block" : "none" }}
         >
@@ -1405,7 +1380,6 @@ const PreventiveMaintenancePanel = () => {
           </div>
         </section>
 
-        {/* Cancellation */}
         <section
           style={{ display: activeTab === "cancellation" ? "block" : "none" }}
         >
@@ -1439,7 +1413,6 @@ const PreventiveMaintenancePanel = () => {
           </div>
         </section>
 
-        {/* Activity Log */}
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
           <SectionHeader title="ACTIVITY LOG" />
           <div className="mt-5 space-y-4">

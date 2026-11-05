@@ -124,7 +124,6 @@ const PreventiveMaintenanceCreate = () => {
         if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
           equipmentData = equipmentRes.value.data.data || [];
 
-          // ── FIX 1: options use instrument_name (what the API actually returns) ──
           const options = equipmentData.map((item) => ({
             value: item.instrument_name,
             label: item.instrument_name,
@@ -139,10 +138,6 @@ const PreventiveMaintenanceCreate = () => {
           console.error("Failed to fetch equipment:", equipmentRes.reason);
         }
 
-        // ── FIX 2: resolve instrument_name from whatever the parent passed ──
-        // Parent sends rowData.equipmentInstrumentName = instrument_name.
-        // Fallback to numeric id / instrument_id_no / rowData.equipmentDbId
-        // so legacy or partial data still resolves.
         let equipmentValue = "";
         if (rowEquipmentName && map[rowEquipmentName]) {
           equipmentValue = rowEquipmentName;
@@ -184,7 +179,6 @@ const PreventiveMaintenanceCreate = () => {
           engineerReviewAttachment: [],
           qaApprovalComments: "",
           qaApprovalAttachment: [],
-          // ── FIX 3: read frequency from location.state, not rowData ──
           preventiveFrequency: passedFrequency || "",
         });
       } catch (error) {
@@ -520,6 +514,7 @@ const PreventiveMaintenanceCreate = () => {
                 />
               </Form.Item>
 
+              {/* 👇 UPDATED OPTIONS */}
               <Form.Item
                 name="preventiveFrequency"
                 label="Preventive Frequency"
@@ -532,6 +527,8 @@ const PreventiveMaintenanceCreate = () => {
                     { value: "quarterly", label: "Quarterly" },
                     { value: "half-yearly", label: "Half Yearly" },
                     { value: "yearly", label: "Yearly" },
+                    { value: "two-yearly", label: "Two Yearly" },
+                    { value: "five-yearly", label: "Five Yearly" },
                   ]}
                   disabled
                 />

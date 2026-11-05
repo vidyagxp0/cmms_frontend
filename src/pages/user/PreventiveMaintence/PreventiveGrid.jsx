@@ -27,13 +27,14 @@ const MONTHS = [
   { key: "dec", label: "December" },
 ];
 
+/* 👇 UPDATED: Use normalized lowercase values */
 const FREQUENCY_OPTIONS = [
-  { value: "Monthly", label: "Monthly" },
-  { value: "Quarterly", label: "Quarterly" },
-  { value: "Half Yearly", label: "Half Yearly" },
-  { value: "Yearly", label: "Yearly" },
-  { value: "Two Yearly", label: "Two Yearly" },
-  { value: "Five Yearly", label: "Five Yearly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "quarterly", label: "Quarterly" },
+  { value: "half-yearly", label: "Half Yearly" },
+  { value: "yearly", label: "Yearly" },
+  { value: "two-yearly", label: "Two Yearly" },
+  { value: "five-yearly", label: "Five Yearly" },
 ];
 
 /* -------------------- Frequency helpers -------------------- */
@@ -74,6 +75,11 @@ const extractFrequencyTokens = (raw) => {
 };
 
 export const getRowBiggestFrequency = (row) => {
+  /* 👇 NEW: If the user selected a frequency in the dropdown, return it immediately */
+  if (row?.frequency) {
+    return { code: row.frequency, label: row.frequency };
+  }
+
   const codes = [];
 
   if (row?.weeklyPreventive && typeof row.weeklyPreventive === "object") {
@@ -107,8 +113,6 @@ export const createEmptyWeeklyData = () => {
 
 /* ═══════════════════════════════════════════════════════════════
    MEMOIZED CELL COMPONENTS
-   Each one only re-renders when ITS OWN value/disabled changes —
-   this is what makes the grid feel instant even at 20+ rows.
    ═══════════════════════════════════════════════════════════════ */
 
 const TextCell = React.memo(function TextCell({
@@ -141,8 +145,6 @@ const DateCell = React.memo(function DateCell({
   disabled,
   updateRow,
 }) {
-  // 👇 CRITICAL: memoize the dayjs object so antd doesn't see a "new value"
-  //    every render — that's what was resetting the picker mid-click.
   const dateValue = useMemo(() => (value ? dayjs(value) : null), [value]);
 
   const handleChange = useCallback(
@@ -306,7 +308,6 @@ const PreventiveGrid = ({
 
   const rows = Array.isArray(value) ? value : [];
 
-  // 👇 keep rows in a ref so updateRow doesn't have to depend on `rows`
   const rowsRef = useRef(rows);
   useEffect(() => {
     rowsRef.current = rows;
@@ -316,7 +317,6 @@ const PreventiveGrid = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
-  /* -------------------- Row actions -------------------- */
   const addRow = () => {
     if (disabled) return;
     if (maxRows !== undefined && rows.length >= maxRows) return;
@@ -367,7 +367,6 @@ const PreventiveGrid = ({
     setIsDeleteModalOpen(false);
   };
 
-  /* -------------------- Cell updates (STABLE) -------------------- */
   const updateRow = useCallback(
     (rowIndex, key, newValue) => {
       if (disabled) return;
@@ -428,7 +427,6 @@ const PreventiveGrid = ({
     [disabled, onChange]
   );
 
-  /* -------------------- Field renderer -------------------- */
   const renderField = (column, row, rowIndex) => {
     const {
       key,
@@ -515,7 +513,6 @@ const PreventiveGrid = ({
     (showChildColumn ? 1 : 0) +
     1;
 
-  /* -------------------- Render -------------------- */
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
       <div className="flex min-h-[68px] items-center justify-between gap-5 border-b border-[#D7E0DC] bg-[#F7F9F8] px-5">

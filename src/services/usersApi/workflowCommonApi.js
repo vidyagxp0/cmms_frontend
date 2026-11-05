@@ -32,3 +32,10 @@ export const getAllDepartmentMastersGlobal = (type) => {
     return api.get(`/user/get-master-data-global/${type}`);
 };
 
+export const getRecordNotifications = (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+
+    return api.get(
+        `/user/record-notifications${query ? `?${query}` : ""}`
+    );
+};

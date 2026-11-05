@@ -187,6 +187,8 @@ const CreateCalibrationPanel = () => {
 
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
 
+  const REQUIRED_FIELDS =[]
+
   useEffect(() => {
     if (!equipmentMap || Object.keys(equipmentMap).length === 0) return;
 

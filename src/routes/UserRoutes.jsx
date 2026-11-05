@@ -64,6 +64,7 @@ import UnCreateCalibration from "../pages/user/UnPlannedCalibration/UnCreateCali
 import UnCreateCalibrationPanel from "../pages/user/UnPlannedCalibration/UnCalibrationPanel";
 import UnCalibrationChild from "../pages/user/UnPlannedCalibration/UnCalibrationChild";
 import UnCalibrationChildPanel from "../pages/user/UnPlannedCalibration/UnCalibrationChildPanel";
+import NotificationList from "../pages/user/Notification/NotificationList";
 
 function UserRoutes() {
   return (
@@ -166,6 +167,7 @@ function UserRoutes() {
         
         {/* Import Master Equipment Data Routes*/}
         <Route path="import-master-equipment-data" element={<ImportMasterEquipmentData />} />
+        <Route path="notification-list" element={<NotificationList />} />
 
       </Route>
     </Routes>

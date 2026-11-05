@@ -26,8 +26,8 @@ const STAGE_OPTIONS = [
 /* 👇 NEW — Record Type filter */
 const RECORD_TYPE_OPTIONS = [
     { label: "All", value: "all" },
-    { label: "Preventive Maintenance", value: "preventive-child" },
-    { label: "Addendum Preventive Maintenance", value: "addendum-preventive-management" },
+    { label: "Preventive Planner", value: "preventive-child" },
+    { label: "Addendum Planner", value: "addendum-preventive-management" },
 ];
 
 const PreventiveMaintenanceDashboard = () => {

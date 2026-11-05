@@ -696,7 +696,7 @@ const AddendumCalibrationChildPanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
-    navigate("/user/addendum-calibration-management-dashboard");
+    navigate("/user/calibration-management-dashboard");
   };
 
   if (isLoading) {
@@ -740,7 +740,7 @@ const AddendumCalibrationChildPanel = () => {
               onBeforeActivity={handleSaveBeforeActivity}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
-              onExit={() => navigate("/user/addendum-calibration-management-dashboard")}
+              onExit={() => navigate("/user/calibration-management-dashboard")}
             />
           </div>
         </div>

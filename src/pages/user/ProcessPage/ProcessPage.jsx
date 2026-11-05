@@ -68,6 +68,13 @@ const ProcessPage = () => {
                             "preventive addendum"
                     );
                 }
+                else if (sourceType === "unplanned-calibration") {
+                    filteredProcesses = filteredProcesses.filter(
+                        (process) =>
+                            process.name?.toLowerCase() ===
+                            "unplanned calibration planner"
+                    );
+                }
 
                 if (filteredProcesses.length === 0) {
                     if (isMounted) {
@@ -113,6 +120,11 @@ const ProcessPage = () => {
                         case "preventive-addendum":
                             navigate(
                                 `/user/addendum-preventive-planner-create/${targetProcess.id}`
+                            );
+                            break;
+                        case "unplanned-calibration":
+                            navigate(
+                                `/user/unplanned-calibration-create/${targetProcess.id}`
                             );
                             break;
                         default:

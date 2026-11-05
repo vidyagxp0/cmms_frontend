@@ -367,7 +367,7 @@ const AddendumCalibrationChildCreate = () => {
       const response = await addAddendumChild(payload);
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Addendum Calibration created successfully.");
-        navigate("/user/addendum-calibration-management-dashboard");
+        navigate("/user/calibration-management-dashboard");
       } else {
         toast.error(response?.data?.message || "Failed to Create Addendum Calibration Management.");
       }
@@ -381,7 +381,7 @@ const AddendumCalibrationChildCreate = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
-    navigate("/user/addendum-calibration-management-dashboard");
+    navigate("/user/calibration-management-dashboard");
   };
 
   if (isLoading) {

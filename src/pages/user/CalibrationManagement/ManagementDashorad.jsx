@@ -29,8 +29,8 @@ const STAGE_OPTIONS = [
 
 const RECORD_TYPE_OPTIONS = [
     { label: "All", value: "all" },
-    { label: "Calibration Management", value: "calibration-child" },
-    { label: "Addendum Management", value: "addendum-calibration-management" },
+    { label: "Calibration Planner", value: "calibration-child" },
+    { label: "Addendum Planner", value: "addendum-calibration-management" },
 ];
 
 const ManagementDashboard = () => {
@@ -75,7 +75,7 @@ const ManagementDashboard = () => {
             if (filters.start_date) params.start_date = filters.start_date;
             if (filters.end_date)   params.end_date   = filters.end_date;
             if (filters.child_type && filters.child_type !== "all") {
-            params.child_type = filters.child_type;
+                params.child_type = filters.child_type;
             }
 
             const response = await getAllCalibrationManagementRecords(params);
@@ -241,10 +241,19 @@ const ManagementDashboard = () => {
                 header: "ID",
                 cell: ({ row, getValue }) => {
                     const record = row.original;
+                    
+                    // 👇 UPDATED ROUTING LOGIC BASED ON CHILD_TYPE
                     const handleClick = () => {
                         if (!record?.id) return;
-                        if (record.is_child === 1) {
-                            navigate(`/user/calibration-management-panel/${5}/${record.id}`);
+                        
+                        const type = record.child_type;
+                        
+                        if (type === "addendum-calibration-management") {
+                            navigate(`/user/addendum-calibration-management-panel/${record.id}`);
+                        } else if (type === "unplanned-calibration-child") {
+                            navigate(`/user/unplanned-calibration-management-panel/${record.id}`);
+                        } else if (type === "calibration-child") {
+                            navigate(`/user/calibration-management-panel/${record.id}`);
                         } else {
                             navigate(`/user/calibration-planner-panel/${record.id}`);
                         }

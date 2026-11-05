@@ -90,3 +90,52 @@ export const getAddendumChildSingleReport = (id) => {
 export const getAddendumManagementAudit = (id, params = {}) => {
     return api.get(`/user/calibration-management-audit/${id}`, {params});
 };
+
+
+// Un Planned Calibration Planner  API
+
+export const getUnPlannedCalibrationDetail = (id) =>
+    api.get(`/user/show-unplanned-calibration-record/${id}`);
+
+export const addUnPlannedCalibration = (payload) =>
+    api.post("/user/store-unplanned-calibration-record", payload);
+
+export const updateUnPlannedCalibration = (id, payload) =>
+    api.put(`/user/update-unplanned-calibration-record/${id}`, payload);
+
+export const executeUnPlannedCalibrationActivity = (id, payload) =>
+    api.post(`/user/unplanned-calibration-record-stage/${id}`, payload);
+
+export const getUnPlannedCalibrationSingleReport = (id) => {
+    return api.get(`/user/unplanned-calibration-singleReport/${id}`, {
+        responseType: "blob",
+    });
+};
+
+export const getUnPlannedCalibrationManagementAudit = (id, params = {}) => {
+    return api.get(`/user/unplanned-calibration-audit/${id}`, {params});
+};
+
+// Un Planned Calibration Child  API
+
+export const getUnPlannedCalibrationChildDetail = (id) =>
+    api.get(`/user/show-unplanned-calibration-management-record/${id}`);
+
+export const addUnPlannedCalibrationChild = (payload) =>
+    api.post("/user/store-unplanned-calibration-management-record", payload);
+
+export const updateUnPlannedCalibrationChild = (id, payload) =>
+    api.put(`/user/update-unplanned-calibration-management-record/${id}`, payload);
+
+export const executeUnPlannedCalibrationChildActivity = (id, payload) =>
+    api.post(`/user/unplanned-calibration-management-record-stage/${id}`, payload);
+
+export const getUnPlannedCalibrationChildSingleReport = (id) => {
+    return api.get(`/user/unplanned-calibration-management-singleReport/${id}`, {
+        responseType: "blob",
+    });
+};
+
+export const getUnPlannedCalibrationManagementChildAudit = (id, params = {}) => {
+    return api.get(`/user/unplanned-calibration-management-audit/${id}`, {params});
+};

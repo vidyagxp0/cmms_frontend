@@ -109,6 +109,14 @@ export const DASHBOARD_NAV_ITEMS = [
         group: "engineering",
         hiddenFromNav: true,
     },
+     {
+        id: "unplanned-calibration",
+        label: "Unplanned Calibration",
+        path: "/user/unplanned-calibration-dashboard",
+        icon: HardHat,
+        hiddenFromNav: true,
+        group: "engineering",
+    },
 
     // {
     //     id: "addendum-calibration-management",

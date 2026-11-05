@@ -1,0 +1,1176 @@
+import React, { useCallback, useEffect, useState, useRef } from "react";
+import { Form, Input, Select } from "antd";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+
+import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
+import ProcessStage from "../../../components/common/ProcesStageTabs/ProcessStage";
+import ProcessActivities from "../../../components/common/ProcesStageTabs/ProcessActivities";
+import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
+import FormInput from "../../../components/common/Form/FormInput";
+import FormTextArea from "../../../components/common/Form/FormTextArea";
+import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
+import FormAttachment from "../../../components/common/Attachment/FormAttachment";
+import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
+// import CalibrationGrid from "./CalibrationGrid";
+import Skeleton from "../../../components/common/Skeleton/Skeleton";
+import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
+import "../../../components/ui/disabledFields.css";
+
+import { getProfile } from "../../../services/authApi";
+import { executeUnPlannedCalibrationActivity, getUnPlannedCalibrationDetail, getCalibrationUser, updateUnPlannedCalibration } from "../../../services/usersApi/calibrationApi";
+import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
+import { 
+  getAllActivites, 
+  getAllActivityLogs, 
+  getAllPermissions, 
+  getAllStages, 
+  getAllDepartments, 
+  getAllDepartmentMasters,
+  getAllDepartmentMastersGlobal // 👈 IMPORT ADDED
+} from "../../../services/usersApi/workflowCommonApi";
+import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import UnCalibrationGrid from "./UnCalibrationGrid";
+
+dayjs.extend(customParseFormat);
+
+// 👇 UPDATED STAGE IDS FOR PROCESS 14
+const TABS = [
+  { id: "general", label: "General Information", stageId: 70 },
+  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 71 },
+  { id: "user-dept-review", label: "User Department Review (User Dept)", stageId: 72 },
+  { id: "qa-review", label: "QA Approval Review", stageId: 73 },
+  { id: "activity", label: "Activity Log", stageId: 74 }, // Maps to Closed - Done
+  { id: "cancellation", label: "Cancellation", stageId: 75 },
+];
+
+const getProcessValue = (processData = [], key) => {
+  if (Array.isArray(processData)) {
+    const field = processData.find((item) => item?.key === key);
+    return field?.value ?? "";
+  }
+  if (processData && typeof processData === "object") {
+    if (processData[key] !== undefined) return processData[key] ?? "";
+    const field = Object.values(processData).find((item) => item?.key === key);
+    return field?.value ?? "";
+  }
+  return "";
+};
+
+const buildGridPayload = (rows = [], equipmentMap = {}) => {
+  return rows.map((row, index) => {
+    const rowData = { row_id: row.row_id ?? index + 1 };
+    Object.keys(row).forEach((key) => {
+      if (key === "monthlyCalibration" || key === "calibrationFrequencyStartDate") {
+        rowData[key] = row[key];
+        return;
+      }
+      let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
+      if (key === "previousCalibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
+      else if (key === "nextCalibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
+      else if (key === "calibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
+      if (key === "equipmentInstrumentName" && value && equipmentMap[value]) value = equipmentMap[value]?.instrument_name || value;
+      rowData[key] = { key, label: key, value };
+    });
+    return rowData;
+  });
+};
+
+const buildRowFromInstrument = (item = {}) => ({
+  equipmentInstrumentName: item.id ?? "",
+  equipmentInstrumentId: item.instrument_id_no || "",
+  make: item.make || "",
+  model: item.sr_no_model_no || "",
+  location: item.location || "",
+  leastCount: item.least_count || "",
+  accuracy: item.accuracy || "",
+  instrumentrange: item.instrument_range || "",
+  operatingrange: item.operating_range || "",
+  calibrationTestPoints: item.calibration_test_points || "",
+  category: item.category || "",
+  plannedDate: "",
+  calibrationDoneDate: "",
+  remark: "",
+});
+
+const buildProcessData = (values, systemFields) => [
+  ...systemFields.map((field) => ({ key: field.name, label: field.label, value: values?.[field.name] || "" })),
+  {
+    key: "master_department",
+    label: "Select Department",
+    value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
+  },
+  { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
+  { key: "year", label: "Year", value: values?.year || "" },
+  { key: "block", label: "Block", value: values?.block || "" },
+  { key: "area", label: "Area", value: values?.area || "" },
+  {
+    key: "instrumentType",
+    label: "Instrument Type",
+    value: values?.instrumentType || "",
+  },
+  { key: "comment", label: "Comments", value: values?.comments || "" },
+  { key: "attachment", label: "Attachment", value: [] },
+  { key: "hod_review_comments", label: "HOD / Designee Review Comments", value: values?.hodReviewComments || "" },
+  { key: "hod_review_attachment", label: "HOD / Designee Review Attachment", value: [] },
+  { key: "user_dept_review_comments", label: "User Dept Review Comments", value: values?.userDeptReviewComments || "" },
+  { key: "user_dept_review_attachment", label: "User Dept Review Attachment", value: values?.userDeptReviewAttachment || [] },
+  { key: "qa_review_comments", label: "QA Review Comments", value: values?.qaReviewComments || "" },
+  { key: "qa_review_attachment", label: "QA Review Attachment", value: [] },
+  { key: "cancellation_remark", label: "Cancellation Remark", value: values?.cancellationRemark || "" },
+  { key: "cancellation_attachment", label: "Cancellation Attachment", value: [] },
+];
+
+const validateCalibrationForm = (form, storedRequired, currentType) => {
+  const values = form.getFieldsValue();
+
+  const fieldsToValidate = [
+    { name: "shortDescription", label: "Short Description" },
+  ];
+
+  // Only validate department if it's a Field Instrument
+  if (currentType === "Field Instrument") {
+    fieldsToValidate.push({ name: "selectedDeptId", label: "Select Department" });
+  }
+
+  return fieldsToValidate.filter((field) => {
+    let value = values?.[field.name];
+    if (value === undefined || value === null || value === "") value = storedRequired[field.name];
+    if (typeof value === "string") return !value.trim();
+    return value === undefined || value === null || value === "";
+  });
+};
+
+const UnCreateCalibrationPanel = () => {
+  const [activeTab, setActiveTab] = useState("general");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [workflowLoading, setWorkflowLoading] = useState(true);
+  const [workflowStages, setWorkflowStages] = useState([]);
+  // 👇 UPDATED DEFAULT PROCESS ID
+  const [processId, setProcessId] = useState(14); 
+  const [activeStageId, setActiveStageId] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [activityLogsLoading, setActivityLogsLoading] = useState(false);
+  const [canPerformActivity, setCanPerformActivity] = useState(false);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
+  const [calibrationRows, setCalibrationRows] = useState([]);
+  const [equipmentOptions, setEquipmentOptions] = useState([]);
+  const [equipmentMap, setEquipmentMap] = useState({});
+  const equipmentMapRef = useRef(equipmentMap);
+  const [equipmentLoading, setEquipmentLoading] = useState(false);
+  const [initiator, setInitiator] = useState("");
+  const [initiatorId, setInitiatorId] = useState("");
+  const [loginUserId, setLoginUserId] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+  const [initiationDepartment, setInitiationDepartment] = useState("");
+  const [dateOfInitiation, setDateOfInitiation] = useState("");
+  const [processName, setProcessName] = useState("");
+  const [hodUsers, setHodUsers] = useState([]);
+  const [qaReviewers, setQaReviewers] = useState([]);
+  const [userRoles, setUserRoles] = useState([]);
+  const [selectedInstrumentType, setSelectedInstrumentType] = useState("");
+  const [form] = Form.useForm();
+  const navigate = useNavigate();
+  const { recordId } = useParams();
+  const isFetchingRef = useRef(false);
+  const requiredValuesRef = useRef({ shortDescription: "", selectedDeptId: "" });
+
+  const [departments, setDepartments] = useState([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
+
+  const selectedDeptIdWatch = Form.useWatch("selectedDeptId", form);
+
+  const autoPopulateRowsRef = useRef(false);
+
+  const REQUIRED_FIELDS = [
+    { name: "shortDescription", label: "Short Description" },
+];
+
+  useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
+
+  useEffect(() => {
+    if (!equipmentMap || Object.keys(equipmentMap).length === 0) return;
+
+    setCalibrationRows((prev) => {
+      let changed = false;
+      const next = prev.map((row) => {
+        const current = row.equipmentInstrumentName;
+        if (!current) return row;
+        if (equipmentMap[current]) return row;
+
+        const match = Object.values(equipmentMap).find(
+          (eq) => eq.instrument_name === current
+        );
+        if (!match) return row;
+
+        changed = true;
+        return { ...row, equipmentInstrumentName: match.id };
+      });
+      return changed ? next : prev;
+    });
+  }, [equipmentMap]);
+
+  // 👇 UPDATED EDITABILITY CHECKS FOR STAGES 70 - 75
+  const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
+  const isGeneralEditable = isStageEditable(70);
+  const isHodEditable = isStageEditable(71);
+  const isUserDeptEditable = isStageEditable(72);
+  const isQaReviewEditable = isStageEditable(73);
+  const isCancellationEditable = isStageEditable(75);
+  const canCreateChild = Number(activeStageId) === 74 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await getProfile();
+        const profile = response?.data?.data;
+
+        if (!profile) return;
+
+        setLoginUserId(profile?.id || "");
+        setUserRoles(Array.isArray(profile?.roles) ? profile.roles : []);
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      setDepartmentsLoading(true);
+      try {
+        const response = await getAllDepartments();
+        const data = response?.data?.data ?? [];
+        setDepartments(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to fetch departments:", error);
+        toast.error("Could not load departments.");
+      } finally {
+        setDepartmentsLoading(false);
+      }
+    };
+    fetchDepartments();
+  }, []);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    const fetchInstruments = async () => {
+      setEquipmentOptions([]);
+      setEquipmentMap({});
+      equipmentMapRef.current = {};
+
+      const requiresDept = selectedInstrumentType === "Field Instrument";
+
+      // Require Instrument Type. Require Department ONLY if Field Instrument.
+      if (!selectedInstrumentType || (requiresDept && !selectedDeptIdWatch)) {
+        setEquipmentLoading(false);
+        return;
+      }
+
+      const typeMap = {
+        "Master Instrument": "instrument_masters",
+        "Field Instrument": "field_instrument_master",
+        "Spare Instrument": "spare_instrument_master",
+      };
+
+      const apiType = typeMap[selectedInstrumentType];
+
+      if (!apiType) {
+        setEquipmentLoading(false);
+        return;
+      }
+
+      try {
+        setEquipmentLoading(true);
+
+        let response;
+        
+        // 👇 UPDATED: Call the correct API based on whether department is required
+        if (requiresDept) {
+          response = await getAllDepartmentMasters(selectedDeptIdWatch, apiType);
+        } else {
+          response = await getAllDepartmentMastersGlobal(apiType);
+        }
+
+        if (!isCurrent) return;
+
+        const data = response?.data?.data || [];
+
+        const normalizedData = data.map((item) => ({
+          ...item,
+          instrument_name:
+            item.instrument_name ||
+            item.field_instrument_name ||
+            item.instrumentName ||
+            item.name ||
+            "",
+          instrument_id_no:
+            item.instrument_id_no ||
+            item.equipment_id ||
+            item.field_instrument_id ||
+            item.instrument_id ||
+            "",
+          make: item.make || item.manufacturer || "",
+          sr_no_model_no:
+            item.sr_no_model_no ||
+            item.model ||
+            item.model_no ||
+            "",
+          location: item.location || item.area || "",
+          least_count: item.least_count || item.leastCount || "",
+          accuracy: item.accuracy || "",
+          instrument_range:
+            item.instrument_range ||
+            item.instrumentrange ||
+            item.range ||
+            "",
+          operating_range:
+            item.operating_range ||
+            item.operatingrange ||
+            "",
+          calibration_test_points:
+            item.calibration_test_points ||
+            item.calibrationTestPoints ||
+            "",
+        }));
+
+        const options = normalizedData.map((item) => ({
+          value: item.id,
+          label: item.instrument_name,
+        }));
+
+        const map = {};
+        normalizedData.forEach((item) => {
+          map[item.id] = item;
+        });
+
+        setEquipmentOptions(options);
+        setEquipmentMap(map);
+        equipmentMapRef.current = map;
+
+        if (autoPopulateRowsRef.current) {
+          setCalibrationRows(normalizedData.map(buildRowFromInstrument));
+        }
+      } catch (error) {
+        if (!isCurrent) return;
+
+        console.error("Failed to fetch instruments:", error);
+        toast.error(
+          error?.response?.data?.message ||
+            "Could not load instruments."
+        );
+      } finally {
+        if (isCurrent) {
+          autoPopulateRowsRef.current = false;
+          setEquipmentLoading(false);
+        }
+      }
+    };
+
+    fetchInstruments();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedInstrumentType, selectedDeptIdWatch]);
+
+  useEffect(() => {
+    const fetchCalibrationUsers = async () => {
+      try {
+        setUsersLoading(true);
+        const response = await getCalibrationUser();
+        const data = response?.data?.data || {};
+        setHodUsers(data?.hod || []);
+        setQaReviewers(data?.qa_reviewer || []);
+      } catch (error) {
+        console.error("Failed to fetch calibration users:", error);
+        toast.error(error?.response?.data?.message || "Failed to load workflow users.");
+        setHodUsers([]);
+        setQaReviewers([]);
+      } finally { setUsersLoading(false); }
+    };
+    fetchCalibrationUsers();
+  }, []);
+
+  const fetchCalibrationDetail = useCallback(async (isInitial = false) => {
+    if (!recordId) { toast.error("Unplanned Calibration Planner record ID is missing."); return; }
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    try {
+      if (isInitial) setIsLoading(true);
+      const response = await getUnPlannedCalibrationDetail(recordId);
+      const responseData = response?.data?.data;
+      if (!responseData) { toast.error("Unplanned Calibration Planner record not found."); return; }
+      setProcessId(responseData?.process_id || 14); // Default to 14 if missing
+      const backendStageId = responseData?.stage?.id || responseData?.stage_id || null;
+      setActiveStageId(backendStageId);
+      setProcessName(responseData?.process?.name || "");
+      const processData = responseData?.process_data || [];
+      const recordNumber = getProcessValue(processData, "recordNumber");
+      const documentNumber = getProcessValue(processData, "documentNumber");
+      const documentType = getProcessValue(processData, "documentType");
+      const processInitiator = getProcessValue(processData, "initiator");
+      const processDateOfInitiation = getProcessValue(processData, "dateOfInitiation");
+      const dueDate = getProcessValue(processData, "dueDate");
+      const processDepartment = getProcessValue(processData, "initiationDepartment");
+      const masterDepartmentId = getProcessValue(processData, "master_department");
+      const shortDescription = getProcessValue(processData, "short_description");
+      const comments = getProcessValue(processData, "comment");
+      const attachment = getProcessValue(processData, "attachment");
+      const year = getProcessValue(processData, "year");
+      const block = getProcessValue(processData, "block");
+      const area = getProcessValue(processData, "area");
+      const hodReviewComments = getProcessValue(processData, "hod_review_comments");
+      const hodReviewAttachment = getProcessValue(processData, "hod_review_attachment");
+      const userDeptReviewComments = getProcessValue(processData, "user_dept_review_comments");
+      const userDeptReviewAttachment = getProcessValue(processData, "user_dept_review_attachment");
+      const qaReviewComments = getProcessValue(processData, "qa_review_comments");
+      const qaReviewAttachment = getProcessValue(processData, "qa_review_attachment");
+      const cancellationRemark = getProcessValue(processData, "cancellation_remark");
+      const cancellationAttachment = getProcessValue(processData, "cancellation_attachment");
+      const instrumentType = getProcessValue(processData, "instrumentType");
+
+      setSelectedInstrumentType(instrumentType || "");
+
+      const backendInitiatorId =
+        responseData?.initiator?.id ??
+        responseData?.initiator_id ??
+        "";
+
+      const backendInitiatorName =
+        responseData?.initiator?.name ??
+        processInitiator ??
+        "";
+
+      setInitiatorId(backendInitiatorId);
+      setInitiator(backendInitiatorName);
+      setDepartmentId(responseData?.department?.id || responseData?.department_id || "");
+      setInitiationDepartment(responseData?.department?.name || processDepartment || "");
+      setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
+
+      requiredValuesRef.current = {
+        shortDescription: shortDescription || "",
+        selectedDeptId: masterDepartmentId || null,
+      };
+
+      form.setFieldsValue({
+        recordNumber,
+        documentNumber,
+        documentType,
+        initiator: backendInitiatorName,
+        dateOfInitiation: processDateOfInitiation || responseData?.initiation_date || "",
+        dueDate,
+        initiationDepartment: responseData?.department?.name || processDepartment || "",
+        selectedDeptId: masterDepartmentId || null,
+        shortDescription,
+        year,
+        block,
+        area,
+        instrumentType: instrumentType || null,
+        comments,
+        attachment: attachment || [],
+        hodReviewComments,
+        hodReviewAttachment: hodReviewAttachment || [],
+        userDeptReviewComments,
+        userDeptReviewAttachment: userDeptReviewAttachment || [],
+        qaReviewComments,
+        qaReviewAttachment: qaReviewAttachment || [],
+        cancellationRemark: cancellationRemark || "",
+        cancellationAttachment: cancellationAttachment || [],
+      });
+
+      const currentEquipmentMap = equipmentMapRef.current;
+      const gridRows = (responseData?.grid_records || []).flatMap((record) => record?.grid_data || []);
+      const rawRows = gridRows.map((item) => {
+        const row = {};
+        Object.keys(item).forEach((key) => {
+          if (key === "row_id") row.row_id = item.row_id;
+          else if (key === "monthlyCalibration") row.monthlyCalibration = item[key] || {};
+          else if (key === "calibrationFrequencyStartDate") row.calibrationFrequencyStartDate = item[key] || "";
+          else if (item[key] && typeof item[key] === "object" && Object.prototype.hasOwnProperty.call(item[key], "value")) row[key] = item[key].value;
+          else row[key] = item[key];
+        });
+        return row;
+      });
+
+      const normalizedRows = rawRows.map((row) => {
+        const newRow = { ...row };
+        newRow.monthlyCalibration = row.monthlyCalibration && typeof row.monthlyCalibration === "object" ? row.monthlyCalibration : {};
+        newRow.calibrationFrequencyStartDate = row.calibrationFrequencyStartDate || "";
+        if (newRow.equipmentInstrumentName && typeof newRow.equipmentInstrumentName === "string") {
+          const found = Object.values(currentEquipmentMap).find((eq) => eq.instrument_name === newRow.equipmentInstrumentName);
+          if (found) newRow.equipmentInstrumentName = found.id;
+        }
+        if (newRow.previousCalibrationDate) newRow.previousCalibrationDate = dayjs(newRow.previousCalibrationDate, "DD/MM/YYYY");
+        if (newRow.nextCalibrationDate) newRow.nextCalibrationDate = dayjs(newRow.nextCalibrationDate, "DD/MM/YYYY");
+        if (newRow.calibrationDate) newRow.calibrationDate = dayjs(newRow.calibrationDate, "DD/MM/YYYY");
+        return newRow;
+      });
+      setCalibrationRows(normalizedRows);
+    } catch (error) {
+      console.error("Failed to fetch unplanned calibration planner detail:", error);
+      toast.error(error?.response?.data?.message || "Failed to load Unplanned Calibration Planner record.");
+    } finally { setIsLoading(false); isFetchingRef.current = false; }
+  }, [recordId, form]);
+
+  useEffect(() => { fetchCalibrationDetail(true); }, [fetchCalibrationDetail]);
+
+  useEffect(() => {
+    if (!processId) return;
+    const fetchStages = async () => {
+      try {
+        setWorkflowLoading(true);
+        const response = await getAllStages(processId);
+        const stages = response?.data?.data || [];
+        const activeStages = stages.filter(
+            (stage) => stage?.is_active !== false
+        );
+        setWorkflowStages(activeStages);
+      } catch (error) {
+        console.error("Failed to fetch workflow stages:", error);
+        toast.error(error?.response?.data?.message || "Failed to load workflow stages.");
+        setWorkflowStages([]);
+      } finally { setWorkflowLoading(false); }
+    };
+    fetchStages();
+  }, [processId]);
+
+  useEffect(() => {
+    if (!activeStageId) { setActivities([]); setActivitiesLoading(false); return; }
+    const fetchActivities = async () => {
+      try {
+        setActivitiesLoading(true);
+        const response = await getAllActivites(activeStageId);
+        const activityList = response?.data?.data || [];
+        setActivities(activityList.filter((activity) => activity?.is_active !== false));
+      } catch (error) {
+        console.error("Failed to fetch activities:", error);
+        toast.error(error?.response?.data?.message || "Failed to load activities.");
+        setActivities([]);
+      } finally { setActivitiesLoading(false); }
+    };
+    fetchActivities();
+  }, [activeStageId]);
+
+  const fetchPermissions = useCallback(async () => {
+    if (!recordId) { setCanPerformActivity(false); setPermissionsLoading(false); return; }
+    try {
+      setPermissionsLoading(true);
+      const response = await getAllPermissions(recordId);
+      const canPerform = response?.data?.data?.permission?.can_perform_action === true;
+      setCanPerformActivity(canPerform);
+    } catch (error) {
+      console.error("Failed to fetch record permissions:", error);
+      setCanPerformActivity(false);
+      toast.error(error?.response?.data?.message || "Failed to check activity permissions.");
+    } finally { setPermissionsLoading(false); }
+  }, [recordId]);
+
+  useEffect(() => { fetchPermissions(); }, [fetchPermissions]);
+
+  const fetchActivityLogs = useCallback(async () => {
+    if (!recordId) { setActivityLogs([]); return; }
+    try {
+      setActivityLogsLoading(true);
+      const response = await getAllActivityLogs(recordId, processId);
+      setActivityLogs(response?.data?.data || []);
+    } catch (error) {
+      console.error("Failed to fetch activity history:", error);
+      toast.error(error?.response?.data?.message || "Failed to load activity history.");
+      setActivityLogs([]);
+    } finally { setActivityLogsLoading(false); }
+  }, [recordId, processId]);
+
+  useEffect(() => {
+    if (!processId) return;
+    fetchActivityLogs();
+  }, [processId, fetchActivityLogs]);
+
+  useEffect(() => {
+    if (!activeStageId) return;
+    const matchingTab = TABS.find((tab) => Number(tab.stageId) === Number(activeStageId));
+    if (matchingTab) setActiveTab(matchingTab.id);
+  }, [activeStageId]);
+
+  const systemFields = [
+    { name: "documentNumber", label: "Document Number", value: form.getFieldValue("documentNumber") || "" },
+    { name: "documentType", label: "Document Type", value: form.getFieldValue("documentType") || "" },
+    { name: "recordNumber", label: "Record Number", value: form.getFieldValue("recordNumber") || "" },
+    { name: "initiator", label: "Initiator", value: initiator },
+    { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
+    { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
+  ];
+
+  const handleViewChild = (rowIndex, rowData) => {
+    const shortDesc = form.getFieldValue("shortDescription") || "";
+    const rowId = rowIndex + 1;
+    navigate(`/user/unplanned-calibration-management-create/${14}/${recordId}`, {
+      state: { rowData, shortDescription: shortDesc, processId: 14, parentId: recordId, rowId, childType: "unplanned-calibration-child" },
+    });
+  };
+
+  const handleSave = async () => {
+    if (isSaving || isLoading || usersLoading) return;
+    const missingFields = validateCalibrationForm(form, requiredValuesRef.current, selectedInstrumentType);
+    if (missingFields.length > 0) {
+      const missingFieldNames = missingFields.map((field) => field.label).join(", ");
+      toast.error(`Required fields missing: ${missingFieldNames}`);
+      form.setFields(missingFields.map((field) => ({ name: field.name, errors: [`${field.label} is required`] })));
+      setActiveTab("general");
+      return;
+    }
+    form.submit();
+  };
+
+  const handleSaveBeforeActivity = async () => {
+    if (isSaving || isLoading || usersLoading) {
+        return false;
+    }
+
+    const missingFields = validateCalibrationForm(
+        form,
+        requiredValuesRef.current,
+        selectedInstrumentType
+    );
+
+    if (missingFields.length > 0) {
+        const missingFieldNames = missingFields
+            .map((field) => field.label)
+            .join(", ");
+
+        toast.error(`Required fields missing: ${missingFieldNames}`);
+
+        form.setFields(
+            missingFields.map((field) => ({
+                name: field.name,
+                errors: [`${field.label} is required`],
+            }))
+        );
+
+        setActiveTab("general");
+
+        return false;
+    }
+
+    try {
+        const values = await form.validateFields();
+        return await handleSubmit(values);
+    } catch (error) {
+        const firstError = error?.errorFields?.[0]?.errors?.[0];
+        if (firstError) {
+            toast.error(firstError);
+        }
+        return false;
+    }
+};
+
+  const handleSubmit = async (values) => {
+    if (isSaving || !recordId) return;
+    try {
+      setIsSaving(true);
+      const allFormValues = form.getFieldsValue(true);
+      const mergedValues = { ...allFormValues, ...values };
+      REQUIRED_FIELDS.forEach(({ name }) => {
+        if (!mergedValues[name] && requiredValuesRef.current[name]) mergedValues[name] = requiredValuesRef.current[name];
+      });
+      const processData = buildProcessData(mergedValues, systemFields);
+      const gridData = buildGridPayload(calibrationRows, equipmentMap);
+      const payload = {
+        process_id: Number(processId),
+        stage_id: Number(activeStageId),
+        department_id: Number(departmentId),
+        initiator_id: Number(initiatorId),
+        initiator_name: initiator,               
+        short_description: mergedValues?.shortDescription || "",
+        initiation_date: mergedValues?.dateOfInitiation || dateOfInitiation || "",
+        process_data: processData,
+        gridData,
+        checklistData: [],
+      };
+      const response = await updateUnPlannedCalibration(recordId, payload);
+      if (response?.data?.success || response?.data?.status === true) {
+        toast.success("Unplanned Calibration Planner updated successfully.");
+        await fetchCalibrationDetail();
+        await fetchPermissions();
+        await fetchActivityLogs();
+        return true;
+      }
+      toast.error(response?.data?.message || "Failed to update Unplanned Calibration Planner.");
+    } catch (error) {
+      console.error("Unplanned Calibration Planner update failed:", error);
+      toast.error(error?.response?.data?.message || "Failed to update Unplanned Calibration Planner. Please try again.");
+      return false;
+    } finally { setIsSaving(false); }
+  };
+
+  const handleActivitySuccess = async () => {
+    try {
+      const values = form.getFieldsValue(true);
+      if (canPerformActivity) {
+        await handleSubmit(values);
+      } else {
+        await fetchCalibrationDetail(false);
+        await fetchPermissions();
+        await fetchActivityLogs();
+      }
+    } catch (error) { console.error("Failed to save unplanned calibration planner after activity:", error); }
+  };
+
+  const handleCancel = () => {
+    if (isSaving) return;
+    navigate("/user/engineering-dashboard");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="w-full space-y-6">
+        <Skeleton variant="title" className="w-full" />
+        <Skeleton variant="form" fields={6} />
+      </div>
+    );
+  }
+
+  // 👇 UPDATED CANCELLED STAGE ID
+  const isCancellationStageActive = Number(activeStageId) === 75;
+
+  const visibleTabs = isCancellationStageActive
+    ? TABS.filter((tab) => tab.id === "cancellation")
+    : TABS.filter((tab) => tab.id !== "cancellation");
+
+  return (
+    <div className="w-full">
+      <div className="mb-2 space-y-2">
+        <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} cancelledStageId={75} />
+        <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
+          <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
+            <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />
+            <div className="min-w-0 flex-1">
+              <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">Process</p>
+              <p className="truncate text-[11px] font-semibold text-[#344A43]">{processName || "—"}</p>
+            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <ProcessActivities
+              activities={activities}
+              loading={activitiesLoading}
+              recordId={recordId}
+              userId={loginUserId}
+              activityApi={executeUnPlannedCalibrationActivity}
+              onActivitySuccess={handleActivitySuccess}
+              onBeforeActivity={handleSaveBeforeActivity}
+              canPerformActivity={canPerformActivity}
+              permissionsLoading={permissionsLoading}
+              onExit={() => navigate("/user/engineering-dashboard")}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <ProcessTabs tabs={visibleTabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+
+      <Form
+        form={form}
+        preserve={true}
+        layout="vertical"
+        requiredMark={false}
+        onFinish={handleSubmit}
+        onFinishFailed={({ errorFields }) => {
+          if (errorFields && errorFields.length > 0) {
+            const firstError = errorFields[0]?.errors?.[0];
+            if (firstError) toast.error(firstError);
+          }
+        }}
+        className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
+      >
+        <section style={{ display: activeTab === "general" ? "block" : "none" }}>
+          <SectionHeader title="GENERAL INFORMATION" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            {systemFields.map((field) => (
+              <Form.Item key={field.name} name={field.name} label={field.label} className="!mb-4">
+                <FormDisabledInput />
+              </Form.Item>
+            ))}
+            <Form.Item
+              name="shortDescription"
+              label={<span>Short Description
+                <RequiredAsterisk
+                message="This field is required to proceed. Please enter a Short Description."
+              />
+              </span>}
+              rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
+              className="!mb-4"
+            >
+              <FormInput placeholder="Enter short description" disabled={!isGeneralEditable} />
+            </Form.Item>
+
+          </div>
+          <div className="my-9 h-px w-full bg-slate-200" />
+          <SectionHeader title="UNPLANNED CALIBRATION INFORMATION" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item
+                name="year"
+                label={
+                  <span className="inline-flex items-center">
+                    Year
+                    <RequiredAsterisk message="Year is required to proceed. Please enter the year." />
+                  </span>
+                }
+                className="!mb-4"
+              >
+                <Input
+                  placeholder="Enter Year"
+                  disabled={!isGeneralEditable}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="block"
+                label={
+                  <span className="inline-flex items-center">
+                    Block
+                    <RequiredAsterisk message="Block is required to proceed. Please enter the block." />
+                  </span>
+                }
+                className="!mb-4"
+              >
+                <Input
+                  placeholder="Enter Block"
+                  disabled={!isGeneralEditable}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="area"
+                label={
+                  <span className="inline-flex items-center">
+                    Area
+                    <RequiredAsterisk message="Area is required to proceed. Please enter the area." />
+                  </span>
+                }
+                className="!mb-4"
+              >
+                <Input
+                  placeholder="Enter Area"
+                  disabled={!isGeneralEditable}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="instrumentType"
+                label={
+                  <span className="inline-flex items-center">
+                    Select Instrument Type
+                    <RequiredAsterisk message="Instrument Type is required. Please select an instrument type to proceed." />
+                  </span>
+                }
+                rules={[{ required: true, message: "Please select instrument type" }]}
+                className="!mb-4"
+              >
+                <Select
+                  placeholder="Select Instrument Type"
+                  disabled={!isGeneralEditable}
+                  allowClear
+                  onChange={(type) => {
+                    const nextType = type || "";
+                    autoPopulateRowsRef.current = Boolean(nextType);
+                    setSelectedInstrumentType(nextType);
+                    setCalibrationRows([]);
+                    
+                    // Clear department if not Field Instrument
+                    if (nextType !== "Field Instrument") {
+                      form.setFieldsValue({ selectedDeptId: null });
+                    }
+                  }}
+                  options={[
+                    {
+                      label: "Master Instrument",
+                      value: "Master Instrument",
+                    },
+                    {
+                      label: "Field Instrument",
+                      value: "Field Instrument",
+                    },
+                    {
+                      label: "Spare Instrument",
+                      value: "Spare Instrument",
+                    },
+                  ]}
+                />
+              </Form.Item>
+
+            {/* 👇 CONDITIONALLY RENDER DEPARTMENT DROPDOWN */}
+            {selectedInstrumentType === "Field Instrument" && (
+              <Form.Item
+                name="selectedDeptId"
+                label={
+                  <span className="inline-flex items-center">
+                    Select Department
+                    <RequiredAsterisk message="Department is required to proceed. Please select a department." />
+                  </span>
+                }
+                rules={[
+                  {
+                    required: true,
+                    message: "Please select a department",
+                  },
+                ]}
+                className="!mb-4"
+              >
+                <Select
+                  placeholder="Select a department"
+                  loading={departmentsLoading}
+                  options={departments.map((dept) => ({
+                    label: dept.name || "Unnamed Department",
+                    value: dept.id,
+                  }))}
+                  showSearch
+                  optionFilterProp="label"
+                  allowClear={false}
+                  disabled={!isGeneralEditable}
+                  onChange={() => {
+                    // Clear rows when department changes
+                    setCalibrationRows([]);
+                  }}
+                />
+              </Form.Item>
+            )}
+
+          </div>
+          <div className="mt-5">
+            <UnCalibrationGrid
+              value={calibrationRows}
+              onChange={setCalibrationRows}
+              equipmentOptions={equipmentOptions}
+              equipmentMap={equipmentMap}
+              equipmentLoading={equipmentLoading}
+              onViewChild={handleViewChild}
+              recordId={recordId}
+              disabled={!isGeneralEditable}
+              canCreateChild={canCreateChild}
+              showAddButton={false}
+            />
+          </div>
+          <Form.Item
+            name="comments"
+            label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
+            className="!mb-4 md:col-span-2"
+          >
+            <FormTextArea
+              rows={5}
+              placeholder="Enter comments..."
+              disabled={!isGeneralEditable}
+            />
+          </Form.Item>
+          <Form.Item
+            name="attachment"
+            label="Attachment"
+            valuePropName="value"
+            className="!mb-4 md:col-span-2"
+          >
+            <FormAttachment
+              multiple={true}
+              recordId={recordId}
+              attachmentField="attachment"
+              label="Attachment"
+              uploadApi={addMultipleAttachments}
+              disabled={!isGeneralEditable}
+            />
+          </Form.Item>
+        </section>
+
+        <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
+          <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item
+            name="hodReviewComments"
+            label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
+              className="!mb-4 md:col-span-2">
+              <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isHodEditable} />
+            </Form.Item>
+            <Form.Item
+              name="hodReviewAttachment"
+              label="Attachment"
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={true}
+                recordId={recordId}
+                attachmentField="hod_review_attachment"
+                label="HOD / Designee Review Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isHodEditable}
+              />
+            </Form.Item>
+          </div>
+        </section>
+
+        <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
+          <SectionHeader title="USER DEPT REVIEW (USER DEPT)" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item 
+            name="userDeptReviewComments"
+            label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
+            className="!mb-4 md:col-span-2">
+              <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isUserDeptEditable} />
+            </Form.Item>
+            <Form.Item
+              name="userDeptReviewAttachment"
+              label="Attachment"
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={true}
+                recordId={recordId}
+                attachmentField="user_dept_review_attachment"
+                label="User Dept Review Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isUserDeptEditable}
+              />
+            </Form.Item>
+          </div>
+        </section>
+
+        <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
+          <SectionHeader title="QA REVIEW" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item 
+            name="qaReviewComments"
+            label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
+            className="!mb-4 md:col-span-2">
+              <FormTextArea rows={5} placeholder="Enter comments..." disabled={!isQaReviewEditable} />
+            </Form.Item>
+            <Form.Item
+              name="qaReviewAttachment"
+              label="Attachment"
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={true}
+                recordId={recordId}
+                attachmentField="qa_review_attachment"
+                label="QA Review Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isQaReviewEditable}
+              />
+            </Form.Item>
+          </div>
+        </section>
+
+        <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
+          <SectionHeader title="CANCELLATION" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item
+              name="cancellationRemark"
+              label="Remark"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormTextArea
+                rows={5}
+                placeholder="Enter cancellation remark..."
+              />
+            </Form.Item>
+            <Form.Item
+              name="cancellationAttachment"
+              label="Attachment"
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={true}
+                recordId={recordId}
+                attachmentField="cancellation_attachment"
+                label="Cancellation Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isCancellationEditable}
+              />
+            </Form.Item>
+          </div>
+        </section>
+
+        <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
+          <SectionHeader title="ACTIVITY LOG" />
+          <div className="mt-5 space-y-4">
+            {activityLogsLoading ? (
+              <Skeleton variant="activityLog" />
+            ) : activityLogs.length === 0 ? (
+              <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">No activity history found.</div>
+            ) : (
+              activityLogs.map((log) => (
+                <div key={log.id} className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]">
+                  <div className="mb-5">
+                    <p className="text-[13px] font-semibold text-[#3E4A5C]">Activity Name</p>
+                    <p className="mt-1 text-[14px] font-semibold text-[#182234]">{log.activity_name || "—"}</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Performed By</p>
+                      <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                        <span className="text-[14px] text-[#526071]">{log.performed_by || "—"}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Date Performed</p>
+                      <div className="flex min-h-11 items-center rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3">
+                        <span className="text-[14px] text-[#526071]">{log.performed_at || "—"}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Comments</p>
+                      <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
+                        <p className="break-words text-[14px] leading-5 text-[#526071]">{log.comment || "—"}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      </Form>
+
+      <FloatingActionButtons
+        onSave={handleSave}
+        onCancel={handleCancel}
+        isSaving={isSaving || isLoading || usersLoading}
+        saveLabel="Update"
+        cancelLabel="Cancel"
+      />
+    </div>
+  );
+};
+
+export default UnCreateCalibrationPanel;

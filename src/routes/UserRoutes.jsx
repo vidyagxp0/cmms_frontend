@@ -59,6 +59,11 @@ import AddendumPreventiveChildPanel from "../pages/user/AddendumPreventiveChild/
 import AddendumPreventiveChildCreate from "../pages/user/AddendumPreventiveChild/AddendumPreventiveChildCreate";
 import AddendumPreventiveChildAudit from "../pages/user/AddendumPreventiveChild/AddendumPreventiveChildAudit";
 import AddendumPreventiveChildDashboard from "../pages/user/AddendumPreventiveChild/AddendumPreventiveChildDashboard";
+import UnPlannedCalibrationDashboard from "../pages/user/UnPlannedCalibration/UnCalibrationDashboard";
+import UnCreateCalibration from "../pages/user/UnPlannedCalibration/UnCreateCalibration";
+import UnCreateCalibrationPanel from "../pages/user/UnPlannedCalibration/UnCalibrationPanel";
+import UnCalibrationChild from "../pages/user/UnPlannedCalibration/UnCalibrationChild";
+import UnCalibrationChildPanel from "../pages/user/UnPlannedCalibration/UnCalibrationChildPanel";
 
 function UserRoutes() {
   return (
@@ -93,7 +98,7 @@ function UserRoutes() {
         
         {/* Engineering and Calibration Child Routes*/}
         <Route path="calibration-management-create/:processId/:recordId" element={<CalibrationChild/>} />
-        <Route path="calibration-management-panel/:processId/:recordId" element={<CalibrationChildPanel/>} />
+        <Route path="calibration-management-panel/:recordId" element={<CalibrationChildPanel/>} />
         <Route path="calibration-management-dashboard" element={<ManagementDashboard />} />
 
         {/* Preventive Maintenance Routes*/}
@@ -147,6 +152,16 @@ function UserRoutes() {
         <Route path="addendum-preventive-management-create/:processId" element={<AddendumPreventiveChildCreate />} />
         <Route path="addendum-preventive-management-panel/:recordId" element={<AddendumPreventiveChildPanel />} /> 
         <Route path="addendum-preventive-management-audit/:recordId" element={<AddendumPreventiveChildAudit />} /> 
+
+        {/*  Unplanned Calibration Routes*/}
+        <Route path="unplanned-calibration-dashboard" element={<UnPlannedCalibrationDashboard />} />
+        <Route path="unplanned-calibration-create/:processId" element={<UnCreateCalibration />} />
+        <Route path="unplanned-calibration-panel/:recordId" element={<UnCreateCalibrationPanel />} /> 
+        <Route path="unplanned-calibration-management-create/:processId/:recordId" element={<UnCalibrationChild />} />
+        <Route path="unplanned-calibration-management-panel/:recordId" element={<UnCalibrationChildPanel />} />
+        {/* <Route path="unplanned-calibration-management-dashboard" element={<ManagementDashboard />} /> */}
+
+        {/* <Route path="unplanned-calibration-audit/:recordId" element={<UnPlannedCalibrationAudit />} />  */}
 
         
         {/* Import Master Equipment Data Routes*/}

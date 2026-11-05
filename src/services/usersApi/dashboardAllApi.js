@@ -69,3 +69,10 @@ export const getAllAddendumPreventiveChildRecords = (params = {}) => {
         params,
     });
 };
+
+
+export const getAllUnPlannedCalibrationRecords = (params = {}) => {
+    return api.get("/user/unplanned-calibration-records", {
+        params,
+    });
+};

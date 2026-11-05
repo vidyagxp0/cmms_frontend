@@ -11,6 +11,7 @@ import {
 } from "../../../services/usersApi/calibrationApi";
 import { getAllAddendumPreventiveRecords } from "../../../services/usersApi/dashboardAllApi";
 import { useAuthStore } from "../../../store/authStore";
+import { getAddendumPreventivePlannerSingleReport } from "../../../services/usersApi/preventive";
 
 const { RangePicker } = DatePicker;
 
@@ -160,7 +161,7 @@ const AddendumPreventivePlannerDashboard = () => {
 
             reportWindow.document.close();
 
-            const response = await getCalibrationSingleReport(recordId);
+            const response = await getAddendumPreventivePlannerSingleReport(recordId);
             const blob = new Blob([response.data], { type: "application/pdf" });
             const pdfUrl = window.URL.createObjectURL(blob);
 

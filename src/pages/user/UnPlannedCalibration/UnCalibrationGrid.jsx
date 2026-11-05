@@ -44,9 +44,6 @@ const UnCalibrationGrid = ({
     // ✅ EXISTING — UNTOUCHED
     { key: "plannedDate", title: "Planned date / Calibration Done on", type: "dualDate", minWidth: 320 },
 
-    // ✅ NEW — added right after the existing column
-    { key: "nextPlannedDate", title: "Next Planned date / Next Calibration Done on", type: "dualDateNext", minWidth: 340 },
-
     { key: "remark", title: "Remarks", type: "textarea", placeholder: "Enter remarks", minWidth: 200 },
   ];
 
@@ -61,7 +58,6 @@ const UnCalibrationGrid = ({
     const newRow = {};
     columns.forEach((column) => { newRow[column.key] = ""; });
     newRow.calibrationDoneDate = "";
-    newRow.nextCalibrationDoneDate = ""; // ✅ NEW
     onChange([...rows, newRow]);
   };
 
@@ -135,17 +131,6 @@ const UnCalibrationGrid = ({
       }
     }
 
-    // ✅ NEW — same rule for the new pair
-    if (key === "nextPlannedDate") {
-      if (
-        newValue &&
-        row.nextCalibrationDoneDate &&
-        dayjs(row.nextCalibrationDoneDate).isBefore(dayjs(newValue), "day")
-      ) {
-        row.nextCalibrationDoneDate = "";
-      }
-    }
-
     updated[rowIndex] = row;
     onChange(updated);
   };
@@ -203,37 +188,6 @@ const UnCalibrationGrid = ({
               return current && current.isBefore(plannedDayjs, "day");
             }}
             defaultPickerValue={plannedDayjs || undefined}
-          />
-        </div>
-      );
-    }
-
-    // ✅ NEW — new pair renderer
-    if (type === "dualDateNext") {
-      const nextPlannedDayjs = row.nextPlannedDate ? dayjs(row.nextPlannedDate) : null;
-
-      return (
-        <div className="flex flex-row gap-1.5 p-1">
-          <DatePicker
-            value={nextPlannedDayjs}
-            placeholder="Next plan date"
-            onChange={(date) => updateRow(rowIndex, "nextPlannedDate", date ? date.format("YYYY-MM-DD") : "")}
-            format="DD-MM-YYYY"
-            className="!h-8 !w-[150px] !rounded !border-[#D1DBD7] !bg-white !px-2 !text-[10px] !font-medium !text-[#263B35] !shadow-none"
-            disabled={isDisabled}
-          />
-          <DatePicker
-            value={row.nextCalibrationDoneDate ? dayjs(row.nextCalibrationDoneDate) : null}
-            placeholder="Next done on"
-            onChange={(date) => updateRow(rowIndex, "nextCalibrationDoneDate", date ? date.format("YYYY-MM-DD") : "")}
-            format="DD-MM-YYYY"
-            className="!h-8 !w-[150px] !rounded !border-[#D1DBD7] !bg-white !px-2 !text-[10px] !font-medium !text-[#263B35] !shadow-none"
-            disabled={isDisabled}
-            disabledDate={(current) => {
-              if (!nextPlannedDayjs) return false;
-              return current && current.isBefore(nextPlannedDayjs, "day");
-            }}
-            defaultPickerValue={nextPlannedDayjs || undefined}
           />
         </div>
       );

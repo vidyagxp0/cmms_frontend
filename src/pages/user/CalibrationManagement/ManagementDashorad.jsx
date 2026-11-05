@@ -31,6 +31,7 @@ const RECORD_TYPE_OPTIONS = [
     { label: "All", value: "all" },
     { label: "Calibration Planner", value: "calibration-child" },
     { label: "Addendum Planner", value: "addendum-calibration-management" },
+    { label: "UnPlanned Calibration", value: "unplanned-calibration-child" },
 ];
 
 const ManagementDashboard = () => {

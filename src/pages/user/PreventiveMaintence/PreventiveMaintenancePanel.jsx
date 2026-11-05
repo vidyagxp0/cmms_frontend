@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import { Form, DatePicker } from "antd";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -62,7 +62,7 @@ const SELECTION_TYPES = [
   "multi_select_checkbox",
 ];
 
-/* 👇 NEW: Normalization to send the exact string to the API */
+/* 👇 Normalization to send the exact string to the API */
 const getNormalizedFrequency = (value) => {
   if (!value) return "";
   const v = String(value).toLowerCase().trim();
@@ -404,23 +404,31 @@ const PreventiveMaintenancePanel = () => {
   const equipmentNameWatch = Form.useWatch("equipmentInstrumentName", form);
   const preventiveFreqWatch = Form.useWatch("preventiveFrequency", form);
 
-  const equipmentObj =
-    equipmentMap[equipmentNameWatch] ||
-    Object.values(equipmentMap).find(
-      (eq) =>
-        String(eq?.id) === String(equipmentNameWatch) ||
-        String(eq?.instrument_id_no) === String(equipmentNameWatch)
-    ) ||
-    null;
+  // 👇 Safer equipment object resolution
+  const equipmentObj = useMemo(() => {
+    if (!equipmentNameWatch) return null;
+    
+    return (
+      equipmentMap[equipmentNameWatch] ||
+      Object.values(equipmentMap).find(
+        (eq) =>
+          String(eq?.id) === String(equipmentNameWatch) ||
+          String(eq?.instrument_id_no) === String(equipmentNameWatch) ||
+          String(eq?.instrument_name) === String(equipmentNameWatch)
+      ) ||
+      null
+    );
+  }, [equipmentMap, equipmentNameWatch]);
 
   const equipmentIdForApi =
     equipmentObj?.id ||
     location.state?.rowData?.equipmentDbId ||
+    (typeof equipmentNameWatch === "number" ? equipmentNameWatch : "") ||
     "";
 
   const frequencyLabel = preventiveFreqWatch || passedFrequency || "";
   
-  /* 👇 UPDATED: Send exact string to API */
+  /* 👇 Send exact string to API */
   const frequencyCodeForApi = getNormalizedFrequency(frequencyLabel);
 
   useEffect(() => {
@@ -460,13 +468,14 @@ const PreventiveMaintenancePanel = () => {
         const data = response?.data?.data || [];
         setEquipmentOptions(
           data.map((item) => ({
-            value: item.instrument_name,
-            label: item.instrument_name,
+            value: item.instrument_name || item.equipment_name,
+            label: item.instrument_name || item.equipment_name,
           }))
         );
         const map = {};
         data.forEach((item) => {
-          map[item.instrument_name] = item;
+          if (item.instrument_name) map[item.instrument_name] = item;
+          if (item.equipment_name) map[item.equipment_name] = item;
         });
         setEquipmentMap(map);
       } catch (error) {
@@ -478,7 +487,10 @@ const PreventiveMaintenancePanel = () => {
     fetchEquipment();
   }, []);
 
+  // 👇 Trigger API exactly when the Checklist tab is opened and data is ready
   useEffect(() => {
+    if (activeTab !== "checklist") return;
+
     if (!equipmentIdForApi || !frequencyCodeForApi) {
       setChecklistData(null);
       return;
@@ -489,7 +501,7 @@ const PreventiveMaintenancePanel = () => {
     const fetchChecklist = async () => {
       try {
         setChecklistLoading(true);
-        // 👇 Sends frequencyCodeForApi (e.g. "half-yearly") to the API
+        // Sends frequencyCodeForApi (e.g. "half-yearly") to the API
         const response = await getEquipmentMasterChecklist(
           equipmentIdForApi,
           frequencyCodeForApi
@@ -512,7 +524,7 @@ const PreventiveMaintenancePanel = () => {
     return () => {
       cancelled = true;
     };
-  }, [equipmentIdForApi, frequencyCodeForApi, equipmentNameWatch, frequencyLabel]);
+  }, [activeTab, equipmentIdForApi, frequencyCodeForApi]);
 
   useEffect(() => {
     if (!checklistData) return;
@@ -644,12 +656,13 @@ const PreventiveMaintenancePanel = () => {
           const found = Object.values(currentEquipmentMap).find(
             (eq) =>
               eq.instrument_name === equipmentName ||
+              eq.equipment_name === equipmentName ||
               eq.name === equipmentName ||
               String(eq.id) === String(equipmentName)
           );
           if (found) {
             equipmentValue =
-              found.instrument_name ?? found.name ?? equipmentName;
+              found.instrument_name ?? found.equipment_name ?? found.name ?? equipmentName;
           }
         }
 
@@ -1216,7 +1229,6 @@ const PreventiveMaintenancePanel = () => {
               />
             </Form.Item>
 
-            {/* 👇 UPDATED OPTIONS */}
             <Form.Item
               name="preventiveFrequency"
               label="Preventive Frequency"

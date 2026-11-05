@@ -51,6 +51,7 @@ const AddendumPreventiveChildCreate = () => {
     parentId: stateParentId,
     preventiveFrequency: passedFrequency = "",
     preventiveFrequencyCode: passedFrequencyCode = "",
+    childType,
   } = state;
 
   const routeProcessId = params.processId || stateProcessId || null;
@@ -318,6 +319,7 @@ const AddendumPreventiveChildCreate = () => {
     }
     form.submit();
   };
+  console.log("childType in AddendumPreventiveChildCreate.jsx:", childType);
 
   const handleSubmit = async (values) => {
     if (isSaving) return;
@@ -328,7 +330,8 @@ const AddendumPreventiveChildCreate = () => {
 
       const payload = {
         process_id: Number(routeProcessId) || 13, // 👈 Process ID 13
-        stage_id: 65,                             // 👈 Initial Stage 65
+        stage_id: 65,  
+        childType,                           // 👈 Initial Stage 65
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
         initiator_name: initiator,

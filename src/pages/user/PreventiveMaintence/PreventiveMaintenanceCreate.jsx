@@ -50,6 +50,7 @@ const PreventiveMaintenanceCreate = () => {
     parentId: stateParentId,
     preventiveFrequency: passedFrequency = "",           // ← from parent
     preventiveFrequencyCode: passedFrequencyCode = "",   // ← from parent (unused here, kept for debug)
+    childType
   } = state;
 
   const routeProcessId = params.processId || stateProcessId || null;
@@ -330,6 +331,7 @@ const PreventiveMaintenanceCreate = () => {
       const payload = {
         process_id: Number(routeProcessId),
         stage_id: 13,
+        childType,
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
         initiator_name: initiator,

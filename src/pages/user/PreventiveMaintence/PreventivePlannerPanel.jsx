@@ -101,12 +101,34 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
 
 const buildRowFromEquipment = (item = {}) => {
   const newRow = {
-    equipmentDbId: item.id !== undefined && item.id !== null ? String(item.id) : "",
-    equipmentInstrumentName: item.equipment_name || item.instrument_name || item.name || "",
-    equipmentInstrumentId: item.instrument_id_no || item.equipment_id || "",
-    location: item.location || "",
-    make: item.make || "",
-    model: item.sr_no_model_no || item.model || "",
+    equipmentDbId:
+      item.id !== undefined && item.id !== null ? String(item.id) : "",
+
+    equipmentInstrumentName:
+      item.equipment_name || item.instrument_name || item.name || "",
+
+    /* 👇 FIX: prefer equipment_id_no first */
+    equipmentInstrumentId:
+      item.equipment_id_no ||
+      item.instrument_id_no ||
+      item.equipment_id ||
+      "",
+
+    /* 👇 FIX: prefer equipment_location first */
+    location:
+      item.equipment_location || item.location || "",
+
+    /* 👇 FIX: prefer equipment_make first */
+    make:
+      item.equipment_make || item.make || "",
+
+    /* 👇 FIX: prefer equipment_model first */
+    model:
+      item.equipment_model ||
+      item.sr_no_model_no ||
+      item.model ||
+      "",
+
     remark: "",
     isFromApi: true,
   };
@@ -118,6 +140,7 @@ const buildRowFromEquipment = (item = {}) => {
 
   return newRow;
 };
+
 
 // ✅ instrumentType removed from process_data
 const buildProcessData = (values, systemFields) => [
@@ -714,6 +737,7 @@ const PreventivePlannerPanel = () => {
         parentId: recordId,
         preventiveFrequency: label,
         preventiveFrequencyCode: code,
+        childType: "preventive-child",
       },
     });
   };

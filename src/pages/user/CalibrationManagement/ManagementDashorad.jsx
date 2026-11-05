@@ -27,11 +27,18 @@ const STAGE_OPTIONS = [
     { label: "Close - Cancelled", value: "Close - Cancelled" },
 ];
 
+const RECORD_TYPE_OPTIONS = [
+    { label: "All", value: "all" },
+    { label: "Calibration Management", value: "calibration-child" },
+    { label: "Addendum Management", value: "addendum-calibration-management" },
+];
+
 const ManagementDashboard = () => {
     const navigate = useNavigate();
 
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [recordTypeFilter, setRecordTypeFilter] = useState("all"); 
 
     // Backend pagination state
     const [pagination, setPagination] = useState({
@@ -67,6 +74,9 @@ const ManagementDashboard = () => {
             if (filters.status)     params.status     = filters.status;
             if (filters.start_date) params.start_date = filters.start_date;
             if (filters.end_date)   params.end_date   = filters.end_date;
+            if (filters.child_type && filters.child_type !== "all") {
+            params.child_type = filters.child_type;
+            }
 
             const response = await getAllCalibrationManagementRecords(params);
 
@@ -102,9 +112,10 @@ const ManagementDashboard = () => {
             status: statusFilter,
             start_date: dateRange?.[0] || "",
             end_date: dateRange?.[1] || "",
+            child_type: recordTypeFilter,
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedSearch, statusFilter, dateRange, fetchRecords]);
+    }, [debouncedSearch, statusFilter, dateRange, recordTypeFilter, fetchRecords]);
 
     // ================================================================
     // VIEW REPORT
@@ -381,12 +392,13 @@ const ManagementDashboard = () => {
         [navigate]
     );
 
-    const hasActiveFilters = Boolean(searchTerm) || Boolean(statusFilter) || Boolean(dateRange);
+    const hasActiveFilters = Boolean(searchTerm) || Boolean(statusFilter) || Boolean(dateRange) || recordTypeFilter !== "all";
     
     const clearFilters = () => {
         setSearchTerm("");
         setStatusFilter("");
         setDateRange(null);
+        setRecordTypeFilter("all");
     };
 
     return (
@@ -433,6 +445,16 @@ const ManagementDashboard = () => {
                             options={STAGE_OPTIONS}
                             allowClear
                             className="w-64 text-sm font-medium shadow-sm"
+                            popupClassName="rounded-lg"
+                        />
+
+                        {/* Record Type Select */}
+                        <Select
+                            size="middle"
+                            value={recordTypeFilter}
+                            onChange={(val) => setRecordTypeFilter(val || "all")}
+                            options={RECORD_TYPE_OPTIONS}
+                            className="w-56 text-sm font-medium shadow-sm"
                             popupClassName="rounded-lg"
                         />
 
@@ -499,6 +521,7 @@ const ManagementDashboard = () => {
                                     status: statusFilter,
                                     start_date: dateRange?.[0] || "",
                                     end_date: dateRange?.[1] || "",
+                                    child_type: recordTypeFilter,
                                 });
                             }}
                             emptyTitle="No calibration management records found"

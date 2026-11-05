@@ -71,11 +71,11 @@ const buildPreventivePlannerProcessData = (values, systemFields) => [
     value: values?.[field.name] || "",
   })),
   // NEW: master_department & instrumentType
-  {
-    key: "master_department",
-    label: "Select Department",
-    value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
-  },
+  // {
+  //   key: "master_department",
+  //   label: "Select Department",
+  //   value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
+  // },
   {
     key: "instrumentType",
     label: "Instrument Type",
@@ -484,7 +484,7 @@ const PreventivePlannerCreate = () => {
                   />
                 </Form.Item>
 
-                <Form.Item
+                {/* <Form.Item
                   name="selectedDeptId"
                   label="Select Department"
                   className="!mb-4"
@@ -501,7 +501,7 @@ const PreventivePlannerCreate = () => {
                     allowClear={false}
                     disabled
                   />
-                </Form.Item>
+                </Form.Item> */}
               </div>
             )}
 

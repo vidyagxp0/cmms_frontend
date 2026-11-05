@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Trash2, Table2, Loader2 } from "lucide-react";
 import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
@@ -27,13 +27,12 @@ const MONTHS = [
   { key: "dec", label: "December" },
 ];
 
-/* ─────────────────── Frequency dropdown options ─────────────────── */
 const FREQUENCY_OPTIONS = [
-  { value: "Monthly",     label: "Monthly" },
-  { value: "Quarterly",   label: "Quarterly" },
+  { value: "Monthly", label: "Monthly" },
+  { value: "Quarterly", label: "Quarterly" },
   { value: "Half Yearly", label: "Half Yearly" },
-  { value: "Yearly",      label: "Yearly" },
-  { value: "Two Yearly",  label: "Two Yearly" },
+  { value: "Yearly", label: "Yearly" },
+  { value: "Two Yearly", label: "Two Yearly" },
   { value: "Five Yearly", label: "Five Yearly" },
 ];
 
@@ -97,7 +96,6 @@ export const getRowBiggestFrequency = (row) => {
   return { code, label: FREQUENCY_LABEL_BY_CODE[code] || "" };
 };
 
-/* -------------------- Weekly/Flat data helpers -------------------- */
 export const createEmptyWeeklyData = () => {
   const data = {};
   MONTHS.forEach(({ key }) => {
@@ -106,6 +104,154 @@ export const createEmptyWeeklyData = () => {
   });
   return data;
 };
+
+/* ═══════════════════════════════════════════════════════════════
+   MEMOIZED CELL COMPONENTS
+   Each one only re-renders when ITS OWN value/disabled changes —
+   this is what makes the grid feel instant even at 20+ rows.
+   ═══════════════════════════════════════════════════════════════ */
+
+const TextCell = React.memo(function TextCell({
+  rowIndex,
+  fieldKey,
+  value,
+  placeholder,
+  disabled,
+  updateRow,
+}) {
+  const handleChange = useCallback(
+    (e) => updateRow(rowIndex, fieldKey, e.target.value),
+    [rowIndex, fieldKey, updateRow]
+  );
+  return (
+    <Input
+      value={value}
+      placeholder={placeholder}
+      onChange={handleChange}
+      disabled={disabled}
+      className="!h-8 !w-full !rounded-none !border-transparent !bg-transparent !px-2 !text-[11px] !font-medium !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!bg-white disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
+    />
+  );
+});
+
+const DateCell = React.memo(function DateCell({
+  rowIndex,
+  fieldKey,
+  value,
+  disabled,
+  updateRow,
+}) {
+  // 👇 CRITICAL: memoize the dayjs object so antd doesn't see a "new value"
+  //    every render — that's what was resetting the picker mid-click.
+  const dateValue = useMemo(() => (value ? dayjs(value) : null), [value]);
+
+  const handleChange = useCallback(
+    (date) =>
+      updateRow(
+        rowIndex,
+        fieldKey,
+        date ? date.format("YYYY-MM-DD") : ""
+      ),
+    [rowIndex, fieldKey, updateRow]
+  );
+
+  return (
+    <DatePicker
+      value={dateValue}
+      onChange={handleChange}
+      format="DD/MM/YYYY"
+      variant="borderless"
+      className="!h-8 !w-full !px-1 !text-[10px] !font-medium !text-[#263B35] hover:bg-[#F3F6F4] cursor-pointer disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
+      disabled={disabled}
+      placeholder="DD/MM/YYYY"
+    />
+  );
+});
+
+const FrequencySelectCell = React.memo(function FrequencySelectCell({
+  rowIndex,
+  fieldKey,
+  value,
+  options,
+  placeholder,
+  disabled,
+  updateRow,
+}) {
+  const handleChange = useCallback(
+    (val) => updateRow(rowIndex, fieldKey, val),
+    [rowIndex, fieldKey, updateRow]
+  );
+  return (
+    <Select
+      value={value || undefined}
+      placeholder={placeholder}
+      onChange={handleChange}
+      options={options}
+      disabled={disabled}
+      className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1]"
+    />
+  );
+});
+
+const EquipmentSelectCell = React.memo(function EquipmentSelectCell({
+  rowIndex,
+  equipmentDbId,
+  equipmentOptions,
+  equipmentLoading,
+  placeholder,
+  disabled,
+  updateRow,
+}) {
+  const selectValue =
+    equipmentDbId !== undefined &&
+    equipmentDbId !== null &&
+    equipmentDbId !== ""
+      ? String(equipmentDbId)
+      : undefined;
+
+  const handleChange = useCallback(
+    (id) => updateRow(rowIndex, "equipmentInstrumentName", id),
+    [rowIndex, updateRow]
+  );
+
+  return (
+    <Select
+      value={selectValue}
+      placeholder={equipmentLoading ? "Loading..." : placeholder}
+      onChange={handleChange}
+      options={equipmentOptions}
+      disabled={disabled || equipmentLoading}
+      showSearch
+      optionFilterProp="label"
+      filterOption={(input, option) =>
+        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+      }
+      className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1] disabled:[&_.ant-select-selector]:!bg-[#F9FAF9] disabled:[&_.ant-select-selection-item]:!text-[#263B35]"
+    />
+  );
+});
+
+const RemarkCell = React.memo(function RemarkCell({
+  rowIndex,
+  value,
+  disabled,
+  updateRemark,
+}) {
+  const handleChange = useCallback(
+    (e) => updateRemark(rowIndex, e.target.value),
+    [rowIndex, updateRemark]
+  );
+  return (
+    <TextArea
+      value={value ?? ""}
+      onChange={handleChange}
+      rows={2}
+      className="!h-full !min-h-[64px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
+      disabled={disabled}
+      placeholder="Enter remark"
+    />
+  );
+});
 
 /* -------------------- Main component -------------------- */
 const PreventiveGrid = ({
@@ -148,7 +294,6 @@ const PreventiveGrid = ({
       placeholder: "Enter location",
       minWidth: 180,
     },
-    /* 👇 NEW: Frequency column, right after Location */
     {
       key: "frequency",
       title: "Frequency",
@@ -160,6 +305,13 @@ const PreventiveGrid = ({
   ];
 
   const rows = Array.isArray(value) ? value : [];
+
+  // 👇 keep rows in a ref so updateRow doesn't have to depend on `rows`
+  const rowsRef = useRef(rows);
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
+
   const [deleteRowIndex, setDeleteRowIndex] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
@@ -176,9 +328,8 @@ const PreventiveGrid = ({
     newRow.equipmentDbId = "";
     newRow.make = "";
     newRow.model = "";
-    newRow.frequency = "";          // 👈 explicit init (also covered by the loop above)
+    newRow.frequency = "";
 
-    // Initialize flat month dates
     MONTHS.forEach((m) => {
       newRow[`${m.key}_planned`] = "";
       newRow[`${m.key}_executed`] = "";
@@ -216,46 +367,66 @@ const PreventiveGrid = ({
     setIsDeleteModalOpen(false);
   };
 
-  /* -------------------- Cell updates -------------------- */
-  const updateRow = (rowIndex, key, newValue) => {
-    if (disabled) return;
-    const updated = [...rows];
-    const row = { ...updated[rowIndex] };
+  /* -------------------- Cell updates (STABLE) -------------------- */
+  const updateRow = useCallback(
+    (rowIndex, key, newValue) => {
+      if (disabled) return;
+      const currentRows = rowsRef.current;
+      const updated = [...currentRows];
+      const row = { ...updated[rowIndex] };
 
-    if (key === "equipmentInstrumentName") {
-      const equipment = equipmentMap[String(newValue)];
+      if (key === "equipmentInstrumentName") {
+        const equipment = equipmentMap[String(newValue)];
 
-      if (equipment) {
-        row.equipmentDbId = String(equipment.id);
-        row.equipmentInstrumentName =
-          equipment.equipment_name || equipment.instrument_name || "";
-        row.equipmentInstrumentId =
-          equipment.instrument_id_no || equipment.equipment_id || "";
-        row.location = equipment.location || "";
-        row.make = equipment.make || "";
-        row.model = equipment.sr_no_model_no || equipment.model || "";
+        if (equipment) {
+          row.equipmentDbId = String(equipment.id);
+          row.equipmentInstrumentName =
+            equipment.equipment_name || equipment.instrument_name || "";
+
+          row.equipmentInstrumentId =
+            equipment.equipment_id_no ||
+            equipment.instrument_id_no ||
+            equipment.equipment_id ||
+            "";
+
+          row.location =
+            equipment.equipment_location || equipment.location || "";
+
+          row.make = equipment.equipment_make || equipment.make || "";
+
+          row.model =
+            equipment.equipment_model ||
+            equipment.sr_no_model_no ||
+            equipment.model ||
+            "";
+        } else {
+          row.equipmentDbId = "";
+          row.equipmentInstrumentName = "";
+          row.equipmentInstrumentId = "";
+          row.location = "";
+          row.make = "";
+          row.model = "";
+        }
       } else {
-        row.equipmentDbId = "";
-        row.equipmentInstrumentName = "";
-        row.equipmentInstrumentId = "";
-        row.location = "";
-        row.make = "";
-        row.model = "";
+        row[key] = newValue;
       }
-    } else {
-      row[key] = newValue;
-    }
 
-    updated[rowIndex] = row;
-    onChange(updated);
-  };
+      updated[rowIndex] = row;
+      onChange(updated);
+    },
+    [disabled, equipmentMap, onChange]
+  );
 
-  const updateRemark = (rowIndex, newValue) => {
-    if (disabled) return;
-    const updated = [...rows];
-    updated[rowIndex] = { ...updated[rowIndex], remark: newValue };
-    onChange(updated);
-  };
+  const updateRemark = useCallback(
+    (rowIndex, newValue) => {
+      if (disabled) return;
+      const currentRows = rowsRef.current;
+      const updated = [...currentRows];
+      updated[rowIndex] = { ...updated[rowIndex], remark: newValue };
+      onChange(updated);
+    },
+    [disabled, onChange]
+  );
 
   /* -------------------- Field renderer -------------------- */
   const renderField = (column, row, rowIndex) => {
@@ -268,9 +439,7 @@ const PreventiveGrid = ({
     } = column;
 
     const fieldValue = row[key] ?? "";
-    const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
 
-    // Check if the specific column was populated from the API
     const isRowFromApi = row.isFromApi === true;
     const apiColumns = [
       "equipmentInstrumentName",
@@ -278,87 +447,58 @@ const PreventiveGrid = ({
       "location",
     ];
     const isApiColumn = apiColumns.includes(key);
-
-    // Disable ONLY the API columns if the row is from the API.
-    // Frequency is NOT in apiColumns, so it stays editable for API rows too.
     const isDisabled =
       disabled || columnDisabled || (isRowFromApi && isApiColumn);
 
-    // Updated disabled styling for visibility
-    const commonProps = {
-      disabled: isDisabled,
-      className:
-        "!w-full !rounded-none !border-transparent !bg-transparent !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!shadow-none disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]",
-    };
-
     if (type === "select") {
       if (key === "equipmentInstrumentName") {
-        const selectValue =
-          row.equipmentDbId !== undefined &&
-          row.equipmentDbId !== null &&
-          row.equipmentDbId !== ""
-            ? String(row.equipmentDbId)
-            : undefined;
-
         return (
-          <Select
-            {...commonProps}
-            value={selectValue}
-            placeholder={equipmentLoading ? "Loading..." : placeholder}
-            onChange={(id) =>
-              updateRow(rowIndex, "equipmentInstrumentName", id)
-            }
-            options={equipmentOptions}
-            disabled={isDisabled || equipmentLoading}
-            showSearch
-            optionFilterProp="label"
-            filterOption={(input, option) =>
-              (option?.label ?? "")
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
-            className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1] disabled:[&_.ant-select-selector]:!bg-[#F9FAF9] disabled:[&_.ant-select-selection-item]:!text-[#263B35]"
+          <EquipmentSelectCell
+            rowIndex={rowIndex}
+            equipmentDbId={row.equipmentDbId}
+            equipmentOptions={equipmentOptions}
+            equipmentLoading={equipmentLoading}
+            placeholder={placeholder}
+            disabled={isDisabled}
+            updateRow={updateRow}
           />
         );
       }
 
       return (
-        <Select
-          {...commonProps}
-          value={fieldValue || undefined}
-          placeholder={placeholder}
-          onChange={handleChange}
+        <FrequencySelectCell
+          rowIndex={rowIndex}
+          fieldKey={key}
+          value={fieldValue}
           options={colOptions}
-          className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1]"
+          placeholder={placeholder}
+          disabled={isDisabled}
+          updateRow={updateRow}
         />
       );
     }
 
     return (
-      <Input
-        {...commonProps}
+      <TextCell
+        rowIndex={rowIndex}
+        fieldKey={key}
         value={fieldValue}
         placeholder={placeholder}
-        onChange={(e) => handleChange(e.target.value)}
-        className="!h-8 !w-full !rounded-none !border-transparent !bg-transparent !px-2 !text-[11px] !font-medium !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
+        disabled={isDisabled}
+        updateRow={updateRow}
       />
     );
   };
 
   const renderDateField = (row, key, rowIndex) => {
     const val = row[key];
-
     return (
-      <DatePicker
-        value={val ? dayjs(val) : null}
-        onChange={(date) =>
-          updateRow(rowIndex, key, date ? date.format("YYYY-MM-DD") : "")
-        }
-        format="DD/MM/YYYY"
-        variant="borderless"
-        className="!h-8 !w-full !px-1 !text-[10px] !font-medium !text-[#263B35] hover:bg-[#F3F6F4] cursor-pointer disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
-        disabled={disabled} // <--- Dates remain enabled for API rows
-        placeholder="DD/MM/YYYY"
+      <DateCell
+        rowIndex={rowIndex}
+        fieldKey={key}
+        value={val || ""}
+        disabled={disabled}
+        updateRow={updateRow}
       />
     );
   };
@@ -378,7 +518,6 @@ const PreventiveGrid = ({
   /* -------------------- Render -------------------- */
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
-      {/* Header bar */}
       <div className="flex min-h-[68px] items-center justify-between gap-5 border-b border-[#D7E0DC] bg-[#F7F9F8] px-5">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#D5E0DF] bg-white text-[#4E7585] shadow-[0_2px_7px_rgba(38,53,46,0.05)]">
@@ -478,10 +617,8 @@ const PreventiveGrid = ({
 
           <tbody>
             {equipmentLoading ? (
-              /* ─── SKELETON LOADER ROWS ─── */
               Array.from({ length: 3 }).map((_, idx) => (
                 <React.Fragment key={`skeleton-${idx}`}>
-                  {/* Skeleton Planned Row */}
                   <tr className="bg-white">
                     <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
                       <div className="mx-auto h-4 w-5 animate-pulse rounded bg-[#E5EBE8]" />
@@ -520,7 +657,6 @@ const PreventiveGrid = ({
                       <div className="mx-auto h-4 w-4 animate-pulse rounded bg-[#E5EBE8]" />
                     </td>
                   </tr>
-                  {/* Skeleton Executed Row */}
                   <tr className="bg-white">
                     <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
                       <div className="mx-auto h-4 w-8 animate-pulse rounded bg-[#E5EBE8]" />
@@ -539,7 +675,6 @@ const PreventiveGrid = ({
             ) : rows.length > 0 ? (
               rows.map((row, rowIndex) => (
                 <React.Fragment key={rowIndex}>
-                  {/* Spacer between logical rows */}
                   {rowIndex > 0 && (
                     <tr aria-hidden="true">
                       <td
@@ -549,7 +684,6 @@ const PreventiveGrid = ({
                     </tr>
                   )}
 
-                  {/* ── Row 1: Planned ── */}
                   <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
                     <td
                       rowSpan={2}
@@ -570,12 +704,10 @@ const PreventiveGrid = ({
                       </td>
                     ))}
 
-                    {/* Row Label: Planned */}
                     <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">
                       Planned
                     </td>
 
-                    {/* Months - Planned */}
                     {MONTHS.map((month) => (
                       <td
                         key={`${month.key}_planned`}
@@ -589,15 +721,11 @@ const PreventiveGrid = ({
                       rowSpan={2}
                       className="border border-[#D5DFDB] p-0 align-middle"
                     >
-                      <TextArea
-                        value={row.remark ?? ""}
-                        onChange={(e) =>
-                          updateRemark(rowIndex, e.target.value)
-                        }
-                        rows={2}
-                        className="!h-full !min-h-[64px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
-                        disabled={disabled} // <--- Remarks remain enabled for API rows
-                        placeholder="Enter remark"
+                      <RemarkCell
+                        rowIndex={rowIndex}
+                        value={row.remark}
+                        disabled={disabled}
+                        updateRemark={updateRemark}
                       />
                     </td>
 
@@ -616,7 +744,7 @@ const PreventiveGrid = ({
                               getRowBiggestFrequency(row)
                             );
                           }}
-                          disabled={!canCreateChild} // <--- Child button remains enabled based on permissions
+                          disabled={!canCreateChild}
                           className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${
                             canCreateChild
                               ? "bg-[#3d606d] hover:bg-[#2B5577] hover:shadow-md active:scale-95"
@@ -640,7 +768,7 @@ const PreventiveGrid = ({
                       <button
                         type="button"
                         onClick={() => handleDeleteRow(rowIndex)}
-                        disabled={disabled || rows.length <= minRows} // <--- Delete button remains enabled
+                        disabled={disabled || rows.length <= minRows}
                         className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
                         aria-label="Delete row"
                       >
@@ -649,14 +777,11 @@ const PreventiveGrid = ({
                     </td>
                   </tr>
 
-                  {/* ── Row 2: Executed ── */}
                   <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                    {/* Row Label: Executed */}
                     <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">
                       Executed
                     </td>
 
-                    {/* Months - Executed */}
                     {MONTHS.map((month) => (
                       <td
                         key={`${month.key}_executed`}
@@ -682,7 +807,6 @@ const PreventiveGrid = ({
         </table>
       </CustomScrollContainer>
 
-      {/* Footer */}
       <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">
         <span className="text-[10px] font-medium text-[#899690]">
           {equipmentLoading
@@ -696,7 +820,6 @@ const PreventiveGrid = ({
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
       <UserModal
         isOpen={isDeleteModalOpen}
         onClose={handleCancelDelete}

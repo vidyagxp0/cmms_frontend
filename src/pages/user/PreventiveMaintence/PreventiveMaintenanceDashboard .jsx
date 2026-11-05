@@ -23,11 +23,21 @@ const STAGE_OPTIONS = [
     { label: "Close - Cancelled", value: "Close - Cancelled" },
 ];
 
+/* 👇 NEW — Record Type filter */
+const RECORD_TYPE_OPTIONS = [
+    { label: "All", value: "all" },
+    { label: "Preventive Maintenance", value: "preventive-child" },
+    { label: "Addendum Preventive Maintenance", value: "addendum-preventive-management" },
+];
+
 const PreventiveMaintenanceDashboard = () => {
     const navigate = useNavigate();
 
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    /* 👇 NEW — default = All */
+    const [recordTypeFilter, setRecordTypeFilter] = useState("all");
 
     // =========================================================
     // BACKEND PAGINATION
@@ -66,6 +76,11 @@ const PreventiveMaintenanceDashboard = () => {
             if (filters.start_date) params.start_date = filters.start_date;
             if (filters.end_date)   params.end_date   = filters.end_date;
 
+            /* 👇 NEW — only send when a specific type is picked */
+            if (filters.child_type && filters.child_type !== "all") {
+                params.child_type = filters.child_type;
+            }
+
             const response = await getAllPreventiveManagementRecords(params);
 
             const paginationData = response?.data?.data;
@@ -100,9 +115,11 @@ const PreventiveMaintenanceDashboard = () => {
             status: statusFilter,
             start_date: dateRange?.[0] || "",
             end_date: dateRange?.[1] || "",
+            child_type: recordTypeFilter,     // 👈 NEW
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedSearch, statusFilter, dateRange, fetchRecords]);
+    }, [debouncedSearch, statusFilter, dateRange, recordTypeFilter, fetchRecords]);
+    //                                                    👆 ADDED — remember the dep
 
     // =========================================================
     // VIEW REPORT
@@ -367,12 +384,19 @@ const PreventiveMaintenanceDashboard = () => {
         [navigate]
     );
 
-    const hasActiveFilters = Boolean(searchTerm) || Boolean(statusFilter) || Boolean(dateRange);
-    
+    /* 👇 UPDATED — include the new filter in "has active" check */
+    const hasActiveFilters =
+        Boolean(searchTerm) ||
+        Boolean(statusFilter) ||
+        Boolean(dateRange) ||
+        recordTypeFilter !== "all";
+
+    /* 👇 UPDATED — also reset the new filter */
     const clearFilters = () => {
         setSearchTerm("");
         setStatusFilter("");
         setDateRange(null);
+        setRecordTypeFilter("all");
     };
 
     // =========================================================
@@ -393,11 +417,11 @@ const PreventiveMaintenanceDashboard = () => {
             {/* MAIN CONTENT */}
             <main className="min-h-0 flex-1 overflow-hidden px-0 pb-0 pt-[58px]">
                 <section className="flex h-full min-h-0 flex-col overflow-hidden bg-transparent">
-                    
+
                     {/* ───────────── SIDE-BY-SIDE COMPACT FILTER BAR ───────────── */}
                     <div className="flex shrink-0 flex-nowrap items-center gap-2 px-4 py-3 border-b border-gray-100 bg-[#FAFBFA] overflow-x-auto">
-                        
-                        {/* Search Input - Strict Fixed Width */}
+
+                        {/* Search Input */}
                         <Input
                             size="small"
                             placeholder="Search..."
@@ -413,6 +437,16 @@ const PreventiveMaintenanceDashboard = () => {
                                 height: "30px",
                                 fontSize: "12px",
                             }}
+                        />
+
+                        {/* Record Type — NEW */}
+                        <Select
+                            size="middle"
+                            value={recordTypeFilter}
+                            onChange={(val) => setRecordTypeFilter(val || "all")}
+                            options={RECORD_TYPE_OPTIONS}
+                            className="w-64 text-sm font-medium shadow-sm"
+                            popupClassName="rounded-lg"
                         />
 
                         {/* Status Select */}
@@ -463,20 +497,20 @@ const PreventiveMaintenanceDashboard = () => {
                             data={records}
                             columns={columns}
                             loading={loading}
-                            
+
                             /* Removes the gap & internal toolbar */
                             toolbar={false}
                             searchable={false}
-                            
+
                             /* Makes the table completely flat and stretches to edges */
                             className="!rounded-none !border-0 !shadow-none !h-full"
-                            
+
                             pagination
                             pageSize={pagination.perPage}
                             pageSizeOptions={[10, 20, 50]}
                             sortable
                             hoverable
-                            
+
                             /* Backend pagination */
                             manualPagination
                             pageCount={pagination.lastPage}
@@ -490,6 +524,7 @@ const PreventiveMaintenanceDashboard = () => {
                                     status: statusFilter,
                                     start_date: dateRange?.[0] || "",
                                     end_date: dateRange?.[1] || "",
+                                    child_type: recordTypeFilter,   // 👈 NEW
                                 });
                             }}
                             emptyTitle="No preventive records found"

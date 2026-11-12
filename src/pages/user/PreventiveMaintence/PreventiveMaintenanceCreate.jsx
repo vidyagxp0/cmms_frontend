@@ -488,18 +488,18 @@ const PreventiveMaintenanceCreate = () => {
               </Form.Item>
 
               <Form.Item name="block" label="Block" className="!mb-4">
-                <FormInput placeholder="Block" />
+                <FormInput placeholder="Block" disabled />
               </Form.Item>
 
               <Form.Item name="department" label="Department" className="!mb-4">
-                <FormInput placeholder="Department" />
+                <FormInput placeholder="Department" disabled />
               </Form.Item>
 
               <Form.Item name="location" label="Location" className="!mb-4">
-                <FormInput placeholder="Location" />
+                <FormInput placeholder="Location" disabled />
               </Form.Item>
 
-              <Form.Item
+              {/* <Form.Item
                 name="previousPreventiveDate"
                 label="Previous Preventive Date"
                 className="!mb-4"
@@ -508,6 +508,7 @@ const PreventiveMaintenanceCreate = () => {
                   className="w-full"
                   format="DD/MM/YYYY"
                   placeholder="Select date"
+                  disabled
                 />
               </Form.Item>
 
@@ -520,8 +521,9 @@ const PreventiveMaintenanceCreate = () => {
                   className="w-full"
                   format="DD/MM/YYYY"
                   placeholder="Select date"
+                  disabled
                 />
-              </Form.Item>
+              </Form.Item> */}
 
               <Form.Item
                 name="preventiveFrequency"
@@ -544,7 +546,7 @@ const PreventiveMaintenanceCreate = () => {
             </div>
 
             <Form.Item name="remark" label="Remark" className="!mb-4 md:col-span-2">
-              <FormTextArea rows={4} placeholder="Enter remark..." />
+              <FormTextArea rows={4} placeholder="Enter remark..." disabled />
             </Form.Item>
 
             <Form.Item

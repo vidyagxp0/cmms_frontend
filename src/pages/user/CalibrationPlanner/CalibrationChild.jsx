@@ -153,7 +153,6 @@ const CalibrationChild = () => {
   const [dateOfInitiation, setDateOfInitiation] = useState("");
   const [formInitialValues, setFormInitialValues] = useState({});
   const [allMasterData, setAllMasterData] = useState([])
-  console.log("🚀 ~ file: CalibrationChild.jsx:168 ~ CalibrationChild ~ allMasterData:", allMasterData)
 
   useEffect(() => {
   if (Array.isArray(passedAllMasterData) && passedAllMasterData.length > 0) {

@@ -290,7 +290,7 @@ const ESignModal = ({ isOpen = false, activity = null, onClose, onConfirm, loadi
                                 disabled={loading}
                                 className="h-[34px] rounded-[9px] border border-white/50 bg-white/30 backdrop-blur-md px-3.5 font-[var(--font-display)] text-[10px] font-bold tracking-[-0.01em] text-[#53675E] transition-all duration-150 hover:border-white/65 hover:bg-white/45 hover:text-[#344A43] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                Cancel
+                                Exit
                             </button>
 
                             <button

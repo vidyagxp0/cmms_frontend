@@ -142,8 +142,8 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
   ];
   const labelMap = {
     shortDescription: "Short Description",
-    instrumentName: "Name",
-    instrumentId: "ID No.",
+    instrumentName: "Equipment / Instrument Name",
+    instrumentId: "Equipment / Instrument ID No.",
     location: "Location",
     make: "Make",
     model: "Sr.No/ Model No.",
@@ -808,14 +808,14 @@ const CalibrationChildPanel = () => {
             <Form.Item name="nextCalibrationDate" label="Calibration Next Due Date" className="!mb-4">
               <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
             </Form.Item>
-            <Form.Item name="instrumentName" label="Name" className="!mb-4">
+            <Form.Item name="instrumentName" label="Equipment / Instrument Name" className="!mb-4">
               <FormSelect
                 placeholder={equipmentLoading ? "Loading..." : "Select Instrument"}
                 options={equipmentOptions}
                 disabled={equipmentLoading || !isManagementEditable}
               />
             </Form.Item>
-            <Form.Item name="instrumentId" label="ID No." className="!mb-4">
+            <Form.Item name="instrumentId" label="Equipment / Instrument ID No." className="!mb-4">
               <FormInput placeholder="e.g. EQ-001" disabled={!isManagementEditable} />
             </Form.Item>
             <Form.Item name="make" label="Make" className="!mb-4">

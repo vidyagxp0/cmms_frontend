@@ -48,7 +48,7 @@ const FIELD_LABELS = {
   previousCalibrationDate: "Calibration Done Date",
   nextCalibrationDate: "Calibration Next Due Date",
   instrumentName: "Equipment / Instrument Name",
-  instrumentId: "ID No.",
+  instrumentId: "Equipment / Instrument ID No.",
   location: "Location",
   make: "Make",
   model: "Sr.No/ Model No.",
@@ -450,45 +450,45 @@ const CalibrationChild = () => {
               </Form.Item>
               
               <Form.Item name="instrumentName" label="Equipment / Instrument Name" className="!mb-4">
-                <FormSelect placeholder="Select Instrument" options={equipmentOptions} />
+                <FormSelect placeholder="Select Instrument" options={equipmentOptions} disabled />
               </Form.Item>
-              <Form.Item name="instrumentId" label="ID No." className="!mb-4">
-                <FormInput placeholder="e.g. EQ-001" />
+              <Form.Item name="instrumentId" label="Equipment / Instrument ID No." className="!mb-4">
+                <FormInput placeholder="e.g. EQ-001" disabled />
               </Form.Item>
               
               <Form.Item name="make" label="Make" className="!mb-4">
-                <FormInput placeholder="e.g. Fluke" />
+                <FormInput placeholder="e.g. Fluke" disabled />
               </Form.Item>
               <Form.Item name="instrumentRange" label="Instrument Range" className="!mb-4">
-                <SymbolicInput placeholder="e.g. 0-1000 V" defaultDiscipline="Range" />
+                <SymbolicInput placeholder="e.g. 0-1000 V" defaultDiscipline="Range" disabled />
               </Form.Item>
               
               <Form.Item name="model" label="Sr.No/ Model No." className="!mb-4">
-                <FormInput placeholder="e.g. 87V" />
+                <FormInput placeholder="e.g. 87V" disabled />
               </Form.Item>
               <Form.Item name="operatingRange" label="Operating Range" className="!mb-4">
-                <SymbolicInput placeholder="e.g. 0-500 V" defaultDiscipline="Operating Range" />
+                <SymbolicInput placeholder="e.g. 0-500 V" defaultDiscipline="Operating Range" disabled />
               </Form.Item>
               
               <Form.Item name="leastCount" label="Least Count" className="!mb-4">
-                <SymbolicInput placeholder="e.g. 0.01" defaultDiscipline="Least Count" />
+                <SymbolicInput placeholder="e.g. 0.01" defaultDiscipline="Least Count" disabled />
               </Form.Item>
               <Form.Item name="accuracy" label="Accuracy" className="!mb-4">
-                <SymbolicInput placeholder="e.g. ±0.5%" defaultDiscipline="Accuracy" />
+                <SymbolicInput placeholder="e.g. ±0.5%" defaultDiscipline="Accuracy" disabled />
               </Form.Item>
               
               <Form.Item name="calibrationTestPoints" label="Calibration test points" className="!mb-4">
-                <SymbolicInput placeholder="e.g. 0, 50, 100" defaultDiscipline="Test Points" />
+                <SymbolicInput placeholder="e.g. 0, 50, 100" defaultDiscipline="Test Points" disabled />
               </Form.Item>
               <Form.Item name="location" label="Location" className="!mb-4">
-                <FormInput placeholder="Lab A, Room 101" />
+                <FormInput placeholder="Lab A, Room 101" disabled />
               </Form.Item>
               
               <Form.Item name="envTemperature" label="Environmental Condition Temperature" className="!mb-4">
-                <SymbolicInput placeholder="e.g. 25" defaultDiscipline="Temperature" />
+                <SymbolicInput placeholder="e.g. 25" defaultDiscipline="Temperature" disabled />
               </Form.Item>
               <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
-                <SymbolicInput placeholder="e.g. 45% RH ± 5%" defaultDiscipline="Humidity" />
+                <SymbolicInput placeholder="e.g. 45% RH ± 5%" defaultDiscipline="Humidity" disabled />
               </Form.Item>
             </div>
 

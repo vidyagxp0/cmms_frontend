@@ -354,7 +354,7 @@ const InstrumentCalibrationPanel = () => {
         setProcessId(responseData?.process_id || null);
         const backendStageId = responseData?.stage?.id || responseData?.stage_id || null;
         setActiveStageId(backendStageId);
-        setProcessName(responseData?.process?.name || "Field Instrument Calibration Addendum");
+        setProcessName(responseData?.process?.name || "Addendum Planner");
         const processData = responseData?.process_data || [];
 
         const recordNumber = getProcessValue(processData, "recordNumber");
@@ -634,17 +634,17 @@ const InstrumentCalibrationPanel = () => {
 
       const response = await updateInstrumentCalibration(recordId, payload);
       if (response?.data?.success || response?.data?.status === true) {
-        toast.success("Field Instrument Calibration Addendum updated successfully.");
+        toast.success("Addendum Planner updated successfully.");
         await fetchCalibrationDetail();
         await fetchPermissions();
         await fetchActivityLogs();
         return true;
       }
-      toast.error(response?.data?.message || "Failed to update Field Instrument Calibration Addendum.");
+      toast.error(response?.data?.message || "Failed to update Addendum Planner.");
       return false;
     } catch (error) {
       console.error("Update failed:", error);
-      toast.error(error?.response?.data?.message || "Failed to update Field Instrument Calibration Addendum. Please try again.");
+      toast.error(error?.response?.data?.message || "Failed to update Addendum Planner. Please try again.");
       return false;
     } finally { setIsSaving(false); }
   };
@@ -691,7 +691,7 @@ const InstrumentCalibrationPanel = () => {
             <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />
             <div className="min-w-0 flex-1">
               <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">Process</p>
-              <p className="truncate text-[11px] font-semibold text-[#344A43]">{processName || "Field Instrument Calibration Addendum"}</p>
+              <p className="truncate text-[11px] font-semibold text-[#344A43]">{processName || "Addendum Planner"}</p>
             </div>
           </div>
           <div className="min-w-0 flex-1">
@@ -854,7 +854,7 @@ const InstrumentCalibrationPanel = () => {
 
           <div className="mt-5">
             <InstrumentCalibrationGrid
-              name="Field Instrument Calibration Addendum"
+              name="Addendum Planner"
               value={calibrationRows}
               onChange={setCalibrationRows}
               recordId={recordId}

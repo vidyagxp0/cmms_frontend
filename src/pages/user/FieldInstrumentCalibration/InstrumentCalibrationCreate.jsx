@@ -309,16 +309,16 @@ const InstrumentCalibrationCreate = () => {
             const response = await addInstrumentCalibration(payload);
 
             if (response?.data?.success) {
-                toast.success("Field Instrument Calibration Addendum record created successfully.");
+                toast.success("Addendum Planner record created successfully.");
                 form.resetFields();
                 setCalibrationRows([]);
                 navigate("/user/field-instrument-calibration-addendum-dashboard");
                 return;
             }
-            toast.error(response?.data?.message || "Failed to create Field Instrument Calibration Addendum record.");
+            toast.error(response?.data?.message || "Failed to create Addendum Planner record.");
         } catch (error) {
-            console.error("Field Instrument Calibration Addendum submission failed:", error);
-            toast.error(error?.response?.data?.message || "Failed to create Field Instrument Calibration Addendum record. Please try again.");
+            console.error("Addendum Planner submission failed:", error);
+            toast.error(error?.response?.data?.message || "Failed to create Addendum Planner record. Please try again.");
         } finally {
             setIsSaving(false);
         }
@@ -343,7 +343,7 @@ const InstrumentCalibrationCreate = () => {
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
                                 <h1 className="truncate font-[var(--font-display)] text-[20px] font-bold tracking-[-0.02em] text-[#244F4A]">
-                                    Create Field Instrument Calibration Addendum
+                                    Create Addendum Planner
                                 </h1>
                                 <span className="hidden rounded-full border border-[#D0BE97] bg-[#F7F0E3] px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.08em] text-[#896B38] sm:inline-flex">
                                     New Record
@@ -367,7 +367,7 @@ const InstrumentCalibrationCreate = () => {
                             <div>
                                 <p className="font-[var(--font-display)] text-[7.5px] font-extrabold uppercase tracking-[0.12em] text-[#82928B]">Process</p>
                                 <p className="max-w-[150px] truncate font-[var(--font-display)] text-[10.5px] font-bold tracking-[-0.01em] text-[#344A43]">
-                                    {processName || "Field Instrument Calibration Addendum"}
+                                    {processName || "Addendum Planner"}
                                 </p>
                             </div>
                         </div>
@@ -468,7 +468,7 @@ const InstrumentCalibrationCreate = () => {
                                 {/* REUSABLE GRID */}
                                 <div className="mt-1">
                                     <InstrumentCalibrationGrid
-                                        name="Field Instrument Calibration Addendum"
+                                        name="Addendum Planner Grid"
                                         value={calibrationRows}
                                         onChange={setCalibrationRows}
                                         equipmentOptions={equipmentOptions}

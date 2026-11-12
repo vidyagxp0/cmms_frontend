@@ -506,7 +506,7 @@ const AddendumPreventivePlannerDashboard = () => {
                                     end_date: dateRange?.[1] || "",
                                 });
                             }}
-                            emptyTitle="No engineering records found"
+                            emptyTitle="No Addendum Planner records found"
                             emptyDescription="Try changing filters or create a new record."
                         />
                     </div>

@@ -161,6 +161,7 @@ const CreateCalibrationPanel = () => {
   const [equipmentMap, setEquipmentMap] = useState({});
   const equipmentMapRef = useRef(equipmentMap);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
+  const [allMasterData, setAllMasterData] = useState([]);
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
   const [loginUserId, setLoginUserId] = useState("");
@@ -261,6 +262,7 @@ const CreateCalibrationPanel = () => {
       setEquipmentOptions([]);
       setEquipmentMap({});
       equipmentMapRef.current = {};
+      setAllMasterData([]);
 
       const requiresDept = selectedInstrumentType === "Field Instrument";
 
@@ -349,6 +351,7 @@ const CreateCalibrationPanel = () => {
 
         setEquipmentOptions(options);
         setEquipmentMap(map);
+        setAllMasterData(normalizedData)
         equipmentMapRef.current = map;
 
         if (autoPopulateRowsRef.current) {
@@ -608,7 +611,7 @@ const CreateCalibrationPanel = () => {
     const shortDesc = form.getFieldValue("shortDescription") || "";
     const rowId = rowIndex + 1;
     navigate(`/user/calibration-management-create/${5}/${recordId}`, {
-      state: { rowData, shortDescription: shortDesc, processId: 5, parentId: recordId, rowId, childType: "calibration-child" },
+      state: { rowData, shortDescription: shortDesc, processId: 5, parentId: recordId, rowId, childType: "calibration-child", allMasterData },
     });
   };
 

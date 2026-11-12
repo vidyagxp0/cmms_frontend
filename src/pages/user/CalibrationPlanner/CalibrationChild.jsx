@@ -132,7 +132,7 @@ const CalibrationChild = () => {
   const [form] = Form.useForm();
   const location = useLocation();
   const navigate = useNavigate();
-  const { rowData, shortDescription: parentShortDesc, processId: passedProcessId, parentId, rowId: parentRowId, childType } = location.state || {};
+  const { rowData, shortDescription: parentShortDesc, processId: passedProcessId, parentId, rowId: parentRowId, childType, allMasterData: passedAllMasterData } = location.state || {};
   const processId = passedProcessId || urlProcessId;
   const { processName, siteName } = location.state || {};
 
@@ -152,6 +152,15 @@ const CalibrationChild = () => {
   const [recordNumber, setRecordNumber] = useState("");
   const [dateOfInitiation, setDateOfInitiation] = useState("");
   const [formInitialValues, setFormInitialValues] = useState({});
+  const [allMasterData, setAllMasterData] = useState([])
+  console.log("🚀 ~ file: CalibrationChild.jsx:168 ~ CalibrationChild ~ allMasterData:", allMasterData)
+
+  useEffect(() => {
+  if (Array.isArray(passedAllMasterData) && passedAllMasterData.length > 0) {
+    setAllMasterData(passedAllMasterData);
+  }
+}, [passedAllMasterData]);
+
 
   useEffect(() => {
     let isMounted = true;
@@ -341,6 +350,7 @@ const CalibrationChild = () => {
         process_data: processData,
         gridData: gridData,
         checklistData: [],
+        allMasterData: allMasterData || [],
       };
 
       const response = await addCalibrationChild(payload);

@@ -1202,7 +1202,7 @@ const PreventiveMaintenancePanel = () => {
               <FormInput placeholder="Location" disabled={!isGeneralEditable} />
             </Form.Item>
 
-            <Form.Item
+            {/* <Form.Item
               name="previousPreventiveDate"
                label={
               <span className="inline-flex items-center">
@@ -1231,7 +1231,7 @@ const PreventiveMaintenancePanel = () => {
                 placeholder="Select date"
                 disabled={!isGeneralEditable}
               />
-            </Form.Item>
+            </Form.Item> */}
 
             <Form.Item
               name="preventiveFrequency"

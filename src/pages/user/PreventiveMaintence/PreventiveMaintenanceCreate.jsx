@@ -235,20 +235,20 @@ const PreventiveMaintenanceCreate = () => {
     { key: "block", label: "Block", value: values?.block || "" },
     { key: "department", label: "Department", value: values?.department || "" },
     { key: "location", label: "Location", value: values?.location || "" },
-    {
-      key: "previousPreventiveDate",
-      label: "Previous Preventive Date",
-      value: values?.previousPreventiveDate
-        ? dayjs(values.previousPreventiveDate).format("DD/MM/YYYY")
-        : "",
-    },
-    {
-      key: "nextPreventiveDate",
-      label: "Next Preventive Date",
-      value: values?.nextPreventiveDate
-        ? dayjs(values.nextPreventiveDate).format("DD/MM/YYYY")
-        : "",
-    },
+    // {
+    //   key: "previousPreventiveDate",
+    //   label: "Previous Preventive Date",
+    //   value: values?.previousPreventiveDate
+    //     ? dayjs(values.previousPreventiveDate).format("DD/MM/YYYY")
+    //     : "",
+    // },
+    // {
+    //   key: "nextPreventiveDate",
+    //   label: "Next Preventive Date",
+    //   value: values?.nextPreventiveDate
+    //     ? dayjs(values.nextPreventiveDate).format("DD/MM/YYYY")
+    //     : "",
+    // },
     { key: "remark", label: "Remark", value: values?.remark || "" },
     {
       key: "attachment",

@@ -4,7 +4,6 @@ const CALIBRATED_BY_COLUMNS = [
     title: "Master Instrument Readings in",
     type: "text",
     placeholder: "Enter Master Instrument Readings",
-    // required: true,
     minWidth: 180,
     symbolic: true,
     toggleable: true,
@@ -27,21 +26,30 @@ const CALIBRATED_BY_COLUMNS = [
     ]
   },
   {
+    // 👇 auto-calculated column — user cannot edit; toggle follows the reading columns
     key: "errorIn",
     title: "Error in",
     type: "text",
-    placeholder: "Enter error",
+    placeholder: "Auto-calculated",
     minWidth: 160,
+    disabled: true,
+    toggleable: true,
+    hideToggle: true,      // never show the split toggle in the header
+    managedToggle: true,   // toggle state is driven by the readings' toggles
+    splitFields: [
+      { key: "errorIn1", placeholder: "Auto-calculated" },
+      { key: "errorIn2", placeholder: "Auto-calculated" }
+    ]
   },
 ];
 
 const CALIBRATION_RESULT_GRID = [
+  // …unchanged…
   {
     key: "name",
     title: "Name",
     type: "text",
     placeholder: "Enter name",
-    // required: true,
     minWidth: 180,
   },
   {

@@ -10,6 +10,28 @@ import { getAllPermissions } from "../../../services/usersApi/workflowCommonApi"
 
 const { TextArea } = Input;
 
+// 👇 Extract the first numeric value out of a string like "100 Bar" or "-0.5 %"
+const extractNumeric = (val) => {
+    if (val === null || val === undefined) return null;
+    const str = String(val).trim();
+    if (!str) return null;
+    const match = str.match(/-?\d+(\.\d+)?/);
+    if (!match) return null;
+    const num = parseFloat(match[0]);
+    return isNaN(num) ? null : num;
+};
+
+// 👇 Error = Master − UUC (change to `u - m` if you want the opposite direction)
+const computeError = (masterVal, uucVal) => {
+    const m = extractNumeric(masterVal);
+    const u = extractNumeric(uucVal);
+    if (m === null || u === null) return "";
+    const diff = m - u;
+    // Round to 6 decimals to hide float noise, then stringify
+    const rounded = Math.round(diff * 1e6) / 1e6;
+    return String(rounded);
+};
+
 const GridSymbolicInput = ({ value, onCommit, ...rest }) => {
     const onCommitRef = useRef(onCommit);
     useEffect(() => {
@@ -49,6 +71,12 @@ const UserDynamicGrid = ({
 }) => {
     const rows = Array.isArray(value) ? value : [];
     const { recordId } = useParams();
+
+    // Stable onChange ref so effects below can call it without re-subscribing
+    const onChangeRef = useRef(onChange);
+    useEffect(() => {
+        onChangeRef.current = onChange;
+    }, [onChange]);
 
     // ---- Permission state ----
     const [canPerformAction, setCanPerformAction] = useState(true);
@@ -111,7 +139,8 @@ const UserDynamicGrid = ({
         setColumnToggles(prev => {
             const newToggles = { ...prev };
             columns.forEach(col => {
-                if (col.toggleable && col.splitFields) {
+                // 👇 skip errorIn (managedToggle) — its toggle is driven below
+                if (col.toggleable && col.splitFields && !col.managedToggle) {
                     const hasSplitData = rows.some(row =>
                         col.splitFields.some(field =>
                             row[field.key] !== undefined && row[field.key] !== null && row[field.key] !== ''
@@ -125,6 +154,41 @@ const UserDynamicGrid = ({
             return newToggles;
         });
     }, [rows, columns]);
+
+    // 👇 errorIn toggle follows the reading toggles
+    useEffect(() => {
+        const masterOn = !!columnToggles["masterInstrumentReadings"];
+        const uucOn = !!columnToggles["unitUnderCalibrationReading"];
+        const shouldSplit = masterOn || uucOn;
+        if (columnToggles["errorIn"] === shouldSplit) return;
+        setColumnToggles(prev => ({ ...prev, errorIn: shouldSplit }));
+    }, [columnToggles]);
+
+    // 👇 recompute errorIn / errorIn1 / errorIn2 whenever rows change (handles backend-loaded data)
+    useEffect(() => {
+        if (!rows.length) return;
+        let needsUpdate = false;
+        const updated = rows.map(row => {
+            const newRow = { ...row };
+            const single = computeError(row.masterInstrumentReadings, row.unitUnderCalibrationReading);
+            if ((row.errorIn ?? "") !== single) {
+                newRow.errorIn = single;
+                needsUpdate = true;
+            }
+            const s1 = computeError(row.masterInstrumentReadings1, row.unitUnderCalibrationReading1);
+            if ((row.errorIn1 ?? "") !== s1) {
+                newRow.errorIn1 = s1;
+                needsUpdate = true;
+            }
+            const s2 = computeError(row.masterInstrumentReadings2, row.unitUnderCalibrationReading2);
+            if ((row.errorIn2 ?? "") !== s2) {
+                newRow.errorIn2 = s2;
+                needsUpdate = true;
+            }
+            return newRow;
+        });
+        if (needsUpdate) onChangeRef.current?.(updated);
+    }, [rows]);
 
     // ---- Modal state ----
     const [toggleModalState, setToggleModalState] = useState({ open: false, columnKey: null });
@@ -142,6 +206,10 @@ const UserDynamicGrid = ({
                 column.splitFields.forEach(field => {
                     row[field.key] = column.defaultValue !== undefined ? column.defaultValue : "";
                 });
+                // 👇 also initialize the single field for managed-toggle columns
+                if (column.managedToggle) {
+                    row[column.key] = column.defaultValue !== undefined ? column.defaultValue : "";
+                }
             } else {
                 row[column.key] = column.defaultValue !== undefined ? column.defaultValue : "";
             }
@@ -178,12 +246,16 @@ const UserDynamicGrid = ({
         setIsDeleteModalOpen(false);
     };
 
-    // ---- Cell change handlers ----
+    // ---- Cell change handlers (auto-compute errorIn) ----
     const handleCellChange = (rowIndex, columnKey, newValue) => {
         if (isReadOnly) return;
         const updatedRows = rows.map((row, index) => {
             if (index !== rowIndex) return row;
-            return { ...row, [columnKey]: newValue };
+            const newRow = { ...row, [columnKey]: newValue };
+            if (columnKey === "masterInstrumentReadings" || columnKey === "unitUnderCalibrationReading") {
+                newRow.errorIn = computeError(newRow.masterInstrumentReadings, newRow.unitUnderCalibrationReading);
+            }
+            return newRow;
         });
         onChange?.(updatedRows);
     };
@@ -192,7 +264,14 @@ const UserDynamicGrid = ({
         if (isReadOnly) return;
         const updatedRows = rows.map((row, index) => {
             if (index !== rowIndex) return row;
-            return { ...row, [fieldKey]: newValue };
+            const newRow = { ...row, [fieldKey]: newValue };
+            if (fieldKey === "masterInstrumentReadings1" || fieldKey === "unitUnderCalibrationReading1") {
+                newRow.errorIn1 = computeError(newRow.masterInstrumentReadings1, newRow.unitUnderCalibrationReading1);
+            }
+            if (fieldKey === "masterInstrumentReadings2" || fieldKey === "unitUnderCalibrationReading2") {
+                newRow.errorIn2 = computeError(newRow.masterInstrumentReadings2, newRow.unitUnderCalibrationReading2);
+            }
+            return newRow;
         });
         onChange?.(updatedRows);
     };
@@ -212,6 +291,17 @@ const UserDynamicGrid = ({
             }
         }
         setColumnToggles(prev => ({ ...prev, [columnKey]: checked }));
+
+        // 👇 no split data to clear → recompute single error right away
+        if (!checked && (columnKey === "masterInstrumentReadings" || columnKey === "unitUnderCalibrationReading")) {
+            const updatedRows = rows.map(row => ({
+                ...row,
+                errorIn1: "",
+                errorIn2: "",
+                errorIn: computeError(row.masterInstrumentReadings, row.unitUnderCalibrationReading),
+            }));
+            onChange?.(updatedRows);
+        }
     };
 
     const handleConfirmToggleOff = () => {
@@ -222,6 +312,12 @@ const UserDynamicGrid = ({
             col.splitFields.forEach(field => {
                 newRow[field.key] = "";
             });
+            // 👇 reading column turned off → clear split errors, recompute single error
+            if (columnKey === "masterInstrumentReadings" || columnKey === "unitUnderCalibrationReading") {
+                newRow.errorIn1 = "";
+                newRow.errorIn2 = "";
+                newRow.errorIn = computeError(newRow.masterInstrumentReadings, newRow.unitUnderCalibrationReading);
+            }
             return newRow;
         });
         onChange?.(updatedRows);
@@ -262,7 +358,6 @@ const UserDynamicGrid = ({
                 <div className="flex gap-2">
                     {column.splitFields.map((field) => {
                         const val = row[field.key] ?? "";
-                        // Field-level flag wins; falls back to column-level.
                         const useSymbolic = field.symbolic ?? column.symbolic;
 
                         if (useSymbolic) {
@@ -317,7 +412,6 @@ const UserDynamicGrid = ({
             });
         }
 
-        // ---- Symbolic single field ----
         if (column.symbolic) {
             return (
                 <GridSymbolicInput
@@ -461,7 +555,8 @@ const UserDynamicGrid = ({
                                         {column.required && (
                                             <span className="text-red-500">*</span>
                                         )}
-                                        {column.toggleable && (
+                                        {/* 👇 hide toggle for managedToggle columns (errorIn) */}
+                                        {column.toggleable && !column.hideToggle && (
                                             <Switch
                                                 size="small"
                                                 checked={columnToggles[column.key] || false}
@@ -647,3 +742,6 @@ const UserDynamicGrid = ({
 };
 
 export default UserDynamicGrid;
+
+
+

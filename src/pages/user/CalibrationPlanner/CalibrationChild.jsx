@@ -47,7 +47,7 @@ const FIELD_LABELS = {
   shortDescription: "Short Description",
   previousCalibrationDate: "Calibration Done Date",
   nextCalibrationDate: "Calibration Next Due Date",
-  instrumentName: "Name",
+  instrumentName: "Equipment / Instrument Name",
   instrumentId: "ID No.",
   location: "Location",
   make: "Make",
@@ -348,11 +348,11 @@ const CalibrationChild = () => {
         toast.success("Child calibration record created successfully.");
         navigate("/user/calibration-management-dashboard");
       } else {
-        toast.error(response?.data?.message || "Failed to create child calibration.");
+        toast.error(response?.data?.message || "Failed to Create Calibration Management.");
       }
     } catch (error) {
       console.error("Child calibration creation failed:", error);
-      toast.error(error?.response?.data?.message || "Failed to create child calibration.");
+      toast.error(error?.response?.data?.message || "Failed to Create Calibration Management.");
     } finally {
       setIsSaving(false);
     }
@@ -380,7 +380,7 @@ const CalibrationChild = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Activity size={20} />
             </div>
-            <h1 className="text-[22px] font-semibold tracking-tight text-[#263B35]">Create Child Calibration</h1>
+            <h1 className="text-[22px] font-semibold tracking-tight text-[#263B35]">Create Calibration Management</h1>
           </div>
         </div>
         <div className="flex items-center gap-8 border-l border-slate-200 pl-6">
@@ -440,7 +440,7 @@ const CalibrationChild = () => {
                 <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
               </Form.Item>
               
-              <Form.Item name="instrumentName" label="Name" className="!mb-4">
+              <Form.Item name="instrumentName" label="Equipment / Instrument Name" className="!mb-4">
                 <FormSelect placeholder="Select Instrument" options={equipmentOptions} />
               </Form.Item>
               <Form.Item name="instrumentId" label="ID No." className="!mb-4">

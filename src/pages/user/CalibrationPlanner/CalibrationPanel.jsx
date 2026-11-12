@@ -396,14 +396,14 @@ const CreateCalibrationPanel = () => {
   }, []);
 
   const fetchCalibrationDetail = useCallback(async (isInitial = false) => {
-    if (!recordId) { toast.error("Calibration record ID is missing."); return; }
+    if (!recordId) { toast.error("Calibration Planner record ID is missing."); return; }
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
       if (isInitial) setIsLoading(true);
       const response = await getCalibrationDetail(recordId);
       const responseData = response?.data?.data;
-      if (!responseData) { toast.error("Calibration record not found."); return; }
+      if (!responseData) { toast.error("Calibration Planner record not found."); return; }
       setProcessId(responseData?.process_id || null);
       const backendStageId = responseData?.stage?.id || responseData?.stage_id || null;
       setActiveStageId(backendStageId);
@@ -512,7 +512,7 @@ const CreateCalibrationPanel = () => {
       setCalibrationRows(normalizedRows);
     } catch (error) {
       console.error("Failed to fetch calibration detail:", error);
-      toast.error(error?.response?.data?.message || "Failed to load Calibration record.");
+      toast.error(error?.response?.data?.message || "Failed to load Calibration Planner record.");
     } finally { setIsLoading(false); isFetchingRef.current = false; }
   }, [recordId, form]);
 
@@ -692,16 +692,16 @@ const CreateCalibrationPanel = () => {
       };
       const response = await updateCalibration(recordId, payload);
       if (response?.data?.success || response?.data?.status === true) {
-        toast.success("Calibration updated successfully.");
+        toast.success("Calibration Planner updated successfully.");
         await fetchCalibrationDetail();
         await fetchPermissions();
         await fetchActivityLogs();
         return true;
       }
-      toast.error(response?.data?.message || "Failed to update Calibration.");
+      toast.error(response?.data?.message || "Failed to update Calibration Planner.");
     } catch (error) {
-      console.error("Calibration update failed:", error);
-      toast.error(error?.response?.data?.message || "Failed to update Calibration. Please try again.");
+      console.error("Calibration Planner update failed:", error);
+      toast.error(error?.response?.data?.message || "Failed to update Calibration Planner. Please try again.");
       return false;
     } finally { setIsSaving(false); }
   };

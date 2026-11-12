@@ -348,19 +348,19 @@ const CreateCalibration = () => {
             const response = await addCalibration(payload);
 
             if (response?.data?.success) {
-                toast.success("Calibration created successfully.");
+                toast.success("Calibration Planner created successfully.");
                 form.resetFields();
                 setCalibrationRows([]);
                 navigate("/user/engineering-dashboard");
                 return;
             }
 
-            toast.error(response?.data?.message || "Failed to create Calibration.");
+            toast.error(response?.data?.message || "Failed to create Calibration Planner.");
         } catch (error) {
-            console.error("Calibration submission failed:", error);
+            console.error("Calibration Planner submission failed:", error);
             toast.error(
                 error?.response?.data?.message ||
-                    "Failed to create Calibration. Please try again."
+                    "Failed to create Calibration Planner. Please try again."
             );
         } finally {
             setIsSaving(false);
@@ -390,7 +390,7 @@ const CreateCalibration = () => {
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
                                 <h1 className="truncate font-[var(--font-display)] text-[20px] font-bold tracking-[-0.02em] text-[#244F4A]">
-                                    Create Calibration
+                                    Create Calibration Planner
                                 </h1>
                                 <span className="hidden rounded-full border border-[#D0BE97] bg-[#F7F0E3] px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.08em] text-[#896B38] sm:inline-flex">
                                     New Record
@@ -416,7 +416,7 @@ const CreateCalibration = () => {
                                     Process
                                 </p>
                                 <p className="max-w-[150px] truncate font-[var(--font-display)] text-[10.5px] font-bold tracking-[-0.01em] text-[#344A43]">
-                                    {processName || "Calibration Management"}
+                                    {processName || "Calibration Planner"}
                                 </p>
                             </div>
                         </div>

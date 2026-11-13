@@ -36,11 +36,16 @@ import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } 
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 // 👇 UPDATED STAGE IDS FOR PROCESS 15
+// 77 = Opened / General Information
+// 78 = Reviewed By HOD/Designee
+// 79 = Verified By QA
+// 80 = Closed – Done
+// 81 = Closed – Cancelled
 const TABS = [
-  { id: "management", label: "General Information", stageId: 76 },
-  { id: "implementor", label: "HOD / Designee Review", stageId: 77 },
-  { id: "qa-review", label: "QA Review & Approval", stageId: 78 },
-  { id: "activity", label: "Activity Log", stageId: 79 },
+  { id: "management", label: "General Information", stageId: 77 },
+  { id: "implementor", label: "Reviewed By HOD/Designee", stageId: 78 },
+  { id: "qa-review", label: "Verified By QA", stageId: 79 },
+  { id: "activity", label: "Activity Log", stageId: 80 }, // UI-only, no workflow stage
 ];
 
 const REQUIRED_FIELDS = [];
@@ -189,7 +194,7 @@ const UnCalibrationChildPanel = () => {
 
   const [workflowStages, setWorkflowStages] = useState([]);
   // 👇 UPDATED DEFAULT PROCESS ID
-  const [processId, setProcessId] = useState(15); 
+  const [processId, setProcessId] = useState(15);
   const [activeStageId, setActiveStageId] = useState(null);
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
@@ -232,13 +237,18 @@ const UnCalibrationChildPanel = () => {
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
 
   // 👇 UPDATED STAGE IDS FOR EDITABILITY
-  const STAGE_IDS = { management: 76, implementor: 77, qaReview: 78, qaApproval: 79 };
+  // Only 77, 78, 79 are editable workflow stages.
+  // 80 = Closed – Done and 81 = Closed – Cancelled are terminal (read-only).
+  const STAGE_IDS = { management: 77, implementor: 78, qaReview: 79 };
 
-  const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
+  const isStageEditable = (stageId) =>
+    Number(activeStageId) === Number(stageId) &&
+    canPerformActivity === true &&
+    permissionsLoading === false;
+
   const isManagementEditable = isStageEditable(STAGE_IDS.management);
   const isImplementorEditable = isStageEditable(STAGE_IDS.implementor);
   const isQaReviewEditable = isStageEditable(STAGE_IDS.qaReview);
-  const isQaApprovalEditable = isStageEditable(STAGE_IDS.qaApproval);
 
   useEffect(() => {
     if (!isLoading && formReady && formInitialValues && Object.keys(formInitialValues).length > 0) {
@@ -530,10 +540,18 @@ const UnCalibrationChildPanel = () => {
   useEffect(() => { fetchActivityLogs(); }, [fetchActivityLogs]);
   useEffect(() => { fetchPermissions(); }, [fetchPermissions]);
 
+  // 👇 Auto-select the correct tab based on active stage.
+  // 80 (Closed – Done) and 81 (Closed – Cancelled) are terminal — no editable tab,
+  // so fall back to the last substantive tab ("qa-review").
   useEffect(() => {
     if (!activeStageId) return;
-    const matchingTab = TABS.find((tab) => Number(tab.stageId) === Number(activeStageId));
-    if (matchingTab) setActiveTab(matchingTab.id);
+    const stageNum = Number(activeStageId);
+    const matchingTab = TABS.find((tab) => Number(tab.stageId) === stageNum);
+    if (matchingTab) {
+      setActiveTab(matchingTab.id);
+    } else if (stageNum === 80 || stageNum === 81) {
+      setActiveTab("qa-review");
+    }
   }, [activeStageId]);
 
   const handleTabChange = (tabId) => {
@@ -718,8 +736,13 @@ const UnCalibrationChildPanel = () => {
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
-        {/* 👇 UPDATED CANCELLED STAGE ID */}
-        <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} cancelledStageId={80}  />
+        {/* 👇 81 = Closed – Cancelled */}
+        <ProcessStage
+          stages={workflowStages}
+          activeStageId={activeStageId}
+          loading={workflowLoading}
+          cancelledStageId={81}
+        />
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
           <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
             <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />
@@ -775,19 +798,19 @@ const UnCalibrationChildPanel = () => {
             <Form.Item name="initiator" label="Initiator" className="!mb-4"><FormDisabledInput /></Form.Item>
             <Form.Item name="dateOfInitiation" label="Date of Initiation" className="!mb-4"><FormDisabledInput /></Form.Item>
             <Form.Item name="initiationDepartment" label="Initiation Department" className="!mb-4"><FormDisabledInput /></Form.Item>
-            <Form.Item 
-            name="shortDescription"
-             label={
-              <span className="inline-flex items-center">
-              Short Description
-              <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
-            </span>
-            }
-            className="!mb-4">
+            <Form.Item
+              name="shortDescription"
+              label={
+                <span className="inline-flex items-center">
+                  Short Description
+                  <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
+                </span>
+              }
+              className="!mb-4">
               <FormInput placeholder="Enter short description" disabled={!isManagementEditable} />
             </Form.Item>
           </div>
-          
+
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="INSTRUMENT / EQUIPMENT DETAILS" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -838,7 +861,7 @@ const UnCalibrationChildPanel = () => {
               <SymbolicInput placeholder="e.g. 45% RH ± 5%" defaultDiscipline="Humidity" disabled={!isManagementEditable} />
             </Form.Item>
           </div>
-          
+
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="CALIBRATION RESULT" />
           <div className="mt-4">
@@ -871,18 +894,18 @@ const UnCalibrationChildPanel = () => {
               rowKey="_rowId"
             />
           </div>
-          
+
           <div className="my-9 h-px w-full bg-slate-200" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
-            name="comments"
-            label={
-              <span className="inline-flex items-center">
-                Comments
-                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
-              </span>
-            }
-            className="!mb-4 md:col-span-2">
+              name="comments"
+              label={
+                <span className="inline-flex items-center">
+                  Comments
+                  <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+                </span>
+              }
+              className="!mb-4 md:col-span-2">
               <FormTextArea rows={4} placeholder="Additional comments..." disabled={!isManagementEditable} />
             </Form.Item>
             <Form.Item name="attachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
@@ -898,19 +921,19 @@ const UnCalibrationChildPanel = () => {
           </div>
         </section>
 
-        {/* Implementor tab */}
+        {/* Implementor tab — Reviewed By HOD/Designee */}
         <section style={{ display: activeTab === "implementor" ? "block" : "none" }}>
-          <SectionHeader title="HOD / DESIGNEE REVIEW" />
+          <SectionHeader title="REVIEWED BY HOD/DESIGNEE" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
-             name="implementorComments"
-            label={
-              <span className="inline-flex items-center">
-                Comments
-                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
-              </span>
-            }
-            className="!mb-4 md:col-span-2">
+              name="implementorComments"
+              label={
+                <span className="inline-flex items-center">
+                  Comments
+                  <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+                </span>
+              }
+              className="!mb-4 md:col-span-2">
               <FormTextArea rows={5} placeholder="Enter HOD / Designee review comments..." disabled={!isImplementorEditable} />
             </Form.Item>
             <Form.Item name="implementorAttachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
@@ -926,20 +949,20 @@ const UnCalibrationChildPanel = () => {
           </div>
         </section>
 
-        {/* QA Review tab */}
+        {/* QA Review tab — Verified By QA */}
         <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
-          <SectionHeader title="QA REVIEW & APPROVAL" />
+          <SectionHeader title="VERIFIED BY QA" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
-            name="qaReviewComments"
-            label={
-              <span className="inline-flex items-center">
-                Comments
-                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
-              </span>
-            }
-            className="!mb-4 md:col-span-2">
-              <FormTextArea rows={5} placeholder="Enter QA review and approval comments..." disabled={!isQaReviewEditable && !isQaApprovalEditable} />
+              name="qaReviewComments"
+              label={
+                <span className="inline-flex items-center">
+                  Comments
+                  <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+                </span>
+              }
+              className="!mb-4 md:col-span-2">
+              <FormTextArea rows={5} placeholder="Enter QA verification comments..." disabled={!isQaReviewEditable} />
             </Form.Item>
             <Form.Item name="qaReviewAttachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
               <FormAttachment
@@ -948,7 +971,7 @@ const UnCalibrationChildPanel = () => {
                 attachmentField="qaReviewAttachment"
                 label="QA Review Attachment"
                 uploadApi={addMultipleAttachments}
-                disabled={!isQaReviewEditable && !isQaApprovalEditable}
+                disabled={!isQaReviewEditable}
               />
             </Form.Item>
           </div>

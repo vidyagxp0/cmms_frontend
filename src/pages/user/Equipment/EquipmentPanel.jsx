@@ -47,12 +47,12 @@ import {
 /* ───────────────────────── Tabs config ───────────────────────── */
 
 const TABS = [
-  { id: "instrument", label: "Instrument Information", stageId: 23 },
+  { id: "instrument", label: "Instrument Information", stageId: 24 },
   // { id: "checklist", label: "Checklist Configuration" },
-  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 24 },
-  { id: "qa-review", label: "QA Approval Review", stageId: 25 },
-  { id: "activity", label: "Activity Log", stageId: 26 },
-  { id: "cancellation", label: "Cancellation", stageId: 27 },
+  { id: "hod", label: "HOD / Designee Review", stageId: 25 },
+  { id: "qa-review", label: "QA Approval Review", stageId: 26 },
+  { id: "activity", label: "Activity Log", stageId: 27 },
+  { id: "cancellation", label: "Cancellation", stageId: 28 },
 ];
 
 const MASTER_INSTRUMENT_PROCESS_ID = 3;
@@ -241,10 +241,10 @@ const EquipmentPanel = () => {
     canPerformActivity === true &&
     permissionsLoading === false;
 
-  const isInstrumentEditable = isImported || isStageEditable(23);
-  const isHodEditable = isImported || isStageEditable(24);
-  const isQaReviewEditable = isImported || isStageEditable(25);
-  const isCancellationEditable = isImported || isStageEditable(27);
+  const isInstrumentEditable = isImported || isStageEditable(24);
+  const isHodEditable = isImported || isStageEditable(25);
+  const isQaReviewEditable = isImported || isStageEditable(26);
+  const isCancellationEditable = isImported || isStageEditable(28);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -686,7 +686,7 @@ const EquipmentPanel = () => {
             stages={workflowStages}
             activeStageId={activeStageId}
             loading={workflowLoading}
-            cancelledStageId={27}
+            cancelledStageId={28}
           />
 
           <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">

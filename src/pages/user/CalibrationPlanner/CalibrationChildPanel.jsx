@@ -37,10 +37,10 @@ import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import MasterInstrumentsGrid from "./MasterInstrumentsGrid";
 
 const TABS = [
-  { id: "management", label: "General Information", stageId: 18 },
-  { id: "implementor", label: "HOD / Designee Review", stageId: 19 },
-  { id: "qa-review", label: "QA Review & Approval", stageId: 20 },
-  { id: "activity", label: "Activity Log", stageId: 21 },
+  { id: "management", label: "General Information", stageId: 19 },
+  { id: "implementor", label: "HOD / Designee Review", stageId: 20 },
+  { id: "qa-review", label: "QA Review & Approval", stageId: 21 },
+  { id: "activity", label: "Activity Log", stageId: 22 },
 ];
 
 const REQUIRED_FIELDS = [];
@@ -234,12 +234,11 @@ const CalibrationChildPanel = () => {
 
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
 
-  const STAGE_IDS = { management: 18, implementor: 19, qaReview: 20, qaApproval: 21 };
+  const STAGE_IDS = { management: 19, implementor: 20,  qaApproval: 21 };
 
   const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
   const isManagementEditable = isStageEditable(STAGE_IDS.management);
   const isImplementorEditable = isStageEditable(STAGE_IDS.implementor);
-  const isQaReviewEditable = isStageEditable(STAGE_IDS.qaReview);
   const isQaApprovalEditable = isStageEditable(STAGE_IDS.qaApproval);
 
   useEffect(() => {
@@ -738,7 +737,7 @@ const CalibrationChildPanel = () => {
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
-        <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} cancelledStageId={22}  />
+        <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} cancelledStageId={23}  />
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
           <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
             <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />

@@ -41,12 +41,12 @@ import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 dayjs.extend(customParseFormat);
 
 const TABS = [
-  { id: "general", label: "General Information", stageId: 39 },
-  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 40 },
-  { id: "user-dept-review", label: "User Department Review (User Dept)", stageId: 41 },
-  { id: "qa-review", label: "QA Approval Review", stageId: 42 },
-  { id: "activity", label: "Activity Log", stageId: 43 },
-  { id: "cancellation", label: "Cancellation", stageId: 44 },
+  { id: "general", label: "General Information", stageId: 40 },
+  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 41 },
+  { id: "user-dept-review", label: "User Department Review (User Dept)", stageId: 42 },
+  { id: "qa-review", label: "QA Approval Review", stageId: 43 },
+  { id: "activity", label: "Activity Log", stageId: 44 },
+  { id: "cancellation", label: "Cancellation", stageId: 45 },
 ];
 
 const REQUIRED_FIELDS = [
@@ -198,11 +198,11 @@ const InstrumentCalibrationPanel = () => {
   }, [equipmentMap]);
 
   const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
-  const isGeneralEditable = isStageEditable(39);
-  const isHodEditable = isStageEditable(40);
-  const isUserDeptEditable = isStageEditable(41);
-  const isQaReviewEditable = isStageEditable(42);
-  const isCancellationEditable = isStageEditable(44);
+  const isGeneralEditable = isStageEditable(40);
+  const isHodEditable = isStageEditable(41);
+  const isUserDeptEditable = isStageEditable(42);
+  const isQaReviewEditable = isStageEditable(43);
+  const isCancellationEditable = isStageEditable(45);
 
   const canCreateChild =
     Number(activeStageId) === 43 &&

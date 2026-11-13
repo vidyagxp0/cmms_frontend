@@ -41,12 +41,12 @@ import { executeSpareInstrumentActivity, getAllPermissionsSpareInstrument, getSp
 /* ───────────────────────── Tabs config ───────────────────────── */
 
 const TABS = [
-  { id: "instrument", label: "Instrument Information", stageId: 45 },
+  { id: "instrument", label: "Instrument Information", stageId: 46 },
   // { id: "checklist", label: "Checklist Configuration" },
-  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 46 },
-  { id: "qa-review", label: "QA Approval Review", stageId: 47 },
-  { id: "activity", label: "Activity Log", stageId: 48 },
-  { id: "cancellation", label: "Cancellation", stageId: 49 },
+  { id: "hod", label: "HOD / Designee Review ", stageId: 47 },
+  { id: "qa-review", label: "QA Approval Review", stageId: 48 },
+  { id: "activity", label: "Activity Log", stageId: 49 },
+  { id: "cancellation", label: "Cancellation", stageId: 50 },
 ];
 
 const MASTER_INSTRUMENT_PROCESS_ID = 9;
@@ -237,10 +237,10 @@ const SpareInstrumentPanel = () => {
     permissionsLoading === false;
 
   // If imported, bypass stage checks and allow editing
-  const isInstrumentEditable = isImported || isStageEditable(45);
-  const isHodEditable = isImported || isStageEditable(46);
-  const isQaReviewEditable = isImported || isStageEditable(47);
-  const isCancellationEditable = isImported || isStageEditable(49);
+  const isInstrumentEditable = isImported || isStageEditable(46);
+  const isHodEditable = isImported || isStageEditable(47);
+  const isQaReviewEditable = isImported || isStageEditable(48);
+  const isCancellationEditable = isImported || isStageEditable(50);
 
   /* ───────── Profile ───────── */
   useEffect(() => {
@@ -701,7 +701,7 @@ const SpareInstrumentPanel = () => {
             stages={workflowStages}
             activeStageId={activeStageId}
             loading={workflowLoading}
-            cancelledStageId={49}
+            cancelledStageId={50}
           />
 
           <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
@@ -932,7 +932,7 @@ const SpareInstrumentPanel = () => {
 
         {/* ─── TAB 2: HOD REVIEW ─── */}
         <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
-          <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
+          <SectionHeader title="HOD / Designee Review " />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item name="hodReviewComments" label="Comments" className="!mb-4 md:col-span-2">
               <FormTextArea

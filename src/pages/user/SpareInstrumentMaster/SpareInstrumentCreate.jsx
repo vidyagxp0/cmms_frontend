@@ -21,7 +21,7 @@ import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInpu
 const TABS = [
     { id: "instrument", label: "Instrument Information" },
     // { id: "checklist", label: "Checklist Configuration" },
-    { id: "hod", label: "HOD / Designee Review (Engineering Dept)" },
+    { id: "hod", label: "HOD / Designee Review " },
     { id: "qa-review", label: "QA Approval Review" },
 ];
 
@@ -272,7 +272,7 @@ const SpareInstrumentCreate = () => {
                 asset_code: values.asset_code.trim(),
                 capacity: values.capacity.trim(),
                 checklist_config: cleanedChecklistConfig,
-                stage_id: 45 || null,
+                stage_id: 46 || null,
                 process_id: 9 || null,
                 initiator_id: loginUserId || null, 
                 
@@ -622,7 +622,7 @@ const SpareInstrumentCreate = () => {
 
                 {activeTab === "hod" && (
                     <section>
-                        <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
+                        <SectionHeader title="HOD / Designee Review " />
 
                         <div className="px-1 pb-1 pt-4">
                             <Form.Item

@@ -38,12 +38,12 @@ dayjs.extend(customParseFormat);
 
 // 👇 UPDATED STAGE IDS FOR PROCESS 14
 const TABS = [
-  { id: "general", label: "General Information", stageId: 70 },
-  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 71 },
-  { id: "user-dept-review", label: "User Department Review (User Dept)", stageId: 72 },
-  { id: "qa-review", label: "QA Approval Review", stageId: 73 },
-  { id: "activity", label: "Activity Log", stageId: 74 }, // Maps to Closed - Done
-  { id: "cancellation", label: "Cancellation", stageId: 75 },
+  { id: "general", label: "General Information", stageId: 71 },
+  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 72 },
+  { id: "user-dept-review", label: "User Department Review (User Dept)", stageId: 73 },
+  { id: "qa-review", label: "QA Approval Review", stageId: 74 },
+  { id: "activity", label: "Activity Log", stageId: 75 }, // Maps to Closed - Done
+  { id: "cancellation", label: "Cancellation", stageId: 76 },
 ];
 
 const getProcessValue = (processData = [], key) => {
@@ -218,12 +218,12 @@ const UnCreateCalibrationPanel = () => {
 
   // 👇 UPDATED EDITABILITY CHECKS FOR STAGES 70 - 75
   const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
-  const isGeneralEditable = isStageEditable(70);
-  const isHodEditable = isStageEditable(71);
-  const isUserDeptEditable = isStageEditable(72);
-  const isQaReviewEditable = isStageEditable(73);
-  const isCancellationEditable = isStageEditable(75);
-  const canCreateChild = Number(activeStageId) === 74 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
+  const isGeneralEditable = isStageEditable(71);
+  const isHodEditable = isStageEditable(72);
+  const isUserDeptEditable = isStageEditable(73);
+  const isQaReviewEditable = isStageEditable(74);
+  const isCancellationEditable = isStageEditable(76);
+  const canCreateChild = Number(activeStageId) === 75 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -740,7 +740,7 @@ const UnCreateCalibrationPanel = () => {
   }
 
   // 👇 UPDATED CANCELLED STAGE ID
-  const isCancellationStageActive = Number(activeStageId) === 75;
+  const isCancellationStageActive = Number(activeStageId) === 76;
 
   const visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")
@@ -749,7 +749,7 @@ const UnCreateCalibrationPanel = () => {
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
-        <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} cancelledStageId={75} />
+        <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} cancelledStageId={76} />
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
           <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
             <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />

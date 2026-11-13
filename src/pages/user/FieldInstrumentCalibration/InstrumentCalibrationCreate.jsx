@@ -295,7 +295,7 @@ const InstrumentCalibrationCreate = () => {
 
             const payload = {
                 process_id: Number(processId),
-                stage_id: 39,
+                stage_id: 40,
                 department_id: departmentId,
                 initiator_id: initiatorId,
                 initiator_name: initiator,

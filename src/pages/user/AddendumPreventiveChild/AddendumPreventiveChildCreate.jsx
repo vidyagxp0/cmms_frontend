@@ -330,7 +330,7 @@ const AddendumPreventiveChildCreate = () => {
 
       const payload = {
         process_id: Number(routeProcessId) || 13, // 👈 Process ID 13
-        stage_id: 65,  
+        stage_id: 66,  
         childType,                           // 👈 Initial Stage 65
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),

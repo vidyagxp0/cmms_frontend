@@ -29,7 +29,8 @@ dayjs.extend(customParseFormat);
 
 const TABS = [
   { id: "general", label: "General Information" },
-  { id: "engineer-review", label: "Review By Engineer Dept" },
+  { id: "user-dept-review", label: "Reviewed By (User Department)" },
+  { id: "engineer-review", label: "Reviewed By (Engineering Department)" },
   { id: "qa-approval", label: "QA Approval" },
 ];
 
@@ -256,13 +257,23 @@ const PreventiveMaintenanceCreate = () => {
       value: values?.attachment || [],
     },
     {
+      key: "user-dept-review_comments",
+      label: "Reviewed By (User Department) Comments",
+      value: values?.userDeptReviewComments || "",
+    },
+    {
+      key: "user-dept-review_attachment",
+      label: "Reviewed By (User Department) Attachment",
+      value: values?.userDeptReviewAttachment || [],
+    },
+    {
       key: "engineer_review_comments",
-      label: "Review By Engineer Dept Comments",
+      label: "Reviewed By (Engineering Department) Comments",
       value: values?.engineerReviewComments || "",
     },
     {
       key: "engineer_review_attachment",
-      label: "Review By Engineer Dept Attachment",
+      label: "Reviewed By (Engineering Department) Attachment",
       value: values?.engineerReviewAttachment || [],
     },
     {
@@ -560,9 +571,32 @@ const PreventiveMaintenanceCreate = () => {
           </section>
         )}
 
+        {activeTab === "user-dept-review" && (
+          <section>
+            <SectionHeader title="Reviewed By (User Department)" />
+            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+              <Form.Item
+                name="userDeptReviewComments"
+                label="Comments"
+                className="!mb-4 md:col-span-2"
+              >
+                <FormTextArea rows={5} placeholder="Enter comments..." />
+              </Form.Item>
+
+              <Form.Item
+                name="userDeptReviewAttachment"
+                label="Attachment"
+                valuePropName="value"
+                className="!mb-4 md:col-span-2"
+              >
+                <FormAttachment disabled />
+              </Form.Item>
+            </div>
+          </section>
+        )}
         {activeTab === "engineer-review" && (
           <section>
-            <SectionHeader title="REVIEW BY ENGINEER DEPT" />
+            <SectionHeader title="Reviewed By (Engineering Department)" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item
                 name="engineerReviewComments"

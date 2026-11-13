@@ -20,7 +20,7 @@ import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInpu
 const TABS = [
     { id: "instrument", label: "Instrument Information" },
     // { id: "checklist", label: "Checklist Configuration" },
-    { id: "hod", label: "HOD / Designee Review (Engineering Dept)" },
+    { id: "hod", label: "HOD / Designee Review" },
     { id: "qa-review", label: "QA Approval Review" },
 ];
 
@@ -278,7 +278,7 @@ const CreateEquipment = () => {
                     values.capacity.trim(),
                 category: values.category.trim(),
                 checklist_config: cleanedChecklistConfig,
-                stage_id: 23 || null,
+                stage_id: 24 || null,
                 process_id: 3 || null,
                 initiator_id: loginUserId || null, 
                 // New review fields

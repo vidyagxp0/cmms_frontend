@@ -20,7 +20,7 @@ import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInpu
 
 const TABS = [
     { id: "instrument", label: "Field Instrument Information" },
-    { id: "hod", label: "HOD / Designee Review (Engineering Dept)" },
+    { id: "hod", label: "HOD / Designee Review " },
     { id: "qa-review", label: "QA Approval Review" },
 ];
 
@@ -312,7 +312,7 @@ const CreateFieldInstruments = () => {
                     values.capacity.trim(),
                 category: values.category.trim(),
                 checklist_config: cleanedChecklistConfig,
-                stage_id: 28 || null,
+                stage_id: 29 || null,
                 process_id: 6 || null,
                 initiator_id: loginUserId || null, 
 
@@ -739,7 +739,7 @@ const CreateFieldInstruments = () => {
 
                 {activeTab === "hod" && (
                     <section>
-                        <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
+                        <SectionHeader title="HOD / Designee Review " />
 
                         <div className="px-1 pb-1 pt-4">
                             <Form.Item

@@ -53,7 +53,7 @@ const MONTHS = [
 const TABS = [
   { id: "general", label: "General Information", stageId: 7 },
   { id: "hod", label: "HOD / Designee Review", stageId: 8 },
-  { id: "user-dept-review", label: "QA Review", stageId: 9 },
+  { id: "user-dept-review", label: "User Department Review (HOD/Designee)", stageId: 9 },
   { id: "qa-review", label: "QA Approval Review", stageId: 10 },
   { id: "activity", label: "Activity Log", stageId: 11 },
   { id: "cancellation", label: "Cancellation", stageId: 12 },
@@ -1065,7 +1065,7 @@ const PreventivePlannerPanel = () => {
         </section>
 
         <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
-          <SectionHeader title="QA REVIEW" />
+          <SectionHeader title="User Department Review (HOD/Designee)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
               name="userDeptReviewComments"

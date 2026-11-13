@@ -44,11 +44,12 @@ dayjs.extend(customParseFormat);
 
 const TABS = [
   { id: "general", label: "General Information", stageId: 13 },
-  { id: "engineer-review", label: "Review By Engineer Dept", stageId: 14 },
-  { id: "qa-approval", label: "QA Approval", stageId: 15 },
   { id: "checklist", label: "Checklist" },
-  { id: "activity", label: "Activity Log", stageId: 16 },
-  { id: "cancellation", label: "Cancellation", stageId: 17 },
+  { id: "user-dept-review", label: "Reviewed By (User Department)", stageId: 14 },
+  { id: "engineer-review", label: "Reviewed By (Engineering Department)", stageId: 15 },
+  { id: "qa-approval", label: "QA Approval", stageId: 16 },
+  { id: "activity", label: "Activity Log", stageId: 17 },
+  { id: "cancellation", label: "Cancellation", stageId: 18 },
 ];
 
 const REQUIRED_FIELDS = [
@@ -416,9 +417,10 @@ const PreventiveMaintenancePanel = () => {
     permissionsLoading === false;
 
   const isGeneralEditable = isStageEditable(13);
-  const isEngineerReviewEditable = isStageEditable(14);
-  const isQaApprovalEditable = isStageEditable(15);
-  const isCancellationEditable = isStageEditable(17);
+  const isUserDeptReviewEditable = isStageEditable(14);
+  const isEngineerReviewEditable = isStageEditable(15);
+  const isQaApprovalEditable = isStageEditable(16);
+  const isCancellationEditable = isStageEditable(18);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -1039,7 +1041,7 @@ const PreventiveMaintenancePanel = () => {
           stages={workflowStages}
           activeStageId={activeStageId}
           loading={workflowLoading}
-          cancelledStageId={17}
+          cancelledStageId={18}
         />
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
           <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
@@ -1287,6 +1289,47 @@ const PreventiveMaintenancePanel = () => {
           </Form.Item>
         </section>
 
+        <section
+          style={{
+            display: activeTab === "user-dept-review" ? "block" : "none",
+          }}
+        >
+          <SectionHeader title="Reviewed By (User Department)" />
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Form.Item
+              name="userDeptReviewComments"
+              label={
+              <span className="inline-flex items-center">
+                Comments
+                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+              </span>
+            }
+              className="!mb-4 md:col-span-2"
+            >
+              <FormTextArea
+                rows={5}
+                placeholder="Enter comments..."
+                disabled={!isUserDeptReviewEditable}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="userDeptReviewAttachment"
+              label="Attachment"
+              valuePropName="value"
+              className="!mb-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={true}
+                recordId={recordId}
+                attachmentField="user_dept_review_attachment"
+                label="Review By User Dept Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isUserDeptReviewEditable}
+              />
+            </Form.Item>
+          </div>
+        </section>
         <section
           style={{
             display: activeTab === "engineer-review" ? "block" : "none",

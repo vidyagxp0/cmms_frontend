@@ -350,7 +350,7 @@ const AddendumCalibrationChildCreate = () => {
 
       const payload = {
         process_id: Number(processId) || 12,
-        stage_id: 60,
+        stage_id: 61,
         is_child: true,
         parent_id: Number(parentId),
         ...(parentRowId != null ? { row_id: Number(parentRowId) } : {}),

@@ -26,7 +26,7 @@ import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 const TABS = [
   { id: "general", label: "General Information" },
   { id: "hod", label: "HOD / Designee Review" },
-  { id: "user-dept-review", label: "QA Review" },
+  { id: "user-dept-review", label: "User Department Review (HOD/Designee)" },
   { id: "qa-review", label: "QA Approval Review" },
 ];
 

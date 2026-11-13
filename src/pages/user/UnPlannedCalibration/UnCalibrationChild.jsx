@@ -328,7 +328,7 @@ const UnCalibrationChild = () => {
 
       const payload = {
         process_id: 15,
-        stage_id: 76,
+        stage_id: 77,
         is_child: true,
         parent_id: Number(parentId),
           ...(parentRowId != null ? { row_id: Number(parentRowId) } : {}),

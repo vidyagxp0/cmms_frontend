@@ -44,12 +44,12 @@ dayjs.extend(customParseFormat);
 
 // 👇 UPDATED: Tab label changed to "HOD / Designee Review"
 const TABS = [
-  { id: "general", label: "General Information", stageId: 65 },
-  { id: "engineer-review", label: "HOD / Designee Review", stageId: 66 },
-  { id: "qa-approval", label: "QA Approval", stageId: 67 },
+  { id: "general", label: "General Information", stageId: 66 },
   { id: "checklist", label: "Checklist" },
-  { id: "activity", label: "Activity Log", stageId: 68 },
-  { id: "cancellation", label: "Cancellation", stageId: 69 },
+  { id: "engineer-review", label: "HOD / Designee Review", stageId: 67 },
+  { id: "qa-approval", label: "QA Approval", stageId: 68 },
+  { id: "activity", label: "Activity Log", stageId: 69 },
+  { id: "cancellation", label: "Cancellation", stageId: 70 },
 ];
 
 const REQUIRED_FIELDS = [
@@ -446,10 +446,10 @@ const AddendumPreventiveChildPanel = () => {
     canPerformActivity === true &&
     permissionsLoading === false;
 
-  const isGeneralEditable = isStageEditable(65);
-  const isEngineerReviewEditable = isStageEditable(66);
-  const isQaApprovalEditable = isStageEditable(67);
-  const isCancellationEditable = isStageEditable(69);
+  const isGeneralEditable = isStageEditable(66);
+  const isEngineerReviewEditable = isStageEditable(67);
+  const isQaApprovalEditable = isStageEditable(68);
+  const isCancellationEditable = isStageEditable(70);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -1029,7 +1029,7 @@ const AddendumPreventiveChildPanel = () => {
     );
   }
 
-  const isCancellationStageActive = Number(activeStageId) === 69;
+  const isCancellationStageActive = Number(activeStageId) === 70;
 
   const visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")
@@ -1042,7 +1042,7 @@ const AddendumPreventiveChildPanel = () => {
           stages={workflowStages}
           activeStageId={activeStageId}
           loading={workflowLoading}
-          cancelledStageId={69}
+          cancelledStageId={70}
         />
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
           <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">

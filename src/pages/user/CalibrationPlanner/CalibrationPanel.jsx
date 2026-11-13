@@ -37,8 +37,8 @@ dayjs.extend(customParseFormat);
 
 const TABS = [
   { id: "general", label: "General Information", stageId: 1 },
-  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 2 },
-  { id: "user-dept-review", label: "User Department Review (User Dept)", stageId: 3 },
+  { id: "hod", label: "Reviewed By HOD/Designee (Engineering)", stageId: 2 },
+  { id: "user-dept-review", label: "Reviewed By User Department", stageId: 3 },
   { id: "qa-review", label: "QA Approval Review", stageId: 4 },
   { id: "activity", label: "Activity Log", stageId: 5 },
   { id: "cancellation", label: "Cancellation", stageId: 6 },

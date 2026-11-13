@@ -37,11 +37,11 @@ import { CALIBRATED_BY_COLUMNS, CALIBRATION_RESULT_GRID } from "../CalibrationPl
 
 // ── Updated TABS to include Cancellation (Stage 64) ──
 const TABS = [
-  { id: "management", label: "General Information", stageId: 60 },
-  { id: "implementor", label: "HOD / Designee Review", stageId: 61 },
-  { id: "qa-review", label: "QA Review & Approval", stageId: 62 },
-  { id: "activity", label: "Activity Log", stageId: 63 },
-  { id: "cancellation", label: "Cancellation", stageId: 64 },
+  { id: "management", label: "General Information", stageId: 61 },
+  { id: "implementor", label: "HOD / Designee Review", stageId: 62 },
+  { id: "qa-review", label: "QA Review & Approval", stageId: 63 },
+  { id: "activity", label: "Activity Log", stageId: 64 },
+  { id: "cancellation", label: "Cancellation", stageId: 65 },
 ];
 
 const REQUIRED_FIELDS = [];
@@ -233,11 +233,11 @@ const AddendumCalibrationChildPanel = () => {
 
   // ── Updated STAGE_IDS to include Cancellation (64) ──
   const STAGE_IDS = { 
-    management: 60, 
-    implementor: 61, 
-    qaReview: 62, 
-    activity: 63,
-    cancellation: 64 
+    management: 61, 
+    implementor: 62, 
+    qaReview: 63, 
+    activity: 64,
+    cancellation: 65 
   };
 
   const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
@@ -717,7 +717,7 @@ const AddendumCalibrationChildPanel = () => {
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
-        <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} cancelledStageId={64} />
+        <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} cancelledStageId={65} />
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
           <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
             <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />

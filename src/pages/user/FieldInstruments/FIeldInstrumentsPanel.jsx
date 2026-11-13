@@ -49,11 +49,11 @@ import {
 /* ───────────────────────── Tabs config ───────────────────────── */
 
 const TABS = [
-  { id: "instrument",   label: "Field Instrument Information",              stageId: 28 },
-  { id: "hod",          label: "HOD / Designee Review (Engineering Dept)",  stageId: 29 },
-  { id: "qa-review",    label: "QA Approval Review",                        stageId: 30 },
-  { id: "activity",     label: "Activity Log",                              stageId: 31 },
-  { id: "cancellation", label: "Cancellation",                              stageId: 32 },
+  { id: "instrument",   label: "Field Instrument Information",              stageId: 29 },
+  { id: "hod",          label: "HOD / Designee Review ",  stageId: 30 },
+  { id: "qa-review",    label: "QA Approval Review",                        stageId: 31 },
+  { id: "activity",     label: "Activity Log",                              stageId: 32 },
+  { id: "cancellation", label: "Cancellation",                              stageId: 33 },
 ];
 
 const FIELD_INSTRUMENT_PROCESS_ID = 6;
@@ -293,10 +293,10 @@ const FIeldInstrumentsPanel = () => {
     permissionsLoading === false;
 
   // If imported, bypass stage checks and allow editing
-  const isInstrumentEditable   = isImported || isStageEditable(28);
-  const isHodEditable          = isImported || isStageEditable(29);
-  const isQaReviewEditable     = isImported || isStageEditable(30);
-  const isCancellationEditable = isImported || isStageEditable(32);
+  const isInstrumentEditable   = isImported || isStageEditable(29);
+  const isHodEditable          = isImported || isStageEditable(30);
+  const isQaReviewEditable     = isImported || isStageEditable(31);
+  const isCancellationEditable = isImported || isStageEditable(33);
 
   /* ───────── Profile ───────── */
   useEffect(() => {
@@ -1064,7 +1064,7 @@ const FIeldInstrumentsPanel = () => {
 
         {/* ─── TAB 2: HOD REVIEW ─── */}
         <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
-          <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
+          <SectionHeader title="HOD / Designee Review " />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item name="hodReviewComments" label="Comments" className="!mb-4 md:col-span-2">
               <FormTextArea

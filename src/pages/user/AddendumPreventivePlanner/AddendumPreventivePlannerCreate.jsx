@@ -26,7 +26,7 @@ import AddendumPreventivePlannerGrid from "./AddendumPreventivePlannerGrid";
 const TABS = [
   { id: "general", label: "General Information" },
   { id: "hod", label: "HOD / Designee Review" },
-  { id: "user-dept-review", label: "QA Review" },
+  // { id: "user-dept-review", label: "QA Review" },
   { id: "qa-review", label: "QA Approval Review" },
 ];
 
@@ -329,7 +329,7 @@ const AddendumPreventivePlannerCreate = () => {
 
       const payload = {
         process_id: Number(processId),
-        stage_id: 55,
+        stage_id: 56,
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
         initiator_name: initiator,

@@ -47,12 +47,12 @@ import {
 /* ───────────────────────── Tabs config ───────────────────────── */
 
 const TABS = [
-  { id: "instrument", label: "General Information", stageId: 50 },
+  { id: "instrument", label: "General Information", stageId: 51 },
   { id: "checklist", label: "Checklist Configuration" },
-  { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 51 },
-  { id: "qa-review", label: "QA Approval Review", stageId: 52 },
-  { id: "activity", label: "Activity Log", stageId: 53 },
-  { id: "cancellation", label: "Cancellation", stageId: 54 },
+  { id: "hod", label: "HOD / Designee Review ", stageId: 52 },
+  { id: "qa-review", label: "QA Approval Review", stageId: 53 },
+  { id: "activity", label: "Activity Log", stageId: 54 },
+  { id: "cancellation", label: "Cancellation", stageId: 55 },
 ];
 
 const MASTER_INSTRUMENT_PROCESS_ID = 10;
@@ -394,10 +394,10 @@ const EquipmentMasterPanel = () => {
     canPerformActivity === true &&
     permissionsLoading === false;
 
-  const isInstrumentEditable = isImported || isStageEditable(50);
-  const isHodEditable = isImported || isStageEditable(51);
-  const isQaReviewEditable = isImported || isStageEditable(52);
-  const isCancellationEditable = isImported || isStageEditable(54);
+  const isInstrumentEditable = isImported || isStageEditable(51);
+  const isHodEditable = isImported || isStageEditable(52);
+  const isQaReviewEditable = isImported || isStageEditable(53);
+  const isCancellationEditable = isImported || isStageEditable(55);
 
   /* ───────── Profile ───────── */
   useEffect(() => {
@@ -877,7 +877,7 @@ const EquipmentMasterPanel = () => {
             stages={workflowStages}
             activeStageId={activeStageId}
             loading={workflowLoading}
-            cancelledStageId={54}
+            cancelledStageId={55}
           />
 
           <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
@@ -1104,7 +1104,7 @@ const EquipmentMasterPanel = () => {
 
         {/* ─── TAB 2: HOD REVIEW ─── */}
         <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
-          <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
+          <SectionHeader title="HOD / Designee Review " />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item name="hodReviewComments" label="Comments" className="!mb-4 md:col-span-2">
               <FormTextArea

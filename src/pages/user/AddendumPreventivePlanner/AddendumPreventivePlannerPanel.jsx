@@ -49,11 +49,11 @@ const MONTHS = [
 ];
 
 const TABS = [
-  { id: "general", label: "General Information", stageId: 55 },
-  { id: "hod", label: "HOD / Designee Review", stageId: 56 },
-  { id: "qa-review", label: "QA Approval Review", stageId: 57 },
-  { id: "activity", label: "Activity Log", stageId: 58 },
-  { id: "cancellation", label: "Cancellation", stageId: 59 },
+  { id: "general", label: "General Information", stageId: 56 },
+  { id: "hod", label: "HOD / Designee Review", stageId: 57 },
+  { id: "qa-review", label: "QA Approval Review", stageId: 58 },
+  { id: "activity", label: "Activity Log", stageId: 59 },
+  { id: "cancellation", label: "Cancellation", stageId: 60 },
 ];
 
 const REQUIRED_FIELDS = [
@@ -216,10 +216,10 @@ const AddendumPreventivePlannerPanel = () => {
     canPerformActivity === true &&
     permissionsLoading === false;
 
-  const isGeneralEditable = isStageEditable(55);
-  const isHodEditable = isStageEditable(56);
-  const isQaReviewEditable = isStageEditable(57);
-  const isCancellationEditable = isStageEditable(59);
+  const isGeneralEditable = isStageEditable(56);
+  const isHodEditable = isStageEditable(57);
+  const isQaReviewEditable = isStageEditable(58);
+  const isCancellationEditable = isStageEditable(60);
 
   // 👇 NEW — Child creation gate (Close Done = stage 58, initiator only)
   const canCreateChild =
@@ -765,7 +765,7 @@ const AddendumPreventivePlannerPanel = () => {
     );
   }
 
-  const isCancellationStageActive = Number(activeStageId) === 59;
+  const isCancellationStageActive = Number(activeStageId) === 60;
 
   const visibleTabs = isCancellationStageActive
     ? TABS.filter((tab) => tab.id === "cancellation")
@@ -778,7 +778,7 @@ const AddendumPreventivePlannerPanel = () => {
           stages={workflowStages}
           activeStageId={activeStageId}
           loading={workflowLoading}
-          cancelledStageId={59}
+          cancelledStageId={60}
         />
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
           <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">

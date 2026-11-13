@@ -335,7 +335,7 @@ const UnCreateCalibration = () => {
 
             const payload = {
                 process_id: Number(processId),
-                stage_id: 70,
+                stage_id: 71,
                 department_id: departmentId,
                 initiator_id: initiatorId,
                 initiator_name: initiator,

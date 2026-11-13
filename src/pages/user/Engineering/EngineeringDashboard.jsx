@@ -11,6 +11,7 @@ import {
 } from "../../../services/usersApi/calibrationApi";
 import { getAllCalibrationPlannerRecords } from "../../../services/usersApi/dashboardAllApi";
 import { useAuthStore } from "../../../store/authStore";
+import NotificationAlertModal from "../Notification/NotificationAlertModal";
 
 const { RangePicker } = DatePicker;
 
@@ -393,6 +394,8 @@ const EngineeringDashboard = () => {
 
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white">
+              <NotificationAlertModal />
+              
             {/* DARK SECONDARY ACTION BAR */}
             <DashboardActionBar
                 title="Engineering Dashboard"

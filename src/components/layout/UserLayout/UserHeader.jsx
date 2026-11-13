@@ -4,18 +4,75 @@ import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "../../../store/authStore";
 import { useNavigate } from "react-router-dom";
 import SessionTimer from "../../common/SessionTimer/SessionTimer";
+import { getRecordNotifications } from "../../../services/usersApi/workflowCommonApi";
+
+const POLL_INTERVAL_MS = 60_000; // refresh every 60s
 
 const UserHeader = ({
-    notificationCount = 3,
+    // optional override — if not provided, the header fetches live count
+    notificationCount: notificationCountOverride,
 }) => {
     const user = useAuthStore((state) => state.user);
     const navigate = useNavigate();
     const [showProfile, setShowProfile] = useState(false);
     const dropdownRef = useRef(null);
 
+    const [pendingCount, setPendingCount] = useState(0);
+
     const userName = user?.name;
     const userRole = user?.roles?.[0];
+    const initial = userName?.charAt(0)?.toUpperCase() || "A";
 
+    const notificationCount =
+        notificationCountOverride !== undefined
+            ? notificationCountOverride
+            : pendingCount;
+
+    /* ==============================================================
+       LIVE PENDING NOTIFICATION COUNT
+       - fetch on mount
+       - re-fetch when tab regains focus
+       - poll every 60s as a fallback
+    ============================================================== */
+    useEffect(() => {
+        let cancelled = false;
+
+        const fetchCount = async () => {
+            try {
+                const res = await getRecordNotifications({
+                    status: "pending",
+                    page: 1,
+                    per_page: 1,
+                });
+
+                const total = Number(res?.data?.data?.total) || 0;
+
+                if (!cancelled) setPendingCount(total);
+            } catch (err) {
+                // silent — keep last known count
+                if (import.meta?.env?.DEV) {
+                    console.warn("Notification count fetch failed:", err?.message);
+                }
+            }
+        };
+
+        fetchCount();
+
+        const onFocus = () => fetchCount();
+        window.addEventListener("focus", onFocus);
+
+        const interval = setInterval(fetchCount, POLL_INTERVAL_MS);
+
+        return () => {
+            cancelled = true;
+            window.removeEventListener("focus", onFocus);
+            clearInterval(interval);
+        };
+    }, []);
+
+    /* ==============================================================
+       CLICK OUTSIDE PROFILE DROPDOWN
+    ============================================================== */
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (
@@ -27,12 +84,9 @@ const UserHeader = ({
         };
 
         document.addEventListener("mousedown", handleClickOutside);
-
         return () =>
             document.removeEventListener("mousedown", handleClickOutside);
     }, []);
-
-    const initial = userName?.charAt(0)?.toUpperCase() || "A";
 
     return (
         <header
@@ -58,80 +112,31 @@ const UserHeader = ({
                 ====================================================== */}
                 <div className="flex h-full min-w-0 items-center">
 
-                    {/* SHILPA */}
                     <button
                         type="button"
                         onClick={() => navigate("/user/cmms-dashboard")}
                         aria-label="Go to CMMS dashboard"
-                        className="
-                            group
-                            flex
-                            h-full
-                            shrink-0
-                            items-center
-                            rounded-none
-                            border-0
-                            bg-transparent
-                            pr-4
-                        "
+                        className="group flex h-full shrink-0 items-center rounded-none border-0 bg-transparent pr-4"
                     >
                         <img
                             src="/shilpaimage.png"
                             alt="Shilpa Logo"
-                            className="
-                                h-[43px]
-                                w-auto
-                                max-w-[215px]
-                                cursor-pointer
-                                object-contain
-                                transition-transform
-                                duration-200
-                                group-hover:scale-[1.015]
-                            "
+                            className="h-[43px] w-auto max-w-[215px] cursor-pointer object-contain transition-transform duration-200 group-hover:scale-[1.015]"
                         />
                     </button>
 
-                    {/* BRAND DIVIDER */}
-                    <div
-                        className="
-                            hidden
-                            h-[34px]
-                            w-px
-                            bg-[#C9CDC7]
-                            lg:block
-                        "
-                    />
+                    <div className="hidden h-[34px] w-px bg-[#C9CDC7] lg:block" />
 
-                    {/* VIDYA GXP */}
                     <button
                         type="button"
                         onClick={() => navigate("/user/cmms-dashboard")}
                         aria-label="Go to CMMS dashboard"
-                        className="
-                            group
-                            flex
-                            h-full
-                            shrink-0
-                            items-center
-                            rounded-none
-                            border-0
-                            bg-transparent
-                            pl-4
-                        "
+                        className="group flex h-full shrink-0 items-center rounded-none border-0 bg-transparent pl-4"
                     >
                         <img
                             src="/vidyagxp_logo.png"
                             alt="VidyaGxP"
-                            className="
-                                h-[43px]
-                                w-auto
-                                max-w-[215px]
-                                cursor-pointer
-                                object-contain
-                                transition-transform
-                                duration-200
-                                group-hover:scale-[1.015]
-                            "
+                            className="h-[43px] w-auto max-w-[215px] cursor-pointer object-contain transition-transform duration-200 group-hover:scale-[1.015]"
                         />
                     </button>
                 </div>
@@ -142,21 +147,7 @@ const UserHeader = ({
                 <div className="flex shrink-0 items-center gap-2 sm:gap-3">
 
                     {/* SESSION TIMER */}
-                    <div
-                        className="
-                            hidden
-                            items-center
-                            rounded-[10px]
-                            border
-                            border-[#D6D8D3]
-                            bg-[#F7F6F2]
-                            px-1
-                            py-1
-                            text-[#53615F]
-                            shadow-[0_1px_5px_rgba(36,50,56,0.035)]
-                            sm:flex
-                        "
-                    >
+                    <div className="hidden items-center rounded-[10px] border border-[#D6D8D3] bg-[#F7F6F2] px-1 py-1 text-[#53615F] shadow-[0_1px_5px_rgba(36,50,56,0.035)] sm:flex">
                         <SessionTimer />
                     </div>
 
@@ -164,7 +155,11 @@ const UserHeader = ({
                     <button
                         type="button"
                         onClick={() => navigate("/user/notification-list")}
-                        aria-label={`Notifications (${notificationCount} unread)`}
+                        aria-label={
+                            notificationCount > 0
+                                ? `Notifications, ${notificationCount} pending`
+                                : "Notifications"
+                        }
                         className="
                             relative flex h-[42px] w-[42px] items-center justify-center
                             rounded-[11px] border border-[#D6D8D3] bg-[#F7F6F2]
@@ -176,97 +171,41 @@ const UserHeader = ({
                         <Bell size={18} strokeWidth={1.8} />
 
                         {notificationCount > 0 && (
-                            <span className="
-                                absolute right-[5px] top-[5px] h-[8px] w-[8px]
-                                rounded-full border-2 border-[#F7F6F2] bg-[#A47D45]
-                            " />
+                            <span
+                                className="
+                                    absolute -right-1 -top-1 flex h-[18px] min-w-[18px]
+                                    items-center justify-center rounded-full border-2
+                                    border-[#F1F0EB] bg-[#A47D45] px-1
+                                    text-[9px] font-bold leading-none text-white
+                                    shadow-[0_1px_3px_rgba(164,125,69,0.45)]
+                                "
+                            >
+                                {notificationCount > 99 ? "99+" : notificationCount}
+                            </span>
                         )}
                     </button>
 
-                    {/* DIVIDER */}
                     <div className="mx-1 hidden h-[30px] w-px bg-[#D1D4CF] sm:block" />
 
                     {/* USER PROFILE */}
-                    <div
-                        ref={dropdownRef}
-                        className="relative"
-                    >
+                    <div ref={dropdownRef} className="relative">
                         <button
                             type="button"
-                            onClick={() => setShowProfile((value) => !value)}
+                            onClick={() => setShowProfile((v) => !v)}
                             aria-expanded={showProfile}
                             aria-haspopup="menu"
-                            className="
-                                group
-                                flex
-                                items-center
-                                gap-2.5
-                                rounded-[12px]
-                                border
-                                border-transparent
-                                bg-transparent
-                                px-2
-                                py-1.5
-                                transition-all
-                                duration-200
-                                hover:border-[#D6D8D3]
-                                hover:bg-[#F7F6F2]
-                            "
+                            className="group flex items-center gap-2.5 rounded-[12px] border border-transparent bg-transparent px-2 py-1.5 transition-all duration-200 hover:border-[#D6D8D3] hover:bg-[#F7F6F2]"
                         >
-                            {/* AVATAR */}
-                            <div
-                                className="
-                                    relative
-                                    flex
-                                    h-[39px]
-                                    w-[39px]
-                                    shrink-0
-                                    items-center
-                                    justify-center
-                                    rounded-[11px]
-                                    border
-                                    border-[#B8C7C0]
-                                    bg-[#DCE7E2]
-                                    text-[13px]
-                                    font-bold
-                                    text-[#29433C]
-                                "
-                            >
+                            <div className="relative flex h-[39px] w-[39px] shrink-0 items-center justify-center rounded-[11px] border border-[#B8C7C0] bg-[#DCE7E2] text-[13px] font-bold text-[#29433C]">
                                 <span>{initial}</span>
-
-                                {/* ONLINE */}
-                                <span
-                                    className="
-                                        absolute
-                                        bottom-[-1px]
-                                        right-[-1px]
-                                        h-[10px]
-                                        w-[10px]
-                                        rounded-full
-                                        border-2
-                                        border-[#F1F0EB]
-                                        bg-[#56766D]
-                                    "
-                                />
+                                <span className="absolute bottom-[-1px] right-[-1px] h-[10px] w-[10px] rounded-full border-2 border-[#F1F0EB] bg-[#56766D]" />
                             </div>
 
-                            {/* USER DETAILS */}
                             <div className="hidden min-w-0 text-left sm:block">
                                 <div className="flex items-center gap-1.5">
-                                    <p
-                                        className="
-                                            max-w-[145px]
-                                            truncate
-                                            text-[13px]
-                                            font-semibold
-                                            leading-tight
-                                            tracking-[-0.01em]
-                                            text-[#243238]
-                                        "
-                                    >
+                                    <p className="max-w-[145px] truncate text-[13px] font-semibold leading-tight tracking-[-0.01em] text-[#243238]">
                                         {userName}
                                     </p>
-
                                     <ShieldCheck
                                         size={12}
                                         strokeWidth={2}
@@ -274,41 +213,20 @@ const UserHeader = ({
                                     />
                                 </div>
 
-                                <p
-                                    className="
-                                        mt-1
-                                        max-w-[145px]
-                                        truncate
-                                        text-[11px]
-                                        font-medium
-                                        leading-none
-                                        text-[#7B8584]
-                                    "
-                                >
+                                <p className="mt-1 max-w-[145px] truncate text-[11px] font-medium leading-none text-[#7B8584]">
                                     {userRole}
                                 </p>
                             </div>
 
-                            {/* CHEVRON */}
                             <ChevronDown
                                 size={15}
                                 strokeWidth={1.8}
-                                className={`
-                                    hidden
-                                    text-[#7B8584]
-                                    transition-transform
-                                    duration-200
-                                    sm:block
-                                    ${
-                                        showProfile
-                                            ? "rotate-180 text-[#56766D]"
-                                            : ""
-                                    }
-                                `}
+                                className={`hidden text-[#7B8584] transition-transform duration-200 sm:block ${
+                                    showProfile ? "rotate-180 text-[#56766D]" : ""
+                                }`}
                             />
                         </button>
 
-                        {/* PROFILE MENU */}
                         <ProfileMenu
                             isOpen={showProfile}
                             userName={userName}

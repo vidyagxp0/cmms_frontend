@@ -32,6 +32,22 @@ const computeError = (masterVal, uucVal) => {
     return String(rounded);
 };
 
+// Split mode: only the 2nd fields are used.
+// Fallback: if only the 1st fields are populated → "NA".
+const computeSplitError = (row) => {
+    const has = (v) => v !== undefined && v !== null && String(v).trim() !== "";
+
+    if (has(row.masterInstrumentReadings2) && has(row.unitUnderCalibrationReading2)) {
+        return computeError(row.masterInstrumentReadings2, row.unitUnderCalibrationReading2);
+    }
+    if (has(row.masterInstrumentReadings1) && has(row.unitUnderCalibrationReading1)) {
+        return "NA";
+    }
+    return "";
+};
+
+
+
 const GridSymbolicInput = ({ value, onCommit, ...rest }) => {
     const onCommitRef = useRef(onCommit);
     useEffect(() => {
@@ -155,40 +171,46 @@ const UserDynamicGrid = ({
         });
     }, [rows, columns]);
 
-    // 👇 errorIn toggle follows the reading toggles
     useEffect(() => {
-        const masterOn = !!columnToggles["masterInstrumentReadings"];
-        const uucOn = !!columnToggles["unitUnderCalibrationReading"];
-        const shouldSplit = masterOn || uucOn;
-        if (columnToggles["errorIn"] === shouldSplit) return;
-        setColumnToggles(prev => ({ ...prev, errorIn: shouldSplit }));
-    }, [columnToggles]);
+    if (!rows.length) return;
 
-    // 👇 recompute errorIn / errorIn1 / errorIn2 whenever rows change (handles backend-loaded data)
-    useEffect(() => {
-        if (!rows.length) return;
-        let needsUpdate = false;
-        const updated = rows.map(row => {
-            const newRow = { ...row };
-            const single = computeError(row.masterInstrumentReadings, row.unitUnderCalibrationReading);
-            if ((row.errorIn ?? "") !== single) {
-                newRow.errorIn = single;
-                needsUpdate = true;
-            }
-            const s1 = computeError(row.masterInstrumentReadings1, row.unitUnderCalibrationReading1);
-            if ((row.errorIn1 ?? "") !== s1) {
-                newRow.errorIn1 = s1;
-                needsUpdate = true;
-            }
-            const s2 = computeError(row.masterInstrumentReadings2, row.unitUnderCalibrationReading2);
-            if ((row.errorIn2 ?? "") !== s2) {
-                newRow.errorIn2 = s2;
-                needsUpdate = true;
-            }
-            return newRow;
-        });
-        if (needsUpdate) onChangeRef.current?.(updated);
-    }, [rows]);
+    const splitActive =
+        !!columnToggles["masterInstrumentReadings"] ||
+        !!columnToggles["unitUnderCalibrationReading"];
+
+    let needsUpdate = false;
+
+    const updated = rows.map((row) => {
+        const newRow = { ...row };
+
+        const nextError = splitActive
+            ? computeSplitError(row)
+            : computeError(
+                  row.masterInstrumentReadings,
+                  row.unitUnderCalibrationReading
+              );
+
+        if ((row.errorIn ?? "") !== nextError) {
+            newRow.errorIn = nextError;
+            needsUpdate = true;
+        }
+
+        // Drop any legacy split-error values left over from earlier sessions
+        if (newRow.errorIn1) {
+            newRow.errorIn1 = "";
+            needsUpdate = true;
+        }
+        if (newRow.errorIn2) {
+            newRow.errorIn2 = "";
+            needsUpdate = true;
+        }
+
+        return newRow;
+    });
+
+    if (needsUpdate) onChangeRef.current?.(updated);
+}, [rows, columnToggles]);
+
 
     // ---- Modal state ----
     const [toggleModalState, setToggleModalState] = useState({ open: false, columnKey: null });
@@ -260,70 +282,65 @@ const UserDynamicGrid = ({
         onChange?.(updatedRows);
     };
 
-    const handleSplitChange = (rowIndex, fieldKey, newValue) => {
-        if (isReadOnly) return;
-        const updatedRows = rows.map((row, index) => {
-            if (index !== rowIndex) return row;
-            const newRow = { ...row, [fieldKey]: newValue };
-            if (fieldKey === "masterInstrumentReadings1" || fieldKey === "unitUnderCalibrationReading1") {
-                newRow.errorIn1 = computeError(newRow.masterInstrumentReadings1, newRow.unitUnderCalibrationReading1);
-            }
-            if (fieldKey === "masterInstrumentReadings2" || fieldKey === "unitUnderCalibrationReading2") {
-                newRow.errorIn2 = computeError(newRow.masterInstrumentReadings2, newRow.unitUnderCalibrationReading2);
-            }
-            return newRow;
-        });
-        onChange?.(updatedRows);
-    };
+const handleSplitChange = (rowIndex, fieldKey, newValue) => {
+    if (isReadOnly) return;
+
+    const updatedRows = rows.map((row, index) => {
+        if (index !== rowIndex) return row;
+
+        const newRow = { ...row, [fieldKey]: newValue };
+
+        if (
+            fieldKey === "masterInstrumentReadings1" ||
+            fieldKey === "masterInstrumentReadings2" ||
+            fieldKey === "unitUnderCalibrationReading1" ||
+            fieldKey === "unitUnderCalibrationReading2"
+        ) {
+            newRow.errorIn = computeSplitError(newRow);
+        }
+
+        return newRow;
+    });
+
+    onChange?.(updatedRows);
+};
 
     // ---- Toggle switch handler with confirmation ----
     const handleToggleChange = (checked, columnKey) => {
-        if (isReadOnly) return;
+    if (isReadOnly) return;
 
-        if (!checked) {
-            const col = columns.find(c => c.key === columnKey);
-            const hasData = rows.some(row =>
-                col.splitFields.some(field => row[field.key] && row[field.key] !== '')
-            );
-            if (hasData) {
-                setToggleModalState({ open: true, columnKey });
-                return;
-            }
+    if (!checked) {
+        const col = columns.find((c) => c.key === columnKey);
+        const hasData = rows.some((row) =>
+            col.splitFields.some((field) => row[field.key] && row[field.key] !== "")
+        );
+        if (hasData) {
+            setToggleModalState({ open: true, columnKey });
+            return;
         }
-        setColumnToggles(prev => ({ ...prev, [columnKey]: checked }));
+    }
 
-        // 👇 no split data to clear → recompute single error right away
-        if (!checked && (columnKey === "masterInstrumentReadings" || columnKey === "unitUnderCalibrationReading")) {
-            const updatedRows = rows.map(row => ({
-                ...row,
-                errorIn1: "",
-                errorIn2: "",
-                errorIn: computeError(row.masterInstrumentReadings, row.unitUnderCalibrationReading),
-            }));
-            onChange?.(updatedRows);
-        }
-    };
+    // Effect above will recompute errorIn when this state changes
+    setColumnToggles((prev) => ({ ...prev, [columnKey]: checked }));
+};
 
-    const handleConfirmToggleOff = () => {
-        const { columnKey } = toggleModalState;
-        const col = columns.find(c => c.key === columnKey);
-        const updatedRows = rows.map(row => {
-            const newRow = { ...row };
-            col.splitFields.forEach(field => {
-                newRow[field.key] = "";
-            });
-            // 👇 reading column turned off → clear split errors, recompute single error
-            if (columnKey === "masterInstrumentReadings" || columnKey === "unitUnderCalibrationReading") {
-                newRow.errorIn1 = "";
-                newRow.errorIn2 = "";
-                newRow.errorIn = computeError(newRow.masterInstrumentReadings, newRow.unitUnderCalibrationReading);
-            }
-            return newRow;
+
+const handleConfirmToggleOff = () => {
+    const { columnKey } = toggleModalState;
+    const col = columns.find((c) => c.key === columnKey);
+
+    const updatedRows = rows.map((row) => {
+        const newRow = { ...row };
+        col.splitFields.forEach((field) => {
+            newRow[field.key] = "";
         });
-        onChange?.(updatedRows);
-        setColumnToggles(prev => ({ ...prev, [columnKey]: false }));
-        setToggleModalState({ open: false, columnKey: null });
-    };
+        return newRow;
+    });
+
+    onChange?.(updatedRows);
+    setColumnToggles((prev) => ({ ...prev, [columnKey]: false }));
+    setToggleModalState({ open: false, columnKey: null });
+};
 
     const handleCancelToggleOff = () => {
         setToggleModalState({ open: false, columnKey: null });

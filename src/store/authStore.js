@@ -26,6 +26,7 @@ export const useAuthStore = create((set) => ({
         sessionStorage.removeItem("user_token");
         sessionStorage.removeItem("auth_type");
         sessionStorage.removeItem("session_start_time");
+        sessionStorage.removeItem("vgxp_notification_modal_shown");
 
         set({
             user: null,

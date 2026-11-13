@@ -95,7 +95,12 @@ const Login = () => {
       sessionStorage.setItem("auth_type", apiUser.role_type);
 
       setUser(user);
-
+      // 🔔 Reset notification alert modal so it shows on first dashboard load this session
+        try {
+          sessionStorage.removeItem("vgxp_notification_modal_shown");
+        } catch (_) {
+          /* ignore */
+        }
       toast.success("Login successful");
 
       navigate(isAdmin ? "/admin/dashboard" : "/user/engineering-dashboard", {

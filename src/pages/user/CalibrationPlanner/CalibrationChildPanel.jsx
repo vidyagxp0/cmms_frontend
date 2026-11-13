@@ -34,6 +34,7 @@ import {
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
 import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import MasterInstrumentsGrid from "./MasterInstrumentsGrid";
 
 const TABS = [
   { id: "management", label: "General Information", stageId: 18 },
@@ -135,7 +136,7 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
   const otherFields = [
     "shortDescription", "instrumentName", "instrumentId", "location", "make", "model",
     "instrumentRange", "leastCount", "accuracy", "calibrationTestPoints", "operatingRange",
-    "envTemperature", "envHumidity", "previousCalibrationDate", "nextCalibrationDate",
+    "envTemperature", "envHumidity", "previousCalibrationDate", "nextCalibrationDate","remarks",
     "comments", "attachment",
     "implementorComments", "implementorAttachment",
     "qaReviewComments", "qaReviewAttachment"
@@ -157,6 +158,7 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
     previousCalibrationDate: "Previous Calibration Date",
     nextCalibrationDate: "Next Calibration Date",
     comments: "Comments",
+    remarks: "Remarks",
     attachment: "Attachment",
     implementorComments: "HOD / Designee Review Comments",
     implementorAttachment: "HOD / Designee Review Attachment",
@@ -216,6 +218,7 @@ const CalibrationChildPanel = () => {
   const [shortDescription, setShortDescription] = useState("");
   const [calibrationResultRows, setCalibrationResultRows] = useState([]);
   const [calibrationResultTest, setCalibrationResultTest] = useState([]);
+  const [masterData, setMasterData] = useState([]);
   const [parentId, setParentId] = useState(null);
 
   // Keep both string (for payload) and dayjs (for grid)
@@ -224,6 +227,8 @@ const CalibrationChildPanel = () => {
 
   const [formInitialValues, setFormInitialValues] = useState({});
   const [formReady, setFormReady] = useState(false);
+
+  const remarksValue = Form.useWatch('remarks', form); // Add this line
 
   const isFetchingRef = useRef(false);
 
@@ -330,6 +335,7 @@ const CalibrationChildPanel = () => {
       setActiveStageId(data?.stage?.id || data?.stage_id || null);
       setProcessName(data?.process?.name || "");
       setParentId(data?.parent_id || null);
+      setMasterData(Array.isArray(data?.master_data) ? data.master_data : []);
 
       const processData = data?.process_data || [];
       const recNum = getProcessValue(processData, "recordNumber");
@@ -359,6 +365,7 @@ const CalibrationChildPanel = () => {
       const implementorAttachment = getProcessValue(processData, "implementorAttachment") || getProcessValue(processData, "implementor_review_attachment");
       const qaReviewComments = getProcessValue(processData, "qaReviewComments") || getProcessValue(processData, "qa_review_comments");
       const qaReviewAttachment = getProcessValue(processData, "qaReviewAttachment") || getProcessValue(processData, "qa_review_attachment");
+      const remarks = getProcessValue(processData, "remarks");
 
       setRecordNumber(recNum || "");
       setInitiator(backendInitiatorName);
@@ -394,6 +401,7 @@ const CalibrationChildPanel = () => {
         qaReviewer: "",
         qaApproval: "",
         comments: comments || "",
+        remarks: remarks || null,
         attachment: Array.isArray(attachment) ? attachment : [],
         implementorComments: implementorComments || "",
         implementorAttachment: Array.isArray(implementorAttachment) ? implementorAttachment : [],
@@ -867,46 +875,77 @@ const CalibrationChildPanel = () => {
               rowKey="_rowId"
             />
           </div>
-          <div className="mt-4">
-            <UserDynamicGrid
-              name="Master Instruments Details"
-              columns={CALIBRATION_RESULT_GRID}
-              value={calibrationResultTest}
-              onChange={handleCalibrationTestChange}
-              allowAdd={isManagementEditable}
-              allowDelete={isManagementEditable}
-              disabled={!isManagementEditable}
-              addButtonLabel="Add Parameter"
-              minRows={0}
-              maxRows={2}
-              rowKey="_rowId"
-            />
-          </div>
+    <div className="mt-4">
+  <MasterInstrumentsGrid
+    name="Master Instruments Details"
+    masterData={masterData}
+    value={calibrationResultTest}
+    onChange={handleCalibrationTestChange}
+    allowAdd={isManagementEditable}
+    allowDelete={isManagementEditable}
+    disabled={!isManagementEditable}
+    addButtonLabel="Add Parameter"
+    minRows={0}
+  />
+</div>
           
           <div className="my-9 h-px w-full bg-slate-200" />
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item
-            name="comments"
-            label={
-              <span className="inline-flex items-center">
-                Comments
-                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
-              </span>
-            }
-            className="!mb-4 md:col-span-2">
-              <FormTextArea rows={4} placeholder="Additional comments..." disabled={!isManagementEditable} />
-            </Form.Item>
-            <Form.Item name="attachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
-              <FormAttachment
-                multiple={true}
-                recordId={recordId}
-                attachmentField="attachment"
-                label="Attachment"
-                uploadApi={addMultipleAttachments}
-                disabled={!isManagementEditable}
-              />
-            </Form.Item>
-          </div>
+      
+      <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+  {/* REMARKS FIELD */}
+  <Form.Item 
+    name="remarks" 
+    label="Remarks" 
+    className="!mb-4 md:col-span-2"
+    rules={[{ required: true, message: 'Please select Pass or Fail' }]}
+    extra={
+      remarksValue === "Pass" ? (
+        <span className="text-[12px] font-medium text-slate-600 mt-1 block">
+          Remarks: The Calibration Results found within of specified accuracy and calibration of instruments
+        </span>
+      ) : remarksValue === "Fail" ? (
+        <span className="text-[12px] font-medium text-slate-600 mt-1 block">
+          Remarks: The Calibration Results found out of specified accuracy and calibration of instruments
+        </span>
+      ) : null
+    }
+  >
+    <FormSelect
+      placeholder="PASS/FAIL"
+      options={[
+        { value: "Pass", label: "PASS" },
+        { value: "Fail", label: "FAIL" },
+      ]}
+      disabled={!isManagementEditable}
+    />
+  </Form.Item>
+
+  {/* COMMENTS FIELD (REVERTED TO ORIGINAL) */}
+  <Form.Item
+    name="comments"
+    label={
+      <span className="inline-flex items-center">
+        Comments
+        <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+      </span>
+    }
+    className="!mb-4 md:col-span-2"
+  >
+    <FormTextArea rows={4} placeholder="Additional comments..." disabled={!isManagementEditable} />
+  </Form.Item>
+  
+  <Form.Item name="attachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
+    <FormAttachment
+      multiple={true}
+      recordId={recordId}
+      attachmentField="attachment"
+      label="Attachment"
+      uploadApi={addMultipleAttachments}
+      disabled={!isManagementEditable}
+    />
+  </Form.Item>
+</div>
+
         </section>
 
         {/* Implementor tab */}

@@ -27,7 +27,6 @@ const MONTHS = [
   { key: "dec", label: "December" },
 ];
 
-/* 👇 UPDATED: Use normalized lowercase values */
 const FREQUENCY_OPTIONS = [
   { value: "monthly", label: "Monthly" },
   { value: "quarterly", label: "Quarterly" },
@@ -37,7 +36,17 @@ const FREQUENCY_OPTIONS = [
   { value: "five-yearly", label: "Five Yearly" },
 ];
 
-/* -------------------- Frequency helpers -------------------- */
+/* ---------- Frequency interval in months ---------- */
+const FREQUENCY_INTERVAL_MONTHS = {
+  monthly: 1,
+  quarterly: 3,
+  "half-yearly": 6,
+  yearly: 12,
+  "two-yearly": 24,
+  "five-yearly": 60,
+};
+
+/* ---------- Frequency helpers (unchanged) ---------- */
 export const FREQUENCY_PRIORITY = { Y: 4, Q: 3, H: 2, M: 1 };
 
 export const FREQUENCY_LABEL_BY_CODE = {
@@ -75,7 +84,6 @@ const extractFrequencyTokens = (raw) => {
 };
 
 export const getRowBiggestFrequency = (row) => {
-  /* 👇 NEW: If the user selected a frequency in the dropdown, return it immediately */
   if (row?.frequency) {
     return { code: row.frequency, label: row.frequency };
   }
@@ -109,6 +117,35 @@ export const createEmptyWeeklyData = () => {
     data[`${key}_executed`] = "";
   });
   return data;
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   FREQUENCY-DRIVEN ACTIVE MONTHS
+   ═══════════════════════════════════════════════════════════════
+   Returns null when all 12 months should be editable (no frequency,
+   monthly frequency, or no anchor date entered yet). Otherwise
+   returns the array of month indices that remain editable.
+   The anchor is the first (earliest) month with a planned date.
+*/
+const getActiveMonthIndices = (row) => {
+  const frequency = row?.frequency;
+  if (!frequency || frequency === "monthly") return null;
+
+  const interval = FREQUENCY_INTERVAL_MONTHS[frequency];
+  if (!interval) return null;
+
+  let anchorIdx = null;
+  for (let i = 0; i < 12; i++) {
+    if (row[`${MONTHS[i].key}_planned`]) {
+      anchorIdx = i;
+      break;
+    }
+  }
+  if (anchorIdx === null) return null;
+
+  const indices = [];
+  for (let i = anchorIdx; i < 12; i += interval) indices.push(i);
+  return indices;
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -340,6 +377,32 @@ const PreventiveGrid = ({
     onChange([...rows, newRow]);
   };
 
+  /* ---------- Duplicate row for a different frequency (MOM Point 2) ---------- */
+  const handleDuplicateForFrequency = useCallback(
+    (rowIndex) => {
+      if (disabled) return;
+      if (maxRows !== undefined && rows.length >= maxRows) return;
+
+      const sourceRow = rowsRef.current[rowIndex];
+      if (!sourceRow) return;
+
+      const newRow = {
+        ...sourceRow,
+        frequency: "",
+        remark: "",
+      };
+      MONTHS.forEach((m) => {
+        newRow[`${m.key}_planned`] = "";
+        newRow[`${m.key}_executed`] = "";
+      });
+
+      const updated = [...rowsRef.current];
+      updated.splice(rowIndex + 1, 0, newRow);
+      onChange(updated);
+    },
+    [disabled, maxRows, rows.length, onChange]
+  );
+
   const handleDeleteRow = (rowIndex) => {
     if (disabled) return;
     if (rows.length <= minRows) return;
@@ -406,7 +469,65 @@ const PreventiveGrid = ({
           row.make = "";
           row.model = "";
         }
-      } else {
+            } else if (key === "frequency") {
+        row.frequency = newValue;
+
+        /* Recalculate the planned schedule when frequency changes.
+           Monthly (interval = 1) is included so the whole year auto-fills. */
+        const interval = FREQUENCY_INTERVAL_MONTHS[newValue];
+        if (interval) {
+          let anchorIdx = null;
+          for (let i = 0; i < 12; i++) {
+            if (row[`${MONTHS[i].key}_planned`]) {
+              anchorIdx = i;
+              break;
+            }
+          }
+          if (anchorIdx !== null) {
+            const anchorDate = dayjs(row[`${MONTHS[anchorIdx].key}_planned`]);
+            MONTHS.forEach((m) => {
+              row[`${m.key}_planned`] = "";
+            });
+            row[`${MONTHS[anchorIdx].key}_planned`] = anchorDate.format(
+              "YYYY-MM-DD"
+            );
+            for (let i = anchorIdx + interval; i < 12; i += interval) {
+              row[`${MONTHS[i].key}_planned`] = anchorDate
+                .add(i - anchorIdx, "month")
+                .format("YYYY-MM-DD");
+            }
+          }
+        }
+
+            } else if (key.endsWith("_planned")) {
+        row[key] = newValue;
+
+        /* Auto-fill subsequent months when the anchor (first filled) date
+           is set. Works for monthly too, so the whole year cascades. */
+        const interval = FREQUENCY_INTERVAL_MONTHS[row.frequency];
+        if (interval && newValue) {
+          const monthKey = key.replace("_planned", "");
+          const monthIndex = MONTHS.findIndex((m) => m.key === monthKey);
+
+          let anchorIdx = null;
+          for (let i = 0; i < 12; i++) {
+            if (row[`${MONTHS[i].key}_planned`]) {
+              anchorIdx = i;
+              break;
+            }
+          }
+
+          if (anchorIdx === monthIndex) {
+            const anchorDate = dayjs(newValue);
+            for (let i = anchorIdx + interval; i < 12; i += interval) {
+              row[`${MONTHS[i].key}_planned`] = anchorDate
+                .add(i - anchorIdx, "month")
+                .format("YYYY-MM-DD");
+            }
+          }
+        }
+      }
+       else {
         row[key] = newValue;
       }
 
@@ -488,14 +609,21 @@ const PreventiveGrid = ({
     );
   };
 
+  /* Frequency-driven disable state for date cells */
   const renderDateField = (row, key, rowIndex) => {
     const val = row[key];
+    const [monthKey] = key.split("_");
+    const monthIndex = MONTHS.findIndex((m) => m.key === monthKey);
+    const activeIndices = getActiveMonthIndices(row);
+    const isRestricted =
+      activeIndices !== null && !activeIndices.includes(monthIndex);
+
     return (
       <DateCell
         rowIndex={rowIndex}
         fieldKey={key}
         value={val || ""}
-        disabled={disabled}
+        disabled={disabled || isRestricted}
         updateRow={updateRow}
       />
     );
@@ -606,7 +734,7 @@ const PreventiveGrid = ({
                   {viewChildLabel}
                 </th>
               )}
-              <th className="w-[60px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
+              <th className="w-[90px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
                 Action
               </th>
             </tr>
@@ -762,15 +890,30 @@ const PreventiveGrid = ({
                       rowSpan={2}
                       className="border border-[#D5DFDB] px-2 py-1 text-center align-middle"
                     >
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteRow(rowIndex)}
-                        disabled={disabled || rows.length <= minRows}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
-                        aria-label="Delete row"
-                      >
-                        <Trash2 size={14} strokeWidth={1.8} />
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicateForFrequency(rowIndex)}
+                          disabled={
+                            disabled ||
+                            (maxRows !== undefined && rows.length >= maxRows)
+                          }
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#4E7585] transition-all duration-200 hover:bg-[#EAF0F4] hover:text-[#2B5577] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
+                          title="Add another frequency for this equipment"
+                          aria-label="Add another frequency for this equipment"
+                        >
+                          <Plus size={14} strokeWidth={2} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRow(rowIndex)}
+                          disabled={disabled || rows.length <= minRows}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
+                          aria-label="Delete row"
+                        >
+                          <Trash2 size={14} strokeWidth={1.8} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
 

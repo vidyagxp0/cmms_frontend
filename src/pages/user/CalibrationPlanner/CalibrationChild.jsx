@@ -161,125 +161,142 @@ const CalibrationChild = () => {
 }, [passedAllMasterData]);
 
 
-  useEffect(() => {
-    let isMounted = true;
+useEffect(() => {
+  let isMounted = true;
 
+  if (!rowData) {
+    toast.error("No data provided for this calibration item.");
+    setIsLoading(false);
+    setEquipmentLoading(false);
+    setUsersLoading(false);
+    navigate(-1);
+    return;
+  }
 
-    if (!rowData) {
-      toast.error("No data provided for this calibration item.");
-      navigate(-1);
-      return;
-    }
+  const loadInitialData = async () => {
+    setIsLoading(true);
+    setEquipmentLoading(true);
+    setUsersLoading(true);
 
-    const loadInitialData = async () => {
-      setIsLoading(true);
-      setEquipmentLoading(true);
-      setUsersLoading(true);
+    let profileName = "";
+    let profileId = "";
+    let profileDeptId = "";
+    let profileDeptName = "";
+    const now = dayjs().format("DD/MM/YYYY HH:mm:ss");
+    let recNum = "";
 
-      try {
-        const [profileRes, recordNumRes, equipmentRes, usersRes] = await Promise.allSettled([
-          getProfile(),
-          processId ? getRecordNumber(processId) : Promise.resolve(null),
-          getAllEquipmentData(),
-          getCalibrationUser(),
-        ]);
+    try {
+      const [profileRes, recordNumRes, equipmentRes, usersRes] = await Promise.allSettled([
+        getProfile(),
+        processId ? getRecordNumber(processId) : Promise.resolve(null),
+        getAllEquipmentData(),
+        getCalibrationUser(),
+      ]);
 
-        if (!isMounted) return;
+      if (!isMounted) return;
 
-        let profileName = "";
-        let profileId = "";
-        let profileDeptId = "";
-        let profileDeptName = "";
-        const now = dayjs().format("DD/MM/YYYY HH:mm:ss");
-        let recNum = "";
-
-        if (profileRes.status === "fulfilled" && profileRes.value?.data?.data) {
-          const profile = profileRes.value.data.data;
-          profileName = profile?.name || "";
-          profileId = profile?.id || "";
-          profileDeptId = profile?.department?.id || "";
-          profileDeptName = profile?.department?.name || "";
-          setInitiator(profileName);
-          setInitiatorId(profileId);
-          setDepartmentId(profileDeptId);
-          setInitiationDepartment(profileDeptName);
-          setDateOfInitiation(now);
-        }
-
-        if (recordNumRes.status === "fulfilled" && recordNumRes.value?.data?.data) {
-          recNum = recordNumRes.value.data.data.record_number || "";
-          setRecordNumber(recNum);
-        } else if (recordNumRes.status === "rejected") {
-          console.error("Failed to fetch record number:", recordNumRes.reason);
-        }
-
-        if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
-          const data = equipmentRes.value.data.data || [];
-          const options = data.map((item) => ({ value: item.id, label: item.instrument_name || item.name || "" }));
-          const map = {};
-          data.forEach((item) => { map[item.id] = item; });
-          setEquipmentOptions(options);
-          setEquipmentMap(map);
-        } else if (equipmentRes.status === "rejected") {
-          console.error("Failed to fetch equipment:", equipmentRes.reason);
-        }
-
-        if (usersRes.status === "fulfilled" && usersRes.value?.data?.data) {
-          const data = usersRes.value.data.data || {};
-          setHodUsers(data?.hod || []);
-          setQaReviewers(data?.qa_reviewer || []);
-          setQaApprovers(data?.qa_approver || []);
-        } else if (usersRes.status === "rejected") {
-          console.error("Failed to fetch calibration users:", usersRes.reason);
-        }
-
-        // ✅ Build values
-        const values = {
-          documentNumber: "SMLJ/ENG/SOP-GEN/005/F08-02",
-          documentType: "Formats",
-          recordNumber: recNum,
-          initiator: rowData.initiator || profileName,
-          dateOfInitiation: rowData.dateOfInitiation || now,
-          initiationDepartment: rowData.initiationDepartment || profileDeptName,
-          shortDescription: rowData.shortDescription || parentShortDesc || "",
-          instrumentName: rowData.equipmentInstrumentName || rowData.instrumentName || "",
-          instrumentId: rowData.equipmentInstrumentId || rowData.instrumentId || "",
-          location: rowData.location || "",
-          make: rowData.make || "",
-          model: rowData.model || "",
-          instrumentRange: rowData.instrumentrange || rowData.instrumentRange || "",
-          leastCount: rowData.leastCount || "",
-          accuracy: rowData.accuracy || "",
-          calibrationTestPoints: rowData.calibrationTestPoints || "",
-          operatingRange: rowData.operatingrange || rowData.operatingRange || "",
-          envTemperature: rowData.envTemperature || "",
-          envHumidity: rowData.envHumidity || "",
-          previousCalibrationDate: toDayjs(rowData.previousCalibrationDate || rowData.plannedDate),
-          nextCalibrationDate: toDayjs(rowData.nextCalibrationDate || rowData.calibrationDoneDate),
-          comments: rowData.comments || "",
-          attachment: rowData.attachment || [],
-        };
-
-        setFormInitialValues(values);
-        setCalibrationResultRows(rowData.calibrationResultRows || []);
-        setCalibrationResultTest(rowData.calibrationResultTest || []);
-      } catch (error) {
-        console.error("❌ Failed to load initial data:", error);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-          setEquipmentLoading(false);
-          setUsersLoading(false);
-        }
+      // ---------- Profile ----------
+      if (profileRes.status === "fulfilled" && profileRes.value?.data?.data) {
+        const profile = profileRes.value.data.data;
+        profileName = profile?.name || "";
+        profileId = profile?.id || "";
+        profileDeptId = profile?.department?.id || "";
+        profileDeptName = profile?.department?.name || "";
+        setInitiator(profileName);
+        setInitiatorId(profileId);
+        setDepartmentId(profileDeptId);
+        setInitiationDepartment(profileDeptName);
+        setDateOfInitiation(now);
+      } else if (profileRes.status === "rejected") {
+        console.error("Failed to fetch profile:", profileRes.reason);
       }
-    };
 
-    loadInitialData();
+      // ---------- Record Number ----------
+      if (recordNumRes.status === "fulfilled" && recordNumRes.value?.data?.data) {
+        recNum = recordNumRes.value.data.data.record_number || "";
+        setRecordNumber(recNum);
+      } else if (recordNumRes.status === "rejected") {
+        console.error("Failed to fetch record number:", recordNumRes.reason);
+      }
 
-    return () => {
-      isMounted = false;
-    };
-  }, [rowData, processId, parentShortDesc, navigate, location.state]);
+      // ---------- Equipment (guarded) ----------
+      if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
+        const raw = equipmentRes.value.data.data;
+        const data = Array.isArray(raw) ? raw : [];
+        const options = data.map((item) => ({
+          value: item?.id,
+          label: item?.instrument_name || item?.name || "",
+        }));
+        const map = {};
+        data.forEach((item) => {
+          if (item?.id) map[item.id] = item;
+        });
+        setEquipmentOptions(options);
+        setEquipmentMap(map);
+      } else if (equipmentRes.status === "rejected") {
+        console.error("Failed to fetch equipment:", equipmentRes.reason);
+      }
+
+      // ---------- Users (guarded) ----------
+      if (usersRes.status === "fulfilled" && usersRes.value?.data?.data) {
+        const data = usersRes.value.data.data || {};
+        setHodUsers(Array.isArray(data?.hod) ? data.hod : []);
+        setQaReviewers(Array.isArray(data?.qa_reviewer) ? data.qa_reviewer : []);
+        setQaApprovers(Array.isArray(data?.qa_approver) ? data.qa_approver : []);
+      } else if (usersRes.status === "rejected") {
+        console.error("Failed to fetch calibration users:", usersRes.reason);
+      }
+    } catch (error) {
+      console.error("❌ Failed to load initial data (unexpected):", error);
+    } finally {
+      if (!isMounted) return;
+
+      // ✅ Always build + set values — even if some APIs failed
+      const values = {
+        documentNumber: "SMLJ/ENG/SOP-GEN/005/F08-02",
+        documentType: "Formats",
+        recordNumber: recNum,
+        initiator: rowData?.initiator || profileName,
+        dateOfInitiation: rowData?.dateOfInitiation || now,
+        initiationDepartment: rowData?.initiationDepartment || profileDeptName,
+        shortDescription: rowData?.shortDescription || parentShortDesc || "",
+        instrumentName: rowData?.equipmentInstrumentName || rowData?.instrumentName || "",
+        instrumentId: rowData?.equipmentInstrumentId || rowData?.instrumentId || "",
+        location: rowData?.location || "",
+        make: rowData?.make || "",
+        model: rowData?.model || "",
+        instrumentRange: rowData?.instrumentrange || rowData?.instrumentRange || "",
+        leastCount: rowData?.leastCount || "",
+        accuracy: rowData?.accuracy || "",
+        calibrationTestPoints: rowData?.calibrationTestPoints || "",
+        operatingRange: rowData?.operatingrange || rowData?.operatingRange || "",
+        envTemperature: rowData?.envTemperature || "",
+        envHumidity: rowData?.envHumidity || "",
+        previousCalibrationDate: toDayjs(rowData?.previousCalibrationDate || rowData?.plannedDate),
+        nextCalibrationDate: toDayjs(rowData?.nextCalibrationDate || rowData?.calibrationDoneDate),
+        comments: rowData?.comments || "",
+        attachment: rowData?.attachment || [],
+      };
+
+      setFormInitialValues(values);
+      setCalibrationResultRows(Array.isArray(rowData?.calibrationResultRows) ? rowData.calibrationResultRows : []);
+      setCalibrationResultTest(Array.isArray(rowData?.calibrationResultTest) ? rowData.calibrationResultTest : []);
+
+      setIsLoading(false);
+      setEquipmentLoading(false);
+      setUsersLoading(false);
+    }
+  };
+
+  loadInitialData();
+
+  return () => {
+    isMounted = false;
+  };
+  // ✅ Removed `location.state` — it isn't referentially stable and caused
+  // the last in-flight load to be discarded.
+}, [rowData, processId, parentShortDesc, navigate]);
+
 
   const handleTabChange = (tabId) => {
     if (tabId !== "management") {

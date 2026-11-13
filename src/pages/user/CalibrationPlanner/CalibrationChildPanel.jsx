@@ -51,6 +51,23 @@ const ATTACHMENT_KEYS = [
   "qaReviewAttachment",
 ];
 
+/** Safe array coercion: returns `value` if it's already an array, `[]` otherwise. */
+const asArray = (value) => (Array.isArray(value) ? value : []);
+
+/** Extract an array from a variety of common API wrapper shapes. */
+const extractArray = (raw) => {
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw?.results)) return raw.results;
+  if (Array.isArray(raw?.items)) return raw.items;
+  if (raw && typeof raw === "object") {
+    // Log unexpected shapes once so they're easy to spot in DevTools.
+    // eslint-disable-next-line no-console
+    console.warn("Unexpected array response shape:", raw);
+  }
+  return [];
+};
+
 const getProcessValue = (processData = [], key) => {
   if (Array.isArray(processData)) {
     const field = processData.find((item) => item?.key === key);
@@ -99,7 +116,7 @@ const toDayjs = (val) => {
 
 // Build row payload for a single grid (without wrapping in name)
 const buildGridRows = (rows = []) => {
-  return rows.map((row, index) => {
+  return asArray(rows).map((row, index) => {
     const rowData = { row_id: index + 1 };
     Object.keys(row).forEach((key) => {
       if (key.startsWith("_")) return;
@@ -119,11 +136,11 @@ const buildGridPayload = (calibrationRows, testRows) => {
 };
 
 const getUserPair = (userId, users) => {
-  const user = users.find((u) => String(u.id) === String(userId));
+  const user = asArray(users).find((u) => String(u.id) === String(userId));
   return { id: user?.id || userId || "", name: user?.name || "" };
 };
 
-const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprovers) => {
+const buildProcessData = (values, systemValues) => {
   const systemFields = [
     { key: "documentNumber", label: "Document Number" },
     { key: "documentType", label: "Document Type" },
@@ -132,15 +149,21 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
     { key: "dateOfInitiation", label: "Date of Initiation" },
     { key: "initiationDepartment", label: "Initiation Department" },
   ];
-  const baseData = systemFields.map((field) => ({ key: field.key, label: field.label, value: systemValues[field.key] || "" }));
+  const baseData = systemFields.map((field) => ({
+    key: field.key,
+    label: field.label,
+    value: systemValues[field.key] || "",
+  }));
+
   const otherFields = [
     "shortDescription", "instrumentName", "instrumentId", "location", "make", "model",
     "instrumentRange", "leastCount", "accuracy", "calibrationTestPoints", "operatingRange",
-    "envTemperature", "envHumidity", "previousCalibrationDate", "nextCalibrationDate","remarks",
+    "envTemperature", "envHumidity", "previousCalibrationDate", "nextCalibrationDate", "remarks",
     "comments", "attachment",
     "implementorComments", "implementorAttachment",
-    "qaReviewComments", "qaReviewAttachment"
+    "qaReviewComments", "qaReviewAttachment",
   ];
+
   const labelMap = {
     shortDescription: "Short Description",
     instrumentName: "Equipment / Instrument Name",
@@ -165,6 +188,7 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
     qaReviewComments: "QA Review Comments",
     qaReviewAttachment: "QA Review Attachment",
   };
+
   otherFields.forEach((key) => {
     let value = values[key] !== undefined && values[key] !== null ? values[key] : "";
     if (ATTACHMENT_KEYS.includes(key)) {
@@ -174,6 +198,7 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
     }
     baseData.push({ key, label: labelMap[key] || key, value });
   });
+
   return baseData;
 };
 
@@ -228,18 +253,24 @@ const CalibrationChildPanel = () => {
   const [formInitialValues, setFormInitialValues] = useState({});
   const [formReady, setFormReady] = useState(false);
 
-  const remarksValue = Form.useWatch('remarks', form); // Add this line
+  const remarksValue = Form.useWatch("remarks", form);
 
   const isFetchingRef = useRef(false);
 
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
 
-  const STAGE_IDS = { management: 19, implementor: 20,  qaApproval: 21 };
+  const STAGE_IDS = { management: 19, implementor: 20, qaApproval: 21 };
 
-  const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
+  const isStageEditable = (stageId) =>
+    Number(activeStageId) === Number(stageId) &&
+    canPerformActivity === true &&
+    permissionsLoading === false;
+
   const isManagementEditable = isStageEditable(STAGE_IDS.management);
   const isImplementorEditable = isStageEditable(STAGE_IDS.implementor);
   const isQaApprovalEditable = isStageEditable(STAGE_IDS.qaApproval);
+  // QA Review tab shares the same stage as QA Approval in this workflow.
+  const isQaReviewEditable = isQaApprovalEditable;
 
   useEffect(() => {
     if (!isLoading && formReady && formInitialValues && Object.keys(formInitialValues).length > 0) {
@@ -261,44 +292,60 @@ const CalibrationChildPanel = () => {
     fetchProfile();
   }, []);
 
+  // ✅ FIXED: guard against non-array response shapes
   useEffect(() => {
     const fetchEquipment = async () => {
       try {
         setEquipmentLoading(true);
         const response = await getAllEquipmentData();
-        const data = response?.data?.data || [];
+        const raw = response?.data?.data;
+        const data = extractArray(raw);
+
         const options = data.map((item) => ({
           value: item.id,
           label: item.instrument_name || item.name || `Instrument ${item.id}`,
         }));
+
         const map = {};
-        data.forEach((item) => { map[item.id] = item; });
+        data.forEach((item) => {
+          if (item?.id !== undefined && item?.id !== null) {
+            map[item.id] = item;
+          }
+        });
+
         setEquipmentOptions(options);
         setEquipmentMap(map);
       } catch (error) {
         console.error("Failed to fetch equipment:", error);
         toast.error("Could not load equipment list.");
-      } finally { setEquipmentLoading(false); }
+        setEquipmentOptions([]);
+        setEquipmentMap({});
+      } finally {
+        setEquipmentLoading(false);
+      }
     };
     fetchEquipment();
   }, []);
 
+  // ✅ FIXED: guard each list
   useEffect(() => {
     const fetchCalibrationUsers = async () => {
       try {
         setUsersLoading(true);
         const response = await getCalibrationUser();
         const data = response?.data?.data || {};
-        setHodUsers(data?.hod || []);
-        setQaReviewers(data?.qa_reviewer || []);
-        setQaApprovers(data?.qa_approver || []);
+        setHodUsers(asArray(data?.hod));
+        setQaReviewers(asArray(data?.qa_reviewer));
+        setQaApprovers(asArray(data?.qa_approver));
       } catch (error) {
         console.error("Failed to fetch calibration users:", error);
         toast.error(error?.response?.data?.message || "Failed to load workflow users.");
         setHodUsers([]);
         setQaReviewers([]);
         setQaApprovers([]);
-      } finally { setUsersLoading(false); }
+      } finally {
+        setUsersLoading(false);
+      }
     };
     fetchCalibrationUsers();
   }, []);
@@ -334,7 +381,7 @@ const CalibrationChildPanel = () => {
       setActiveStageId(data?.stage?.id || data?.stage_id || null);
       setProcessName(data?.process?.name || "");
       setParentId(data?.parent_id || null);
-      setMasterData(Array.isArray(data?.master_data) ? data.master_data : []);
+      setMasterData(asArray(data?.master_data));
 
       const processData = data?.process_data || [];
       const recNum = getProcessValue(processData, "recordNumber");
@@ -360,10 +407,18 @@ const CalibrationChildPanel = () => {
       const nextCalDate = getProcessValue(processData, "nextCalibrationDate");
       const comments = getProcessValue(processData, "comments");
       const attachment = getProcessValue(processData, "attachment");
-      const implementorComments = getProcessValue(processData, "implementorComments") || getProcessValue(processData, "implementor_review_comments");
-      const implementorAttachment = getProcessValue(processData, "implementorAttachment") || getProcessValue(processData, "implementor_review_attachment");
-      const qaReviewComments = getProcessValue(processData, "qaReviewComments") || getProcessValue(processData, "qa_review_comments");
-      const qaReviewAttachment = getProcessValue(processData, "qaReviewAttachment") || getProcessValue(processData, "qa_review_attachment");
+      const implementorComments =
+        getProcessValue(processData, "implementorComments") ||
+        getProcessValue(processData, "implementor_review_comments");
+      const implementorAttachment =
+        getProcessValue(processData, "implementorAttachment") ||
+        getProcessValue(processData, "implementor_review_attachment");
+      const qaReviewComments =
+        getProcessValue(processData, "qaReviewComments") ||
+        getProcessValue(processData, "qa_review_comments");
+      const qaReviewAttachment =
+        getProcessValue(processData, "qaReviewAttachment") ||
+        getProcessValue(processData, "qa_review_attachment");
       const remarks = getProcessValue(processData, "remarks");
 
       setRecordNumber(recNum || "");
@@ -401,17 +456,16 @@ const CalibrationChildPanel = () => {
         qaApproval: "",
         comments: comments || "",
         remarks: remarks || null,
-        attachment: Array.isArray(attachment) ? attachment : [],
+        attachment: asArray(attachment),
         implementorComments: implementorComments || "",
-        implementorAttachment: Array.isArray(implementorAttachment) ? implementorAttachment : [],
+        implementorAttachment: asArray(implementorAttachment),
         qaReviewComments: qaReviewComments || "",
-        qaReviewAttachment: Array.isArray(qaReviewAttachment) ? qaReviewAttachment : [],
+        qaReviewAttachment: asArray(qaReviewAttachment),
       };
 
       setFormInitialValues(formData);
       form.setFieldsValue(formData);
 
-      // ✅ Convert QA verified date to both string and dayjs
       const qaVerifiedDateStr = getQaVerifiedDate(data?.qaVerifiedAt);
       const qaVerifiedDayjs = qaVerifiedDateStr
         ? dayjs(qaVerifiedDateStr, "DD/MM/YYYY")
@@ -419,19 +473,23 @@ const CalibrationChildPanel = () => {
       setCalibrationDoneDate(qaVerifiedDateStr);
       setCalibrationDoneDayjs(qaVerifiedDayjs);
 
-      const gridRecords = data?.grid_records || [];
-      const allGridData = gridRecords.flatMap((rec) => rec?.grid_data || []);
+      const gridRecords = asArray(data?.grid_records);
+      const allGridData = gridRecords.flatMap((rec) => asArray(rec?.grid_data));
       const calibrationRows = [];
       const testRows = [];
 
       allGridData.forEach((gridEntry) => {
-        if (!gridEntry || !gridEntry.rows) return;
+        if (!gridEntry) return;
         const { name, rows } = gridEntry;
-        const plainRows = rows.map((row) => {
+        const plainRows = asArray(rows).map((row) => {
           const plainRow = {};
           Object.keys(row).forEach((key) => {
             if (key === "row_id") plainRow.row_id = row.row_id;
-            else if (row[key] && typeof row[key] === "object" && Object.prototype.hasOwnProperty.call(row[key], "value")) {
+            else if (
+              row[key] &&
+              typeof row[key] === "object" &&
+              Object.prototype.hasOwnProperty.call(row[key], "value")
+            ) {
               plainRow[key] = row[key].value;
             } else {
               plainRow[key] = row[key];
@@ -449,7 +507,7 @@ const CalibrationChildPanel = () => {
 
       setCalibrationResultRows(calibrationRows);
 
-      // ✅ Pass dayjs objects for date cells so DatePicker can render them
+      // Pass dayjs objects for date cells so DatePicker can render them
       setCalibrationResultTest(
         testRows.map((row) => ({
           ...row,
@@ -470,36 +528,42 @@ const CalibrationChildPanel = () => {
 
   useEffect(() => { fetchChildDetail(true); }, [fetchChildDetail]);
 
+  // ✅ FIXED: guard stages array
   useEffect(() => {
     if (!processId) return;
     const fetchStages = async () => {
       try {
         setWorkflowLoading(true);
         const response = await getAllStages(processId);
-        const stages = response?.data?.data || [];
+        const stages = asArray(response?.data?.data);
         setWorkflowStages(stages.filter((stage) => stage?.is_active !== false));
       } catch (error) {
         console.error("Failed to fetch workflow stages:", error);
         toast.error(error?.response?.data?.message || "Failed to load workflow stages.");
         setWorkflowStages([]);
-      } finally { setWorkflowLoading(false); }
+      } finally {
+        setWorkflowLoading(false);
+      }
     };
     fetchStages();
   }, [processId]);
 
+  // ✅ FIXED: guard activities array
   useEffect(() => {
     if (!activeStageId) { setActivities([]); setActivitiesLoading(false); return; }
     const fetchActivities = async () => {
       try {
         setActivitiesLoading(true);
         const response = await getAllActivites(activeStageId);
-        const activityList = response?.data?.data || [];
+        const activityList = asArray(response?.data?.data);
         setActivities(activityList.filter((activity) => activity?.is_active !== false));
       } catch (error) {
         console.error("Failed to fetch activities:", error);
         toast.error(error?.response?.data?.message || "Failed to load activities.");
         setActivities([]);
-      } finally { setActivitiesLoading(false); }
+      } finally {
+        setActivitiesLoading(false);
+      }
     };
     fetchActivities();
   }, [activeStageId]);
@@ -515,21 +579,26 @@ const CalibrationChildPanel = () => {
       console.error("Failed to fetch permissions:", error);
       setCanPerformActivity(false);
       toast.error(error?.response?.data?.message || "Failed to check activity permissions.");
-    } finally { setPermissionsLoading(false); }
+    } finally {
+      setPermissionsLoading(false);
+    }
   }, [recordId]);
 
+  // ✅ FIXED: guard activity logs array
   const fetchActivityLogs = useCallback(async () => {
     if (!recordId) { setActivityLogs([]); return; }
     try {
       setActivityLogsLoading(true);
       const response = await getAllActivityLogs(recordId, processId);
-      setActivityLogs(response?.data?.data || []);
+      setActivityLogs(asArray(response?.data?.data));
     } catch (error) {
       console.error("Failed to fetch activity history:", error);
       toast.error(error?.response?.data?.message || "Failed to load activity history.");
       setActivityLogs([]);
-    } finally { setActivityLogsLoading(false); }
-  }, [recordId]);
+    } finally {
+      setActivityLogsLoading(false);
+    }
+  }, [recordId, processId]);
 
   useEffect(() => { fetchActivityLogs(); }, [fetchActivityLogs]);
   useEffect(() => { fetchPermissions(); }, [fetchPermissions]);
@@ -545,11 +614,10 @@ const CalibrationChildPanel = () => {
     setActiveTab(tabId);
   };
 
-  // ✅ Use the dayjs version so grid renders the disabled DatePicker correctly
   const handleCalibrationTestChange = useCallback(
     (rows = []) => {
       setCalibrationResultTest(
-        rows.map((row) =>
+        asArray(rows).map((row) =>
           calibrationDoneDayjs
             ? { ...row, calibrationdoneDATE: calibrationDoneDayjs }
             : row
@@ -587,88 +655,56 @@ const CalibrationChildPanel = () => {
   };
 
   const handleSaveBeforeActivity = async () => {
-  if (
-    isSaving ||
-    isLoading ||
-    usersLoading ||
-    !recordId
-  ) {
-    return false;
-  }
-
-  // Preserve the existing required-field validation.
-  const values = form.getFieldsValue(true);
-
-  const missing = REQUIRED_FIELDS.filter((field) => {
-    const value = values[field.name];
-
-    if (typeof value === "string") {
-      return !value.trim();
-    }
-
-    return (
-      value === undefined ||
-      value === null ||
-      value === ""
-    );
-  });
-
-  if (missing.length > 0) {
-    const names = missing.map((field) => field.label).join(", ");
-
-    toast.error(`Required fields missing: ${names}`);
-
-    form.setFields(
-      missing.map((field) => ({
-        name: field.name,
-        errors: [`${field.label} is required`],
-      }))
-    );
-
-    setActiveTab("management");
-    return false;
-  }
-
-  try {
-    // Validate Ant Design form fields before saving.
-    const validatedValues = await form.validateFields();
-
-    // The activity can proceed only when the update API succeeds.
-    return await handleSubmit(validatedValues);
-  } catch (error) {
-    // Validation failed; do not execute the activity.
-    if (error?.errorFields) {
-      const firstError = error.errorFields[0];
-
-      // NEW: Show toast for the validation error
-      if (firstError?.errors?.[0]) {
-        toast.error(firstError.errors[0]);
-      }
-
-      if (firstError?.name?.length) {
-        const fieldName = firstError.name[0];
-        if (
-          ["implementorComments", "implementorAttachment"].includes(
-            fieldName
-          )
-        ) {
-          setActiveTab("implementor");
-        } else if (
-          ["qaReviewComments", "qaReviewAttachment"].includes(
-            fieldName
-          )
-        ) {
-          setActiveTab("qa-review");
-        } else {
-          setActiveTab("management");
-        }
-      }
+    if (isSaving || isLoading || usersLoading || !recordId) {
       return false;
     }
-    console.error("Save before activity failed:", error);
-    return false;
-  }
-};
+
+    const values = form.getFieldsValue(true);
+
+    const missing = REQUIRED_FIELDS.filter((field) => {
+      const value = values[field.name];
+      if (typeof value === "string") return !value.trim();
+      return value === undefined || value === null || value === "";
+    });
+
+    if (missing.length > 0) {
+      const names = missing.map((field) => field.label).join(", ");
+      toast.error(`Required fields missing: ${names}`);
+      form.setFields(
+        missing.map((field) => ({
+          name: field.name,
+          errors: [`${field.label} is required`],
+        }))
+      );
+      setActiveTab("management");
+      return false;
+    }
+
+    try {
+      const validatedValues = await form.validateFields();
+      return await handleSubmit(validatedValues);
+    } catch (error) {
+      if (error?.errorFields) {
+        const firstError = error.errorFields[0];
+        if (firstError?.errors?.[0]) {
+          toast.error(firstError.errors[0]);
+        }
+        if (firstError?.name?.length) {
+          const fieldName = firstError.name[0];
+          if (["implementorComments", "implementorAttachment"].includes(fieldName)) {
+            setActiveTab("implementor");
+          } else if (["qaReviewComments", "qaReviewAttachment"].includes(fieldName)) {
+            setActiveTab("qa-review");
+          } else {
+            setActiveTab("management");
+          }
+        }
+        return false;
+      }
+      console.error("Save before activity failed:", error);
+      return false;
+    }
+  };
 
   const handleSubmit = async (values) => {
     if (isSaving || !recordId) return;
@@ -676,7 +712,7 @@ const CalibrationChildPanel = () => {
       setIsSaving(true);
       const allFormValues = form.getFieldsValue(true);
       const mergedValues = { ...allFormValues, ...values };
-      const processData = buildProcessData(mergedValues, systemValues, hodUsers, qaReviewers, qaApprovers);
+      const processData = buildProcessData(mergedValues, systemValues);
       const gridData = buildGridPayload(calibrationResultRows, calibrationResultTest);
 
       const payload = {
@@ -686,7 +722,9 @@ const CalibrationChildPanel = () => {
         initiator_id: Number(initiatorId),
         initiator_name: initiator,
         short_description: mergedValues.shortDescription || "",
-        initiation_date: dayjs(mergedValues.dateOfInitiation || dateOfInitiation).format("DD/MM/YYYY HH:mm"),
+        initiation_date: dayjs(mergedValues.dateOfInitiation || dateOfInitiation).format(
+          "DD/MM/YYYY HH:mm"
+        ),
         process_data: processData,
         gridData: gridData,
         checklistData: [],
@@ -699,18 +737,19 @@ const CalibrationChildPanel = () => {
         await fetchPermissions();
         await fetchActivityLogs();
         return true;
-      } else {
-        toast.error(response?.data?.message || "Failed to update child calibration.");
-        return false;
       }
+      toast.error(response?.data?.message || "Failed to update child calibration.");
+      return false;
     } catch (error) {
       console.error("Update failed:", error);
       toast.error(error?.response?.data?.message || "Failed to update child calibration.");
       return false;
-    } finally { setIsSaving(false); }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleActivitySuccess = async (response, selectedActivity) => {
+  const handleActivitySuccess = async () => {
     try {
       await fetchChildDetail();
       await fetchPermissions();
@@ -737,13 +776,22 @@ const CalibrationChildPanel = () => {
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
-        <ProcessStage stages={workflowStages} activeStageId={activeStageId} loading={workflowLoading} cancelledStageId={23}  />
+        <ProcessStage
+          stages={workflowStages}
+          activeStageId={activeStageId}
+          loading={workflowLoading}
+          cancelledStageId={23}
+        />
         <div className="flex flex-col gap-2 rounded-xl border border-[#DCE8E2] bg-white p-2 shadow-[0_3px_14px_rgba(21,44,32,0.04)] lg:flex-row lg:items-center">
           <div className="flex min-w-0 shrink-0 items-center gap-4 rounded-lg bg-[#F7FAF8] px-3 py-2 lg:w-[40%]">
             <div className="h-7 w-px shrink-0 bg-[#DCE8E2]" />
             <div className="min-w-0 flex-1">
-              <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">Process</p>
-              <p className="truncate text-[11px] font-semibold text-[#344A43]">{processName || "—"}</p>
+              <p className="mb-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8A9992]">
+                Process
+              </p>
+              <p className="truncate text-[11px] font-semibold text-[#344A43]">
+                {processName || "—"}
+              </p>
             </div>
           </div>
           <div className="min-w-0 flex-1">
@@ -783,29 +831,42 @@ const CalibrationChildPanel = () => {
         }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
-        {/* Management tab - always mounted */}
+        {/* Management tab */}
         <section style={{ display: activeTab === "management" ? "block" : "none" }}>
           <SectionHeader title="SYSTEM INFORMATION" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="documentNumber" label="Document Number" className="!mb-4"><FormDisabledInput /></Form.Item>
-            <Form.Item name="documentType" label="Document Type" className="!mb-4"><FormDisabledInput /></Form.Item>
-            <Form.Item name="recordNumber" label="Record Number" className="!mb-4"><FormDisabledInput /></Form.Item>
-            <Form.Item name="initiator" label="Initiator" className="!mb-4"><FormDisabledInput /></Form.Item>
-            <Form.Item name="dateOfInitiation" label="Date of Initiation" className="!mb-4"><FormDisabledInput /></Form.Item>
-            <Form.Item name="initiationDepartment" label="Initiation Department" className="!mb-4"><FormDisabledInput /></Form.Item>
-            <Form.Item 
-            name="shortDescription"
-             label={
-              <span className="inline-flex items-center">
-              Short Description
-              <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
-            </span>
-            }
-            className="!mb-4">
+            <Form.Item name="documentNumber" label="Document Number" className="!mb-4">
+              <FormDisabledInput />
+            </Form.Item>
+            <Form.Item name="documentType" label="Document Type" className="!mb-4">
+              <FormDisabledInput />
+            </Form.Item>
+            <Form.Item name="recordNumber" label="Record Number" className="!mb-4">
+              <FormDisabledInput />
+            </Form.Item>
+            <Form.Item name="initiator" label="Initiator" className="!mb-4">
+              <FormDisabledInput />
+            </Form.Item>
+            <Form.Item name="dateOfInitiation" label="Date of Initiation" className="!mb-4">
+              <FormDisabledInput />
+            </Form.Item>
+            <Form.Item name="initiationDepartment" label="Initiation Department" className="!mb-4">
+              <FormDisabledInput />
+            </Form.Item>
+            <Form.Item
+              name="shortDescription"
+              label={
+                <span className="inline-flex items-center">
+                  Short Description
+                  <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
+                </span>
+              }
+              className="!mb-4"
+            >
               <FormInput placeholder="Enter short description" disabled={!isManagementEditable} />
             </Form.Item>
           </div>
-          
+
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="INSTRUMENT / EQUIPMENT DETAILS" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -856,7 +917,7 @@ const CalibrationChildPanel = () => {
               <SymbolicInput placeholder="e.g. 45% RH ± 5%" defaultDiscipline="Humidity" disabled={!isManagementEditable} />
             </Form.Item>
           </div>
-          
+
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="CALIBRATION RESULT" />
           <div className="mt-4">
@@ -874,77 +935,76 @@ const CalibrationChildPanel = () => {
               rowKey="_rowId"
             />
           </div>
-    <div className="mt-4">
-  <MasterInstrumentsGrid
-    name="Master Instruments Details"
-    masterData={masterData}
-    value={calibrationResultTest}
-    onChange={handleCalibrationTestChange}
-    allowAdd={isManagementEditable}
-    allowDelete={isManagementEditable}
-    disabled={!isManagementEditable}
-    addButtonLabel="Add Parameter"
-    minRows={0}
-  />
-</div>
-          
+          <div className="mt-4">
+            <MasterInstrumentsGrid
+              name="Master Instruments Details"
+              masterData={masterData}
+              value={calibrationResultTest}
+              onChange={handleCalibrationTestChange}
+              allowAdd={isManagementEditable}
+              allowDelete={isManagementEditable}
+              disabled={!isManagementEditable}
+              addButtonLabel="Add Parameter"
+              minRows={0}
+            />
+          </div>
+
           <div className="my-9 h-px w-full bg-slate-200" />
-      
-      <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-  {/* REMARKS FIELD */}
-  <Form.Item 
-    name="remarks" 
-    label="Remarks" 
-    className="!mb-4 md:col-span-2"
-    rules={[{ required: true, message: 'Please select Pass or Fail' }]}
-    extra={
-      remarksValue === "Pass" ? (
-        <span className="text-[12px] font-medium text-slate-600 mt-1 block">
-          Remarks: The Calibration Results found within of specified accuracy and calibration of instruments
-        </span>
-      ) : remarksValue === "Fail" ? (
-        <span className="text-[12px] font-medium text-slate-600 mt-1 block">
-          Remarks: The Calibration Results found out of specified accuracy and calibration of instruments
-        </span>
-      ) : null
-    }
-  >
-    <FormSelect
-      placeholder="PASS/FAIL"
-      options={[
-        { value: "Pass", label: "PASS" },
-        { value: "Fail", label: "FAIL" },
-      ]}
-      disabled={!isManagementEditable}
-    />
-  </Form.Item>
 
-  {/* COMMENTS FIELD (REVERTED TO ORIGINAL) */}
-  <Form.Item
-    name="comments"
-    label={
-      <span className="inline-flex items-center">
-        Comments
-        <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
-      </span>
-    }
-    className="!mb-4 md:col-span-2"
-  >
-    <FormTextArea rows={4} placeholder="Additional comments..." disabled={!isManagementEditable} />
-  </Form.Item>
-  
-  <Form.Item name="attachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
-    <FormAttachment
-      multiple={true}
-      recordId={recordId}
-      attachmentField="attachment"
-      label="Attachment"
-      uploadApi={addMultipleAttachments}
-      disabled={!isManagementEditable}
-    />
-  </Form.Item>
-</div>
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            {/* REMARKS FIELD */}
+            <Form.Item
+              name="remarks"
+              label="Remarks"
+              className="!mb-4 md:col-span-2"
+              rules={[{ required: true, message: "Please select Pass or Fail" }]}
+              extra={
+                remarksValue === "Pass" ? (
+                  <span className="text-[12px] font-medium text-slate-600 mt-1 block">
+                    Remarks: The Calibration Results found within of specified accuracy and calibration of instruments
+                  </span>
+                ) : remarksValue === "Fail" ? (
+                  <span className="text-[12px] font-medium text-slate-600 mt-1 block">
+                    Remarks: The Calibration Results found out of specified accuracy and calibration of instruments
+                  </span>
+                ) : null
+              }
+            >
+              <FormSelect
+                placeholder="PASS/FAIL"
+                options={[
+                  { value: "Pass", label: "PASS" },
+                  { value: "Fail", label: "FAIL" },
+                ]}
+                disabled={!isManagementEditable}
+              />
+            </Form.Item>
 
+            {/* COMMENTS FIELD */}
+            <Form.Item
+              name="comments"
+              label={
+                <span className="inline-flex items-center">
+                  Comments
+                  <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+                </span>
+              }
+              className="!mb-4 md:col-span-2"
+            >
+              <FormTextArea rows={4} placeholder="Additional comments..." disabled={!isManagementEditable} />
+            </Form.Item>
+
+            <Form.Item name="attachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
+              <FormAttachment
+                multiple={true}
+                recordId={recordId}
+                attachmentField="attachment"
+                label="Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isManagementEditable}
+              />
+            </Form.Item>
+          </div>
         </section>
 
         {/* Implementor tab */}
@@ -952,15 +1012,20 @@ const CalibrationChildPanel = () => {
           <SectionHeader title="HOD / DESIGNEE REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
-             name="implementorComments"
-            label={
-              <span className="inline-flex items-center">
-                Comments
-                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
-              </span>
-            }
-            className="!mb-4 md:col-span-2">
-              <FormTextArea rows={5} placeholder="Enter HOD / Designee review comments..." disabled={!isImplementorEditable} />
+              name="implementorComments"
+              label={
+                <span className="inline-flex items-center">
+                  Comments
+                  <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+                </span>
+              }
+              className="!mb-4 md:col-span-2"
+            >
+              <FormTextArea
+                rows={5}
+                placeholder="Enter HOD / Designee review comments..."
+                disabled={!isImplementorEditable}
+              />
             </Form.Item>
             <Form.Item name="implementorAttachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
               <FormAttachment
@@ -980,15 +1045,20 @@ const CalibrationChildPanel = () => {
           <SectionHeader title="QA REVIEW & APPROVAL" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Form.Item
-            name="qaReviewComments"
-            label={
-              <span className="inline-flex items-center">
-                Comments
-                <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
-              </span>
-            }
-            className="!mb-4 md:col-span-2">
-              <FormTextArea rows={5} placeholder="Enter QA review and approval comments..." disabled={!isQaReviewEditable && !isQaApprovalEditable} />
+              name="qaReviewComments"
+              label={
+                <span className="inline-flex items-center">
+                  Comments
+                  <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+                </span>
+              }
+              className="!mb-4 md:col-span-2"
+            >
+              <FormTextArea
+                rows={5}
+                placeholder="Enter QA review and approval comments..."
+                disabled={!isQaReviewEditable && !isQaApprovalEditable}
+              />
             </Form.Item>
             <Form.Item name="qaReviewAttachment" label="Attachment" valuePropName="value" className="!mb-4 md:col-span-2">
               <FormAttachment
@@ -1010,13 +1080,20 @@ const CalibrationChildPanel = () => {
             {activityLogsLoading ? (
               <Skeleton variant="activityLog" />
             ) : activityLogs.length === 0 ? (
-              <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">No activity history found.</div>
+              <div className="rounded-lg border border-[#DCE3EA] bg-white p-5 text-center text-sm text-slate-500">
+                No activity history found.
+              </div>
             ) : (
               activityLogs.map((log) => (
-                <div key={log.id} className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]">
+                <div
+                  key={log.id}
+                  className="rounded-lg border border-[#DCE3EA] bg-white p-5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
+                >
                   <div className="mb-5">
                     <p className="text-[13px] font-semibold text-[#3E4A5C]">Activity Name</p>
-                    <p className="mt-1 text-[14px] font-semibold text-[#182234]">{log.activity_name || "—"}</p>
+                    <p className="mt-1 text-[14px] font-semibold text-[#182234]">
+                      {log.activity_name || "—"}
+                    </p>
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div>
@@ -1034,7 +1111,9 @@ const CalibrationChildPanel = () => {
                     <div>
                       <p className="mb-1 text-[13px] font-semibold text-[#3E4A5C]">Comments</p>
                       <div className="h-11 overflow-y-auto rounded-md border border-[#DCE3EA] bg-[#F3F4F6] px-3 py-2">
-                        <p className="break-words text-[14px] leading-5 text-[#526071]">{log.comment || "—"}</p>
+                        <p className="break-words text-[14px] leading-5 text-[#526071]">
+                          {log.comment || "—"}
+                        </p>
                       </div>
                     </div>
                   </div>

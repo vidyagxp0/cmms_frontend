@@ -52,7 +52,6 @@ const TABS = [
 
 const REQUIRED_FIELDS = [{ name: "shortDescription", label: "Short Description" }];
 
-// Updated labels to perfectly match the new grid structure
 const GRID_LABELS = {
     equipmentName: "Equipment Name",
     instrumentName: "Instrument Name",
@@ -88,7 +87,6 @@ const normalizeGridRows = (rows = [], equipmentMap = {}) => {
                 value = formatDate(value);
             }
             
-            // Map the key to its proper UI label
             rowData[key] = { key, label: GRID_LABELS[key] || key, value };
         });
         return rowData;
@@ -101,7 +99,6 @@ const buildProcessData = (values, systemFields) => [
         label: field.label,
         value: values?.[field.name] || "",
     })),
-    // NEW: master_department & instrumentType
     {
         key: "master_department",
         label: "Select Department",
@@ -120,6 +117,12 @@ const buildProcessData = (values, systemFields) => [
     { key: "area", label: "Area", value: values?.area || "" },
     { key: "hod_review_comments", label: "HOD / Designee Review Comments", value: values?.hodReviewComments || "" },
     { key: "hod_review_attachment", label: "HOD / Designee Review Attachment", value: [] },
+    // 👇 NEW: Select User Department
+    {
+        key: "user_dept_selected_department",
+        label: "Select User Department",
+        value: values?.userDeptSelectedDeptId ? Number(values.userDeptSelectedDeptId) : null,
+    },
     { key: "user_dept_review_comments", label: "User Dept Review Comments", value: values?.userDeptReviewComments || "" },
     { key: "user_dept_review_attachment", label: "User Dept Review Attachment", value: [] },
     { key: "qa_review_comments", label: "QA Review Comments", value: values?.qaReviewComments || "" },
@@ -153,7 +156,7 @@ const InstrumentCalibrationCreate = () => {
     const [hodUsers, setHodUsers] = useState([]);
     const [qaReviewers, setQaReviewers] = useState([]);
 
-    // New Department States
+    // Departments
     const [departments, setDepartments] = useState([]);
     const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
@@ -211,7 +214,7 @@ const InstrumentCalibrationCreate = () => {
                     documentNumber: "SMLJ/ENG/SOP-GEN/005/F15-02",
                     documentType: "Formats",
                     recordNumber: generatedRecordNumber,
-                    // instrumentType: "Field Instrument", // Default value
+                    userDeptSelectedDeptId: null,
                 });
 
                 if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
@@ -333,7 +336,6 @@ const InstrumentCalibrationCreate = () => {
 
     return (
         <div className="w-full min-h-full bg-transparent pb-6">
-            {/* PAGE HEADER */}
             <header className="mb-4 w-full">
                 <div className="flex min-h-[60px] flex-col gap-3 py-1 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex min-w-0 items-center gap-3">
@@ -355,7 +357,6 @@ const InstrumentCalibrationCreate = () => {
                         </div>
                     </div>
 
-                    {/* CONTEXT */}
                     <div className="flex shrink-0 items-center gap-3 rounded-none border-0 bg-transparent px-0 py-0">
                         <div className="flex items-center gap-2 rounded-none bg-transparent px-0 py-0">
                         </div>
@@ -375,12 +376,10 @@ const InstrumentCalibrationCreate = () => {
                 </div>
             </header>
 
-            {/* PROCESS TABS */}
             <div className="mb-5">
                 <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
             </div>
 
-            {/* FORM */}
             <Form
                 form={form}
                 layout="vertical"
@@ -388,7 +387,6 @@ const InstrumentCalibrationCreate = () => {
                 onFinish={handleSubmit}
                 className="w-full [&_.ant-form-item-label>label]:!text-[11px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1 [&_.ant-form-item-explain-error]:!text-[10px]"
             >
-                {/* GENERAL INFORMATION */}
                 {activeTab === "general" && (
                     <>
                         <section className="overflow-hidden bg-transparent shadow-none">
@@ -420,7 +418,6 @@ const InstrumentCalibrationCreate = () => {
                             )}
                         </section>
 
-                        {/* FIELD INSTRUMENT INFORMATION */}
                         <section className="overflow-hidden bg-transparent shadow-none">
                             <SectionHeader title="FIELD INSTRUMENT INFORMATION" />
                             <div className="px-1 pb-1 pt-4">
@@ -435,7 +432,6 @@ const InstrumentCalibrationCreate = () => {
                                         <Input placeholder="Enter Area" />
                                     </Form.Item>
                                     
-                                    {/* NEW FIELDS - DISABLED ON CREATE */}
                                     <Form.Item name="instrumentType" label="Select Instrument Type" className="!mb-3">
                                         <Select
                                             placeholder="Select Instrument Type"
@@ -465,7 +461,6 @@ const InstrumentCalibrationCreate = () => {
                                     </Form.Item>
                                 </div>
 
-                                {/* REUSABLE GRID */}
                                 <div className="mt-1">
                                     <InstrumentCalibrationGrid
                                         name="Addendum Planner Grid"
@@ -478,12 +473,10 @@ const InstrumentCalibrationCreate = () => {
                                     />
                                 </div>
 
-                                {/* COMMENTS */}
                                 <Form.Item name="comments" label="Comments" className="!mb-3 mt-4">
                                     <FormTextArea rows={4} placeholder="Enter comments..." />
                                 </Form.Item>
 
-                                {/* ATTACHMENT */}
                                 <Form.Item name="attachment" label="Attachment" valuePropName="value" className="!mb-0">
                                     <FormAttachment
                                         multiple={true}
@@ -499,7 +492,6 @@ const InstrumentCalibrationCreate = () => {
                     </>
                 )}
 
-                {/* HOD REVIEW */}
                 {activeTab === "hod" && (
                     <section className="overflow-hidden bg-transparent shadow-none">
                         <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
@@ -525,11 +517,36 @@ const InstrumentCalibrationCreate = () => {
                     </section>
                 )}
 
-                {/* USER DEPARTMENT REVIEW */}
+                {/* =====================================================
+                    USER DEPARTMENT REVIEW — 👇 NEW: Select User Department
+                ===================================================== */}
                 {activeTab === "user-dept-review" && (
                     <section className="overflow-hidden bg-transparent shadow-none">
                         <SectionHeader title="USER DEPARTMENT REVIEW (USER DEPT)" />
                         <div className="px-1 pb-1 pt-4">
+                            {/* 👇 NEW: Select User Department before Comments */}
+                            <Form.Item
+                                name="userDeptSelectedDeptId"
+                                label={
+                                    <span className="inline-flex items-center">
+                                        Select User Department
+                                        <RequiredAsterisk message="Please select a user department." />
+                                    </span>
+                                }
+                                className="!mb-4"
+                            >
+                                <Select
+                                    placeholder="Select user department"
+                                    loading={departmentsLoading}
+                                    options={departments.map((dept) => ({
+                                        label: dept.name || "Unnamed Department",
+                                        value: dept.id,
+                                    }))}
+                                    showSearch
+                                    optionFilterProp="label"
+                                    allowClear={false}
+                                />
+                            </Form.Item>
                             <Form.Item name="userDeptReviewComments" label="Comments" className="!mb-4">
                                 <FormTextArea rows={4} placeholder="Enter comments..." />
                             </Form.Item>
@@ -551,7 +568,6 @@ const InstrumentCalibrationCreate = () => {
                     </section>
                 )}
 
-                {/* QA REVIEW */}
                 {activeTab === "qa-review" && (
                     <section className="overflow-hidden bg-transparent shadow-none">
                         <SectionHeader title="QA APPROVAL REVIEW" />
@@ -578,7 +594,6 @@ const InstrumentCalibrationCreate = () => {
                 )}
             </Form>
 
-            {/* FLOATING ACTIONS */}
             <FloatingActionButtons
                 onSave={handleSave}
                 onCancel={handleCancel}

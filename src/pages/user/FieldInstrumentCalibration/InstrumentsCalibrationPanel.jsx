@@ -124,6 +124,12 @@ const buildProcessData = (values, systemFields) => [
   { key: "attachment", label: "Attachment", value: [] },
   { key: "hod_review_comments", label: "HOD / Designee Review Comments", value: values?.hodReviewComments || "" },
   { key: "hod_review_attachment", label: "HOD / Designee Review Attachment", value: [] },
+  // 👇 NEW: Select User Department
+  {
+    key: "user_dept_selected_department",
+    label: "Select User Department",
+    value: values?.userDeptSelectedDeptId ? Number(values.userDeptSelectedDeptId) : null,
+  },
   { key: "user_dept_review_comments", label: "User Dept Review Comments", value: values?.userDeptReviewComments || "" },
   { key: "user_dept_review_attachment", label: "User Dept Review Attachment", value: values?.userDeptReviewAttachment || [] },
   { key: "qa_review_comments", label: "QA Review Comments", value: values?.qaReviewComments || "" },
@@ -260,7 +266,6 @@ const InstrumentCalibrationPanel = () => {
     fetchCalibrationUsers();
   }, []);
 
-  // 👇 UPDATED: Fetch equipment logic (No auto-population)
   useEffect(() => {
     let isCurrent = true;
 
@@ -321,9 +326,6 @@ const InstrumentCalibrationPanel = () => {
         setEquipmentMap(map);
         equipmentMapRef.current = map;
 
-        // 👇 REMOVED: Auto-population of rows
-        // The grid will remain empty until the user clicks "Add Row"
-        
       } catch (error) {
         if (!isCurrent) return;
         console.error("Failed to fetch equipment:", error);
@@ -374,6 +376,8 @@ const InstrumentCalibrationPanel = () => {
         const area = getProcessValue(processData, "area");
         const hodReviewComments = getProcessValue(processData, "hod_review_comments");
         const hodReviewAttachment = getProcessValue(processData, "hod_review_attachment");
+        // 👇 NEW: read User Dept selected department
+        const userDeptSelectedDeptId = getProcessValue(processData, "user_dept_selected_department");
         const userDeptReviewComments = getProcessValue(processData, "user_dept_review_comments");
         const userDeptReviewAttachment = getProcessValue(processData, "user_dept_review_attachment");
         const qaReviewComments = getProcessValue(processData, "qa_review_comments");
@@ -414,6 +418,8 @@ const InstrumentCalibrationPanel = () => {
           attachment: attachment || [],
           hodReviewComments,
           hodReviewAttachment: hodReviewAttachment || [],
+          // 👇 NEW: set User Dept selected department
+          userDeptSelectedDeptId: userDeptSelectedDeptId ? Number(userDeptSelectedDeptId) : null,
           userDeptReviewComments,
           userDeptReviewAttachment: userDeptReviewAttachment || [],
           qaReviewComments,
@@ -931,9 +937,36 @@ const InstrumentCalibrationPanel = () => {
           </div>
         </section>
 
+        {/* =====================================================
+            USER DEPT REVIEW — 👇 NEW: Select User Department
+        ===================================================== */}
         <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
           <SectionHeader title="USER DEPT REVIEW (USER DEPT)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            {/* 👇 NEW: Select User Department before Comments */}
+            <Form.Item
+              name="userDeptSelectedDeptId"
+              label={
+                <span className="inline-flex items-center">
+                  Select User Department
+                  <RequiredAsterisk message="Please select a user department." />
+                </span>
+              }
+              className="!mb-4 md:col-span-2"
+            >
+              <Select
+                placeholder="Select user department"
+                loading={departmentsLoading}
+                options={departments.map((dept) => ({
+                  label: dept.name || "Unnamed Department",
+                  value: dept.id,
+                }))}
+                showSearch
+                optionFilterProp="label"
+                allowClear={false}
+                disabled={!isUserDeptEditable}
+              />
+            </Form.Item>
             <Form.Item
               name="userDeptReviewComments"
               label={

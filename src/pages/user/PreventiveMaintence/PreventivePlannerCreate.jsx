@@ -70,12 +70,6 @@ const buildPreventivePlannerProcessData = (values, systemFields) => [
     label: field.label,
     value: values?.[field.name] || "",
   })),
-  // NEW: master_department & instrumentType
-  // {
-  //   key: "master_department",
-  //   label: "Select Department",
-  //   value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
-  // },
   {
     key: "instrumentType",
     label: "Instrument Type",
@@ -93,6 +87,14 @@ const buildPreventivePlannerProcessData = (values, systemFields) => [
     key: "hod_review_attachment",
     label: "HOD / Designee Review Attachment",
     value: values?.hodReviewAttachment || [],
+  },
+  // 👇 NEW: Select User Department
+  {
+    key: "user_dept_selected_department",
+    label: "Select User Department",
+    value: values?.userDeptSelectedDeptId
+      ? Number(values.userDeptSelectedDeptId)
+      : null,
   },
   {
     key: "user_dept_review_comments",
@@ -132,8 +134,7 @@ const PreventivePlannerCreate = () => {
   const [equipmentLoading, setEquipmentLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
   const [preventivePlannerRows, setPreventivePlannerRows] = useState([]);
-  
-  // NEW: State to hold header week dates
+
   const [headerWeekDates, setHeaderWeekDates] = useState({});
 
   const [equipmentOptions, setEquipmentOptions] = useState([]);
@@ -145,7 +146,7 @@ const PreventivePlannerCreate = () => {
   const [recordNumber, setRecordNumber] = useState("");
   const [dateOfInitiation] = useState(() => formatDateTime(new Date()));
 
-  // New Department States
+  // Departments
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
@@ -200,7 +201,6 @@ const PreventivePlannerCreate = () => {
           );
         }
 
-        // 1. Force clear any preserved state for these fields
         form.resetFields(["instrumentType", "selectedDeptId"]);
 
         form.setFieldsValue({
@@ -210,9 +210,7 @@ const PreventivePlannerCreate = () => {
           initiationDepartment: departmentName,
           dateOfInitiation,
           recordNumber: generatedRecordNumber,
-          
-          // 2. Explicitly set to undefined to show placeholders
-          instrumentType: undefined, 
+          instrumentType: undefined,
           selectedDeptId: undefined,
         });
 
@@ -256,15 +254,15 @@ const PreventivePlannerCreate = () => {
   }, [processId, form, dateOfInitiation]);
 
   const systemFields = [
-     {
-            name: "documentNumber",
-            label: "Document Number",
-            value: "SMLJ/ENG/SOP-GEN/OO3/T01-01",
+    {
+      name: "documentNumber",
+      label: "Document Number",
+      value: "SMLJ/ENG/SOP-GEN/OO3/T01-01",
     },
     {
-        name: "documentType",
-        label: "Document Type",
-        value: "Formats",
+      name: "documentType",
+      label: "Document Type",
+      value: "Formats",
     },
     { name: "recordNumber", label: "Record Number", value: recordNumber },
     { name: "initiator", label: "Initiator", value: initiator },
@@ -337,10 +335,7 @@ const PreventivePlannerCreate = () => {
         initiation_date: dateOfInitiation,
         process_data: processData,
         gridData,
-        
-        // NEW: Include header week dates in payload
-        headerWeekDates, 
-        
+        headerWeekDates,
         checklistData: [],
       };
 
@@ -350,7 +345,7 @@ const PreventivePlannerCreate = () => {
         toast.success("Preventive Planner created successfully.");
         form.resetFields();
         setPreventivePlannerRows([]);
-        setHeaderWeekDates({}); // Reset dates
+        setHeaderWeekDates({});
         navigate("/user/preventive-planner-dashboard");
         return;
       }
@@ -466,7 +461,6 @@ const PreventivePlannerCreate = () => {
                   <FormInput placeholder="Enter short description" />
                 </Form.Item>
 
-                {/* FIELDS - DISABLED ON CREATE */}
                 <Form.Item
                   name="instrumentType"
                   label="Select Instrument Type"
@@ -483,25 +477,6 @@ const PreventivePlannerCreate = () => {
                     ]}
                   />
                 </Form.Item>
-
-                {/* <Form.Item
-                  name="selectedDeptId"
-                  label="Select Department"
-                  className="!mb-4"
-                >
-                  <Select
-                    placeholder="Select a department"
-                    loading={departmentsLoading}
-                    options={departments.map((dept) => ({
-                      label: dept.name || "Unnamed Department",
-                      value: dept.id,
-                    }))}
-                    showSearch
-                    optionFilterProp="label"
-                    allowClear={false}
-                    disabled
-                  />
-                </Form.Item> */}
               </div>
             )}
 
@@ -566,11 +541,38 @@ const PreventivePlannerCreate = () => {
           </section>
         )}
 
+        {/* =====================================================
+            USER DEPARTMENT REVIEW — 👇 NEW: Select User Department
+        ===================================================== */}
         {activeTab === "user-dept-review" && (
           <section>
             <SectionHeader title="QA REVIEW" />
 
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+              {/* 👇 NEW: Select User Department before Comments */}
+              <Form.Item
+                name="userDeptSelectedDeptId"
+                label={
+                  <span className="inline-flex items-center">
+                    Select User Department
+                    <RequiredAsterisk message="Please select a user department." />
+                  </span>
+                }
+                className="!mb-4 md:col-span-2"
+              >
+                <Select
+                  placeholder="Select user department"
+                  loading={departmentsLoading}
+                  options={departments.map((dept) => ({
+                    label: dept.name || "Unnamed Department",
+                    value: dept.id,
+                  }))}
+                  showSearch
+                  optionFilterProp="label"
+                  allowClear={false}
+                />
+              </Form.Item>
+
               <Form.Item
                 name="userDeptReviewComments"
                 label="Comments"

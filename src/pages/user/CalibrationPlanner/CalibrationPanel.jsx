@@ -22,14 +22,14 @@ import "../../../components/ui/disabledFields.css";
 import { getProfile } from "../../../services/authApi";
 import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration } from "../../../services/usersApi/calibrationApi";
 import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
-import { 
-  getAllActivites, 
-  getAllActivityLogs, 
-  getAllPermissions, 
-  getAllStages, 
-  getAllDepartments, 
+import {
+  getAllActivites,
+  getAllActivityLogs,
+  getAllPermissions,
+  getAllStages,
+  getAllDepartments,
   getAllDepartmentMasters,
-  getAllDepartmentMastersGlobal // 👈 IMPORT ADDED
+  getAllDepartmentMastersGlobal
 } from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
@@ -113,6 +113,12 @@ const buildProcessData = (values, systemFields) => [
   { key: "attachment", label: "Attachment", value: [] },
   { key: "hod_review_comments", label: "HOD / Designee Review Comments", value: values?.hodReviewComments || "" },
   { key: "hod_review_attachment", label: "HOD / Designee Review Attachment", value: [] },
+  // 👇 NEW: User Dept Selected Department
+  {
+    key: "user_dept_selected_department",
+    label: "Select User Department",
+    value: values?.userDeptSelectedDeptId ? Number(values.userDeptSelectedDeptId) : null,
+  },
   { key: "user_dept_review_comments", label: "User Dept Review Comments", value: values?.userDeptReviewComments || "" },
   { key: "user_dept_review_attachment", label: "User Dept Review Attachment", value: values?.userDeptReviewAttachment || [] },
   { key: "qa_review_comments", label: "QA Review Comments", value: values?.qaReviewComments || "" },
@@ -128,7 +134,6 @@ const validateCalibrationForm = (form, storedRequired, currentType) => {
     { name: "shortDescription", label: "Short Description" },
   ];
 
-  // Only validate department if it's a Field Instrument
   if (currentType === "Field Instrument") {
     fieldsToValidate.push({ name: "selectedDeptId", label: "Select Department" });
   }
@@ -188,7 +193,7 @@ const CreateCalibrationPanel = () => {
 
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
 
-  const REQUIRED_FIELDS =[]
+  const REQUIRED_FIELDS = []
 
   useEffect(() => {
     if (!equipmentMap || Object.keys(equipmentMap).length === 0) return;
@@ -266,7 +271,6 @@ const CreateCalibrationPanel = () => {
 
       const requiresDept = selectedInstrumentType === "Field Instrument";
 
-      // Require Instrument Type. Require Department ONLY if Field Instrument.
       if (!selectedInstrumentType || (requiresDept && !selectedDeptIdWatch)) {
         setEquipmentLoading(false);
         return;
@@ -289,8 +293,6 @@ const CreateCalibrationPanel = () => {
         setEquipmentLoading(true);
 
         let response;
-        
-        // 👇 UPDATED: Call the correct API based on whether department is required
         if (requiresDept) {
           response = await getAllDepartmentMasters(selectedDeptIdWatch, apiType);
         } else {
@@ -428,6 +430,7 @@ const CreateCalibrationPanel = () => {
       const area = getProcessValue(processData, "area");
       const hodReviewComments = getProcessValue(processData, "hod_review_comments");
       const hodReviewAttachment = getProcessValue(processData, "hod_review_attachment");
+      const userDeptSelectedDeptId = getProcessValue(processData, "user_dept_selected_department");
       const userDeptReviewComments = getProcessValue(processData, "user_dept_review_comments");
       const userDeptReviewAttachment = getProcessValue(processData, "user_dept_review_attachment");
       const qaReviewComments = getProcessValue(processData, "qa_review_comments");
@@ -477,6 +480,7 @@ const CreateCalibrationPanel = () => {
         attachment: attachment || [],
         hodReviewComments,
         hodReviewAttachment: hodReviewAttachment || [],
+        userDeptSelectedDeptId: userDeptSelectedDeptId ? Number(userDeptSelectedDeptId) : null,
         userDeptReviewComments,
         userDeptReviewAttachment: userDeptReviewAttachment || [],
         qaReviewComments,
@@ -686,7 +690,7 @@ const CreateCalibrationPanel = () => {
         stage_id: Number(activeStageId),
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
-        initiator_name: initiator,               
+        initiator_name: initiator,
         short_description: mergedValues?.shortDescription || "",
         initiation_date: mergedValues?.dateOfInitiation || dateOfInitiation || "",
         process_data: processData,
@@ -882,30 +886,19 @@ const CreateCalibrationPanel = () => {
                     autoPopulateRowsRef.current = Boolean(nextType);
                     setSelectedInstrumentType(nextType);
                     setCalibrationRows([]);
-                    
-                    // Clear department if not Field Instrument
+
                     if (nextType !== "Field Instrument") {
                       form.setFieldsValue({ selectedDeptId: null });
                     }
                   }}
                   options={[
-                    {
-                      label: "Master Instrument",
-                      value: "Master Instrument",
-                    },
-                    {
-                      label: "Field Instrument",
-                      value: "Field Instrument",
-                    },
-                    {
-                      label: "Spare Instrument",
-                      value: "Spare Instrument",
-                    },
+                    { label: "Master Instrument", value: "Master Instrument" },
+                    { label: "Field Instrument", value: "Field Instrument" },
+                    { label: "Spare Instrument", value: "Spare Instrument" },
                   ]}
                 />
               </Form.Item>
 
-            {/* 👇 CONDITIONALLY RENDER DEPARTMENT DROPDOWN */}
             {selectedInstrumentType === "Field Instrument" && (
               <Form.Item
                 name="selectedDeptId"
@@ -915,12 +908,7 @@ const CreateCalibrationPanel = () => {
                     <RequiredAsterisk message="Department is required to proceed. Please select a department." />
                   </span>
                 }
-                rules={[
-                  {
-                    required: true,
-                    message: "Please select a department",
-                  },
-                ]}
+                rules={[{ required: true, message: "Please select a department" }]}
                 className="!mb-4"
               >
                 <Select
@@ -934,10 +922,7 @@ const CreateCalibrationPanel = () => {
                   optionFilterProp="label"
                   allowClear={false}
                   disabled={!isGeneralEditable}
-                  onChange={() => {
-                    // Clear rows when department changes
-                    setCalibrationRows([]);
-                  }}
+                  onChange={() => { setCalibrationRows([]); }}
                 />
               </Form.Item>
             )}
@@ -1022,10 +1007,36 @@ const CreateCalibrationPanel = () => {
           </div>
         </section>
 
+        {/* =====================================================
+            USER DEPT REVIEW — Select User Department
+        ===================================================== */}
         <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
           <SectionHeader title="USER DEPT REVIEW (USER DEPT)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item 
+            <Form.Item
+              name="userDeptSelectedDeptId"
+              label={
+                <span className="inline-flex items-center">
+                  Select User Department
+                  <RequiredAsterisk message="Please select a user department." />
+                </span>
+              }
+              className="!mb-4 md:col-span-2"
+            >
+              <Select
+                placeholder="Select user department"
+                loading={departmentsLoading}
+                options={departments.map((dept) => ({
+                  label: dept.name || "Unnamed Department",
+                  value: dept.id,
+                }))}
+                showSearch
+                optionFilterProp="label"
+                allowClear={false}
+                disabled={!isUserDeptEditable}
+              />
+            </Form.Item>
+            <Form.Item
             name="userDeptReviewComments"
             label={
               <span className="inline-flex items-center">
@@ -1057,7 +1068,7 @@ const CreateCalibrationPanel = () => {
         <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
           <SectionHeader title="QA REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item 
+            <Form.Item
             name="qaReviewComments"
             label={
               <span className="inline-flex items-center">

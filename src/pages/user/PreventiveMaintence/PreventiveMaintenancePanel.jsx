@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef, useMemo } from "react";
-import { Form, DatePicker } from "antd";
+import { Form, DatePicker, Select } from "antd";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
@@ -36,6 +36,7 @@ import {
   getAllActivityLogs,
   getAllPermissions,
   getAllStages,
+  getAllDepartments,
 } from "../../../services/usersApi/workflowCommonApi";
 import ChecklistInput from "../../../components/common/ChecklistInput/ChecklistInput";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
@@ -134,6 +135,14 @@ const buildProcessData = (values, systemFields) => [
   },
   { key: "remark", label: "Remark", value: values?.remark || "" },
   { key: "attachment", label: "Attachment", value: [] },
+  // 👇 NEW: Select User Department
+  {
+    key: "user_dept_selected_department",
+    label: "Select User Department",
+    value: values?.userDeptSelectedDeptId
+      ? Number(values.userDeptSelectedDeptId)
+      : null,
+  },
   {
     key: "engineer_review_comments",
     label: "Review By Engineer Dept Comments",
@@ -392,6 +401,10 @@ const PreventiveMaintenancePanel = () => {
   const [processName, setProcessName] = useState("");
   const [userRoles, setUserRoles] = useState([]);
 
+  // Departments
+  const [departments, setDepartments] = useState([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
+
   const [checklistData, setChecklistData] = useState(null);
   const [checklistAnswers, setChecklistAnswers] = useState({});
   const [checklistLoading, setChecklistLoading] = useState(false);
@@ -435,6 +448,24 @@ const PreventiveMaintenancePanel = () => {
       }
     };
     fetchProfile();
+  }, []);
+
+  // 👇 NEW: Fetch departments for Select User Department
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      setDepartmentsLoading(true);
+      try {
+        const response = await getAllDepartments();
+        const data = response?.data?.data ?? [];
+        setDepartments(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to fetch departments:", error);
+        toast.error("Could not load departments.");
+      } finally {
+        setDepartmentsLoading(false);
+      }
+    };
+    fetchDepartments();
   }, []);
 
   useEffect(() => {
@@ -578,6 +609,11 @@ const PreventiveMaintenancePanel = () => {
         const nextDate = getProcessValue(processData, "nextPreventiveDate");
         const remark = getProcessValue(processData, "remark");
         const attachment = getProcessValue(processData, "attachment");
+        // 👇 NEW: read User Dept selected department
+        const userDeptSelectedDeptId = getProcessValue(
+          processData,
+          "user_dept_selected_department"
+        );
         const engineerReviewComments = getProcessValue(
           processData,
           "engineer_review_comments"
@@ -689,6 +725,10 @@ const PreventiveMaintenancePanel = () => {
           nextPreventiveDate: nextDate ? dayjs(nextDate, "DD/MM/YYYY") : null,
           remark: remark || "",
           attachment: attachment || [],
+          // 👇 NEW: set User Dept selected department
+          userDeptSelectedDeptId: userDeptSelectedDeptId
+            ? Number(userDeptSelectedDeptId)
+            : null,
           engineerReviewComments: engineerReviewComments || "",
           engineerReviewAttachment: engineerReviewAttachment || [],
           qaApprovalComments: qaApprovalComments || "",
@@ -1204,37 +1244,6 @@ const PreventiveMaintenancePanel = () => {
               <FormInput placeholder="Location" disabled={!isGeneralEditable} />
             </Form.Item>
 
-            {/* <Form.Item
-              name="previousPreventiveDate"
-               label={
-              <span className="inline-flex items-center">
-                Previous Preventive Date
-                <RequiredAsterisk message="Previous Preventive Date are required to proceed. Please enter your Previous Preventive Date." />
-              </span>
-            }
-              className="!mb-4"
-            >
-              <DatePicker
-                className="w-full"
-                format="DD/MM/YYYY"
-                placeholder="Select date"
-                disabled={!isGeneralEditable}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="nextPreventiveDate"
-              label="Next Preventive Date"
-              className="!mb-4"
-            >
-              <DatePicker
-                className="w-full"
-                format="DD/MM/YYYY"
-                placeholder="Select date"
-                disabled={!isGeneralEditable}
-              />
-            </Form.Item> */}
-
             <Form.Item
               name="preventiveFrequency"
               label="Preventive Frequency"
@@ -1289,6 +1298,9 @@ const PreventiveMaintenancePanel = () => {
           </Form.Item>
         </section>
 
+        {/* =====================================================
+            USER DEPT REVIEW — 👇 NEW: Select User Department
+        ===================================================== */}
         <section
           style={{
             display: activeTab === "user-dept-review" ? "block" : "none",
@@ -1296,6 +1308,31 @@ const PreventiveMaintenancePanel = () => {
         >
           <SectionHeader title="Reviewed By (User Department)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            {/* 👇 NEW: Select User Department before Comments */}
+            <Form.Item
+              name="userDeptSelectedDeptId"
+              label={
+                <span className="inline-flex items-center">
+                  Select User Department
+                  <RequiredAsterisk message="Please select a user department." />
+                </span>
+              }
+              className="!mb-4 md:col-span-2"
+            >
+              <Select
+                placeholder="Select user department"
+                loading={departmentsLoading}
+                options={departments.map((dept) => ({
+                  label: dept.name || "Unnamed Department",
+                  value: dept.id,
+                }))}
+                showSearch
+                optionFilterProp="label"
+                allowClear={false}
+                disabled={!isUserDeptReviewEditable}
+              />
+            </Form.Item>
+
             <Form.Item
               name="userDeptReviewComments"
               label={
@@ -1330,6 +1367,7 @@ const PreventiveMaintenancePanel = () => {
             </Form.Item>
           </div>
         </section>
+
         <section
           style={{
             display: activeTab === "engineer-review" ? "block" : "none",

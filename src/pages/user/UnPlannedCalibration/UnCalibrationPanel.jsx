@@ -14,7 +14,6 @@ import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
-// import CalibrationGrid from "./CalibrationGrid";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import "../../../components/ui/disabledFields.css";
@@ -22,14 +21,14 @@ import "../../../components/ui/disabledFields.css";
 import { getProfile } from "../../../services/authApi";
 import { executeUnPlannedCalibrationActivity, getUnPlannedCalibrationDetail, getCalibrationUser, updateUnPlannedCalibration } from "../../../services/usersApi/calibrationApi";
 import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
-import { 
-  getAllActivites, 
-  getAllActivityLogs, 
-  getAllPermissions, 
-  getAllStages, 
-  getAllDepartments, 
+import {
+  getAllActivites,
+  getAllActivityLogs,
+  getAllPermissions,
+  getAllStages,
+  getAllDepartments,
   getAllDepartmentMasters,
-  getAllDepartmentMastersGlobal // 👈 IMPORT ADDED
+  getAllDepartmentMastersGlobal
 } from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import UnCalibrationGrid from "./UnCalibrationGrid";
@@ -42,7 +41,7 @@ const TABS = [
   { id: "hod", label: "HOD / Designee Review (Engineering Dept)", stageId: 72 },
   { id: "user-dept-review", label: "User Department Review (User Dept)", stageId: 73 },
   { id: "qa-review", label: "QA Approval Review", stageId: 74 },
-  { id: "activity", label: "Activity Log", stageId: 75 }, // Maps to Closed - Done
+  { id: "activity", label: "Activity Log", stageId: 75 },
   { id: "cancellation", label: "Cancellation", stageId: 76 },
 ];
 
@@ -115,6 +114,12 @@ const buildProcessData = (values, systemFields) => [
   { key: "attachment", label: "Attachment", value: [] },
   { key: "hod_review_comments", label: "HOD / Designee Review Comments", value: values?.hodReviewComments || "" },
   { key: "hod_review_attachment", label: "HOD / Designee Review Attachment", value: [] },
+  // 👇 NEW: Select User Department
+  {
+    key: "user_dept_selected_department",
+    label: "Select User Department",
+    value: values?.userDeptSelectedDeptId ? Number(values.userDeptSelectedDeptId) : null,
+  },
   { key: "user_dept_review_comments", label: "User Dept Review Comments", value: values?.userDeptReviewComments || "" },
   { key: "user_dept_review_attachment", label: "User Dept Review Attachment", value: values?.userDeptReviewAttachment || [] },
   { key: "qa_review_comments", label: "QA Review Comments", value: values?.qaReviewComments || "" },
@@ -130,7 +135,6 @@ const validateCalibrationForm = (form, storedRequired, currentType) => {
     { name: "shortDescription", label: "Short Description" },
   ];
 
-  // Only validate department if it's a Field Instrument
   if (currentType === "Field Instrument") {
     fieldsToValidate.push({ name: "selectedDeptId", label: "Select Department" });
   }
@@ -150,8 +154,7 @@ const UnCreateCalibrationPanel = () => {
   const [usersLoading, setUsersLoading] = useState(true);
   const [workflowLoading, setWorkflowLoading] = useState(true);
   const [workflowStages, setWorkflowStages] = useState([]);
-  // 👇 UPDATED DEFAULT PROCESS ID
-  const [processId, setProcessId] = useState(14); 
+  const [processId, setProcessId] = useState(14);
   const [activeStageId, setActiveStageId] = useState(null);
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
@@ -190,7 +193,7 @@ const UnCreateCalibrationPanel = () => {
 
   const REQUIRED_FIELDS = [
     { name: "shortDescription", label: "Short Description" },
-];
+  ];
 
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
 
@@ -216,7 +219,7 @@ const UnCreateCalibrationPanel = () => {
     });
   }, [equipmentMap]);
 
-  // 👇 UPDATED EDITABILITY CHECKS FOR STAGES 70 - 75
+  // 👇 UPDATED EDITABILITY CHECKS FOR STAGES 71 - 76
   const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
   const isGeneralEditable = isStageEditable(71);
   const isHodEditable = isStageEditable(72);
@@ -270,7 +273,6 @@ const UnCreateCalibrationPanel = () => {
 
       const requiresDept = selectedInstrumentType === "Field Instrument";
 
-      // Require Instrument Type. Require Department ONLY if Field Instrument.
       if (!selectedInstrumentType || (requiresDept && !selectedDeptIdWatch)) {
         setEquipmentLoading(false);
         return;
@@ -293,8 +295,6 @@ const UnCreateCalibrationPanel = () => {
         setEquipmentLoading(true);
 
         let response;
-        
-        // 👇 UPDATED: Call the correct API based on whether department is required
         if (requiresDept) {
           response = await getAllDepartmentMasters(selectedDeptIdWatch, apiType);
         } else {
@@ -410,7 +410,7 @@ const UnCreateCalibrationPanel = () => {
       const response = await getUnPlannedCalibrationDetail(recordId);
       const responseData = response?.data?.data;
       if (!responseData) { toast.error("Unplanned Calibration Planner record not found."); return; }
-      setProcessId(responseData?.process_id || 14); // Default to 14 if missing
+      setProcessId(responseData?.process_id || 14);
       const backendStageId = responseData?.stage?.id || responseData?.stage_id || null;
       setActiveStageId(backendStageId);
       setProcessName(responseData?.process?.name || "");
@@ -431,6 +431,8 @@ const UnCreateCalibrationPanel = () => {
       const area = getProcessValue(processData, "area");
       const hodReviewComments = getProcessValue(processData, "hod_review_comments");
       const hodReviewAttachment = getProcessValue(processData, "hod_review_attachment");
+      // 👇 NEW: read User Dept selected department
+      const userDeptSelectedDeptId = getProcessValue(processData, "user_dept_selected_department");
       const userDeptReviewComments = getProcessValue(processData, "user_dept_review_comments");
       const userDeptReviewAttachment = getProcessValue(processData, "user_dept_review_attachment");
       const qaReviewComments = getProcessValue(processData, "qa_review_comments");
@@ -480,6 +482,8 @@ const UnCreateCalibrationPanel = () => {
         attachment: attachment || [],
         hodReviewComments,
         hodReviewAttachment: hodReviewAttachment || [],
+        // 👇 NEW: set User Dept selected department
+        userDeptSelectedDeptId: userDeptSelectedDeptId ? Number(userDeptSelectedDeptId) : null,
         userDeptReviewComments,
         userDeptReviewAttachment: userDeptReviewAttachment || [],
         qaReviewComments,
@@ -689,7 +693,7 @@ const UnCreateCalibrationPanel = () => {
         stage_id: Number(activeStageId),
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
-        initiator_name: initiator,               
+        initiator_name: initiator,
         short_description: mergedValues?.shortDescription || "",
         initiation_date: mergedValues?.dateOfInitiation || dateOfInitiation || "",
         process_data: processData,
@@ -739,7 +743,6 @@ const UnCreateCalibrationPanel = () => {
     );
   }
 
-  // 👇 UPDATED CANCELLED STAGE ID
   const isCancellationStageActive = Number(activeStageId) === 76;
 
   const visibleTabs = isCancellationStageActive
@@ -813,7 +816,6 @@ const UnCreateCalibrationPanel = () => {
             >
               <FormInput placeholder="Enter short description" disabled={!isGeneralEditable} />
             </Form.Item>
-
           </div>
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="UNPLANNED CALIBRATION INFORMATION" />
@@ -886,30 +888,18 @@ const UnCreateCalibrationPanel = () => {
                     autoPopulateRowsRef.current = Boolean(nextType);
                     setSelectedInstrumentType(nextType);
                     setCalibrationRows([]);
-                    
-                    // Clear department if not Field Instrument
                     if (nextType !== "Field Instrument") {
                       form.setFieldsValue({ selectedDeptId: null });
                     }
                   }}
                   options={[
-                    {
-                      label: "Master Instrument",
-                      value: "Master Instrument",
-                    },
-                    {
-                      label: "Field Instrument",
-                      value: "Field Instrument",
-                    },
-                    {
-                      label: "Spare Instrument",
-                      value: "Spare Instrument",
-                    },
+                    { label: "Master Instrument", value: "Master Instrument" },
+                    { label: "Field Instrument", value: "Field Instrument" },
+                    { label: "Spare Instrument", value: "Spare Instrument" },
                   ]}
                 />
               </Form.Item>
 
-            {/* 👇 CONDITIONALLY RENDER DEPARTMENT DROPDOWN */}
             {selectedInstrumentType === "Field Instrument" && (
               <Form.Item
                 name="selectedDeptId"
@@ -919,12 +909,7 @@ const UnCreateCalibrationPanel = () => {
                     <RequiredAsterisk message="Department is required to proceed. Please select a department." />
                   </span>
                 }
-                rules={[
-                  {
-                    required: true,
-                    message: "Please select a department",
-                  },
-                ]}
+                rules={[{ required: true, message: "Please select a department" }]}
                 className="!mb-4"
               >
                 <Select
@@ -938,14 +923,10 @@ const UnCreateCalibrationPanel = () => {
                   optionFilterProp="label"
                   allowClear={false}
                   disabled={!isGeneralEditable}
-                  onChange={() => {
-                    // Clear rows when department changes
-                    setCalibrationRows([]);
-                  }}
+                  onChange={() => { setCalibrationRows([]); }}
                 />
               </Form.Item>
             )}
-
           </div>
           <div className="mt-5">
             <UnCalibrationGrid
@@ -1026,10 +1007,37 @@ const UnCreateCalibrationPanel = () => {
           </div>
         </section>
 
+        {/* =====================================================
+            USER DEPT REVIEW — 👇 NEW: Select User Department
+        ===================================================== */}
         <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
           <SectionHeader title="USER DEPT REVIEW (USER DEPT)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item 
+            {/* 👇 NEW: Select User Department before Comments */}
+            <Form.Item
+              name="userDeptSelectedDeptId"
+              label={
+                <span className="inline-flex items-center">
+                  Select User Department
+                  <RequiredAsterisk message="Please select a user department." />
+                </span>
+              }
+              className="!mb-4 md:col-span-2"
+            >
+              <Select
+                placeholder="Select user department"
+                loading={departmentsLoading}
+                options={departments.map((dept) => ({
+                  label: dept.name || "Unnamed Department",
+                  value: dept.id,
+                }))}
+                showSearch
+                optionFilterProp="label"
+                allowClear={false}
+                disabled={!isUserDeptEditable}
+              />
+            </Form.Item>
+            <Form.Item
             name="userDeptReviewComments"
             label={
               <span className="inline-flex items-center">
@@ -1061,7 +1069,7 @@ const UnCreateCalibrationPanel = () => {
         <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
           <SectionHeader title="QA REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item 
+            <Form.Item
             name="qaReviewComments"
             label={
               <span className="inline-flex items-center">

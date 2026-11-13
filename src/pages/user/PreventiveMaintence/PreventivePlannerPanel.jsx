@@ -164,6 +164,14 @@ const buildProcessData = (values, systemFields) => [
     label: "HOD / Designee Review Attachment",
     value: [],
   },
+  // 👇 NEW: Select User Department
+  {
+    key: "user_dept_selected_department",
+    label: "Select User Department",
+    value: values?.userDeptSelectedDeptId
+      ? Number(values.userDeptSelectedDeptId)
+      : null,
+  },
   {
     key: "user_dept_review_comments",
     label: "User Dept Review Comments",
@@ -444,6 +452,8 @@ const PreventivePlannerPanel = () => {
         const attachment = getProcessValue(processData, "attachment");
         const hodReviewComments = getProcessValue(processData, "hod_review_comments");
         const hodReviewAttachment = getProcessValue(processData, "hod_review_attachment");
+        // 👇 NEW: read User Dept selected department
+        const userDeptSelectedDeptId = getProcessValue(processData, "user_dept_selected_department");
         const userDeptReviewComments = getProcessValue(processData, "user_dept_review_comments");
         const userDeptReviewAttachment = getProcessValue(processData, "user_dept_review_attachment");
         const qaReviewComments = getProcessValue(processData, "qa_review_comments");
@@ -493,6 +503,10 @@ const PreventivePlannerPanel = () => {
           attachment: attachment || [],
           hodReviewComments,
           hodReviewAttachment: hodReviewAttachment || [],
+          // 👇 NEW: set User Dept selected department
+          userDeptSelectedDeptId: userDeptSelectedDeptId
+            ? Number(userDeptSelectedDeptId)
+            : null,
           userDeptReviewComments,
           userDeptReviewAttachment: userDeptReviewAttachment || [],
           qaReviewComments,
@@ -1064,9 +1078,40 @@ const PreventivePlannerPanel = () => {
           </div>
         </section>
 
+        {/* =====================================================
+            USER DEPT REVIEW — 👇 NEW: Select User Department
+        ===================================================== */}
         <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
           <SectionHeader title="User Department Review (HOD/Designee)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            {/* 👇 NEW: Select User Department before Comments */}
+            <Form.Item
+              name="userDeptSelectedDeptId"
+              label={
+                <span className="inline-flex items-center">
+                  Select User Department
+                  <RequiredAsterisk message="Please select a user department." />
+                </span>
+              }
+              className="!mb-4 md:col-span-2"
+            >
+              <Select
+                placeholder="Select user department"
+                loading={departmentsLoading}
+                options={departments.map((dept, idx) => ({
+                  label:
+                    dept.name ||
+                    dept.department_name ||
+                    dept.dept_name ||
+                    "Unnamed Department",
+                  value: dept.id || dept.department_id || dept.dept_id || idx,
+                }))}
+                showSearch
+                optionFilterProp="label"
+                allowClear={false}
+                disabled={!isUserDeptEditable}
+              />
+            </Form.Item>
             <Form.Item
               name="userDeptReviewComments"
               label={

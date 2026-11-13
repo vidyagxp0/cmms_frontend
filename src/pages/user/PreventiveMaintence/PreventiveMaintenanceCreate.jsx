@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Activity } from "lucide-react";
-import { Form, DatePicker } from "antd";
+import { Form, DatePicker, Select } from "antd";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
@@ -20,7 +20,7 @@ import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import { getProfile } from "../../../services/authApi";
 import { getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
 import { addPreventiveMaintence } from "../../../services/usersApi/preventive";
-import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
+import { getRecordNumber, getAllDepartments } from "../../../services/usersApi/workflowCommonApi";
 import { formatDateTime } from "../../../utils/date";
 import { addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
@@ -73,6 +73,10 @@ const PreventiveMaintenanceCreate = () => {
   const [recordNumber, setRecordNumber] = useState("");
   const [dateOfInitiation] = useState(() => formatDateTime(new Date()));
 
+  // Departments
+  const [departments, setDepartments] = useState([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
+
   // Prefill sources from the parent row
   const rowEquipmentName = rowData?.equipmentInstrumentName || "";
   const rowEquipmentDbId = rowData?.equipmentDbId || "";
@@ -90,12 +94,14 @@ const PreventiveMaintenanceCreate = () => {
     const loadInitialData = async () => {
       setIsLoading(true);
       setEquipmentLoading(true);
+      setDepartmentsLoading(true);
 
       try {
-        const [profileRes, recordNumRes, equipmentRes] = await Promise.allSettled([
+        const [profileRes, recordNumRes, equipmentRes, deptRes] = await Promise.allSettled([
           getProfile(),
           routeProcessId ? getRecordNumber(routeProcessId) : Promise.resolve(null),
           getAllEquipmentData(),
+          getAllDepartments(),
         ]);
 
         if (!isMounted) return;
@@ -158,6 +164,12 @@ const PreventiveMaintenanceCreate = () => {
         setEquipmentOptions(options);
         setEquipmentMap(map);
 
+        if (deptRes.status === "fulfilled" && deptRes.value?.data?.data) {
+          setDepartments(deptRes.value.data.data || []);
+        } else if (deptRes.status === "rejected") {
+          console.error("Failed to fetch departments:", deptRes.reason);
+        }
+
         form.setFieldsValue({
           recordNumber: generatedRecordNumber,
           initiator: userName,
@@ -176,6 +188,9 @@ const PreventiveMaintenanceCreate = () => {
           nextPreventiveDate: rowNextDate ? dayjs(rowNextDate) : null,
           remark: rowRemark,
           attachment: [],
+          userDeptSelectedDeptId: null,
+          userDeptReviewComments: "",
+          userDeptReviewAttachment: [],
           engineerReviewComments: "",
           engineerReviewAttachment: [],
           qaApprovalComments: "",
@@ -188,6 +203,7 @@ const PreventiveMaintenanceCreate = () => {
         if (isMounted) {
           setIsLoading(false);
           setEquipmentLoading(false);
+          setDepartmentsLoading(false);
         }
       }
     };
@@ -236,25 +252,19 @@ const PreventiveMaintenanceCreate = () => {
     { key: "block", label: "Block", value: values?.block || "" },
     { key: "department", label: "Department", value: values?.department || "" },
     { key: "location", label: "Location", value: values?.location || "" },
-    // {
-    //   key: "previousPreventiveDate",
-    //   label: "Previous Preventive Date",
-    //   value: values?.previousPreventiveDate
-    //     ? dayjs(values.previousPreventiveDate).format("DD/MM/YYYY")
-    //     : "",
-    // },
-    // {
-    //   key: "nextPreventiveDate",
-    //   label: "Next Preventive Date",
-    //   value: values?.nextPreventiveDate
-    //     ? dayjs(values.nextPreventiveDate).format("DD/MM/YYYY")
-    //     : "",
-    // },
     { key: "remark", label: "Remark", value: values?.remark || "" },
     {
       key: "attachment",
       label: "Attachment",
       value: values?.attachment || [],
+    },
+    // 👇 NEW: Select User Department
+    {
+      key: "user_dept_selected_department",
+      label: "Select User Department",
+      value: values?.userDeptSelectedDeptId
+        ? Number(values.userDeptSelectedDeptId)
+        : null,
     },
     {
       key: "user-dept-review_comments",
@@ -510,32 +520,6 @@ const PreventiveMaintenanceCreate = () => {
                 <FormInput placeholder="Location" disabled />
               </Form.Item>
 
-              {/* <Form.Item
-                name="previousPreventiveDate"
-                label="Previous Preventive Date"
-                className="!mb-4"
-              >
-                <DatePicker
-                  className="w-full"
-                  format="DD/MM/YYYY"
-                  placeholder="Select date"
-                  disabled
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="nextPreventiveDate"
-                label="Next Preventive Date"
-                className="!mb-4"
-              >
-                <DatePicker
-                  className="w-full"
-                  format="DD/MM/YYYY"
-                  placeholder="Select date"
-                  disabled
-                />
-              </Form.Item> */}
-
               <Form.Item
                 name="preventiveFrequency"
                 label="Preventive Frequency"
@@ -575,6 +559,30 @@ const PreventiveMaintenanceCreate = () => {
           <section>
             <SectionHeader title="Reviewed By (User Department)" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+              {/* 👇 NEW: Select User Department before Comments */}
+              <Form.Item
+                name="userDeptSelectedDeptId"
+                label={
+                  <span className="inline-flex items-center">
+                    Select User Department
+                    <RequiredAsterisk message="Please select a user department." />
+                  </span>
+                }
+                className="!mb-4 md:col-span-2"
+              >
+                <Select
+                  placeholder="Select user department"
+                  loading={departmentsLoading}
+                  options={departments.map((dept) => ({
+                    label: dept.name || "Unnamed Department",
+                    value: dept.id,
+                  }))}
+                  showSearch
+                  optionFilterProp="label"
+                  allowClear={false}
+                />
+              </Form.Item>
+
               <Form.Item
                 name="userDeptReviewComments"
                 label="Comments"

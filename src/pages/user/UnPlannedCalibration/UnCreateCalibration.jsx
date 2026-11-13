@@ -4,7 +4,6 @@ import { Form, Input, Select } from "antd";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
-// import CalibrationGrid from "./CalibrationGrid";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import FormInput from "../../../components/common/Form/FormInput";
@@ -90,7 +89,6 @@ const buildProcessData = (values, systemFields) => [
         value: values?.[field.name] || "",
     })),
 
-    // NEW: master_department field
     {
         key: "master_department",
         label: "Select Department",
@@ -112,6 +110,14 @@ const buildProcessData = (values, systemFields) => [
         key: "hod_review_attachment",
         label: "HOD / Designee Review Attachment",
         value: values?.hodReviewAttachment || [],
+    },
+    // 👇 NEW: Select User Department
+    {
+        key: "user_dept_selected_department",
+        label: "Select User Department",
+        value: values?.userDeptSelectedDeptId
+            ? Number(values.userDeptSelectedDeptId)
+            : null,
     },
     {
         key: "user_dept_review_comments",
@@ -163,7 +169,7 @@ const UnCreateCalibration = () => {
     const [hodUsers, setHodUsers] = useState([]);
     const [qaReviewers, setQaReviewers] = useState([]);
 
-    // New Department States
+    // Departments
     const [departments, setDepartments] = useState([]);
     const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
@@ -227,8 +233,8 @@ const UnCreateCalibration = () => {
                     dateOfInitiation,
                     documentNumber: "SMLJ/ENG/SOP-GEN/OOS/FI 9-02",
                     documentType: "Formats",
-                    // siteLocationCode: "Unit IV",
                     recordNumber: generatedRecordNumber,
+                    userDeptSelectedDeptId: null,
                 });
 
                 if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
@@ -283,7 +289,6 @@ const UnCreateCalibration = () => {
         { name: "documentNumber", label: "Document Number", value: "SMLJ/ENG/SOP-GEN/OOS/FI 9-02" },
         { name: "documentType", label: "Document Type", value: "Formats" },
         { name: "recordNumber", label: "Record Number", value: recordNumber },
-        // { name: "siteLocationCode", label: "Site / Location Code", value: "Unit IV" },
         { name: "initiator", label: "Initiator", value: initiator },
         { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
         { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
@@ -379,12 +384,8 @@ const UnCreateCalibration = () => {
 
     return (
         <div className="w-full min-h-full bg-transparent pb-6">
-            {/* =====================================================
-                PAGE HEADER
-            ====================================================== */}
             <header className="mb-4 w-full">
                 <div className="flex min-h-[60px] flex-col gap-3 py-1 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    {/* TITLE */}
                     <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[11px] border border-[#C6D8D0] bg-[#E8F0EC] text-[#4F7064]">
                             <Activity size={19} strokeWidth={1.9} />
@@ -405,11 +406,9 @@ const UnCreateCalibration = () => {
                         </div>
                     </div>
 
-                    {/* CONTEXT */}
                     <div className="flex shrink-0 items-center gap-3 rounded-none border-0 bg-transparent px-0 py-0">
                         <div className="mx-1 h-7 w-px bg-[#DCE5E0]" />
 
-                        {/* PROCESS */}
                         <div className="flex items-center gap-2 rounded-none bg-transparent px-0 py-0">
                             <span className="flex h-[26px] w-[26px] items-center justify-center rounded-[8px] bg-[#EAF1ED] text-[#58776C]">
                                 <Workflow size={12} strokeWidth={1.9} />
@@ -427,16 +426,10 @@ const UnCreateCalibration = () => {
                 </div>
             </header>
 
-            {/* =====================================================
-                PROCESS TABS
-            ====================================================== */}
             <div className="mb-5">
                 <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
             </div>
 
-            {/* =====================================================
-                FORM
-            ====================================================== */}
             <Form
                 form={form}
                 layout="vertical"
@@ -444,9 +437,6 @@ const UnCreateCalibration = () => {
                 onFinish={handleSubmit}
                 className="w-full [&_.ant-form-item-label>label]:!text-[11px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1 [&_.ant-form-item-explain-error]:!text-[10px]"
             >
-                {/* =================================================
-                    GENERAL INFORMATION
-                ================================================== */}
                 {activeTab === "general" && (
                     <>
                         <section className="overflow-hidden bg-transparent shadow-none">
@@ -492,9 +482,6 @@ const UnCreateCalibration = () => {
                             )}
                         </section>
 
-                        {/* =================================================
-                            UNPLANNED CALIBRATION INFORMATION
-                        ================================================== */}
                         <section className="overflow-hidden bg-transparent shadow-none">
                             <SectionHeader title="UNPLANNED CALIBRATION INFORMATION" />
 
@@ -524,7 +511,6 @@ const UnCreateCalibration = () => {
                                         />
                                     </Form.Item>
 
-                                    {/* SELECT DEPARTMENT DROPDOWN (DISABLED) */}
                                     <Form.Item name="selectedDeptId" label="Select Department" className="!mb-3">
                                         <Select
                                             placeholder="Select a department"
@@ -536,12 +522,11 @@ const UnCreateCalibration = () => {
                                             showSearch
                                             optionFilterProp="label"
                                             allowClear={false}
-                                            disabled // Disabled on Create Page as requested
+                                            disabled
                                         />
                                     </Form.Item>
                                 </div>
 
-                                {/* UNPLANNED CALIBRATION GRID */}
                                 <div className="mt-1">
                                     <UnCalibrationGrid
                                         value={calibrationRows}
@@ -553,12 +538,10 @@ const UnCreateCalibration = () => {
                                     />
                                 </div>
 
-                                {/* COMMENTS */}
                                 <Form.Item name="comments" label="Comments" className="!mb-3 mt-4">
                                     <FormTextArea rows={4} placeholder="Enter comments..." />
                                 </Form.Item>
 
-                                {/* ATTACHMENT */}
                                 <Form.Item
                                     name="attachment"
                                     label="Attachment"
@@ -572,9 +555,6 @@ const UnCreateCalibration = () => {
                     </>
                 )}
 
-                {/* =================================================
-                    HOD REVIEW
-                ================================================== */}
                 {activeTab === "hod" && (
                     <section className="overflow-hidden bg-transparent shadow-none">
                         <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
@@ -599,14 +579,38 @@ const UnCreateCalibration = () => {
                     </section>
                 )}
 
-                {/* =================================================
-                    USER DEPARTMENT REVIEW
-                ================================================== */}
+                {/* =====================================================
+                    USER DEPARTMENT REVIEW — 👇 NEW: Select User Department
+                ===================================================== */}
                 {activeTab === "user-dept-review" && (
                     <section className="overflow-hidden bg-transparent shadow-none">
                         <SectionHeader title="USER DEPARTMENT REVIEW (USER DEPT)" />
 
                         <div className="px-1 pb-1 pt-4">
+                            {/* 👇 NEW: Select User Department before Comments */}
+                            <Form.Item
+                                name="userDeptSelectedDeptId"
+                                label={
+                                    <span className="inline-flex items-center">
+                                        Select User Department
+                                        <RequiredAsterisk message="Please select a user department." />
+                                    </span>
+                                }
+                                className="!mb-4"
+                            >
+                                <Select
+                                    placeholder="Select user department"
+                                    loading={departmentsLoading}
+                                    options={departments.map((dept) => ({
+                                        label: dept.name || "Unnamed Department",
+                                        value: dept.id,
+                                    }))}
+                                    showSearch
+                                    optionFilterProp="label"
+                                    allowClear={false}
+                                />
+                            </Form.Item>
+
                             <Form.Item name="userDeptReviewComments" label="Comments" className="!mb-4">
                                 <FormTextArea rows={4} placeholder="Enter comments..." />
                             </Form.Item>
@@ -626,9 +630,6 @@ const UnCreateCalibration = () => {
                     </section>
                 )}
 
-                {/* =================================================
-                    QA REVIEW
-                ================================================== */}
                 {activeTab === "qa-review" && (
                     <section className="overflow-hidden bg-transparent shadow-none">
                         <SectionHeader title="QA APPROVAL REVIEW" />
@@ -654,9 +655,6 @@ const UnCreateCalibration = () => {
                 )}
             </Form>
 
-            {/* =====================================================
-                FLOATING ACTIONS
-            ====================================================== */}
             <FloatingActionButtons
                 onSave={handleSave}
                 onCancel={handleCancel}

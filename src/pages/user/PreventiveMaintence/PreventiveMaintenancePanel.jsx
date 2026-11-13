@@ -144,6 +144,16 @@ const buildProcessData = (values, systemFields) => [
       : null,
   },
   {
+    key: "user_dept_review_comments",
+    label: "Review By User Department Comments",
+    value: values?.userDeptReviewComments || "",
+  },
+  {
+    key: "user_dept_review_attachment",
+    label: "Review By User Department Attachment",
+    value: [],
+  },
+  {
     key: "engineer_review_comments",
     label: "Review By Engineer Dept Comments",
     value: values?.engineerReviewComments || "",
@@ -613,6 +623,14 @@ const PreventiveMaintenancePanel = () => {
         const userDeptSelectedDeptId = getProcessValue(
           processData,
           "user_dept_selected_department"
+        );
+        const userDeptReviewComments = getProcessValue(
+          processData,
+          "user_dept_review_comments"
+        );
+        const userDeptReviewAttachment = getProcessValue(
+          processData,
+          "user_dept_review_attachment"
         );
         const engineerReviewComments = getProcessValue(
           processData,

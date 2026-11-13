@@ -35,12 +35,7 @@ import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInpu
 import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
-// 👇 UPDATED STAGE IDS FOR PROCESS 15
-// 77 = Opened / General Information
-// 78 = Reviewed By HOD/Designee
-// 79 = Verified By QA
-// 80 = Closed – Done
-// 81 = Closed – Cancelled
+
 const TABS = [
   { id: "management", label: "General Information", stageId: 77 },
   { id: "implementor", label: "Reviewed By HOD/Designee", stageId: 78 },

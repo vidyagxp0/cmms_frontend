@@ -38,6 +38,22 @@ const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
 ];
 
+/** Safe array coercion helper. */
+const asArray = (value) => (Array.isArray(value) ? value : []);
+
+/** Extract an array from a variety of API wrapper shapes. */
+const extractArray = (raw) => {
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw?.results)) return raw.results;
+  if (Array.isArray(raw?.items)) return raw.items;
+  if (raw && typeof raw === "object") {
+    // eslint-disable-next-line no-console
+    console.warn("Unexpected array response shape:", raw);
+  }
+  return [];
+};
+
 const PreventiveMaintenanceCreate = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -51,10 +67,11 @@ const PreventiveMaintenanceCreate = () => {
     parentId: stateParentId,
     preventiveFrequency: passedFrequency = "",
     preventiveFrequencyCode: passedFrequencyCode = "",
-    childType
+    childType,
   } = state;
 
   console.log("PreventiveMaintenanceCreate state:", state);
+
   const routeProcessId = params.processId || stateProcessId || null;
   const routeParentId =
     params.parentId || params.recordId || stateParentId || null;
@@ -73,6 +90,10 @@ const PreventiveMaintenanceCreate = () => {
   const [recordNumber, setRecordNumber] = useState("");
   const [dateOfInitiation] = useState(() => formatDateTime(new Date()));
 
+  // ✅ NEW: track initial values + form readiness
+  const [formInitialValues, setFormInitialValues] = useState({});
+  const [formReady, setFormReady] = useState(false);
+
   // Departments
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
@@ -88,6 +109,18 @@ const PreventiveMaintenanceCreate = () => {
   const rowNextDate = rowData?.nextPreventiveDate || "";
   const rowRemark = rowData?.remark || "";
 
+  // ✅ Safety net — re-apply values AFTER the Form actually mounts
+  useEffect(() => {
+    if (
+      !isLoading &&
+      formReady &&
+      formInitialValues &&
+      Object.keys(formInitialValues).length > 0
+    ) {
+      form.setFieldsValue(formInitialValues);
+    }
+  }, [isLoading, formReady, formInitialValues, form]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -97,12 +130,15 @@ const PreventiveMaintenanceCreate = () => {
       setDepartmentsLoading(true);
 
       try {
-        const [profileRes, recordNumRes, equipmentRes, deptRes] = await Promise.allSettled([
-          getProfile(),
-          routeProcessId ? getRecordNumber(routeProcessId) : Promise.resolve(null),
-          getAllEquipmentData(),
-          getAllDepartments(),
-        ]);
+        const [profileRes, recordNumRes, equipmentRes, deptRes] =
+          await Promise.allSettled([
+            getProfile(),
+            routeProcessId
+              ? getRecordNumber(routeProcessId)
+              : Promise.resolve(null),
+            getAllEquipmentData(),
+            getAllDepartments(),
+          ]);
 
         if (!isMounted) return;
 
@@ -118,25 +154,37 @@ const PreventiveMaintenanceCreate = () => {
           setDepartmentId(profile?.department?.id || "");
           departmentName = profile?.department?.name || "";
           setInitiationDepartment(departmentName);
+        } else if (profileRes.status === "rejected") {
+          console.error("Failed to fetch profile:", profileRes.reason);
         }
 
-        if (recordNumRes.status === "fulfilled" && recordNumRes.value?.data?.data) {
+        if (
+          recordNumRes.status === "fulfilled" &&
+          recordNumRes.value?.data?.data
+        ) {
           generatedRecordNumber =
             recordNumRes.value.data.data.record_number || "";
           setRecordNumber(generatedRecordNumber);
+        } else if (recordNumRes.status === "rejected") {
+          console.error("Failed to fetch record number:", recordNumRes.reason);
         }
 
+        // ✅ Equipment — guarded extraction
         let equipmentData = [];
         const map = {};
         let options = [];
 
-        if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
-          equipmentData = equipmentRes.value.data.data || [];
+        if (
+          equipmentRes.status === "fulfilled" &&
+          equipmentRes.value?.data?.data !== undefined
+        ) {
+          equipmentData = extractArray(equipmentRes.value.data.data);
 
           options = equipmentData.map((item) => ({
             value: item.equipment_name || item.instrument_name,
             label: item.equipment_name || item.instrument_name,
           }));
+
           equipmentData.forEach((item) => {
             if (item.equipment_name) map[item.equipment_name] = item;
             if (item.instrument_name) map[item.instrument_name] = item;
@@ -145,32 +193,41 @@ const PreventiveMaintenanceCreate = () => {
           console.error("Failed to fetch equipment:", equipmentRes.reason);
         }
 
-        // 👇 NEW CHANGE: Directly use the rowEquipmentName passed from the grid
+        // Prefer the name passed from the grid; fall back to DB ID lookup
         let equipmentValue = rowEquipmentName || "";
-        
-        // Fallback: If no name was passed, try to find it by the DB ID
+
         if (!equipmentValue && rowEquipmentDbId) {
           const found = equipmentData.find(
             (item) => String(item.id) === String(rowEquipmentDbId)
           );
-          if (found) equipmentValue = found.equipment_name || found.instrument_name;
+          if (found)
+            equipmentValue = found.equipment_name || found.instrument_name;
         }
 
-        // Ensure the prefilled name exists in the options so the Select box displays it
-        if (equipmentValue && !options.some(opt => opt.value === equipmentValue)) {
-            options.push({ value: equipmentValue, label: equipmentValue });
+        // Make sure the prefilled name exists in options so the disabled
+        // Select can render it
+        if (
+          equipmentValue &&
+          !options.some((opt) => opt.value === equipmentValue)
+        ) {
+          options.push({ value: equipmentValue, label: equipmentValue });
         }
 
         setEquipmentOptions(options);
         setEquipmentMap(map);
 
-        if (deptRes.status === "fulfilled" && deptRes.value?.data?.data) {
-          setDepartments(deptRes.value.data.data || []);
+        // ✅ Departments — guarded
+        if (
+          deptRes.status === "fulfilled" &&
+          deptRes.value?.data?.data !== undefined
+        ) {
+          setDepartments(extractArray(deptRes.value.data.data));
         } else if (deptRes.status === "rejected") {
           console.error("Failed to fetch departments:", deptRes.reason);
         }
 
-        form.setFieldsValue({
+        // ✅ Build values ONCE, then hand to state + form
+        const values = {
           recordNumber: generatedRecordNumber,
           initiator: userName,
           dateOfInitiation,
@@ -196,7 +253,11 @@ const PreventiveMaintenanceCreate = () => {
           qaApprovalComments: "",
           qaApprovalAttachment: [],
           preventiveFrequency: passedFrequency || "",
-        });
+        };
+
+        setFormInitialValues(values);
+        form.setFieldsValue(values);
+        setFormReady(true);
       } catch (error) {
         console.error("Error loading initial data:", error);
       } finally {
@@ -258,7 +319,6 @@ const PreventiveMaintenanceCreate = () => {
       label: "Attachment",
       value: values?.attachment || [],
     },
-    // 👇 NEW: Select User Department
     {
       key: "user_dept_selected_department",
       label: "Select User Department",
@@ -362,8 +422,6 @@ const PreventiveMaintenanceCreate = () => {
         process_data: processData,
         gridData: [],
         checklistData: [],
-        
-        // Send Equipment ID and Frequency OUTSIDE process_data
         equipment_id: rowEquipmentDbId ? Number(rowEquipmentDbId) : null,
         frequency: passedFrequency || "",
       };
@@ -443,6 +501,8 @@ const PreventiveMaintenanceCreate = () => {
 
       <Form
         form={form}
+        initialValues={formInitialValues}
+        preserve={true}
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
@@ -466,11 +526,11 @@ const PreventiveMaintenanceCreate = () => {
               <Form.Item
                 name="shortDescription"
                 label={
-                <span className="inline-flex items-center">
-                Short Description
-                <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
-              </span>
-              }
+                  <span className="inline-flex items-center">
+                    Short Description
+                    <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
+                  </span>
+                }
                 rules={[
                   {
                     required: true,
@@ -559,7 +619,6 @@ const PreventiveMaintenanceCreate = () => {
           <section>
             <SectionHeader title="Reviewed By (User Department)" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              {/* 👇 NEW: Select User Department before Comments */}
               <Form.Item
                 name="userDeptSelectedDeptId"
                 label={
@@ -602,6 +661,7 @@ const PreventiveMaintenanceCreate = () => {
             </div>
           </section>
         )}
+
         {activeTab === "engineer-review" && (
           <section>
             <SectionHeader title="Reviewed By (Engineering Department)" />

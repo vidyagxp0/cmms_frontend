@@ -41,7 +41,6 @@ const TABS = [
   { id: "user-dept-review", label: "Reviewed By User Department", stageId: 3 },
   { id: "qa-review", label: "QA Approval Review", stageId: 4 },
   { id: "activity", label: "Activity Log", stageId: 5 },
-  { id: "cancellation", label: "Cancellation", stageId: 6 },
 ];
 
 const getProcessValue = (processData = [], key) => {
@@ -123,6 +122,7 @@ const buildProcessData = (values, systemFields) => [
   { key: "user_dept_review_attachment", label: "User Dept Review Attachment", value: values?.userDeptReviewAttachment || [] },
   { key: "qa_review_comments", label: "QA Review Comments", value: values?.qaReviewComments || "" },
   { key: "qa_review_attachment", label: "QA Review Attachment", value: [] },
+  // Cancellation fields kept (empty) for backend compatibility — no UI now
   { key: "cancellation_remark", label: "Cancellation Remark", value: values?.cancellationRemark || "" },
   { key: "cancellation_attachment", label: "Cancellation Attachment", value: [] },
 ];
@@ -222,7 +222,6 @@ const CreateCalibrationPanel = () => {
   const isHodEditable = isStageEditable(2);
   const isUserDeptEditable = isStageEditable(3);
   const isQaReviewEditable = isStageEditable(4);
-  const isCancellationEditable = isStageEditable(6);
   const canCreateChild = Number(activeStageId) === 5 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
 
   useEffect(() => {
@@ -740,12 +739,6 @@ const CreateCalibrationPanel = () => {
     );
   }
 
-  const isCancellationStageActive = Number(activeStageId) === 6;
-
-  const visibleTabs = isCancellationStageActive
-    ? TABS.filter((tab) => tab.id === "cancellation")
-    : TABS.filter((tab) => tab.id !== "cancellation");
-
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
@@ -776,7 +769,7 @@ const CreateCalibrationPanel = () => {
       </div>
 
       <div className="mb-6">
-        <ProcessTabs tabs={visibleTabs} activeTab={activeTab} onTabChange={setActiveTab} />
+        <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
       <Form
@@ -1097,36 +1090,8 @@ const CreateCalibrationPanel = () => {
           </div>
         </section>
 
-        <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
-          <SectionHeader title="CANCELLATION" />
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item
-              name="cancellationRemark"
-              label="Remark"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormTextArea
-                rows={5}
-                placeholder="Enter cancellation remark..."
-              />
-            </Form.Item>
-            <Form.Item
-              name="cancellationAttachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormAttachment
-                multiple={true}
-                recordId={recordId}
-                attachmentField="cancellation_attachment"
-                label="Cancellation Attachment"
-                uploadApi={addMultipleAttachments}
-                disabled={!isCancellationEditable}
-              />
-            </Form.Item>
-          </div>
-        </section>
+        {/* Cancellation tab removed — cancelled stage is still indicated via
+            cancelledStageId={6} on <ProcessStage /> */}
 
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
           <SectionHeader title="ACTIVITY LOG" />

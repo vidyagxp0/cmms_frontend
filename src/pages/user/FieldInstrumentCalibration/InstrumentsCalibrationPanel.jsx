@@ -46,7 +46,6 @@ const TABS = [
   { id: "user-dept-review", label: "User Department Review (User Dept)", stageId: 42 },
   { id: "qa-review", label: "QA Approval Review", stageId: 43 },
   { id: "activity", label: "Activity Log", stageId: 44 },
-  { id: "cancellation", label: "Cancellation", stageId: 45 },
 ];
 
 const REQUIRED_FIELDS = [
@@ -134,8 +133,6 @@ const buildProcessData = (values, systemFields) => [
   { key: "user_dept_review_attachment", label: "User Dept Review Attachment", value: values?.userDeptReviewAttachment || [] },
   { key: "qa_review_comments", label: "QA Review Comments", value: values?.qaReviewComments || "" },
   { key: "qa_review_attachment", label: "QA Review Attachment", value: [] },
-  { key: "cancellation_remark", label: "Cancellation Remark", value: values?.cancellationRemark || "" },
-  { key: "cancellation_attachment", label: "Cancellation Attachment", value: [] },
 ];
 
 const validateCalibrationForm = (form, storedRequired) => {
@@ -208,10 +205,9 @@ const InstrumentCalibrationPanel = () => {
   const isHodEditable = isStageEditable(41);
   const isUserDeptEditable = isStageEditable(42);
   const isQaReviewEditable = isStageEditable(43);
-  const isCancellationEditable = isStageEditable(45);
 
   const canCreateChild =
-    Number(activeStageId) === 43 &&
+    Number(activeStageId) === 44 &&
     userRoles.some((role) => String(role).toLowerCase() === "initiator");
 
   useEffect(() => {
@@ -382,8 +378,6 @@ const InstrumentCalibrationPanel = () => {
         const userDeptReviewAttachment = getProcessValue(processData, "user_dept_review_attachment");
         const qaReviewComments = getProcessValue(processData, "qa_review_comments");
         const qaReviewAttachment = getProcessValue(processData, "qa_review_attachment");
-        const cancellationRemark = getProcessValue(processData, "cancellation_remark");
-        const cancellationAttachment = getProcessValue(processData, "cancellation_attachment");
 
         const backendInitiatorId = responseData?.initiator?.id ?? responseData?.initiator_id ?? "";
         const backendInitiatorName = responseData?.initiator?.name ?? processInitiator ?? "";
@@ -424,8 +418,6 @@ const InstrumentCalibrationPanel = () => {
           userDeptReviewAttachment: userDeptReviewAttachment || [],
           qaReviewComments,
           qaReviewAttachment: qaReviewAttachment || [],
-          cancellationRemark: cancellationRemark || "",
-          cancellationAttachment: cancellationAttachment || [],
         });
 
         const currentEquipmentMap = equipmentMapRef.current;
@@ -682,12 +674,6 @@ const InstrumentCalibrationPanel = () => {
     );
   }
 
-  const isCancellationStageActive = Number(activeStageId) === 44;
-
-  const visibleTabs = isCancellationStageActive
-    ? TABS.filter((tab) => tab.id === "cancellation")
-    : TABS.filter((tab) => tab.id !== "cancellation");
-
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
@@ -719,7 +705,7 @@ const InstrumentCalibrationPanel = () => {
       </div>
 
       <div className="mb-6">
-        <ProcessTabs tabs={visibleTabs} activeTab={activeTab} onTabChange={setActiveTab} />
+        <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
       <Form
@@ -1030,29 +1016,8 @@ const InstrumentCalibrationPanel = () => {
           </div>
         </section>
 
-        <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
-          <SectionHeader title="CANCELLATION" />
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="cancellationRemark" label="Remark" className="!mb-4 md:col-span-2">
-              <FormTextArea rows={5} placeholder="Enter cancellation remark..." />
-            </Form.Item>
-            <Form.Item
-              name="cancellationAttachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormAttachment
-                multiple={true}
-                recordId={recordId}
-                attachmentField="cancellation_attachment"
-                label="Cancellation Attachment"
-                uploadApi={addMultipleAttachments}
-                disabled={!isCancellationEditable}
-              />
-            </Form.Item>
-          </div>
-        </section>
+        {/* Cancellation tab removed — cancelled stage still shown via
+            cancelledStageId={45} on <ProcessStage /> */}
 
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
           <SectionHeader title="ACTIVITY LOG" />

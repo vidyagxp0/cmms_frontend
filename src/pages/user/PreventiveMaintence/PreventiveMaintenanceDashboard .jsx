@@ -240,28 +240,44 @@ const PreventiveMaintenanceDashboard = () => {
     const columns = useMemo(
         () => [
             // ID
-            {
-                accessorKey: "id",
-                header: "ID",
-                cell: ({ row, getValue }) => {
-                    const record = row.original;
-                    const handleClick = () => {
-                        if (!record?.id) return;
-                        navigate(`/user/preventive-maintenance-panel/${record.id}`);
-                    };
+           {
+    accessorKey: "id",
+    header: "ID",
+    cell: ({ row, getValue }) => {
+        const record = row.original;
 
-                    return (
-                        <button
-                            type="button"
-                            onClick={handleClick}
-                            className="inline-flex cursor-pointer items-center rounded-[8px] border border-[#D3E1DB] bg-[#F1F5F2] px-2 py-1.5 font-[var(--font-display)] text-[10px] font-bold tracking-[-0.01em] text-[#56766D] transition-all duration-200 hover:border-[#B9CEC5] hover:bg-[#E8F0EC] hover:text-[#244F4A] focus:outline-none focus:ring-2 focus:ring-[#6E9487]/20"
-                            title="View record details"
-                        >
-                            #{getValue() || "-"}
-                        </button>
-                    );
-                },
-            },
+        const handleClick = () => {
+            if (!record?.id) return;
+
+            /* 👇 Branch on child_type */
+            if (record.child_type === "addendum-preventive-management") {
+                navigate(
+                    `/user/addendum-preventive-management-panel/${record.id}`
+                );
+                return;
+            }
+
+            if (record.child_type === "preventive-child") {
+                navigate(`/user/preventive-maintenance-panel/${record.id}`);
+                return;
+            }
+
+            /* Fallback for anything unexpected */
+            navigate(`/user/preventive-maintenance-panel/${record.id}`);
+        };
+
+        return (
+            <button
+                type="button"
+                onClick={handleClick}
+                className="inline-flex cursor-pointer items-center rounded-[8px] border border-[#D3E1DB] bg-[#F1F5F2] px-2 py-1.5 font-[var(--font-display)] text-[10px] font-bold tracking-[-0.01em] text-[#56766D] transition-all duration-200 hover:border-[#B9CEC5] hover:bg-[#E8F0EC] hover:text-[#244F4A] focus:outline-none focus:ring-2 focus:ring-[#6E9487]/20"
+                title="View record details"
+            >
+                #{getValue() || "-"}
+            </button>
+        );
+    },
+},
 
             // RECORD NUMBER
             {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Activity } from "lucide-react";
 import { Form, DatePicker } from "antd";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -27,7 +27,6 @@ import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 dayjs.extend(customParseFormat);
 
-// 👇 UPDATED: Tab label changed to "HOD / Designee Review"
 const TABS = [
   { id: "general", label: "General Information" },
   { id: "engineer-review", label: "HOD / Designee Review" },
@@ -38,20 +37,37 @@ const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
 ];
 
+/** Safe array coercion. */
+const asArray = (value) => (Array.isArray(value) ? value : []);
+
+/** Extract array from common API wrapper shapes. */
+const extractArray = (raw) => {
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw?.results)) return raw.results;
+  if (Array.isArray(raw?.items)) return raw.items;
+  if (raw && typeof raw === "object") {
+    // eslint-disable-next-line no-console
+    console.warn("Unexpected array response shape:", raw);
+  }
+  return [];
+};
+
 const AddendumPreventiveChildCreate = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
 
-  const state = location.state || {};
+  // ✅ Memoise `state` so its identity is stable across renders
+  const state = useMemo(() => location.state || {}, [location.state]);
+
   const {
-    rowData = {},
+    rowData,
     shortDescription: parentShortDescription = "",
     processId: stateProcessId,
     parentId: stateParentId,
-    preventiveFrequency: passedFrequency = "",
-    preventiveFrequencyCode: passedFrequencyCode = "",
     childType,
+    preventiveFrequency: passedFrequency = "",
   } = state;
 
   const routeProcessId = params.processId || stateProcessId || null;
@@ -72,16 +88,32 @@ const AddendumPreventiveChildCreate = () => {
   const [recordNumber, setRecordNumber] = useState("");
   const [dateOfInitiation] = useState(() => formatDateTime(new Date()));
 
+  // ✅ NEW: track initial values + form readiness
+  const [formInitialValues, setFormInitialValues] = useState({});
+  const [formReady, setFormReady] = useState(false);
+
   // Prefill sources from the parent row
-  const rowEquipmentName = rowData?.equipmentInstrumentName || ""; 
-  const rowEquipmentDbId = rowData?.equipmentDbId || "";             
-  const rowEquipmentCode = rowData?.equipmentInstrumentId || "";     
+  const rowEquipmentName = rowData?.equipmentInstrumentName || "";
+  const rowEquipmentDbId = rowData?.equipmentDbId || "";
+  const rowEquipmentCode = rowData?.equipmentInstrumentId || "";
   const rowBlock = rowData?.block || "";
   const rowDepartment = rowData?.department || "";
   const rowLocation = rowData?.location || "";
   const rowPrevDate = rowData?.previousPreventiveDate || "";
   const rowNextDate = rowData?.nextPreventiveDate || "";
   const rowRemark = rowData?.remark || "";
+
+  // ✅ Safety net — re-apply values AFTER the Form actually mounts
+  useEffect(() => {
+    if (
+      !isLoading &&
+      formReady &&
+      formInitialValues &&
+      Object.keys(formInitialValues).length > 0
+    ) {
+      form.setFieldsValue(formInitialValues);
+    }
+  }, [isLoading, formReady, formInitialValues, form]);
 
   useEffect(() => {
     let isMounted = true;
@@ -90,19 +122,24 @@ const AddendumPreventiveChildCreate = () => {
       setIsLoading(true);
       setEquipmentLoading(true);
 
+      let userName = "";
+      let departmentName = "";
+      let generatedRecordNumber = "";
+      let equipmentValue = "";
+
       try {
-        const [profileRes, recordNumRes, equipmentRes] = await Promise.allSettled([
-          getProfile(),
-          routeProcessId ? getRecordNumber(routeProcessId) : Promise.resolve(null),
-          getAllEquipmentData(),
-        ]);
+        const [profileRes, recordNumRes, equipmentRes] =
+          await Promise.allSettled([
+            getProfile(),
+            routeProcessId
+              ? getRecordNumber(routeProcessId)
+              : Promise.resolve(null),
+            getAllEquipmentData(),
+          ]);
 
         if (!isMounted) return;
 
-        let userName = "";
-        let departmentName = "";
-        let generatedRecordNumber = "";
-
+        // Profile
         if (profileRes.status === "fulfilled" && profileRes.value?.data?.data) {
           const profile = profileRes.value.data.data;
           userName = profile?.name || "";
@@ -111,37 +148,51 @@ const AddendumPreventiveChildCreate = () => {
           setDepartmentId(profile?.department?.id || "");
           departmentName = profile?.department?.name || "";
           setInitiationDepartment(departmentName);
+        } else if (profileRes.status === "rejected") {
+          console.error("Failed to fetch profile:", profileRes.reason);
         }
 
-        if (recordNumRes.status === "fulfilled" && recordNumRes.value?.data?.data) {
+        // Record number
+        if (
+          recordNumRes.status === "fulfilled" &&
+          recordNumRes.value?.data?.data
+        ) {
           generatedRecordNumber =
             recordNumRes.value.data.data.record_number || "";
           setRecordNumber(generatedRecordNumber);
+        } else if (recordNumRes.status === "rejected") {
+          console.error("Failed to fetch record number:", recordNumRes.reason);
         }
 
+        // ✅ Equipment — guarded
         let equipmentData = [];
         const map = {};
 
-        if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
-          equipmentData = equipmentRes.value.data.data || [];
+        if (
+          equipmentRes.status === "fulfilled" &&
+          equipmentRes.value?.data?.data !== undefined
+        ) {
+          equipmentData = extractArray(equipmentRes.value.data.data);
 
-          // Map options using equipment_name OR instrument_name to match the parent grid
           const options = equipmentData.map((item) => {
-            const name = item.equipment_name || item.instrument_name || item.name || "";
+            const name =
+              item.equipment_name || item.instrument_name || item.name || "";
             return { value: name, label: name };
           });
-          
+
           equipmentData.forEach((item) => {
-            const name = item.equipment_name || item.instrument_name || item.name || "";
-            map[name] = item;
+            const name =
+              item.equipment_name || item.instrument_name || item.name || "";
+            if (name) map[name] = item;
           });
 
           setEquipmentOptions(options);
           setEquipmentMap(map);
+        } else if (equipmentRes.status === "rejected") {
+          console.error("Failed to fetch equipment:", equipmentRes.reason);
         }
 
         // Resolve the equipment name from the parent row
-        let equipmentValue = "";
         if (rowEquipmentName && map[rowEquipmentName]) {
           equipmentValue = rowEquipmentName;
         } else if (rowEquipmentName) {
@@ -153,25 +204,34 @@ const AddendumPreventiveChildCreate = () => {
               item.instrument_id_no === rowEquipmentCode ||
               item.equipment_id_no === rowEquipmentCode
           );
-          if (found) equipmentValue = found.equipment_name || found.instrument_name || found.name;
+          if (found)
+            equipmentValue =
+              found.equipment_name || found.instrument_name || found.name || "";
         } else if (rowEquipmentDbId) {
           const found = equipmentData.find(
             (item) => String(item.id) === String(rowEquipmentDbId)
           );
-          if (found) equipmentValue = found.equipment_name || found.instrument_name || found.name;
+          if (found)
+            equipmentValue =
+              found.equipment_name || found.instrument_name || found.name || "";
         }
+      } catch (error) {
+        console.error("❌ Error loading initial data (unexpected):", error);
+      } finally {
+        if (!isMounted) return;
 
-        form.setFieldsValue({
-          recordNumber: generatedRecordNumber,
-          initiator: userName,
+        // ✅ ALWAYS build & set values — never skip on error
+        const values = {
+          recordNumber: generatedRecordNumber || "",
+          initiator: userName || "",
           dateOfInitiation,
-          initiationDepartment: departmentName,
+          initiationDepartment: departmentName || "",
           shortDescription: parentShortDescription || "",
           equipmentInstrumentName: equipmentValue || undefined,
           equipmentInstrumentId:
             rowEquipmentCode ||
-            map[equipmentValue]?.equipment_id_no ||
-            map[equipmentValue]?.instrument_id_no ||
+            equipmentMap[equipmentValue]?.equipment_id_no ||
+            equipmentMap[equipmentValue]?.instrument_id_no ||
             "",
           block: rowBlock,
           department: rowDepartment,
@@ -185,14 +245,14 @@ const AddendumPreventiveChildCreate = () => {
           qaApprovalComments: "",
           qaApprovalAttachment: [],
           preventiveFrequency: passedFrequency || "",
-        });
-      } catch (error) {
-        console.error("Error loading initial data:", error);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-          setEquipmentLoading(false);
-        }
+        };
+
+        setFormInitialValues(values);
+        form.setFieldsValue(values);
+        setFormReady(true);
+
+        setIsLoading(false);
+        setEquipmentLoading(false);
       }
     };
 
@@ -201,7 +261,8 @@ const AddendumPreventiveChildCreate = () => {
     return () => {
       isMounted = false;
     };
-  }, [routeProcessId, form, dateOfInitiation, passedFrequency, rowEquipmentName, rowEquipmentDbId, rowEquipmentCode, rowBlock, rowDepartment, rowLocation, rowPrevDate, rowNextDate, rowRemark, parentShortDescription]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeProcessId, form, dateOfInitiation, passedFrequency]);
 
   const systemFields = [
     { name: "recordNumber", label: "Record Number" },
@@ -210,7 +271,6 @@ const AddendumPreventiveChildCreate = () => {
     { name: "initiationDepartment", label: "Initiation Department" },
   ];
 
-  // 👇 UPDATED: Payload labels changed to HOD / Designee Review
   const buildProcessData = (values) => [
     ...systemFields.map((field) => ({
       key: field.name,
@@ -235,20 +295,20 @@ const AddendumPreventiveChildCreate = () => {
     { key: "block", label: "Block", value: values?.block || "" },
     { key: "department", label: "Department", value: values?.department || "" },
     { key: "location", label: "Location", value: values?.location || "" },
-    {
-      key: "previousPreventiveDate",
-      label: "Previous Preventive Date",
-      value: values?.previousPreventiveDate
-        ? dayjs(values.previousPreventiveDate).format("DD/MM/YYYY")
-        : "",
-    },
-    {
-      key: "nextPreventiveDate",
-      label: "Next Preventive Date",
-      value: values?.nextPreventiveDate
-        ? dayjs(values.nextPreventiveDate).format("DD/MM/YYYY")
-        : "",
-    },
+    // {
+    //   key: "previousPreventiveDate",
+    //   label: "Previous Preventive Date",
+    //   value: values?.previousPreventiveDate
+    //     ? dayjs(values.previousPreventiveDate).format("DD/MM/YYYY")
+    //     : "",
+    // },
+    // {
+    //   key: "nextPreventiveDate",
+    //   label: "Next Preventive Date",
+    //   value: values?.nextPreventiveDate
+    //     ? dayjs(values.nextPreventiveDate).format("DD/MM/YYYY")
+    //     : "",
+    // },
     { key: "remark", label: "Remark", value: values?.remark || "" },
     {
       key: "attachment",
@@ -319,7 +379,6 @@ const AddendumPreventiveChildCreate = () => {
     }
     form.submit();
   };
-  console.log("childType in AddendumPreventiveChildCreate.jsx:", childType);
 
   const handleSubmit = async (values) => {
     if (isSaving) return;
@@ -329,9 +388,9 @@ const AddendumPreventiveChildCreate = () => {
       const processData = buildProcessData(values);
 
       const payload = {
-        process_id: Number(routeProcessId) || 13, // 👈 Process ID 13
-        stage_id: 66,  
-        childType,                           // 👈 Initial Stage 65
+        process_id: Number(routeProcessId) || 13,
+        stage_id: 66,
+        childType,
         department_id: Number(departmentId),
         initiator_id: Number(initiatorId),
         initiator_name: initiator,
@@ -349,12 +408,13 @@ const AddendumPreventiveChildCreate = () => {
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Addendum Preventive Maintenance created successfully.");
         form.resetFields();
-        navigate("/user/addendum-preventive-planner-dashboard");
+        navigate("/user/preventive-maintenance-dashboard");
         return;
       }
 
       toast.error(
-        response?.data?.message || "Failed to create Addendum Preventive Maintenance."
+        response?.data?.message ||
+          "Failed to create Addendum Preventive Maintenance."
       );
     } catch (error) {
       console.error("Addendum Preventive Maintenance submission failed:", error);
@@ -419,6 +479,8 @@ const AddendumPreventiveChildCreate = () => {
 
       <Form
         form={form}
+        initialValues={formInitialValues}
+        preserve={true}
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
@@ -442,11 +504,11 @@ const AddendumPreventiveChildCreate = () => {
               <Form.Item
                 name="shortDescription"
                 label={
-                <span className="inline-flex items-center">
-                Short Description
-                <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
-              </span>
-              }
+                  <span className="inline-flex items-center">
+                    Short Description
+                    <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
+                  </span>
+                }
                 rules={[
                   {
                     required: true,
@@ -485,18 +547,18 @@ const AddendumPreventiveChildCreate = () => {
               </Form.Item>
 
               <Form.Item name="block" label="Block" className="!mb-4">
-                <FormInput placeholder="Block" />
+                <FormInput placeholder="Block" disabled />
               </Form.Item>
 
               <Form.Item name="department" label="Department" className="!mb-4">
-                <FormInput placeholder="Department" />
+                <FormInput placeholder="Department" disabled />
               </Form.Item>
 
               <Form.Item name="location" label="Location" className="!mb-4">
-                <FormInput placeholder="Location" />
+                <FormInput placeholder="Location" disabled />
               </Form.Item>
 
-              <Form.Item
+              {/* <Form.Item
                 name="previousPreventiveDate"
                 label="Previous Preventive Date"
                 className="!mb-4"
@@ -518,7 +580,7 @@ const AddendumPreventiveChildCreate = () => {
                   format="DD/MM/YYYY"
                   placeholder="Select date"
                 />
-              </Form.Item>
+              </Form.Item> */}
 
               <Form.Item
                 name="preventiveFrequency"
@@ -553,7 +615,6 @@ const AddendumPreventiveChildCreate = () => {
           </section>
         )}
 
-        {/* 👇 UPDATED: Section header changed to HOD / DESIGNEE REVIEW */}
         {activeTab === "engineer-review" && (
           <section>
             <SectionHeader title="HOD / DESIGNEE REVIEW" />

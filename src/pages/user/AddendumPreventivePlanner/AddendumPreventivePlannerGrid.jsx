@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Trash2, Table2, Loader2 } from "lucide-react";
 import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
@@ -27,6 +27,89 @@ const MONTHS = [
   { key: "dec", label: "December" },
 ];
 
+const FREQUENCY_OPTIONS = [
+  { value: "monthly", label: "Monthly" },
+  { value: "quarterly", label: "Quarterly" },
+  { value: "half-yearly", label: "Half Yearly" },
+  { value: "yearly", label: "Yearly" },
+  { value: "two-yearly", label: "Two Yearly" },
+  { value: "five-yearly", label: "Five Yearly" },
+];
+
+/* ---------- Frequency interval in months ---------- */
+const FREQUENCY_INTERVAL_MONTHS = {
+  monthly: 1,
+  quarterly: 3,
+  "half-yearly": 6,
+  yearly: 12,
+  "two-yearly": 24,
+  "five-yearly": 60,
+};
+
+/* ---------- Frequency helpers (unchanged) ---------- */
+export const FREQUENCY_PRIORITY = { Y: 4, Q: 3, H: 2, M: 1 };
+
+export const FREQUENCY_LABEL_BY_CODE = {
+  Y: "yearly",
+  Q: "quarterly",
+  H: "half-yearly",
+  M: "monthly",
+};
+
+const WORD_PATTERNS = [
+  [/HALF[\s-]?YEARLY|HALF[\s-]?YEAR/g, "H"],
+  [/YEARLY|ANNUAL(LY)?/g, "Y"],
+  [/QUARTERLY|QUARTER/g, "Q"],
+  [/MONTHLY|MONTH/g, "M"],
+];
+
+const extractFrequencyTokens = (raw) => {
+  if (raw === undefined || raw === null) return [];
+  let str = String(raw).trim().toUpperCase();
+  if (!str) return [];
+
+  const tokens = new Set();
+
+  WORD_PATTERNS.forEach(([re, code]) => {
+    if (re.test(str)) tokens.add(code);
+    str = str.replace(re, " ");
+  });
+
+  const letters = str.replace(/[^A-Z]/g, "");
+  for (const ch of letters) {
+    if (FREQUENCY_PRIORITY[ch] !== undefined) tokens.add(ch);
+  }
+
+  return [...tokens];
+};
+
+export const getRowBiggestFrequency = (row) => {
+  if (row?.frequency) {
+    return { code: row.frequency, label: row.frequency };
+  }
+
+  const codes = [];
+
+  if (row?.weeklyPreventive && typeof row.weeklyPreventive === "object") {
+    Object.values(row.weeklyPreventive).forEach((weeks) => {
+      if (!Array.isArray(weeks)) return;
+      weeks.forEach((week) => {
+        if (!week) return;
+        extractFrequencyTokens(week.planned).forEach((c) => codes.push(c));
+        extractFrequencyTokens(week.actual).forEach((c) => codes.push(c));
+      });
+    });
+  }
+
+  if (codes.length === 0) return { code: "", label: "" };
+
+  const code = codes.reduce((best, cur) =>
+    FREQUENCY_PRIORITY[cur] > FREQUENCY_PRIORITY[best] ? cur : best
+  );
+
+  return { code, label: FREQUENCY_LABEL_BY_CODE[code] || "" };
+};
+
 export const createEmptyWeeklyData = () => {
   const data = {};
   MONTHS.forEach(({ key }) => {
@@ -36,23 +119,197 @@ export const createEmptyWeeklyData = () => {
   return data;
 };
 
+/* ═══════════════════════════════════════════════════════════════
+   FREQUENCY-DRIVEN ACTIVE MONTHS
+   ═══════════════════════════════════════════════════════════════
+   Returns null when all 12 months should be editable (no frequency,
+   monthly frequency, or no anchor date entered yet). Otherwise
+   returns the array of month indices that remain editable.
+   The anchor is the first (earliest) month with a planned date.
+*/
+const getActiveMonthIndices = (row) => {
+  const frequency = row?.frequency;
+  if (!frequency || frequency === "monthly") return null;
+
+  const interval = FREQUENCY_INTERVAL_MONTHS[frequency];
+  if (!interval) return null;
+
+  let anchorIdx = null;
+  for (let i = 0; i < 12; i++) {
+    if (row[`${MONTHS[i].key}_planned`]) {
+      anchorIdx = i;
+      break;
+    }
+  }
+  if (anchorIdx === null) return null;
+
+  const indices = [];
+  for (let i = anchorIdx; i < 12; i += interval) indices.push(i);
+  return indices;
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   MEMOIZED CELL COMPONENTS
+   ═══════════════════════════════════════════════════════════════ */
+
+const TextCell = React.memo(function TextCell({
+  rowIndex,
+  fieldKey,
+  value,
+  placeholder,
+  disabled,
+  updateRow,
+}) {
+  const handleChange = useCallback(
+    (e) => updateRow(rowIndex, fieldKey, e.target.value),
+    [rowIndex, fieldKey, updateRow]
+  );
+  return (
+    <Input
+      value={value}
+      placeholder={placeholder}
+      onChange={handleChange}
+      disabled={disabled}
+      className="!h-8 !w-full !rounded-none !border-transparent !bg-transparent !px-2 !text-[11px] !font-medium !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!bg-white disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
+    />
+  );
+});
+
+const DateCell = React.memo(function DateCell({
+  rowIndex,
+  fieldKey,
+  value,
+  disabled,
+  updateRow,
+}) {
+  const dateValue = useMemo(() => (value ? dayjs(value) : null), [value]);
+
+  const handleChange = useCallback(
+    (date) =>
+      updateRow(
+        rowIndex,
+        fieldKey,
+        date ? date.format("YYYY-MM-DD") : ""
+      ),
+    [rowIndex, fieldKey, updateRow]
+  );
+
+  return (
+    <DatePicker
+      value={dateValue}
+      onChange={handleChange}
+      format="DD/MM/YYYY"
+      variant="borderless"
+      className="!h-8 !w-full !px-1 !text-[10px] !font-medium !text-[#263B35] hover:bg-[#F3F6F4] cursor-pointer disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
+      disabled={disabled}
+      placeholder="DD/MM/YYYY"
+    />
+  );
+});
+
+const FrequencySelectCell = React.memo(function FrequencySelectCell({
+  rowIndex,
+  fieldKey,
+  value,
+  options,
+  placeholder,
+  disabled,
+  updateRow,
+}) {
+  const handleChange = useCallback(
+    (val) => updateRow(rowIndex, fieldKey, val),
+    [rowIndex, fieldKey, updateRow]
+  );
+  return (
+    <Select
+      value={value || undefined}
+      placeholder={placeholder}
+      onChange={handleChange}
+      options={options}
+      disabled={disabled}
+      className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1]"
+    />
+  );
+});
+
+const EquipmentSelectCell = React.memo(function EquipmentSelectCell({
+  rowIndex,
+  equipmentDbId,
+  equipmentOptions,
+  equipmentLoading,
+  placeholder,
+  disabled,
+  updateRow,
+}) {
+  const selectValue =
+    equipmentDbId !== undefined &&
+    equipmentDbId !== null &&
+    equipmentDbId !== ""
+      ? String(equipmentDbId)
+      : undefined;
+
+  const handleChange = useCallback(
+    (id) => updateRow(rowIndex, "equipmentInstrumentName", id),
+    [rowIndex, updateRow]
+  );
+
+  return (
+    <Select
+      value={selectValue}
+      placeholder={equipmentLoading ? "Loading..." : placeholder}
+      onChange={handleChange}
+      options={equipmentOptions}
+      disabled={disabled || equipmentLoading}
+      showSearch
+      optionFilterProp="label"
+      filterOption={(input, option) =>
+        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+      }
+      className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1] disabled:[&_.ant-select-selector]:!bg-[#F9FAF9] disabled:[&_.ant-select-selection-item]:!text-[#263B35]"
+    />
+  );
+});
+
+const RemarkCell = React.memo(function RemarkCell({
+  rowIndex,
+  value,
+  disabled,
+  updateRemark,
+}) {
+  const handleChange = useCallback(
+    (e) => updateRemark(rowIndex, e.target.value),
+    [rowIndex, updateRemark]
+  );
+  return (
+    <TextArea
+      value={value ?? ""}
+      onChange={handleChange}
+      rows={2}
+      className="!h-full !min-h-[64px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
+      disabled={disabled}
+      placeholder="Enter remark"
+    />
+  );
+});
+
+/* -------------------- Main component -------------------- */
 const AddendumPreventivePlannerGrid = ({
   value = [],
   onChange,
   equipmentOptions = [],
   equipmentMap = {},
   equipmentLoading = false,
-  name = "Addendum Preventive Information",
+  name = "Addendum Preventive Planner Information",
   description = "",
   addButtonLabel = "Add Row",
   minRows = 0,
   maxRows,
+  onViewChild,
+  viewChildLabel = "Child",
   recordId,
   disabled = false,
-  showAddButton = true,
-  onViewChild,
   canCreateChild = false,
-  viewChildLabel = "Child",
+  showAddButton = true,
 }) => {
   const mainColumns = [
     {
@@ -61,8 +318,7 @@ const AddendumPreventivePlannerGrid = ({
       type: "select",
       placeholder: "Select equipment name",
       required: true,
-      /* 👇 widened so "Name (Code)" fits comfortably in the cell */
-      minWidth: 380,
+      minWidth: 240,
     },
     {
       key: "equipmentInstrumentId",
@@ -77,40 +333,26 @@ const AddendumPreventivePlannerGrid = ({
       placeholder: "Enter location",
       minWidth: 180,
     },
+    {
+      key: "frequency",
+      title: "Frequency",
+      type: "select",
+      placeholder: "Select frequency",
+      options: FREQUENCY_OPTIONS,
+      minWidth: 160,
+    },
   ];
 
   const rows = Array.isArray(value) ? value : [];
+
+  const rowsRef = useRef(rows);
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
+
   const [deleteRowIndex, setDeleteRowIndex] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
-
-  /* 👇 Combine Equipment Name + Equipment Code for the dropdown labels */
-  const combinedEquipmentOptions = useMemo(() => {
-    return equipmentOptions.map((opt) => {
-      const eq = equipmentMap?.[String(opt.value)];
-      if (!eq) return opt;
-
-      const name =
-        eq.equipment_name ||
-        eq.instrument_name ||
-        eq.instrumentName ||
-        eq.name ||
-        "";
-
-      const code =
-        eq.equipment_id_no ||
-        eq.instrument_id_no ||
-        eq.equipment_id ||
-        "";
-
-      const label =
-        code && !(opt.label || "").includes(code)
-          ? `${name || opt.label} (${code})`
-          : opt.label || name;
-
-      return { ...opt, label };
-    });
-  }, [equipmentOptions, equipmentMap]);
 
   const addRow = () => {
     if (disabled) return;
@@ -123,6 +365,7 @@ const AddendumPreventivePlannerGrid = ({
     newRow.equipmentDbId = "";
     newRow.make = "";
     newRow.model = "";
+    newRow.frequency = "";
 
     MONTHS.forEach((m) => {
       newRow[`${m.key}_planned`] = "";
@@ -130,10 +373,35 @@ const AddendumPreventivePlannerGrid = ({
     });
 
     newRow.remark = "";
-    newRow.row_id = rows.length + 1;
 
     onChange([...rows, newRow]);
   };
+
+  /* ---------- Duplicate row for a different frequency (MOM Point 2) ---------- */
+  const handleDuplicateForFrequency = useCallback(
+    (rowIndex) => {
+      if (disabled) return;
+      if (maxRows !== undefined && rows.length >= maxRows) return;
+
+      const sourceRow = rowsRef.current[rowIndex];
+      if (!sourceRow) return;
+
+      const newRow = {
+        ...sourceRow,
+        frequency: "",
+        remark: "",
+      };
+      MONTHS.forEach((m) => {
+        newRow[`${m.key}_planned`] = "";
+        newRow[`${m.key}_executed`] = "";
+      });
+
+      const updated = [...rowsRef.current];
+      updated.splice(rowIndex + 1, 0, newRow);
+      onChange(updated);
+    },
+    [disabled, maxRows, rows.length, onChange]
+  );
 
   const handleDeleteRow = (rowIndex) => {
     if (disabled) return;
@@ -146,10 +414,7 @@ const AddendumPreventivePlannerGrid = ({
   const handleConfirmDelete = async () => {
     if (deleteRowIndex === null || rows.length <= minRows) return;
     try {
-      const updatedRows = rows
-        .filter((_, index) => index !== deleteRowIndex)
-        .map((row, index) => ({ ...row, row_id: index + 1 }));
-
+      const updatedRows = rows.filter((_, index) => index !== deleteRowIndex);
       const payload = { gridData: updatedRows };
       if (selectedId) await updatePreventive(selectedId, payload);
       onChange(updatedRows);
@@ -160,59 +425,163 @@ const AddendumPreventivePlannerGrid = ({
     }
   };
 
+  /* Append the equipment code to each option label so users see
+   "Name (ID)" in the dropdown AND in the selected value. */
+const equipmentOptionsWithCode = useMemo(() => {
+  if (!Array.isArray(equipmentOptions)) return [];
+
+  return equipmentOptions.map((opt) => {
+    const eq = equipmentMap?.[String(opt?.value)];
+
+    const code =
+      eq?.equipment_id_no ||
+      eq?.instrument_id_no ||
+      eq?.equipment_id ||
+      eq?.instrument_id ||
+      opt?.equipment_id_no ||
+      opt?.instrument_id_no ||
+      opt?.equipment_id ||
+      opt?.instrument_id ||
+      opt?.code ||
+      "";
+
+    if (!code) return opt;
+
+    const baseLabel =
+      opt?.label ||
+      eq?.equipment_name ||
+      eq?.instrument_name ||
+      "";
+
+    // Avoid double-printing if the parent already baked the code in.
+    if (!baseLabel || baseLabel.includes(code)) return opt;
+
+    return { ...opt, label: `${baseLabel} (${code})` };
+  });
+}, [equipmentOptions, equipmentMap]);
+
   const handleCancelDelete = () => {
     setDeleteRowIndex(null);
     setIsDeleteModalOpen(false);
   };
 
-  const updateRow = (rowIndex, key, newValue) => {
-    if (disabled) return;
-    const updated = [...rows];
-    const row = { ...updated[rowIndex] };
+  const updateRow = useCallback(
+    (rowIndex, key, newValue) => {
+      if (disabled) return;
+      const currentRows = rowsRef.current;
+      const updated = [...currentRows];
+      const row = { ...updated[rowIndex] };
 
-    if (key === "equipmentInstrumentName") {
-      const equipment = equipmentMap[String(newValue)];
+      if (key === "equipmentInstrumentName") {
+        const equipment = equipmentMap[String(newValue)];
 
-      if (equipment) {
-        row.equipmentDbId = String(equipment.id);
-        row.equipmentInstrumentName =
-          equipment.equipment_name || equipment.instrument_name || "";
+        if (equipment) {
+          row.equipmentDbId = String(equipment.id);
+          row.equipmentInstrumentName =
+            equipment.equipment_name || equipment.instrument_name || "";
 
-        row.equipmentInstrumentId =
-          equipment.equipment_id_no ||
-          equipment.instrument_id_no ||
-          equipment.equipment_id ||
-          "";
-        row.location =
-          equipment.equipment_location || equipment.location || "";
-        row.make = equipment.equipment_make || equipment.make || "";
-        row.model =
-          equipment.equipment_model ||
-          equipment.sr_no_model_no ||
-          equipment.model ||
-          "";
-      } else {
-        row.equipmentDbId = "";
-        row.equipmentInstrumentName = "";
-        row.equipmentInstrumentId = "";
-        row.location = "";
-        row.make = "";
-        row.model = "";
+          row.equipmentInstrumentId =
+            equipment.equipment_id_no ||
+            equipment.instrument_id_no ||
+            equipment.equipment_id ||
+            "";
+
+          row.location =
+            equipment.equipment_location || equipment.location || "";
+
+          row.make = equipment.equipment_make || equipment.make || "";
+
+          row.model =
+            equipment.equipment_model ||
+            equipment.sr_no_model_no ||
+            equipment.model ||
+            "";
+        } else {
+          row.equipmentDbId = "";
+          row.equipmentInstrumentName = "";
+          row.equipmentInstrumentId = "";
+          row.location = "";
+          row.make = "";
+          row.model = "";
+        }
+            } else if (key === "frequency") {
+        row.frequency = newValue;
+
+        /* Recalculate the planned schedule when frequency changes.
+           Monthly (interval = 1) is included so the whole year auto-fills. */
+        const interval = FREQUENCY_INTERVAL_MONTHS[newValue];
+        if (interval) {
+          let anchorIdx = null;
+          for (let i = 0; i < 12; i++) {
+            if (row[`${MONTHS[i].key}_planned`]) {
+              anchorIdx = i;
+              break;
+            }
+          }
+          if (anchorIdx !== null) {
+            const anchorDate = dayjs(row[`${MONTHS[anchorIdx].key}_planned`]);
+            MONTHS.forEach((m) => {
+              row[`${m.key}_planned`] = "";
+            });
+            row[`${MONTHS[anchorIdx].key}_planned`] = anchorDate.format(
+              "YYYY-MM-DD"
+            );
+            for (let i = anchorIdx + interval; i < 12; i += interval) {
+              row[`${MONTHS[i].key}_planned`] = anchorDate
+                .add(i - anchorIdx, "month")
+                .format("YYYY-MM-DD");
+            }
+          }
+        }
+
+            } else if (key.endsWith("_planned")) {
+        row[key] = newValue;
+
+        /* Auto-fill subsequent months when the anchor (first filled) date
+           is set. Works for monthly too, so the whole year cascades. */
+        const interval = FREQUENCY_INTERVAL_MONTHS[row.frequency];
+        if (interval && newValue) {
+          const monthKey = key.replace("_planned", "");
+          const monthIndex = MONTHS.findIndex((m) => m.key === monthKey);
+
+          let anchorIdx = null;
+          for (let i = 0; i < 12; i++) {
+            if (row[`${MONTHS[i].key}_planned`]) {
+              anchorIdx = i;
+              break;
+            }
+          }
+
+          if (anchorIdx === monthIndex) {
+            const anchorDate = dayjs(newValue);
+            for (let i = anchorIdx + interval; i < 12; i += interval) {
+              row[`${MONTHS[i].key}_planned`] = anchorDate
+                .add(i - anchorIdx, "month")
+                .format("YYYY-MM-DD");
+            }
+          }
+        }
       }
-    } else {
-      row[key] = newValue;
-    }
+       else {
+        row[key] = newValue;
+      }
 
-    updated[rowIndex] = row;
-    onChange(updated);
-  };
+      updated[rowIndex] = row;
+      onChange(updated);
+    },
+    [disabled, equipmentMap, onChange]
+  );
 
-  const updateRemark = (rowIndex, newValue) => {
-    if (disabled) return;
-    const updated = [...rows];
-    updated[rowIndex] = { ...updated[rowIndex], remark: newValue };
-    onChange(updated);
-  };
+  const updateRemark = useCallback(
+    (rowIndex, newValue) => {
+      if (disabled) return;
+      const currentRows = rowsRef.current;
+      const updated = [...currentRows];
+      updated[rowIndex] = { ...updated[rowIndex], remark: newValue };
+      onChange(updated);
+    },
+    [disabled, onChange]
+  );
 
   const renderField = (column, row, rowIndex) => {
     const {
@@ -224,123 +593,79 @@ const AddendumPreventivePlannerGrid = ({
     } = column;
 
     const fieldValue = row[key] ?? "";
-    const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
 
-    // 👇 ONLY lock the Equipment Code field if it has a value
-    const isCodeField = key === "equipmentInstrumentId";
-    const hasValue =
-      fieldValue !== undefined &&
-      fieldValue !== null &&
-      String(fieldValue).trim() !== "";
-    const isLockedCode = isCodeField && hasValue;
-
-    const isDisabled = disabled || columnDisabled || isLockedCode;
-
-    const commonProps = {
-      disabled: isDisabled,
-      className:
-        "!w-full !rounded-none !border-transparent !bg-transparent !shadow-none hover:!border-[#A8B9B2] focus:!border-[#4E7585] focus:!shadow-none disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]",
-    };
+    const isRowFromApi = row.isFromApi === true;
+    const apiColumns = [
+      "equipmentInstrumentName",
+      "equipmentInstrumentId",
+      "location",
+    ];
+    const isApiColumn = apiColumns.includes(key);
+    const isDisabled =
+      disabled || columnDisabled || (isRowFromApi && isApiColumn);
 
     if (type === "select") {
       if (key === "equipmentInstrumentName") {
-        const selectValue =
-          row.equipmentDbId !== undefined &&
-          row.equipmentDbId !== null &&
-          row.equipmentDbId !== ""
-            ? String(row.equipmentDbId)
-            : combinedEquipmentOptions.find(
-                (opt) => opt.label === row.equipmentInstrumentName
-              )?.value ||
-              equipmentOptions.find(
-                (opt) => opt.label === row.equipmentInstrumentName
-              )?.value ||
-              undefined;
-
         return (
-          <Select
-            {...commonProps}
-            value={selectValue}
-            placeholder={equipmentLoading ? "Loading..." : placeholder}
-            onChange={(id) =>
-              updateRow(rowIndex, "equipmentInstrumentName", id)
-            }
-            options={combinedEquipmentOptions}
-            disabled={isDisabled || equipmentLoading}
-            showSearch
-            optionFilterProp="label"
-            /* 👇 let the popup auto-widen so full "Name (Code)" is always visible */
-            popupMatchSelectWidth={false}
-            filterOption={(input, option) =>
-              (option?.label ?? "")
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
-            className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1] disabled:[&_.ant-select-selector]:!bg-[#F9FAF9] disabled:[&_.ant-select-selection-item]:!text-[#263B35]"
+          <EquipmentSelectCell
+            rowIndex={rowIndex}
+            equipmentDbId={row.equipmentDbId}
+            // equipmentOptions={equipmentOptions}
+            equipmentOptions={equipmentOptionsWithCode}
+            equipmentLoading={equipmentLoading}
+            placeholder={placeholder}
+            disabled={isDisabled}
+            updateRow={updateRow}
           />
         );
       }
 
       return (
-        <Select
-          {...commonProps}
-          value={fieldValue || undefined}
-          placeholder={placeholder}
-          onChange={handleChange}
+        <FrequencySelectCell
+          rowIndex={rowIndex}
+          fieldKey={key}
+          value={fieldValue}
           options={colOptions}
-          className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1]"
+          placeholder={placeholder}
+          disabled={isDisabled}
+          updateRow={updateRow}
         />
       );
     }
 
     return (
-      <Input
-        {...commonProps}
+      <TextCell
+        rowIndex={rowIndex}
+        fieldKey={key}
         value={fieldValue}
         placeholder={placeholder}
-        onChange={(e) => handleChange(e.target.value)}
-        className="!h-8 !w-full !rounded-none !border-transparent !bg-transparent !px-2 !text-[11px] !font-medium !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
+        disabled={isDisabled}
+        updateRow={updateRow}
       />
     );
   };
 
+  /* Frequency-driven disable state for date cells */
   const renderDateField = (row, key, rowIndex) => {
     const val = row[key];
+    const [monthKey] = key.split("_");
+    const monthIndex = MONTHS.findIndex((m) => m.key === monthKey);
+    const activeIndices = getActiveMonthIndices(row);
+    const isRestricted =
+      activeIndices !== null && !activeIndices.includes(monthIndex);
 
     return (
-      <DatePicker
-        value={val ? dayjs(val) : null}
-        onChange={(date) =>
-          updateRow(rowIndex, key, date ? date.format("YYYY-MM-DD") : "")
-        }
-        format="DD/MM/YYYY"
-        variant="borderless"
-        className="!h-8 !w-full !px-1 !text-[10px] !font-medium !text-[#263B35] hover:bg-[#F3F6F4] cursor-pointer disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
-        disabled={disabled}
-        placeholder="DD/MM/YYYY"
+      <DateCell
+        rowIndex={rowIndex}
+        fieldKey={key}
+        value={val || ""}
+        disabled={disabled || isRestricted}
+        updateRow={updateRow}
       />
     );
   };
 
-  // 👇 Removed 30-day window logic. Only checks initiator + close done
-  const getChildButtonState = () => {
-    if (!canCreateChild) {
-      return {
-        enabled: false,
-        title:
-          "Child creation is available only to Initiator at Close Done stage.",
-      };
-    }
-
-    return {
-      enabled: true,
-      title: "Create child",
-    };
-  };
-
-  const visibleColumns = mainColumns.filter(
-    (column) => column.hidden !== true
-  );
+  const visibleColumns = mainColumns.filter((column) => column.hidden !== true);
   const showChildColumn = typeof onViewChild === "function";
 
   const emptyColSpan =
@@ -445,7 +770,7 @@ const AddendumPreventivePlannerGrid = ({
                   {viewChildLabel}
                 </th>
               )}
-              <th className="w-[60px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
+              <th className="w-[90px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">
                 Action
               </th>
             </tr>
@@ -486,7 +811,7 @@ const AddendumPreventivePlannerGrid = ({
                     </td>
                     {showChildColumn && (
                       <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
-                        <div className="mx-auto h-4 w-10 animate-pulse rounded bg-[#E5EBE8]" />
+                        <div className="mx-auto h-7 w-12 animate-pulse rounded bg-[#E5EBE8]" />
                       </td>
                     )}
                     <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
@@ -509,108 +834,112 @@ const AddendumPreventivePlannerGrid = ({
                 </React.Fragment>
               ))
             ) : rows.length > 0 ? (
-              rows.map((row, rowIndex) => {
-                const {
-                  enabled: childButtonEnabled,
-                  title: childButtonTitle,
-                } = getChildButtonState(row);
-
-                return (
-                  <React.Fragment key={rowIndex}>
-                    {rowIndex > 0 && (
-                      <tr aria-hidden="true">
-                        <td
-                          colSpan={emptyColSpan}
-                          className="!h-3 !border-0 !p-0 !bg-[#F7FAF8]"
-                        />
-                      </tr>
-                    )}
-
-                    <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+              rows.map((row, rowIndex) => (
+                <React.Fragment key={rowIndex}>
+                  {rowIndex > 0 && (
+                    <tr aria-hidden="true">
                       <td
-                        rowSpan={2}
-                        className="border border-[#D5DFDB] px-2 py-1 text-center align-middle"
-                      >
-                        <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">
-                          {row.row_id ?? rowIndex + 1}.
-                        </span>
-                      </td>
+                        colSpan={emptyColSpan}
+                        className="!h-3 !border-0 !p-0 !bg-[#F7FAF8]"
+                      />
+                    </tr>
+                  )}
 
-                      {visibleColumns.map((column) => (
-                        <td
-                          key={column.key}
-                          rowSpan={2}
-                          className="border border-[#D5DFDB] p-0 align-middle"
-                        >
-                          {renderField(column, row, rowIndex)}
-                        </td>
-                      ))}
+                  <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+                    <td
+                      rowSpan={2}
+                      className="border border-[#D5DFDB] px-2 py-1 text-center align-middle"
+                    >
+                      <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">
+                        {rowIndex + 1}.
+                      </span>
+                    </td>
 
-                      <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">
-                        Planned
-                      </td>
-
-                      {MONTHS.map((month) => (
-                        <td
-                          key={`${month.key}_planned`}
-                          className="border border-[#D5DFDB] p-0 align-middle"
-                        >
-                          {renderDateField(
-                            row,
-                            `${month.key}_planned`,
-                            rowIndex
-                          )}
-                        </td>
-                      ))}
-
+                    {visibleColumns.map((column) => (
                       <td
+                        key={column.key}
                         rowSpan={2}
                         className="border border-[#D5DFDB] p-0 align-middle"
                       >
-                        <TextArea
-                          value={row.remark ?? ""}
-                          onChange={(e) =>
-                            updateRemark(rowIndex, e.target.value)
-                          }
-                          rows={2}
-                          className="!h-full !min-h-[64px] !w-full !resize-none !rounded-none !border-transparent !bg-transparent !px-2 !py-1.5 !text-[11px] !font-medium !leading-5 !text-[#263B35] !shadow-none !placeholder:text-[#9AA6A1] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
-                          disabled={disabled}
-                          placeholder="Enter remark"
-                        />
+                        {renderField(column, row, rowIndex)}
                       </td>
+                    ))}
 
-                      {showChildColumn && (
-                        <td
-                          rowSpan={2}
-                          className="border border-[#D5DFDB] px-2 py-1 text-center align-middle"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!childButtonEnabled) return;
-                              onViewChild(rowIndex, {
-                                ...row,
-                                row_id: row.row_id ?? rowIndex + 1,
-                              });
-                            }}
-                            disabled={!childButtonEnabled}
-                            className={`inline-flex h-7 items-center justify-center rounded px-3 text-[11px] font-medium text-white shadow-sm transition-all duration-200 focus:outline-none ${
-                              childButtonEnabled
-                                ? "bg-[#3d606d] hover:bg-[#2B5577] active:scale-95"
-                                : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
-                            }`}
-                            aria-label="Create child"
-                            title={childButtonTitle}
-                          >
-                            Child
-                          </button>
-                        </td>
-                      )}
+                    <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">
+                      Planned
+                    </td>
 
+                    {MONTHS.map((month) => (
+                      <td
+                        key={`${month.key}_planned`}
+                        className="border border-[#D5DFDB] p-0 align-middle"
+                      >
+                        {renderDateField(row, `${month.key}_planned`, rowIndex)}
+                      </td>
+                    ))}
+
+                    <td
+                      rowSpan={2}
+                      className="border border-[#D5DFDB] p-0 align-middle"
+                    >
+                      <RemarkCell
+                        rowIndex={rowIndex}
+                        value={row.remark}
+                        disabled={disabled}
+                        updateRemark={updateRemark}
+                      />
+                    </td>
+
+                    {showChildColumn && (
                       <td
                         rowSpan={2}
                         className="border border-[#D5DFDB] px-2 py-1 text-center align-middle"
                       >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!canCreateChild) return;
+                            onViewChild(
+                              rowIndex,
+                              row,
+                              getRowBiggestFrequency(row)
+                            );
+                          }}
+                          disabled={!canCreateChild}
+                          className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${
+                            canCreateChild
+                              ? "bg-[#3d606d] hover:bg-[#2B5577] hover:shadow-md active:scale-95"
+                              : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
+                          }`}
+                          title={
+                            canCreateChild
+                              ? "Create child preventive record"
+                              : "Child creation is available only to Initiator at Close Done stage"
+                          }
+                        >
+                          {viewChildLabel}
+                        </button>
+                      </td>
+                    )}
+
+                    <td
+                      rowSpan={2}
+                      className="border border-[#D5DFDB] px-2 py-1 text-center align-middle"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicateForFrequency(rowIndex)}
+                          disabled={
+                            disabled ||
+                            (maxRows !== undefined && rows.length >= maxRows)
+                          }
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#4E7585] transition-all duration-200 hover:bg-[#EAF0F4] hover:text-[#2B5577] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
+                          title="Add another frequency for this equipment"
+                          aria-label="Add another frequency for this equipment"
+                        >
+                          <Plus size={14} strokeWidth={2} />
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleDeleteRow(rowIndex)}
@@ -620,30 +949,26 @@ const AddendumPreventivePlannerGrid = ({
                         >
                           <Trash2 size={14} strokeWidth={1.8} />
                         </button>
-                      </td>
-                    </tr>
+                      </div>
+                    </td>
+                  </tr>
 
-                    <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                      <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">
-                        Executed
-                      </td>
+                  <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+                    <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">
+                      Executed
+                    </td>
 
-                      {MONTHS.map((month) => (
-                        <td
-                          key={`${month.key}_executed`}
-                          className="border border-[#D5DFDB] p-0 align-middle"
-                        >
-                          {renderDateField(
-                            row,
-                            `${month.key}_executed`,
-                            rowIndex
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  </React.Fragment>
-                );
-              })
+                    {MONTHS.map((month) => (
+                      <td
+                        key={`${month.key}_executed`}
+                        className="border border-[#D5DFDB] p-0 align-middle"
+                      >
+                        {renderDateField(row, `${month.key}_executed`, rowIndex)}
+                      </td>
+                    ))}
+                  </tr>
+                </React.Fragment>
+              ))
             ) : (
               <tr>
                 <td

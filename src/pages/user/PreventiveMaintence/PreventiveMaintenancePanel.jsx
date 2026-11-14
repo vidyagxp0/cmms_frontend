@@ -50,7 +50,6 @@ const TABS = [
   { id: "engineer-review", label: "Reviewed By (Engineering Department)", stageId: 15 },
   { id: "qa-approval", label: "QA Approval", stageId: 16 },
   { id: "activity", label: "Activity Log", stageId: 17 },
-  { id: "cancellation", label: "Cancellation", stageId: 18 },
 ];
 
 const REQUIRED_FIELDS = [
@@ -169,16 +168,6 @@ const buildProcessData = (values, systemFields) => [
     value: values?.qaApprovalComments || "",
   },
   { key: "qa_approval_attachment", label: "QA Approval Attachment", value: [] },
-  {
-    key: "cancellation_remark",
-    label: "Cancellation Remark",
-    value: values?.cancellationRemark || "",
-  },
-  {
-    key: "cancellation_attachment",
-    label: "Cancellation Attachment",
-    value: [],
-  },
 ];
 
 const validatePreventiveMaintenceForm = (form, storedRequired) => {
@@ -443,7 +432,6 @@ const PreventiveMaintenancePanel = () => {
   const isUserDeptReviewEditable = isStageEditable(14);
   const isEngineerReviewEditable = isStageEditable(15);
   const isQaApprovalEditable = isStageEditable(16);
-  const isCancellationEditable = isStageEditable(18);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -648,14 +636,6 @@ const PreventiveMaintenancePanel = () => {
           processData,
           "qa_approval_attachment"
         );
-        const cancellationRemark = getProcessValue(
-          processData,
-          "cancellation_remark"
-        );
-        const cancellationAttachment = getProcessValue(
-          processData,
-          "cancellation_attachment"
-        );
         const preventiveFrequencyVal = getProcessValue(
           processData,
           "preventive_frequency"
@@ -751,8 +731,6 @@ const PreventiveMaintenancePanel = () => {
           engineerReviewAttachment: engineerReviewAttachment || [],
           qaApprovalComments: qaApprovalComments || "",
           qaApprovalAttachment: qaApprovalAttachment || [],
-          cancellationRemark: cancellationRemark || "",
-          cancellationAttachment: cancellationAttachment || [],
           preventiveFrequency: preventiveFrequencyVal || "",
         });
       } catch (error) {
@@ -1086,12 +1064,6 @@ const PreventiveMaintenancePanel = () => {
     );
   }
 
-  const isCancellationStageActive = Number(activeStageId) === 17;
-
-  const visibleTabs = isCancellationStageActive
-    ? TABS.filter((tab) => tab.id === "cancellation")
-    : TABS.filter((tab) => tab.id !== "cancellation");
-
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
@@ -1133,7 +1105,7 @@ const PreventiveMaintenancePanel = () => {
 
       <div className="mb-6">
         <ProcessTabs
-          tabs={visibleTabs}
+          tabs={TABS}
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
@@ -1496,38 +1468,8 @@ const PreventiveMaintenancePanel = () => {
           </div>
         </section>
 
-        <section
-          style={{ display: activeTab === "cancellation" ? "block" : "none" }}
-        >
-          <SectionHeader title="CANCELLATION" />
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item
-              name="cancellationRemark"
-              label="Remark"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormTextArea
-                rows={5}
-                placeholder="Enter cancellation remark..."
-              />
-            </Form.Item>
-            <Form.Item
-              name="cancellationAttachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormAttachment
-                multiple={true}
-                recordId={recordId}
-                attachmentField="cancellation_attachment"
-                label="Cancellation Attachment"
-                uploadApi={addMultipleAttachments}
-                disabled={!isCancellationEditable}
-              />
-            </Form.Item>
-          </div>
-        </section>
+        {/* Cancellation tab removed — cancelled stage still shown via
+            cancelledStageId={18} on <ProcessStage /> */}
 
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
           <SectionHeader title="ACTIVITY LOG" />

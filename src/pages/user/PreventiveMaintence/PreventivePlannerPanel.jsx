@@ -56,7 +56,6 @@ const TABS = [
   { id: "user-dept-review", label: "User Department Review (HOD/Designee)", stageId: 9 },
   { id: "qa-review", label: "QA Approval Review", stageId: 10 },
   { id: "activity", label: "Activity Log", stageId: 11 },
-  { id: "cancellation", label: "Cancellation", stageId: 12 },
 ];
 
 const REQUIRED_FIELDS = [
@@ -192,16 +191,6 @@ const buildProcessData = (values, systemFields) => [
     label: "QA Review Attachment",
     value: [],
   },
-  {
-    key: "cancellation_remark",
-    label: "Cancellation Remark",
-    value: values?.cancellationRemark || "",
-  },
-  {
-    key: "cancellation_attachment",
-    label: "Cancellation Attachment",
-    value: [],
-  },
 ];
 
 const validatePreventivePlannerForm = (form, storedRequired) => {
@@ -283,7 +272,6 @@ const PreventivePlannerPanel = () => {
   const isHodEditable = isStageEditable(8);
   const isUserDeptEditable = isStageEditable(9);
   const isQaReviewEditable = isStageEditable(10);
-  const isCancellationEditable = isStageEditable(11);
 
   const tryAutoPopulateOnInitial = useCallback(() => {
     if (autoPopulateDoneRef.current) return;
@@ -458,8 +446,6 @@ const PreventivePlannerPanel = () => {
         const userDeptReviewAttachment = getProcessValue(processData, "user_dept_review_attachment");
         const qaReviewComments = getProcessValue(processData, "qa_review_comments");
         const qaReviewAttachment = getProcessValue(processData, "qa_review_attachment");
-        const cancellationRemark = getProcessValue(processData, "cancellation_remark");
-        const cancellationAttachment = getProcessValue(processData, "cancellation_attachment");
 
         const firstGridRecord = gridRecords[0] || null;
         const savedHeaderDates =
@@ -511,8 +497,6 @@ const PreventivePlannerPanel = () => {
           userDeptReviewAttachment: userDeptReviewAttachment || [],
           qaReviewComments,
           qaReviewAttachment: qaReviewAttachment || [],
-          cancellationRemark: cancellationRemark || "",
-          cancellationAttachment: cancellationAttachment || [],
         });
 
         const currentEquipmentMap = equipmentMapRef.current;
@@ -871,12 +855,6 @@ const PreventivePlannerPanel = () => {
     );
   }
 
-  const isCancellationStageActive = Number(activeStageId) === 12;
-
-  const visibleTabs = isCancellationStageActive
-    ? TABS.filter((tab) => tab.id === "cancellation")
-    : TABS.filter((tab) => tab.id !== "cancellation");
-
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
@@ -918,7 +896,7 @@ const PreventivePlannerPanel = () => {
 
       <div className="mb-6">
         <ProcessTabs
-          tabs={visibleTabs}
+          tabs={TABS}
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
@@ -1175,29 +1153,8 @@ const PreventivePlannerPanel = () => {
           </div>
         </section>
 
-        <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
-          <SectionHeader title="CANCELLATION" />
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="cancellationRemark" label="Remark" className="!mb-4 md:col-span-2">
-              <FormTextArea rows={5} placeholder="Enter cancellation remark..." />
-            </Form.Item>
-            <Form.Item
-              name="cancellationAttachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormAttachment
-                multiple={true}
-                recordId={recordId}
-                attachmentField="cancellation_attachment"
-                label="Cancellation Attachment"
-                uploadApi={addMultipleAttachments}
-                disabled={!isCancellationEditable}
-              />
-            </Form.Item>
-          </div>
-        </section>
+        {/* Cancellation tab removed — cancelled stage still shown via
+            cancelledStageId={12} on <ProcessStage /> */}
 
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
           <SectionHeader title="ACTIVITY LOG" />

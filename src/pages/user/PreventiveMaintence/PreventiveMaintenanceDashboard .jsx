@@ -10,7 +10,7 @@ import DataTable from "../../../components/common/DataTable/DataTable";
 import {
     getAllPreventiveManagementRecords,
 } from "../../../services/usersApi/dashboardAllApi";
-import { getPreventiveMaintenanceSingleReport } from "../../../services/usersApi/preventive";
+import { getPreventiveMaintenanceSingleReport, getAddendumPreventivePlannerSingleReport } from "../../../services/usersApi/preventive";
 
 const { RangePicker } = DatePicker;
 
@@ -121,10 +121,23 @@ const PreventiveMaintenanceDashboard = () => {
     }, [debouncedSearch, statusFilter, dateRange, recordTypeFilter, fetchRecords]);
     //                                                    👆 ADDED — remember the dep
 
+
+    // Picks the correct report API based on the record's child_type
+    const getReportApiByChildType = (childType) => {
+        switch (childType) {
+            case "addendum-preventive-management":
+                return getAddendumPreventivePlannerSingleReport;
+            case "preventive-child":
+            default:
+                return getPreventiveMaintenanceSingleReport; // original behaviour as fallback
+        }
+    };
+
     // =========================================================
     // VIEW REPORT
     // =========================================================
-    const handleViewReport = async (recordId) => {
+    const handleViewReport = async (record) => {
+        const recordId = record?.id;
         const reportWindow = window.open("", "_blank");
 
         try {
@@ -172,7 +185,9 @@ const PreventiveMaintenanceDashboard = () => {
 
             reportWindow.document.close();
 
-            const response = await getPreventiveMaintenanceSingleReport(recordId);
+            // 👇 Choose the API based on child_type
+            const reportApi = getReportApiByChildType(record?.child_type);
+            const response = await reportApi(recordId);
 
             const blob = new Blob([response.data], { type: "application/pdf" });
             const pdfUrl = window.URL.createObjectURL(blob);
@@ -387,7 +402,7 @@ const PreventiveMaintenanceDashboard = () => {
                 cell: ({ row }) => (
                     <button
                         type="button"
-                        onClick={() => handleViewReport(row.original?.id)}
+                        onClick={() => handleViewReport(row.original)}
                         className="inline-flex items-center gap-2 rounded-[9px] border border-[#CADBD5] bg-[#F1F5F2] px-3 py-1.5 font-[var(--font-display)] text-[10px] font-bold tracking-[-0.01em] text-[#4F7568] transition-all duration-200 hover:border-[#AFC9BF] hover:bg-[#E7F0EC] hover:text-[#244F4A] hover:shadow-[0_3px_8px_rgba(36,79,74,0.08)] focus:outline-none focus:ring-2 focus:ring-[#6E9487]/20 active:scale-[0.98]"
                         title="View preventive maintenance report"
                     >

@@ -19,7 +19,7 @@ import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 
 import { getProfile } from "../../../services/authApi";
 import { getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
-import { addPreventiveMaintence } from "../../../services/usersApi/preventive";
+import { addAddendumPreventiveChild } from "../../../services/usersApi/preventive";
 import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
 import { formatDateTime } from "../../../utils/date";
 import { addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
@@ -403,7 +403,7 @@ const AddendumPreventiveChildCreate = () => {
         checklistData: [],
       };
 
-      const response = await addPreventiveMaintence(payload);
+      const response = await addAddendumPreventiveChild(payload);
 
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Addendum Preventive Maintenance created successfully.");

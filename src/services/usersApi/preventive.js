@@ -50,7 +50,7 @@ export const getPrevemtiveMaintenanceAuditListing = (id, params = {}) => {
 };
 
 export const getPreventiveMaintenanceSingleReport = (id) => {
-    return api.get(`/user/preventive-maintenance-singleReport/${id}`, {
+    return api.get(`/user/addendum-peventive-management-singleReport/${id}`, {
         responseType: "blob",
     });
 };
@@ -78,4 +78,28 @@ export const getAddendumPreventivePlannerSingleReport = (id) => {
 
 export const getAddendumPreventiveAuditListing = (id, params = {}) => {
     return api.get(`/user/preventive-addendum/audit-trail/${id}`, {params});
+};
+
+// All Addendum Preventive Child APIs
+
+export const getAddendumPreventiveChildDetail = (id) =>
+    api.get(`/user/show-addendum-peventive-management-record/${id}`);
+
+export const addAddendumPreventiveChild = (payload) =>
+    api.post("/user/store-addendum-peventive-management-record", payload);
+
+export const updateAddendumPreventiveChild = (id, payload) =>
+    api.put(`/user/update-addendum-peventive-management-record/${id}`, payload);
+
+export const executeAddendumPreventiveActivityChild = (id, payload) =>
+    api.post(`/user/addendumpeventiveManagement-record-stage/${id}`, payload);
+
+export const getAddendumPreventivePlannerSingleReportChild = (id) => {
+    return api.get(`/user/addendum-peventive-management-singleReport/${id}`, {
+        responseType: "blob",
+    });
+};
+
+export const getAddendumPreventiveAuditListingChild = (id, params = {}) => {
+    return api.get(`/user/addendum-peventive-management-audit/${id}`, {params});
 };

@@ -22,9 +22,9 @@ import "../../../components/ui/disabledFields.css";
 import { getProfile } from "../../../services/authApi";
 import { getAllEquipmentData } from "../../../services/usersApi/calibrationApi";
 import {
-  executePreventiveMaintenceActivity,
+  executeAddendumPreventiveActivityChild,
   getEquipmentMasterChecklist,
-  getPreventiveMaintenceDetail,
+  getAddendumPreventiveChildDetail,
   updatePreventiveMaintence,
 } from "../../../services/usersApi/preventive";
 import {
@@ -544,7 +544,7 @@ const AddendumPreventiveChildPanel = () => {
       isFetchingRef.current = true;
       try {
         if (isInitial) setIsLoading(true);
-        const response = await getPreventiveMaintenceDetail(recordId);
+        const response = await getAddendumPreventiveChildDetail(recordId);
         const responseData = response?.data?.data;
         if (!responseData) {
           toast.error("Addendum Preventive Maintenance record not found.");
@@ -1034,7 +1034,7 @@ const AddendumPreventiveChildPanel = () => {
               loading={activitiesLoading}
               recordId={recordId}
               userId={loginUserId}
-              activityApi={executePreventiveMaintenceActivity}
+              activityApi={executeAddendumPreventiveActivityChild}
               onActivitySuccess={handleActivitySuccess}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}

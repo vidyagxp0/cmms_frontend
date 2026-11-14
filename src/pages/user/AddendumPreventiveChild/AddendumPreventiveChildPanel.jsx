@@ -49,7 +49,6 @@ const TABS = [
   { id: "engineer-review", label: "HOD / Designee Review", stageId: 67 },
   { id: "qa-approval", label: "QA Approval", stageId: 68 },
   { id: "activity", label: "Activity Log", stageId: 69 },
-  { id: "cancellation", label: "Cancellation", stageId: 70 },
 ];
 
 const REQUIRED_FIELDS = [
@@ -117,20 +116,20 @@ const buildProcessData = (values, systemFields) => [
   { key: "block", label: "Block", value: values?.block || "" },
   { key: "department", label: "Department", value: values?.department || "" },
   { key: "location", label: "Location", value: values?.location || "" },
-  {
-    key: "previousPreventiveDate",
-    label: "Previous Preventive Date",
-    value: values?.previousPreventiveDate
-      ? dayjs(values.previousPreventiveDate).format("DD/MM/YYYY")
-      : "",
-  },
-  {
-    key: "nextPreventiveDate",
-    label: "Next Preventive Date",
-    value: values?.nextPreventiveDate
-      ? dayjs(values.nextPreventiveDate).format("DD/MM/YYYY")
-      : "",
-  },
+  // {
+  //   key: "previousPreventiveDate",
+  //   label: "Previous Preventive Date",
+  //   value: values?.previousPreventiveDate
+  //     ? dayjs(values.previousPreventiveDate).format("DD/MM/YYYY")
+  //     : "",
+  // },
+  // {
+  //   key: "nextPreventiveDate",
+  //   label: "Next Preventive Date",
+  //   value: values?.nextPreventiveDate
+  //     ? dayjs(values.nextPreventiveDate).format("DD/MM/YYYY")
+  //     : "",
+  // },
   {
     key: "preventive_frequency",
     label: "Preventive Frequency",
@@ -154,16 +153,6 @@ const buildProcessData = (values, systemFields) => [
     value: values?.qaApprovalComments || "",
   },
   { key: "qa_approval_attachment", label: "QA Approval Attachment", value: [] },
-  {
-    key: "cancellation_remark",
-    label: "Cancellation Remark",
-    value: values?.cancellationRemark || "",
-  },
-  {
-    key: "cancellation_attachment",
-    label: "Cancellation Attachment",
-    value: [],
-  },
 ];
 
 const validatePreventiveMaintenceForm = (form, storedRequired) => {
@@ -449,7 +438,6 @@ const AddendumPreventiveChildPanel = () => {
   const isGeneralEditable = isStageEditable(66);
   const isEngineerReviewEditable = isStageEditable(67);
   const isQaApprovalEditable = isStageEditable(68);
-  const isCancellationEditable = isStageEditable(70);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -615,14 +603,6 @@ const AddendumPreventiveChildPanel = () => {
           processData,
           "qa_approval_attachment"
         );
-        const cancellationRemark = getProcessValue(
-          processData,
-          "cancellation_remark"
-        );
-        const cancellationAttachment = getProcessValue(
-          processData,
-          "cancellation_attachment"
-        );
         const preventiveFrequencyVal = getProcessValue(
           processData,
           "preventive_frequency"
@@ -696,8 +676,6 @@ const AddendumPreventiveChildPanel = () => {
           engineerReviewAttachment: engineerReviewAttachment || [],
           qaApprovalComments: qaApprovalComments || "",
           qaApprovalAttachment: qaApprovalAttachment || [],
-          cancellationRemark: cancellationRemark || "",
-          cancellationAttachment: cancellationAttachment || [],
           preventiveFrequency: preventiveFrequencyVal || "",
         });
       } catch (error) {
@@ -1029,12 +1007,6 @@ const AddendumPreventiveChildPanel = () => {
     );
   }
 
-  const isCancellationStageActive = Number(activeStageId) === 70;
-
-  const visibleTabs = isCancellationStageActive
-    ? TABS.filter((tab) => tab.id === "cancellation")
-    : TABS.filter((tab) => tab.id !== "cancellation");
-
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
@@ -1075,7 +1047,7 @@ const AddendumPreventiveChildPanel = () => {
 
       <div className="mb-6">
         <ProcessTabs
-          tabs={visibleTabs}
+          tabs={TABS}
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
@@ -1206,7 +1178,7 @@ const AddendumPreventiveChildPanel = () => {
               <FormInput placeholder="Location" disabled={!isGeneralEditable} />
             </Form.Item>
 
-            <Form.Item
+            {/* <Form.Item
               name="previousPreventiveDate"
                label={
               <span className="inline-flex items-center">
@@ -1235,7 +1207,7 @@ const AddendumPreventiveChildPanel = () => {
                 placeholder="Select date"
                 disabled={!isGeneralEditable}
               />
-            </Form.Item>
+            </Form.Item> */}
 
             <Form.Item
               name="preventiveFrequency"
@@ -1401,39 +1373,8 @@ const AddendumPreventiveChildPanel = () => {
           </div>
         </section>
 
-        {/* Cancellation */}
-        <section
-          style={{ display: activeTab === "cancellation" ? "block" : "none" }}
-        >
-          <SectionHeader title="CANCELLATION" />
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item
-              name="cancellationRemark"
-              label="Remark"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormTextArea
-                rows={5}
-                placeholder="Enter cancellation remark..."
-              />
-            </Form.Item>
-            <Form.Item
-              name="cancellationAttachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormAttachment
-                multiple={true}
-                recordId={recordId}
-                attachmentField="cancellation_attachment"
-                label="Cancellation Attachment"
-                uploadApi={addMultipleAttachments}
-                disabled={!isCancellationEditable}
-              />
-            </Form.Item>
-          </div>
-        </section>
+        {/* Cancellation tab removed — cancelled stage still shown via
+            cancelledStageId={70} on <ProcessStage /> */}
 
         {/* Activity Log */}
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>

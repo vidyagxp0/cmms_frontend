@@ -223,7 +223,7 @@ const AddendumPreventivePlannerPanel = () => {
 
   // 👇 NEW — Child creation gate (Close Done = stage 58, initiator only)
   const canCreateChild =
-    Number(activeStageId) === 58 &&
+    Number(activeStageId) === 59 &&
     userRoles.some((role) => String(role).toLowerCase() === "initiator");
 
   useEffect(() => {

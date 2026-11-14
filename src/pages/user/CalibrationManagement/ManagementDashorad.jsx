@@ -10,6 +10,8 @@ import DataTable from "../../../components/common/DataTable/DataTable";
 import {
     getCalibrationSingleReport,
     getCalibrationChildSingleReport,
+    getAddendumChildSingleReport,
+    getUnPlannedCalibrationChildSingleReport
 } from "../../../services/usersApi/calibrationApi";
 
 import {
@@ -118,10 +120,24 @@ const ManagementDashboard = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedSearch, statusFilter, dateRange, recordTypeFilter, fetchRecords]);
 
+    // Picks the correct report API based on the record's child_type
+    const getReportApiByChildType = (childType) => {
+        switch (childType) {
+            case "unplanned-calibration-child":
+                return getUnPlannedCalibrationChildSingleReport;
+            case "addendum-calibration-management":
+                return getAddendumChildSingleReport;
+            case "calibration-child":
+            default:
+                return getCalibrationChildSingleReport; // original behaviour as fallback
+        }
+    };
+
     // ================================================================
     // VIEW REPORT
     // ================================================================
-    const handleViewReport = async (recordId) => {
+    const handleViewReport = async (record) => {
+        const recordId = record?.id;
         const reportWindow = window.open("", "_blank");
 
         try {
@@ -169,7 +185,9 @@ const ManagementDashboard = () => {
 
             reportWindow.document.close();
 
-            const response = await getCalibrationChildSingleReport(recordId);
+            // 👇 Choose the API based on child_type
+            const reportApi = getReportApiByChildType(record?.child_type);
+            const response = await reportApi(recordId);
 
             const blob = new Blob([response.data], { type: "application/pdf" });
             const pdfUrl = window.URL.createObjectURL(blob);
@@ -389,7 +407,7 @@ const ManagementDashboard = () => {
                 cell: ({ row }) => (
                     <button
                         type="button"
-                        onClick={() => handleViewReport(row.original?.id)}
+                        onClick={() => handleViewReport(row.original)}
                         className="inline-flex cursor-pointer items-center gap-2 rounded-[9px] border border-[#C9D9D3] bg-[#EEF4F1] px-3 py-1.5 text-[10.5px] font-bold text-[#56766D] shadow-[0_1px_4px_rgba(86,118,109,0.045)] transition-all duration-200 hover:border-[#AFC5BC] hover:bg-[#E2ECE8] hover:text-[#48685F] hover:shadow-[0_3px_9px_rgba(86,118,109,0.09)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-muted)] focus-visible:ring-offset-1"
                         title="View Calibration Management Report"
                     >

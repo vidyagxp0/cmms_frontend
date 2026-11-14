@@ -30,6 +30,7 @@ import {
   getCalibrationChildDetail,
   updateCalibrationChild,
   executeCalibrationActivityChild,
+  executeUnPlannedCalibrationChildActivity
 } from "../../../services/usersApi/calibrationApi";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
 import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
@@ -753,7 +754,7 @@ const UnCalibrationChildPanel = () => {
               auditRoute={"/user/audit-unplanned-calibration"}
               recordId={recordId}
               userId={loginUserId}
-              activityApi={executeCalibrationActivityChild}
+              activityApi={executeUnPlannedCalibrationChildActivity}
               onActivitySuccess={handleActivitySuccess}
               onBeforeActivity={handleSaveBeforeActivity}
               canPerformActivity={canPerformActivity}

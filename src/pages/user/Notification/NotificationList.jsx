@@ -17,6 +17,7 @@ import {
     BellRing,
 } from "lucide-react";
 import { getRecordNotifications } from "../../../services/usersApi/workflowCommonApi";
+import { useNavigate } from "react-router-dom";
 
 
 const NotificationList = () => {
@@ -26,6 +27,8 @@ const NotificationList = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [page, setPage] = useState(1);
+    const navigate = useNavigate();
+
 
     const [pagination, setPagination] = useState({
         currentPage: 1,
@@ -129,6 +132,10 @@ const NotificationList = () => {
         fetchNotifications(page, activeFilter);
     };
 
+    const handleExit = () => {
+        navigate("/user/engineering-dashboard")
+    };
+
     const handlePrevious = () => {
         if (page > 1) setPage((prev) => prev - 1);
     };
@@ -176,18 +183,29 @@ const NotificationList = () => {
                     </div>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={handleRefresh}
-                    disabled={loading}
-                    className="inline-flex h-[38px] items-center justify-center gap-2 self-start rounded-[10px] border border-[#C9D9CF] bg-white/80 px-4 text-[11px] font-semibold text-[#416B60] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#8EAD9B] hover:bg-[#EAF2EC] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 sm:self-auto"
-                >
-                    <RefreshCw
-                        size={14}
-                        className={loading ? "animate-spin" : ""}
-                    />
-                    Refresh
-                </button>
+<div className="flex flex-wrap items-center gap-3">
+    <button
+        type="button"
+        onClick={handleRefresh}
+        disabled={loading}
+        className="inline-flex h-[38px] items-center justify-center gap-2 rounded-[10px] border border-[#C9D9CF] bg-white/80 px-4 text-[11px] font-semibold text-[#416B60] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#8EAD9B] hover:bg-[#EAF2EC] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+    >
+        <RefreshCw
+            size={14}
+            className={loading ? "animate-spin" : ""}
+        />
+        Refresh
+    </button>
+
+    <button
+        type="button"
+        onClick={handleExit}
+        disabled={loading}
+        className="inline-flex h-[38px] items-center justify-center gap-2 rounded-[10px] border border-[#C9D9CF] bg-white/80 px-4 text-[11px] font-semibold text-[#416B60] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#8EAD9B] hover:bg-[#EAF2EC] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+    >
+        Exit
+    </button>
+</div>
             </div>
 
             {/* SUMMARY CARDS */}

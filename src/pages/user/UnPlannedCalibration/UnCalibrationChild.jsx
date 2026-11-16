@@ -495,11 +495,11 @@ const UnCalibrationChild = () => {
           </div>
         </div>
         <div className="flex items-center gap-8 border-l border-slate-200 pl-6">
-          <div>
+          {/* <div>
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">
               Site
             </p>
-          </div>
+          </div> */}
           <div className="h-9 w-px bg-slate-200" />
           <div>
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B8983]">

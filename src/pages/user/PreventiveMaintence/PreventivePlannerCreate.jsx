@@ -499,7 +499,7 @@ const PreventivePlannerCreate = () => {
                 label="Comments"
                 className="!mb-4 md:col-span-2"
               >
-                <FormTextArea rows={5} placeholder="Enter comments..." />
+                <FormTextArea rows={5} placeholder="Enter comments..." disabled />
               </Form.Item>
 
               <Form.Item

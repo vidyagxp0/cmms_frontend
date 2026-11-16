@@ -70,11 +70,18 @@ const buildPreventivePlannerProcessData = (values, systemFields) => [
     label: field.label,
     value: values?.[field.name] || "",
   })),
+  // {
+  //   key: "instrumentType",
+  //   label: "Instrument Type",
+  //   value: values?.instrumentType || null,
+  // },
+
   {
-    key: "instrumentType",
-    label: "Instrument Type",
-    value: values?.instrumentType || null,
+    key: "master_department",
+    label: "Select Department",
+    value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
   },
+
   { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
   { key: "comment", label: "Comments", value: values?.comments || "" },
   { key: "attachment", label: "Attachment", value: values?.attachment || [] },
@@ -461,7 +468,7 @@ const PreventivePlannerCreate = () => {
                   <FormInput placeholder="Enter short description" />
                 </Form.Item>
 
-                <Form.Item
+                {/* <Form.Item
                   name="instrumentType"
                   label="Select Instrument Type"
                   className="!mb-4"
@@ -476,7 +483,43 @@ const PreventivePlannerCreate = () => {
                       { label: "Equipment Master", value: "Equipment Master" },
                     ]}
                   />
+                </Form.Item> */}
+
+                <Form.Item
+                  name="selectedDeptId"
+                  label={
+                    <span className="inline-flex items-center">
+                      Select Department
+                      {/* <RequiredAsterisk message="Department is required to proceed. Please select a department." /> */}
+                    </span>
+                  }
+                  // rules={[{ required: true, message: "Please select a department" }]}
+                  className="!mb-4"
+                >
+                  <Select
+                    placeholder="Select a department"
+                    loading={departmentsLoading}
+                    options={departments.map((dept, idx) => ({
+                      label:
+                        dept.name ||
+                        dept.department_name ||
+                        dept.dept_name ||
+                        "Unnamed Department",
+                      value: dept.id || dept.department_id || dept.dept_id || idx,
+                    }))}
+                    showSearch
+                    optionFilterProp="label"
+                    allowClear={false}
+                    // disabled={!isGeneralEditable}
+                    disabled
+                    onChange={() => {
+                      userChangedDropdownRef.current = true;
+                      savedRowsCountRef.current = 0;
+                      setPreventiveRows([]);
+                    }}
+                  />
                 </Form.Item>
+                
               </div>
             )}
 

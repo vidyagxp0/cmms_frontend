@@ -880,11 +880,15 @@ const CalibrationChildPanel = () => {
               <FormSelect
                 placeholder={equipmentLoading ? "Loading..." : "Select Instrument"}
                 options={equipmentOptions}
-                disabled={equipmentLoading || !isManagementEditable}
+                // disabled={equipmentLoading || !isManagementEditable}
+                disabled
               />
             </Form.Item>
             <Form.Item name="instrumentId" label="Equipment / Instrument ID No." className="!mb-4">
-              <FormInput placeholder="e.g. EQ-001" disabled={!isManagementEditable} />
+              <FormInput placeholder="e.g. EQ-001" 
+              // disabled={!isManagementEditable}
+              disabled
+               />
             </Form.Item>
             <Form.Item name="make" label="Make" className="!mb-4">
               <FormInput placeholder="e.g. Fluke" disabled={!isManagementEditable} />

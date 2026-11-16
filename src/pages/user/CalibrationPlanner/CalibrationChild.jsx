@@ -251,6 +251,18 @@ useEffect(() => {
     } finally {
       if (!isMounted) return;
 
+      // The parent grid stores the instrument's id (from the department master list
+      // passed as allMasterData). Resolve it to the instrument name for display.
+      const resolveInstrumentName = (raw) => {
+        if (raw === undefined || raw === null || raw === "") return "";
+        const masters = Array.isArray(passedAllMasterData) ? passedAllMasterData : [];
+        const match = masters.find((m) => String(m?.id) === String(raw));
+        if (match) {
+          return match.instrument_name || match.field_instrument_name || match.instrumentName || match.name || String(raw);
+        }
+        return String(raw);
+      };
+
       // ✅ Always build + set values — even if some APIs failed
       const values = {
         documentNumber: "SMLJ/ENG/SOP-GEN/005/F08-02",
@@ -260,7 +272,7 @@ useEffect(() => {
         dateOfInitiation: rowData?.dateOfInitiation || now,
         initiationDepartment: rowData?.initiationDepartment || profileDeptName,
         shortDescription: rowData?.shortDescription || parentShortDesc || "",
-        instrumentName: rowData?.equipmentInstrumentName || rowData?.instrumentName || "",
+        instrumentName: resolveInstrumentName(rowData?.equipmentInstrumentName || rowData?.instrumentName),
         instrumentId: rowData?.equipmentInstrumentId || rowData?.instrumentId || "",
         location: rowData?.location || "",
         make: rowData?.make || "",
@@ -467,7 +479,7 @@ useEffect(() => {
               </Form.Item>
               
               <Form.Item name="instrumentName" label="Equipment / Instrument Name" className="!mb-4">
-                <FormSelect placeholder="Select Instrument" options={equipmentOptions} disabled />
+                <FormInput placeholder="Instrument name" disabled />
               </Form.Item>
               <Form.Item name="instrumentId" label="Equipment / Instrument ID No." className="!mb-4">
                 <FormInput placeholder="e.g. EQ-001" disabled />

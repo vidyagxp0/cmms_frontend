@@ -144,8 +144,8 @@ const buildProcessData = (values, systemValues, hodUsers, qaReviewers, qaApprove
   ];
   const labelMap = {
     shortDescription: "Short Description",
-    instrumentName: "Name",
-    instrumentId: "ID No.",
+    instrumentName: "Equipment / Instrument Name",
+    instrumentId: "Equipment / Instrument ID No.",
     location: "Location",
     make: "Make",
     model: "Sr.No/ Model No.",
@@ -333,6 +333,7 @@ const UnCalibrationChildPanel = () => {
       if (isInitial) setIsLoading(true);
       const response = await getCalibrationChildDetail(recordId);
       const data = response?.data?.data;
+      console.log(data,"this is an data ")
       if (!data) { toast.error("Child unplanned calibration record not found."); return; }
 
       setProcessId(data?.process_id || 15); // Default to 15
@@ -816,15 +817,19 @@ const UnCalibrationChildPanel = () => {
             <Form.Item name="nextCalibrationDate" label="Calibration Next Due Date" className="!mb-4">
               <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
             </Form.Item>
-            <Form.Item name="instrumentName" label="Name" className="!mb-4">
+            <Form.Item name="instrumentName" label="Equipment / Instrument Name" className="!mb-4">
               <FormSelect
                 placeholder={equipmentLoading ? "Loading..." : "Select Instrument"}
                 options={equipmentOptions}
-                disabled={equipmentLoading || !isManagementEditable}
+                // disabled={equipmentLoading || !isManagementEditable}
+                disabled
               />
             </Form.Item>
-            <Form.Item name="instrumentId" label="ID No." className="!mb-4">
-              <FormInput placeholder="e.g. EQ-001" disabled={!isManagementEditable} />
+            <Form.Item name="instrumentId" label="Equipment / Instrument ID No." className="!mb-4">
+              <FormInput placeholder="e.g. EQ-001" 
+              // disabled={!isManagementEditable} 
+              disabled
+              />
             </Form.Item>
             <Form.Item name="make" label="Make" className="!mb-4">
               <FormInput placeholder="e.g. Fluke" disabled={!isManagementEditable} />

@@ -51,8 +51,8 @@ const FIELD_LABELS = {
   shortDescription: "Short Description",
   previousCalibrationDate: "Calibration Done Date",
   nextCalibrationDate: "Calibration Next Due Date",
-  instrumentName: "Name",
-  instrumentId: "ID No.",
+  instrumentName: "Equipment / Instrument Name",
+  instrumentId: "Equipment / Instrument ID No.",
   location: "Location",
   make: "Make",
   model: "Sr.No/ Model No.",
@@ -124,7 +124,7 @@ const normalizeGridRows = (rows = []) => {
   });
 };
 
-const buildChildProcessData = (values, systemValues) => {
+const buildChildProcessData = (values, systemValues, equipmentMap ) => {
   const processData = SYSTEM_FIELDS.map((field) => ({
     key: field.key,
     label: field.label,
@@ -154,6 +154,13 @@ const buildChildProcessData = (values, systemValues) => {
   fieldsToInclude.forEach((key) => {
     let value = values[key] !== undefined && values[key] !== null ? values[key] : "";
     if (dayjs.isDayjs(value)) value = value.format("DD/MM/YYYY");
+    
+    // 👇 resolve the Select's option-value (id) back to its label (name)
+    if (key === "instrumentName" && value) {
+      const eq = equipmentMap?.[value];
+      if (eq) value = eq.instrument_name || eq.name || value;
+    }
+
     processData.push({ key, label: FIELD_LABELS[key] || key, value });
   });
 
@@ -400,7 +407,7 @@ const UnCalibrationChild = () => {
       dateOfInitiation: values.dateOfInitiation || dateOfInitiation,
       initiationDepartment: values.initiationDepartment || initiationDepartment,
     };
-    return buildChildProcessData(values, systemValues);
+    return buildChildProcessData(values, systemValues, equipmentMap);
   };
 
   const handleSubmit = async (values) => {
@@ -578,18 +585,19 @@ const UnCalibrationChild = () => {
                 />
               </Form.Item>
 
-              <Form.Item name="instrumentName" label="Name" className="!mb-4">
+              <Form.Item name="instrumentName" label="Equipment / Instrument Name" className="!mb-4">
                 <FormSelect
                   placeholder="Select Instrument"
                   options={equipmentOptions}
+                  disabled
                 />
               </Form.Item>
-              <Form.Item name="instrumentId" label="ID No." className="!mb-4">
-                <FormInput placeholder="e.g. EQ-001" />
+              <Form.Item name="instrumentId" label="Equipment / Instrument ID No." className="!mb-4">
+                <FormInput placeholder="e.g. EQ-001"  disabled/>
               </Form.Item>
 
               <Form.Item name="make" label="Make" className="!mb-4">
-                <FormInput placeholder="e.g. Fluke" />
+                <FormInput placeholder="e.g. Fluke" disabled />
               </Form.Item>
               <Form.Item
                 name="instrumentRange"
@@ -599,11 +607,12 @@ const UnCalibrationChild = () => {
                 <SymbolicInput
                   placeholder="e.g. 0-1000 V"
                   defaultDiscipline="Range"
+                  disabled
                 />
               </Form.Item>
 
               <Form.Item name="model" label="Sr.No/ Model No." className="!mb-4">
-                <FormInput placeholder="e.g. 87V" />
+                <FormInput placeholder="e.g. 87V" disabled />
               </Form.Item>
               <Form.Item
                 name="operatingRange"
@@ -613,6 +622,7 @@ const UnCalibrationChild = () => {
                 <SymbolicInput
                   placeholder="e.g. 0-500 V"
                   defaultDiscipline="Operating Range"
+                  disabled
                 />
               </Form.Item>
 
@@ -620,12 +630,14 @@ const UnCalibrationChild = () => {
                 <SymbolicInput
                   placeholder="e.g. 0.01"
                   defaultDiscipline="Least Count"
+                  disabled
                 />
               </Form.Item>
               <Form.Item name="accuracy" label="Accuracy" className="!mb-4">
                 <SymbolicInput
                   placeholder="e.g. ±0.5%"
                   defaultDiscipline="Accuracy"
+                  disabled
                 />
               </Form.Item>
 
@@ -637,10 +649,11 @@ const UnCalibrationChild = () => {
                 <SymbolicInput
                   placeholder="e.g. 0, 50, 100"
                   defaultDiscipline="Test Points"
+                  disabled
                 />
               </Form.Item>
               <Form.Item name="location" label="Location" className="!mb-4">
-                <FormInput placeholder="Lab A, Room 101" />
+                <FormInput placeholder="Lab A, Room 101" disabled />
               </Form.Item>
 
               <Form.Item
@@ -648,7 +661,7 @@ const UnCalibrationChild = () => {
                 label="Environmental Condition Temperature"
                 className="!mb-4"
               >
-                <SymbolicInput placeholder="e.g. 25" defaultDiscipline="Temperature" />
+                <SymbolicInput placeholder="e.g. 25" defaultDiscipline="Temperature" disabled />
               </Form.Item>
               <Form.Item
                 name="envHumidity"
@@ -658,6 +671,7 @@ const UnCalibrationChild = () => {
                 <SymbolicInput
                   placeholder="e.g. 45% RH ± 5%"
                   defaultDiscipline="Humidity"
+                  disabled
                 />
               </Form.Item>
             </div>
@@ -695,7 +709,7 @@ const UnCalibrationChild = () => {
             <div className="my-9 h-px w-full bg-slate-200" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item name="comments" label="Remarks" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={4} placeholder="Additional remarks..." />
+                <FormTextArea rows={4} placeholder="Additional remarks..." disabled />
               </Form.Item>
               <Form.Item
                 name="attachment"

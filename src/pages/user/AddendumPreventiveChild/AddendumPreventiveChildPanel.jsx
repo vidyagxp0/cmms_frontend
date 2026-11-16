@@ -875,27 +875,61 @@ const AddendumPreventiveChildPanel = () => {
     form.submit();
   };
 
+
   const handleSaveBeforeActivity = async () => {
-    if (isSaving || isLoading || !recordId) {
+  if (isSaving || isLoading || !recordId) return false;
+
+  // 1. Required custom fields
+  const missingFields = validatePreventiveMaintenceForm(
+    form,
+    requiredValuesRef.current
+  );
+  if (missingFields.length > 0) {
+    const names = missingFields.map((f) => f.label).join(", ");
+    toast.error(`Required fields missing: ${names}`);
+    form.setFields(
+      missingFields.map((f) => ({
+        name: f.name,
+        errors: [`${f.label} is required`],
+      }))
+    );
+    setActiveTab("general");
+    return false;
+  }
+
+  // 2. Checklist required cells
+  if (checklistData) {
+    const missingChecklist = getEmptyChecklistFields(
+      checklistData,
+      checklistAnswers
+    );
+    if (missingChecklist.length > 0) {
+      const first = missingChecklist[0];
+      const remaining = missingChecklist.length - 1;
+      toast.error(
+        `Checklist field "${first.columnName}" is required for: ${first.questionText}` +
+          (remaining > 0
+            ? ` (+${remaining} more required field${
+                remaining === 1 ? "" : "s"
+              } missing)`
+            : "")
+      );
+      setActiveTab("checklist");
       return false;
     }
-    try {
-      const values = form.getFieldsValue(true);
-      const saved = await handleSubmit(values);
-      return saved === true;
-    } catch (error) {
-       const firstError = error?.errorFields?.[0]?.errors?.[0];
-        if (firstError) {
-          toast.error(firstError);
-        } else {
-          console.error(
-            "Failed to save Addendum Preventive Maintenance before activity:",
-            error
-          );
-        }
-        return false;
-      }
-  };
+  }
+
+  // 3. Ant Design field validation → then save
+  try {
+    const values = await form.validateFields();
+    const saved = await handleSubmit(values);
+    return saved === true;
+  } catch (error) {
+    const firstError = error?.errorFields?.[0]?.errors?.[0];
+    if (firstError) toast.error(firstError);
+    return false;
+  }
+};
 
   const handleSubmit = async (values) => {
     if (isSaving || !recordId) return false;
@@ -1036,6 +1070,7 @@ const AddendumPreventiveChildPanel = () => {
               userId={loginUserId}
               activityApi={executeAddendumPreventiveActivityChild}
               onActivitySuccess={handleActivitySuccess}
+              onBeforeActivity={handleSaveBeforeActivity}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
               auditRoute={"/user/addendum-preventive-planner-audit"}

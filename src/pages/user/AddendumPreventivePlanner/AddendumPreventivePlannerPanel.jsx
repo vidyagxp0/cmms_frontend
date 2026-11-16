@@ -616,10 +616,23 @@ const AddendumPreventivePlannerPanel = () => {
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
 
+  const FREQUENCY_CODE_TO_NAME = {
+  M: "monthly",
+  Q: "quarterly",
+  H: "half-yearly",
+  Y: "yearly",
+};
+
   // 👇 NEW — Child navigation
   const handleViewChild = (rowIndex, rowData) => {
     const shortDesc = form.getFieldValue("shortDescription") || "";
     const rowId = rowData?.row_id ?? rowIndex + 1;
+      const raw =
+      rowData?.frequency || frequency?.code || frequency?.label || "";
+
+  // Codes (M/Q/H/Y) → full option names ("monthly", "quarterly", …)
+    const normalizedFrequency =
+      FREQUENCY_CODE_TO_NAME[raw] || raw || "";
     navigate(`/user/addendum-preventive-management-create/13`, {
       state: {
         rowData,
@@ -629,6 +642,7 @@ const AddendumPreventivePlannerPanel = () => {
         rowId,
         childType: "addendum-preventive-management",
         processName: "Addendum Preventive Maintenance",
+        preventiveFrequency: normalizedFrequency,
       },
     });
   };

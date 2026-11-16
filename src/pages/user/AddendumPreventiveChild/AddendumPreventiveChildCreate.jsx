@@ -594,6 +594,8 @@ const AddendumPreventiveChildCreate = () => {
                     { value: "quarterly", label: "Quarterly" },
                     { value: "half-yearly", label: "Half Yearly" },
                     { value: "yearly", label: "Yearly" },
+                    { value: "two-yearly",   label: "Two Yearly" },   
+                    { value: "five-yearly",  label: "Five Yearly" }
                   ]}
                   disabled
                 />

@@ -576,14 +576,13 @@ const Audit = () => {
 
         <div className="flex shrink-0 items-center gap-2">
           {/* AUDIT REPORT BUTTON */}
-          <button
+          {/* <button
               type="button"
               onClick={() => handleViewReport(recordId)}
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#C9D9D3] bg-[#EEF4F1] px-4 text-sm font-semibold text-[#56766D] transition hover:bg-[#E2ECE8]"
           >
-              {/* <Eye size={15} /> */}
               <span>Audit Report</span>
-          </button>
+          </button> */}
 
           {/* EXIT BUTTON */}
           <button

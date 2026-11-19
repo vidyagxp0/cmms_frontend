@@ -50,7 +50,7 @@ export const getPrevemtiveMaintenanceAuditListing = (id, params = {}) => {
 };
 
 export const getPreventiveMaintenanceSingleReport = (id) => {
-    return api.get(`/user/addendum-peventive-management-singleReport/${id}`, {
+    return api.get(`/user/preventive-maintenance-singleReport/${id}`, {
         responseType: "blob",
     });
 };

@@ -38,6 +38,14 @@ const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
 ];
 
+const QA_REMARK_OPTIONS = [
+  { value: "Verification Required", label: "Verification Required" },
+  { value: "Validation Required", label: "Validation Required" },
+  { value: "Qualification Required", label: "Qualification Required" },
+  { value: "Not Required", label: "Not Required" },
+  { value: "If Any", label: "If Any" },
+];
+
 /** Safe array coercion helper. */
 const asArray = (value) => (Array.isArray(value) ? value : []);
 
@@ -250,6 +258,7 @@ const PreventiveMaintenanceCreate = () => {
           userDeptReviewAttachment: [],
           engineerReviewComments: "",
           engineerReviewAttachment: [],
+          qaRemark: "",
           qaApprovalComments: "",
           qaApprovalAttachment: [],
           preventiveFrequency: passedFrequency || "",
@@ -345,6 +354,11 @@ const PreventiveMaintenanceCreate = () => {
       key: "engineer_review_attachment",
       label: "Reviewed By (Engineering Department) Attachment",
       value: values?.engineerReviewAttachment || [],
+    },
+      {
+      key: "qa_approval_remark",
+      label: "QA Approval Remark",
+      value: values?.qaRemark || "",
     },
     {
       key: "qa_approval_comments",
@@ -690,6 +704,24 @@ const PreventiveMaintenanceCreate = () => {
           <section>
             <SectionHeader title="QA APPROVAL" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+              {/* 👇 NEW: Remark dropdown before Comments */}
+              <Form.Item
+                name="qaRemark"
+                label={
+                  <span className="inline-flex items-center">
+                    Remark
+                    <RequiredAsterisk message="Please select a remark to proceed." />
+                  </span>
+                }
+                className="!mb-4 md:col-span-2"
+              >
+                <Select
+                  placeholder="Select remark"
+                  options={QA_REMARK_OPTIONS}
+                  allowClear
+                />
+              </Form.Item>
+
               <Form.Item
                 name="qaApprovalComments"
                 label="Comments"
@@ -709,6 +741,8 @@ const PreventiveMaintenanceCreate = () => {
             </div>
           </section>
         )}
+
+        
       </Form>
 
       <FloatingActionButtons

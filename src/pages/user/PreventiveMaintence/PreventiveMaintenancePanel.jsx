@@ -63,6 +63,14 @@ const SELECTION_TYPES = [
   "multi_select_checkbox",
 ];
 
+const QA_REMARK_OPTIONS = [
+  { value: "Verification Required", label: "Verification Required" },
+  { value: "Validation Required", label: "Validation Required" },
+  { value: "Qualification Required", label: "Qualification Required" },
+  { value: "Not Required", label: "Not Required" },
+  { value: "If Any", label: "If Any" },
+];
+
 /* 👇 Normalization to send the exact string to the API */
 const getNormalizedFrequency = (value) => {
   if (!value) return "";
@@ -161,6 +169,11 @@ const buildProcessData = (values, systemFields) => [
     key: "engineer_review_attachment",
     label: "Review By Engineer Dept Attachment",
     value: [],
+  },
+  {
+  key: "qa_approval_remark",
+  label: "QA Approval Remark",
+  value: values?.qaRemark || "",
   },
   {
     key: "qa_approval_comments",
@@ -416,8 +429,8 @@ const PreventiveMaintenancePanel = () => {
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "" });
 
-  const equipmentNameWatch = Form.useWatch("equipmentInstrumentName", form);
-  const preventiveFreqWatch = Form.useWatch("preventiveFrequency", form);
+  const qaRemarkWatch = Form.useWatch("qaRemark", form);
+  const showQaComments = qaRemarkWatch === "If Any";
 
   useEffect(() => {
     equipmentMapRef.current = equipmentMap;
@@ -628,6 +641,10 @@ const PreventiveMaintenancePanel = () => {
           processData,
           "engineer_review_attachment"
         );
+        const qaApprovalRemark = getProcessValue(
+        processData,
+        "qa_approval_remark"
+      );
         const qaApprovalComments = getProcessValue(
           processData,
           "qa_approval_comments"
@@ -729,6 +746,7 @@ const PreventiveMaintenancePanel = () => {
             : null,
           engineerReviewComments: engineerReviewComments || "",
           engineerReviewAttachment: engineerReviewAttachment || [],
+          qaRemark: qaApprovalRemark || null,
           qaApprovalComments: qaApprovalComments || "",
           qaApprovalAttachment: qaApprovalAttachment || [],
           preventiveFrequency: preventiveFrequencyVal || "",
@@ -1401,45 +1419,74 @@ const PreventiveMaintenancePanel = () => {
           </div>
         </section>
 
-        <section
-          style={{ display: activeTab === "qa-approval" ? "block" : "none" }}
-        >
-          <SectionHeader title="QA APPROVAL" />
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item
-              name="qaApprovalComments"
-               label={
-                <span className="inline-flex items-center">
-                  Comments
-                  <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
-                </span>
-              }
-              className="!mb-4 md:col-span-2"
-            >
-              <FormTextArea
-                rows={5}
-                placeholder="Enter comments..."
-                disabled={!isQaApprovalEditable}
-              />
-            </Form.Item>
+<section
+  style={{ display: activeTab === "qa-approval" ? "block" : "none" }}
+>
+  <SectionHeader title="QA APPROVAL" />
+  <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
 
-            <Form.Item
-              name="qaApprovalAttachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormAttachment
-                multiple={true}
-                recordId={recordId}
-                attachmentField="qa_approval_attachment"
-                label="QA Approval Attachment"
-                uploadApi={addMultipleAttachments}
-                disabled={!isQaApprovalEditable}
-              />
-            </Form.Item>
-          </div>
-        </section>
+    {/* 👇 NEW: Remark dropdown (before Comments) */}
+    <Form.Item
+      name="qaRemark"
+      label={
+        <span className="inline-flex items-center">
+          Remark
+          <RequiredAsterisk message="Please select a remark to proceed." />
+        </span>
+      }
+      className="!mb-4 md:col-span-2"
+    >
+      <Select
+        placeholder="Select remark"
+        options={QA_REMARK_OPTIONS}
+        disabled={!isQaApprovalEditable}
+        allowClear
+        onChange={(value) => {
+          // Clear comments when the user moves away from "If Any"
+          if (value !== "If Any") {
+            form.setFieldValue("qaApprovalComments", "");
+          }
+        }}
+      />
+    </Form.Item>
+
+    {/* 👇 Comments shown only when "If Any" is selected */}
+    {showQaComments && (
+      <Form.Item
+        name="qaApprovalComments"
+        label={
+          <span className="inline-flex items-center">
+            Comments
+            <RequiredAsterisk message="Comments are required to proceed. Please enter your comments." />
+          </span>
+        }
+        className="!mb-4 md:col-span-2"
+      >
+        <FormTextArea
+          rows={5}
+          placeholder="Enter comments..."
+          disabled={!isQaApprovalEditable}
+        />
+      </Form.Item>
+    )}
+
+    <Form.Item
+      name="qaApprovalAttachment"
+      label="Attachment"
+      valuePropName="value"
+      className="!mb-4 md:col-span-2"
+    >
+      <FormAttachment
+        multiple={true}
+        recordId={recordId}
+        attachmentField="qa_approval_attachment"
+        label="QA Approval Attachment"
+        uploadApi={addMultipleAttachments}
+        disabled={!isQaApprovalEditable}
+      />
+    </Form.Item>
+  </div>
+</section>
 
         <section
           style={{ display: activeTab === "checklist" ? "block" : "none" }}

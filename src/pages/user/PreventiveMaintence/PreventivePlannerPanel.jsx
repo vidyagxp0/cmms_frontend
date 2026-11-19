@@ -97,6 +97,7 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
   });
 };
 
+// ── CHANGED: also seed per-month `_frequency` fields ──
 const buildRowFromEquipment = (item = {}) => {
   const newRow = {
     equipmentDbId:
@@ -130,6 +131,7 @@ const buildRowFromEquipment = (item = {}) => {
   MONTHS.forEach((m) => {
     newRow[`${m.key}_planned`] = "";
     newRow[`${m.key}_executed`] = "";
+    newRow[`${m.key}_frequency`] = ""; // NEW — replaces the removed Frequency column
   });
 
   return newRow;
@@ -163,7 +165,6 @@ const buildProcessData = (values, systemFields) => [
     label: "HOD / Designee Review Attachment",
     value: [],
   },
-  // 👇 NEW: Select User Department
   {
     key: "user_dept_selected_department",
     label: "Select User Department",
@@ -440,7 +441,6 @@ const PreventivePlannerPanel = () => {
         const attachment = getProcessValue(processData, "attachment");
         const hodReviewComments = getProcessValue(processData, "hod_review_comments");
         const hodReviewAttachment = getProcessValue(processData, "hod_review_attachment");
-        // 👇 NEW: read User Dept selected department
         const userDeptSelectedDeptId = getProcessValue(processData, "user_dept_selected_department");
         const userDeptReviewComments = getProcessValue(processData, "user_dept_review_comments");
         const userDeptReviewAttachment = getProcessValue(processData, "user_dept_review_attachment");
@@ -489,7 +489,6 @@ const PreventivePlannerPanel = () => {
           attachment: attachment || [],
           hodReviewComments,
           hodReviewAttachment: hodReviewAttachment || [],
-          // 👇 NEW: set User Dept selected department
           userDeptSelectedDeptId: userDeptSelectedDeptId
             ? Number(userDeptSelectedDeptId)
             : null,
@@ -521,9 +520,11 @@ const PreventivePlannerPanel = () => {
         const normalizedRows = rawRows.map((row) => {
           const newRow = { ...row, isFromApi: true };
 
+          // ── CHANGED: also normalise per-month `_frequency` fields ──
           MONTHS.forEach(({ key }) => {
             if (newRow[`${key}_planned`] === undefined || newRow[`${key}_planned`] === null) newRow[`${key}_planned`] = "";
             if (newRow[`${key}_executed`] === undefined || newRow[`${key}_executed`] === null) newRow[`${key}_executed`] = "";
+            if (newRow[`${key}_frequency`] === undefined || newRow[`${key}_frequency`] === null) newRow[`${key}_frequency`] = "";
           });
 
           if (
@@ -1056,13 +1057,9 @@ const PreventivePlannerPanel = () => {
           </div>
         </section>
 
-        {/* =====================================================
-            USER DEPT REVIEW — 👇 NEW: Select User Department
-        ===================================================== */}
         <section style={{ display: activeTab === "user-dept-review" ? "block" : "none" }}>
           <SectionHeader title="User Department Review (HOD/Designee)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            {/* 👇 NEW: Select User Department before Comments */}
             <Form.Item
               name="userDeptSelectedDeptId"
               label={
@@ -1152,9 +1149,6 @@ const PreventivePlannerPanel = () => {
             </Form.Item>
           </div>
         </section>
-
-        {/* Cancellation tab removed — cancelled stage still shown via
-            cancelledStageId={12} on <ProcessStage /> */}
 
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
           <SectionHeader title="ACTIVITY LOG" />

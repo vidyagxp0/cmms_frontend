@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Plus, Trash2, Table2, Loader2 } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Plus, Trash2, Table2, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import UserModal from "../../../components/common/UserModal/UserModal";
@@ -9,6 +9,28 @@ import "../../../components/ui/disabledFields.css";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 
 const { TextArea } = Input;
+
+/* ── NEW: pagination constant ── */
+const DEFAULT_PAGE_SIZE = 20;
+
+/* ── NEW: page loader ── */
+const PageLoader = ({ visible }) => {
+  if (!visible) return null;
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-b-xl bg-white/70"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex flex-col items-center gap-2 rounded-xl border border-[#E0E7E4] bg-white px-5 py-3 shadow-[0_6px_20px_rgba(38,53,46,0.12)]">
+        <div className="h-6 w-6 animate-spin rounded-full border-[2.5px] border-[#D5DFDB] border-t-[#2B5577]" />
+        <p className="text-[11px] font-semibold tracking-wide text-[#596760]">
+          Loading page…
+        </p>
+      </div>
+    </div>
+  );
+};
 
 const CalibrationGrid = ({
   value = [],
@@ -27,6 +49,7 @@ const CalibrationGrid = ({
   disabled = false,
   canCreateChild = false,
   showAddButton = true,
+  pageSize = DEFAULT_PAGE_SIZE, // NEW
 }) => {
   const columns = [
     { key: "equipmentInstrumentName", title: "Instrument Name.", type: "select", placeholder: "Select instrument", required: true, minWidth: 180 },
@@ -44,16 +67,87 @@ const CalibrationGrid = ({
     // ✅ EXISTING — UNTOUCHED
     { key: "plannedDate", title: "Planned date / Calibration Done on", type: "dualDate", minWidth: 320 },
 
-    // ✅ NEW — added right after the existing column
+    // ✅ EXISTING — UNTOUCHED
     { key: "nextPlannedDate", title: "Next Planned date / Next Calibration Done on", type: "dualDateNext", minWidth: 340 },
 
     { key: "remark", title: "Remarks", type: "textarea", placeholder: "Enter remarks", minWidth: 200 },
   ];
 
   const rows = Array.isArray(value) ? value : [];
+
   const [deleteRowIndex, setDeleteRowIndex] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+
+  /* ─────────────────────────────────────────────────────────
+     NEW: PAGINATION STATE
+     ───────────────────────────────────────────────────────── */
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isPageChanging, setIsPageChanging] = useState(false);
+  const changeIdRef = useRef(0);
+
+  const totalRows = rows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safePage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalRows);
+
+  const visibleRows = useMemo(
+    () =>
+      rows.slice(startIndex, endIndex).map((row, i) => ({
+        row,
+        index: startIndex + i,
+      })),
+    [rows, startIndex, endIndex]
+  );
+
+  const pageOptions = useMemo(
+    () =>
+      Array.from({ length: totalPages }, (_, i) => ({
+        value: i + 1,
+        label: String(i + 1),
+      })),
+    [totalPages]
+  );
+
+  useEffect(() => {
+    if (rows.length === 0 && currentPage !== 1) setCurrentPage(1);
+  }, [rows.length, currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
+  /* ─────────────────────────────────────────────────────────
+     NEW: PAGE CHANGE — two-phase paint so the loader is
+     always visible before the heavy render starts. Token
+     guard makes rapid clicks safe (last click wins).
+     ───────────────────────────────────────────────────────── */
+  const goToPage = useCallback(
+    (page) => {
+      const clamped = Math.min(Math.max(1, page), totalPages);
+      if (clamped === safePage) return;
+
+      const id = ++changeIdRef.current;
+      setIsPageChanging(true);
+
+      requestAnimationFrame(() => {
+        if (changeIdRef.current !== id) return;
+        requestAnimationFrame(() => {
+          if (changeIdRef.current !== id) return;
+
+          setCurrentPage(clamped);
+
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              if (changeIdRef.current === id) setIsPageChanging(false);
+            });
+          });
+        });
+      });
+    },
+    [safePage, totalPages]
+  );
 
   const addRow = () => {
     if (disabled) return;
@@ -61,8 +155,15 @@ const CalibrationGrid = ({
     const newRow = {};
     columns.forEach((column) => { newRow[column.key] = ""; });
     newRow.calibrationDoneDate = "";
-    newRow.nextCalibrationDoneDate = ""; // ✅ NEW
-    onChange([...rows, newRow]);
+    newRow.nextCalibrationDoneDate = ""; // ✅ EXISTING
+
+    const newRows = [...rows, newRow];
+    const newPage = Math.max(1, Math.ceil(newRows.length / pageSize));
+
+    onChange(newRows);
+
+    // NEW: jump to the page that contains the new row
+    if (newPage !== safePage) goToPage(newPage);
   };
 
   const handleDeleteRow = (rowIndex) => {
@@ -135,7 +236,7 @@ const CalibrationGrid = ({
       }
     }
 
-    // ✅ NEW — same rule for the new pair
+    // ✅ EXISTING behaviour — untouched
     if (key === "nextPlannedDate") {
       if (
         newValue &&
@@ -208,7 +309,7 @@ const CalibrationGrid = ({
       );
     }
 
-    // ✅ NEW — new pair renderer
+    // ✅ EXISTING — UNTOUCHED
     if (type === "dualDateNext") {
       const nextPlannedDayjs = row.nextPlannedDate ? dayjs(row.nextPlannedDate) : null;
 
@@ -316,146 +417,213 @@ const CalibrationGrid = ({
         )}
       </div>
 
-      <CustomScrollContainer maxHeight="520px" direction="both" className="w-full rounded-b-xl">
-        <table className="w-full min-w-[max-content] border-collapse border border-[#D5DFDB]">
-          <thead className="sticky top-0 z-[5]">
-            <tr className="bg-[#EEF3F1]">
-              <th className="w-[50px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Sr. No</th>
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  style={{ minWidth: column.minWidth || 120 }}
-                  className="border border-[#D5DFDB] px-2 py-2 text-left align-middle text-[10px] font-bold text-[#43564F]"
-                >
-                  <div className="flex items-center gap-1">
-                    {column.title.replace(/\.$/, "")}
-                    {column.key === "equipmentInstrumentName" && (
-                      <RequiredAsterisk
-                        message="Instrument Name is required. Please select an instrument to proceed."
-                      />
-                    )}
-                  </div>
-                </th>
-              ))}
-              {showChildColumn && (
-                <th className="w-[70px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">{viewChildLabel}</th>
-              )}
-              <th className="w-[60px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {equipmentLoading ? (
-              Array.from({ length: 5 }).map((_, idx) => (
-                <tr key={`skeleton-${idx}`} className="bg-white">
-                  <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
-                    <div className="mx-auto h-4 w-5 animate-pulse rounded bg-[#E5EBE8]" />
-                  </td>
-                  {columns.map((column, colIdx) => (
-                    <td key={column.key} className="border border-[#D5DFDB] px-2 py-2 align-middle">
-                      <div
-                        className="h-4 animate-pulse rounded bg-[#E5EBE8]"
-                        style={{ width: `${55 + ((idx * 13 + colIdx * 17) % 45)}%` }}
-                      />
-                    </td>
-                  ))}
-                  {showChildColumn && (
+      {/* NEW: relative wrapper for the loader overlay */}
+      <div className="relative">
+        <CustomScrollContainer maxHeight="520px" direction="both" className="w-full rounded-b-xl">
+          <table className="w-full min-w-[max-content] border-collapse border border-[#D5DFDB]">
+            <thead className="sticky top-0 z-[5]">
+              <tr className="bg-[#EEF3F1]">
+                <th className="w-[50px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Sr. No</th>
+                {columns.map((column) => (
+                  <th
+                    key={column.key}
+                    style={{ minWidth: column.minWidth || 120 }}
+                    className="border border-[#D5DFDB] px-2 py-2 text-left align-middle text-[10px] font-bold text-[#43564F]"
+                  >
+                    <div className="flex items-center gap-1">
+                      {column.title.replace(/\.$/, "")}
+                      {column.key === "equipmentInstrumentName" && (
+                        <RequiredAsterisk
+                          message="Instrument Name is required. Please select an instrument to proceed."
+                        />
+                      )}
+                    </div>
+                  </th>
+                ))}
+                {showChildColumn && (
+                  <th className="w-[70px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">{viewChildLabel}</th>
+                )}
+                <th className="w-[60px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Action</th>
+              </tr>
+            </thead>
+
+            {/* NEW: key={safePage} remounts tbody per page → CSS fade */}
+            <tbody
+              key={safePage}
+              style={{ animation: "calibrationPageFade 160ms ease-out" }}
+            >
+              {equipmentLoading ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={`skeleton-${idx}`} className="bg-white">
                     <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
-                      <div className="mx-auto h-4 w-10 animate-pulse rounded bg-[#E5EBE8]" />
+                      <div className="mx-auto h-4 w-5 animate-pulse rounded bg-[#E5EBE8]" />
                     </td>
-                  )}
-                  <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
-                    <div className="mx-auto h-4 w-4 animate-pulse rounded bg-[#E5EBE8]" />
-                  </td>
-                </tr>
-              ))
-            ) : rows.length > 0 ? (
-              rows.map((row, rowIndex) => {
- 
-                const rowPlannedDate = row.plannedDate ? dayjs(row.plannedDate).startOf("day") : null;
-                let isWithinDateWindow = false;
-                let windowStart = null;
-                let windowEnd = null;
-
-                if (rowPlannedDate) {
-                  // ✅ NEW: 30 days before the planned date, up to and including the planned date
-                  windowStart = rowPlannedDate.subtract(30, "day").startOf("day");
-                  windowEnd = rowPlannedDate.endOf("day");
-
-                  isWithinDateWindow =
-                    !today.isBefore(windowStart) && !today.isAfter(windowEnd);
-                }
-
-                const childButtonEnabled = canCreateChild && isWithinDateWindow;
-
-                let childButtonTitle = "Create child calibration";
-                if (!canCreateChild) {
-                  childButtonTitle =
-                    "Child creation is available only to Initiator at Close Done stage.";
-                } else if (!rowPlannedDate) {
-                  childButtonTitle =
-                    "Please select a Planned date in this row to enable child creation.";
-                } else if (!isWithinDateWindow) {
-                  childButtonTitle = `Child can only be created between ${windowStart.format(
-                    "DD-MM-YYYY"
-                  )} and ${windowEnd.format("DD-MM-YYYY")} (30 days before the planned date up to the planned date).`;
-                }
-
-                return (
-                  <tr key={rowIndex} className="group bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                    <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
-                      <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">{rowIndex + 1}.</span>
-                    </td>
-                    {columns.map((column) => (
-                      <td key={column.key} className="border border-[#D5DFDB] p-0 align-top">
-                        {renderField(column, row, rowIndex)}
+                    {columns.map((column, colIdx) => (
+                      <td key={column.key} className="border border-[#D5DFDB] px-2 py-2 align-middle">
+                        <div
+                          className="h-4 animate-pulse rounded bg-[#E5EBE8]"
+                          style={{ width: `${55 + ((idx * 13 + colIdx * 17) % 45)}%` }}
+                        />
                       </td>
                     ))}
                     {showChildColumn && (
+                      <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+                        <div className="mx-auto h-4 w-10 animate-pulse rounded bg-[#E5EBE8]" />
+                      </td>
+                    )}
+                    <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+                      <div className="mx-auto h-4 w-4 animate-pulse rounded bg-[#E5EBE8]" />
+                    </td>
+                  </tr>
+                ))
+              ) : visibleRows.length > 0 ? (
+                // NEW: iterate visibleRows — rowIndex stays the real index
+                visibleRows.map(({ row, index: rowIndex }) => {
+                  const rowPlannedDate = row.plannedDate ? dayjs(row.plannedDate).startOf("day") : null;
+                  let isWithinDateWindow = false;
+                  let windowStart = null;
+                  let windowEnd = null;
+
+                  if (rowPlannedDate) {
+                    windowStart = rowPlannedDate.subtract(30, "day").startOf("day");
+                    windowEnd = rowPlannedDate.endOf("day");
+
+                    isWithinDateWindow =
+                      !today.isBefore(windowStart) && !today.isAfter(windowEnd);
+                  }
+
+                  const childButtonEnabled = canCreateChild && isWithinDateWindow;
+
+                  let childButtonTitle = "Create child calibration";
+                  if (!canCreateChild) {
+                    childButtonTitle =
+                      "Child creation is available only to Initiator at Close Done stage.";
+                  } else if (!rowPlannedDate) {
+                    childButtonTitle =
+                      "Please select a Planned date in this row to enable child creation.";
+                  } else if (!isWithinDateWindow) {
+                    childButtonTitle = `Child can only be created between ${windowStart.format(
+                      "DD-MM-YYYY"
+                    )} and ${windowEnd.format("DD-MM-YYYY")} (30 days before the planned date up to the planned date).`;
+                  }
+
+                  return (
+                    <tr key={rowIndex} className="group bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+                      <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
+                        <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">{rowIndex + 1}.</span>
+                      </td>
+                      {columns.map((column) => (
+                        <td key={column.key} className="border border-[#D5DFDB] p-0 align-top">
+                          {renderField(column, row, rowIndex)}
+                        </td>
+                      ))}
+                      {showChildColumn && (
+                        <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!childButtonEnabled) return;
+                              onViewChild(rowIndex, row);
+                            }}
+                            disabled={!childButtonEnabled}
+                            className={`inline-flex h-7 items-center justify-center rounded px-3 text-[11px] font-medium text-white shadow-sm transition-all duration-200 focus:outline-none ${
+                              childButtonEnabled
+                                ? "bg-[#3d606d] hover:bg-[#2B5577] active:scale-95"
+                                : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
+                            }`}
+                            aria-label="Create child calibration"
+                            title={childButtonTitle}
+                          >
+                            Child
+                          </button>
+                        </td>
+                      )}
                       <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
                         <button
                           type="button"
-                          onClick={() => {
-                            if (!childButtonEnabled) return;
-                            onViewChild(rowIndex, row);
-                          }}
-                          disabled={!childButtonEnabled}
-                          className={`inline-flex h-7 items-center justify-center rounded px-3 text-[11px] font-medium text-white shadow-sm transition-all duration-200 focus:outline-none ${
-                            childButtonEnabled
-                              ? "bg-[#3d606d] hover:bg-[#2B5577] active:scale-95"
-                              : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
-                          }`}
-                          aria-label="Create child calibration"
-                          title={childButtonTitle}
+                          onClick={() => handleDeleteRow(rowIndex)}
+                          disabled={disabled || rows.length <= minRows}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
+                          aria-label="Delete row"
                         >
-                          Child
+                          <Trash2 size={14} strokeWidth={1.8} />
                         </button>
                       </td>
-                    )}
-                    <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteRow(rowIndex)}
-                        disabled={disabled || rows.length <= minRows}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
-                        aria-label="Delete row"
-                      >
-                        <Trash2 size={14} strokeWidth={1.8} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={totalColumns} className="h-[80px] border border-[#D5DFDB] px-5 text-center text-[11px] font-medium text-[#899690]">
-                  No calibration rows added yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </CustomScrollContainer>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={totalColumns} className="h-[80px] border border-[#D5DFDB] px-5 text-center text-[11px] font-medium text-[#899690]">
+                    No calibration rows added yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </CustomScrollContainer>
 
+        {/* NEW: loader overlay */}
+        <PageLoader visible={isPageChanging} />
+      </div>
+
+      {/* ── NEW: Centered pagination bar with dropdown selector ── */}
+      {!equipmentLoading && totalPages > 1 && (
+        <div className="flex flex-col items-center gap-1.5 border-t border-[#E0E7E4] bg-white px-4 py-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => goToPage(safePage - 1)}
+              disabled={safePage === 1}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#D5DEDA] bg-white text-[#4E7585] transition-all duration-150 hover:bg-[#F0F4F2] hover:text-[#2B5577] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={15} strokeWidth={2} />
+            </button>
+
+            <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#596760]">
+              <span>Page</span>
+
+              <Select
+                value={safePage}
+                onChange={(val) => goToPage(Number(val))}
+                options={pageOptions}
+                listHeight={220}
+                showSearch
+                optionFilterProp="label"
+                virtual
+                popupMatchSelectWidth={false}
+                className="!w-[76px] [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-md [&_.ant-select-selector]:!border-[#D5DEDA] [&_.ant-select-selector]:!bg-white [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-semibold [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-item]:!leading-[30px] [&_.ant-select-selection-search-input]:!h-8 [&_.ant-select-arrow]:!text-[#4E7585] [&_.ant-select-arrow]:!text-[10px]"
+                popupClassName="[&_.ant-select-item-option]:!text-[11px] [&_.ant-select-item-option]:!py-1 [&_.ant-select-item-option-selected]:!bg-[#EAF0F4] [&_.ant-select-item-option-selected]:!text-[#2B5577] [&_.ant-select-item-option-selected]:!font-semibold [&_.ant-select-item-option-active]:!bg-[#F0F4F2]"
+              />
+
+              <span>
+                of <span className="font-semibold text-[#263B35]">{totalPages}</span>
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => goToPage(safePage + 1)}
+              disabled={safePage === totalPages}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#D5DEDA] bg-white text-[#4E7585] transition-all duration-150 hover:bg-[#F0F4F2] hover:text-[#2B5577] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Next page"
+            >
+              <ChevronRight size={15} strokeWidth={2} />
+            </button>
+          </div>
+
+          <span className="text-[11px] font-medium text-[#899690]">
+            {isPageChanging ? (
+              <>Loading page <span className="font-semibold text-[#263B35]">{safePage}</span>…</>
+            ) : (
+              <>Showing <span className="font-semibold text-[#263B35]">{startIndex + 1}–{endIndex}</span> of <span className="font-semibold text-[#263B35]">{totalRows}</span> rows</>
+            )}
+          </span>
+        </div>
+      )}
+
+      {/* Footer (original) */}
       <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">
         <span className="text-[10px] font-medium text-[#899690]">
           {equipmentLoading
@@ -476,6 +644,14 @@ const CalibrationGrid = ({
           </div>
         </div>
       </UserModal>
+
+      {/* NEW: scoped keyframes for page fade */}
+      <style>{`
+        @keyframes calibrationPageFade {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };

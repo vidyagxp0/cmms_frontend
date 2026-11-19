@@ -76,6 +76,7 @@ const PreventiveMaintenanceCreate = () => {
     preventiveFrequency: passedFrequency = "",
     preventiveFrequencyCode: passedFrequencyCode = "",
     childType,
+    parentDepartmentName = "",
   } = state;
 
   console.log("PreventiveMaintenanceCreate state:", state);
@@ -246,8 +247,8 @@ const PreventiveMaintenanceCreate = () => {
             rowEquipmentCode ||
             map[equipmentValue]?.instrument_id_no ||
             "",
-          block: rowBlock,
-          department: rowDepartment,
+          block: rowBlock || parentDepartmentName,          
+          department: rowDepartment || parentDepartmentName,
           location: rowLocation,
           previousPreventiveDate: rowPrevDate ? dayjs(rowPrevDate) : null,
           nextPreventiveDate: rowNextDate ? dayjs(rowNextDate) : null,

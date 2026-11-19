@@ -711,6 +711,18 @@ const PreventivePlannerPanel = () => {
     const { code = "", label = "" } =
       biggestFrequency || getRowBiggestFrequency(rowData);
 
+        const selectedDeptObj = departments.find(
+    (d) =>
+      String(d.id || d.department_id || d.dept_id) ===
+      String(selectedDeptIdWatch)
+  );
+
+    const parentDepartmentName =
+    selectedDeptObj?.name ||
+    selectedDeptObj?.department_name ||
+    selectedDeptObj?.dept_name ||
+    "";
+
     navigate(`/user/preventive-maintenance-create/${4}/${recordId}`, {
       state: {
         rowData,
@@ -720,6 +732,7 @@ const PreventivePlannerPanel = () => {
         preventiveFrequency: label,
         preventiveFrequencyCode: code,
         childType: "preventive-child",
+        parentDepartmentName
       },
     });
   };

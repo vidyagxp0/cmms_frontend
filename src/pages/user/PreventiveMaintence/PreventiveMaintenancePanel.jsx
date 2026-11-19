@@ -68,7 +68,7 @@ const QA_REMARK_OPTIONS = [
   { value: "Validation Required", label: "Validation Required" },
   { value: "Qualification Required", label: "Qualification Required" },
   { value: "Not Required", label: "Not Required" },
-  { value: "If Any", label: "If Any" },
+  { value: "If Any Other", label: "If Any Other" },
 ];
 
 /* 👇 Normalization to send the exact string to the API */
@@ -430,7 +430,7 @@ const PreventiveMaintenancePanel = () => {
   const requiredValuesRef = useRef({ shortDescription: "" });
 
   const qaRemarkWatch = Form.useWatch("qaRemark", form);
-  const showQaComments = qaRemarkWatch === "If Any";
+  const showQaComments = qaRemarkWatch === "If Any Other";
 
   useEffect(() => {
     equipmentMapRef.current = equipmentMap;
@@ -1223,7 +1223,7 @@ const PreventiveMaintenancePanel = () => {
               </span>
             }
             className="!mb-4">
-              <FormInput placeholder="Block" disabled={!isGeneralEditable} />
+              <FormInput placeholder="Block" disabled />
             </Form.Item>
 
             <Form.Item
@@ -1237,7 +1237,7 @@ const PreventiveMaintenancePanel = () => {
             className="!mb-4">
               <FormInput
                 placeholder="Department"
-                disabled={!isGeneralEditable}
+                disabled
               />
             </Form.Item>
 
@@ -1250,7 +1250,7 @@ const PreventiveMaintenancePanel = () => {
               </span>
             }
             className="!mb-4">
-              <FormInput placeholder="Location" disabled={!isGeneralEditable} />
+              <FormInput placeholder="Location" disabled />
             </Form.Item>
 
             <Form.Item
@@ -1442,15 +1442,15 @@ const PreventiveMaintenancePanel = () => {
         disabled={!isQaApprovalEditable}
         allowClear
         onChange={(value) => {
-          // Clear comments when the user moves away from "If Any"
-          if (value !== "If Any") {
+          // Clear comments when the user moves away from "If Any Other"
+          if (value !== "If Any Other") {
             form.setFieldValue("qaApprovalComments", "");
           }
         }}
       />
     </Form.Item>
 
-    {/* 👇 Comments shown only when "If Any" is selected */}
+    {/* 👇 Comments shown only when "If Any Other" is selected */}
     {showQaComments && (
       <Form.Item
         name="qaApprovalComments"

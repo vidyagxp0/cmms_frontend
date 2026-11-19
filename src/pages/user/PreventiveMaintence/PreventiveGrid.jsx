@@ -665,10 +665,28 @@ const PreventiveGrid = ({
                           <td rowSpan={3} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
                             <button
                               type="button"
+                              // onClick={() => {
+                              //   if (!childEnabled) return;
+                              //   onViewChild(rowIndex, row, getRowBiggestFrequency(row));
+                              // }}
                               onClick={() => {
-                                if (!childEnabled) return;
-                                onViewChild(rowIndex, row, getRowBiggestFrequency(row));
-                              }}
+                              if (!childEnabled) return;
+
+                              // Get the currently running month
+                              const currentMonthKey = MONTHS[dayjs().month()]?.key;
+
+                              // Get only this month's frequency from the selected equipment row
+                              const currentMonthFrequency = currentMonthKey
+                                ? row?.[`${currentMonthKey}_frequency`] || ""
+                                : "";
+
+                              const frequencyCode = FREQUENCY_VALUE_TO_CODE[currentMonthFrequency] || "";
+
+                              onViewChild(rowIndex, row, {
+                                code: frequencyCode,
+                                label: currentMonthFrequency,
+                              });
+                            }}
                               disabled={!childEnabled}
                               className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${
                                 childEnabled

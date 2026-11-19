@@ -27,6 +27,29 @@ const MONTHS = [
   { key: "dec", label: "December" },
 ];
 
+/* ─────────────────────────────────────────────────────────
+   Child button gate:
+   Enabled only when the current running month's `_planned`
+   date exists AND today is within ±7 days of that date.
+   (dayjs().month() is 0-indexed → directly maps to MONTHS[])
+   ───────────────────────────────────────────────────────── */
+const CHILD_WINDOW_DAYS = 7;
+
+export const isWithinCurrentMonthPlannedWindow = (row) => {
+  const now = dayjs();
+  const currentMonthKey = MONTHS[now.month()]?.key;
+  if (!currentMonthKey) return false;
+
+  const plannedValue = row?.[`${currentMonthKey}_planned`];
+  if (!plannedValue) return false;
+
+  const planned = dayjs(plannedValue);
+  if (!planned.isValid()) return false;
+
+  const diffDays = now.startOf("day").diff(planned.startOf("day"), "day");
+  return Math.abs(diffDays) <= CHILD_WINDOW_DAYS;
+};
+
 const FREQUENCY_OPTIONS = [
   { value: "monthly", label: "Monthly" },
   { value: "quarterly", label: "Quarterly" },
@@ -36,15 +59,6 @@ const FREQUENCY_OPTIONS = [
   { value: "five-yearly", label: "Five Yearly" },
 ];
 
-const FREQUENCY_INTERVAL_MONTHS = {
-  monthly: 1,
-  quarterly: 3,
-  "half-yearly": 6,
-  yearly: 12,
-  "two-yearly": 24,
-  "five-yearly": 60,
-};
-
 export const FREQUENCY_PRIORITY = { Y: 4, Q: 3, H: 2, M: 1 };
 
 export const FREQUENCY_LABEL_BY_CODE = {
@@ -52,6 +66,15 @@ export const FREQUENCY_LABEL_BY_CODE = {
   Q: "quarterly",
   H: "half-yearly",
   M: "monthly",
+};
+
+const FREQUENCY_VALUE_TO_CODE = {
+  monthly: "M",
+  quarterly: "Q",
+  "half-yearly": "H",
+  yearly: "Y",
+  "two-yearly": "Y",
+  "five-yearly": "Y",
 };
 
 const WORD_PATTERNS = [
@@ -79,10 +102,19 @@ const extractFrequencyTokens = (raw) => {
 };
 
 export const getRowBiggestFrequency = (row) => {
-  if (row?.frequency) {
-    return { code: row.frequency, label: row.frequency };
-  }
   const codes = [];
+
+  MONTHS.forEach((m) => {
+    const freq = row?.[`${m.key}_frequency`];
+    if (freq && FREQUENCY_VALUE_TO_CODE[freq]) {
+      codes.push(FREQUENCY_VALUE_TO_CODE[freq]);
+    }
+  });
+
+  if (row?.frequency && FREQUENCY_VALUE_TO_CODE[row.frequency]) {
+    codes.push(FREQUENCY_VALUE_TO_CODE[row.frequency]);
+  }
+
   if (row?.weeklyPreventive && typeof row.weeklyPreventive === "object") {
     Object.values(row.weeklyPreventive).forEach((weeks) => {
       if (!Array.isArray(weeks)) return;
@@ -93,6 +125,7 @@ export const getRowBiggestFrequency = (row) => {
       });
     });
   }
+
   if (codes.length === 0) return { code: "", label: "" };
   const code = codes.reduce((best, cur) =>
     FREQUENCY_PRIORITY[cur] > FREQUENCY_PRIORITY[best] ? cur : best
@@ -109,28 +142,9 @@ export const createEmptyWeeklyData = () => {
   return data;
 };
 
-const getActiveMonthIndices = (row) => {
-  const frequency = row?.frequency;
-  if (!frequency || frequency === "monthly") return null;
-  const interval = FREQUENCY_INTERVAL_MONTHS[frequency];
-  if (!interval) return null;
-  let anchorIdx = null;
-  for (let i = 0; i < 12; i++) {
-    if (row[`${MONTHS[i].key}_planned`]) {
-      anchorIdx = i;
-      break;
-    }
-  }
-  if (anchorIdx === null) return null;
-  const indices = [];
-  for (let i = anchorIdx; i < 12; i += interval) indices.push(i);
-  return indices;
-};
-
-/* ── Pagination constant (buildPaginationItems removed) ── */
 const DEFAULT_PAGE_SIZE = 20;
 
-/* ── Cell components (unchanged) ── */
+/* ── Cell components ── */
 const TextCell = React.memo(function TextCell({
   rowIndex, fieldKey, value, placeholder, disabled, updateRow,
 }) {
@@ -184,7 +198,7 @@ const FrequencySelectCell = React.memo(function FrequencySelectCell({
       onChange={handleChange}
       options={options}
       disabled={disabled}
-      className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1]"
+      className="!w-full [&_.ant-select-selector]:!h-8   [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1]"
     />
   );
 });
@@ -278,7 +292,6 @@ const PreventiveGrid = ({
     { key: "equipmentInstrumentName", title: "Equipment Name", type: "select", placeholder: "Select equipment name", required: true, minWidth: 240 },
     { key: "equipmentInstrumentId", title: "Equipment Code", type: "text", minWidth: 180 },
     { key: "location", title: "Location", type: "text", placeholder: "Enter location", minWidth: 180 },
-    { key: "frequency", title: "Frequency", type: "select", placeholder: "Select frequency", options: FREQUENCY_OPTIONS, minWidth: 160 },
   ];
 
   const rows = Array.isArray(value) ? value : [];
@@ -305,7 +318,6 @@ const PreventiveGrid = ({
     [rows, startIndex, endIndex]
   );
 
-  /* NEW: dropdown options — every page 1..totalPages */
   const pageOptions = useMemo(
     () =>
       Array.from({ length: totalPages }, (_, i) => ({
@@ -323,11 +335,6 @@ const PreventiveGrid = ({
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [currentPage, totalPages]);
 
-  /* ─────────────────────────────────────────────────────────
-     PAGE CHANGE — two-phase paint so the loader is always
-     visible before the heavy render starts. Token guard
-     makes rapid clicks safe (last click wins).
-     ───────────────────────────────────────────────────────── */
   const goToPage = useCallback(
     (page) => {
       const clamped = Math.min(Math.max(1, page), totalPages);
@@ -364,10 +371,10 @@ const PreventiveGrid = ({
     newRow.equipmentDbId = "";
     newRow.make = "";
     newRow.model = "";
-    newRow.frequency = "";
     MONTHS.forEach((m) => {
       newRow[`${m.key}_planned`] = "";
       newRow[`${m.key}_executed`] = "";
+      newRow[`${m.key}_frequency`] = "";
     });
     newRow.remark = "";
 
@@ -376,29 +383,6 @@ const PreventiveGrid = ({
     onChange(newRows);
     if (newPage !== safePage) goToPage(newPage);
   };
-
-  const handleDuplicateForFrequency = useCallback(
-    (rowIndex) => {
-      if (disabled) return;
-      if (maxRows !== undefined && rows.length >= maxRows) return;
-      const sourceRow = rowsRef.current[rowIndex];
-      if (!sourceRow) return;
-
-      const newRow = { ...sourceRow, frequency: "", remark: "" };
-      MONTHS.forEach((m) => {
-        newRow[`${m.key}_planned`] = "";
-        newRow[`${m.key}_executed`] = "";
-      });
-
-      const updated = [...rowsRef.current];
-      const newIndex = rowIndex + 1;
-      updated.splice(newIndex, 0, newRow);
-      const newPage = Math.max(1, Math.floor(newIndex / pageSize) + 1);
-      onChange(updated);
-      if (newPage !== safePage) goToPage(newPage);
-    },
-    [disabled, maxRows, rows.length, onChange, pageSize, safePage, goToPage]
-  );
 
   const handleDeleteRow = (rowIndex) => {
     if (disabled) return;
@@ -427,7 +411,7 @@ const PreventiveGrid = ({
     setIsDeleteModalOpen(false);
   };
 
-  /* ── Cell updates (unchanged) ── */
+  /* ── Cell updates ── */
   const updateRow = useCallback(
     (rowIndex, key, newValue) => {
       if (disabled) return;
@@ -445,42 +429,12 @@ const PreventiveGrid = ({
           row.make = equipment.equipment_make || equipment.make || "";
           row.model = equipment.equipment_model || equipment.sr_no_model_no || equipment.model || "";
         } else {
-          row.equipmentDbId = ""; row.equipmentInstrumentName = ""; row.equipmentInstrumentId = "";
-          row.location = ""; row.make = ""; row.model = "";
-        }
-      } else if (key === "frequency") {
-        row.frequency = newValue;
-        const interval = FREQUENCY_INTERVAL_MONTHS[newValue];
-        if (interval) {
-          let anchorIdx = null;
-          for (let i = 0; i < 12; i++) {
-            if (row[`${MONTHS[i].key}_planned`]) { anchorIdx = i; break; }
-          }
-          if (anchorIdx !== null) {
-            const anchorDate = dayjs(row[`${MONTHS[anchorIdx].key}_planned`]);
-            MONTHS.forEach((m) => { row[`${m.key}_planned`] = ""; });
-            row[`${MONTHS[anchorIdx].key}_planned`] = anchorDate.format("YYYY-MM-DD");
-            for (let i = anchorIdx + interval; i < 12; i += interval) {
-              row[`${MONTHS[i].key}_planned`] = anchorDate.add(i - anchorIdx, "month").format("YYYY-MM-DD");
-            }
-          }
-        }
-      } else if (key.endsWith("_planned")) {
-        row[key] = newValue;
-        const interval = FREQUENCY_INTERVAL_MONTHS[row.frequency];
-        if (interval && newValue) {
-          const monthKey = key.replace("_planned", "");
-          const monthIndex = MONTHS.findIndex((m) => m.key === monthKey);
-          let anchorIdx = null;
-          for (let i = 0; i < 12; i++) {
-            if (row[`${MONTHS[i].key}_planned`]) { anchorIdx = i; break; }
-          }
-          if (anchorIdx === monthIndex) {
-            const anchorDate = dayjs(newValue);
-            for (let i = anchorIdx + interval; i < 12; i += interval) {
-              row[`${MONTHS[i].key}_planned`] = anchorDate.add(i - anchorIdx, "month").format("YYYY-MM-DD");
-            }
-          }
+          row.equipmentDbId = "";
+          row.equipmentInstrumentName = "";
+          row.equipmentInstrumentId = "";
+          row.location = "";
+          row.make = "";
+          row.model = "";
         }
       } else {
         row[key] = newValue;
@@ -529,12 +483,23 @@ const PreventiveGrid = ({
 
   const renderDateField = (row, key, rowIndex) => {
     const val = row[key];
-    const [monthKey] = key.split("_");
-    const monthIndex = MONTHS.findIndex((m) => m.key === monthKey);
-    const activeIndices = getActiveMonthIndices(row);
-    const isRestricted = activeIndices !== null && !activeIndices.includes(monthIndex);
     return (
-      <DateCell rowIndex={rowIndex} fieldKey={key} value={val || ""} disabled={disabled || isRestricted} updateRow={updateRow} />
+      <DateCell rowIndex={rowIndex} fieldKey={key} value={val || ""} disabled={disabled} updateRow={updateRow} />
+    );
+  };
+
+  const renderFrequencyField = (row, monthKey, rowIndex) => {
+    const fieldKey = `${monthKey}_frequency`;
+    return (
+      <FrequencySelectCell
+        rowIndex={rowIndex}
+        fieldKey={fieldKey}
+        value={row[fieldKey] ?? ""}
+        options={FREQUENCY_OPTIONS}
+        placeholder="Freq"
+        disabled={disabled}
+        updateRow={updateRow}
+      />
     );
   };
 
@@ -652,67 +617,77 @@ const PreventiveGrid = ({
                         </td>
                       ))}
                     </tr>
+                    <tr className="bg-white">
+                      <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
+                        <div className="mx-auto h-4 w-10 animate-pulse rounded bg-[#E5EBE8]" />
+                      </td>
+                      {MONTHS.map((month) => (
+                        <td key={`${month.key}_skel_f`} className="border border-[#D5DFDB] px-1 py-2 align-middle">
+                          <div className="h-6 w-full animate-pulse rounded bg-[#E5EBE8]" />
+                        </td>
+                      ))}
+                    </tr>
                   </React.Fragment>
                 ))
               ) : visibleRows.length > 0 ? (
-                visibleRows.map(({ row, index: rowIndex }, visibleIdx) => (
-                  <React.Fragment key={rowIndex}>
-                    {visibleIdx > 0 && (
-                      <tr aria-hidden="true">
-                        <td colSpan={emptyColSpan} className="!h-3 !border-0 !p-0 !bg-[#F7FAF8]" />
-                      </tr>
-                    )}
+                visibleRows.map(({ row, index: rowIndex }, visibleIdx) => {
+                  /* NEW: per-row child button gate (initiator + close done + ±7 days) */
+                  const withinPlannedWindow = isWithinCurrentMonthPlannedWindow(row);
+                  const childEnabled = canCreateChild && withinPlannedWindow;
 
-                    <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                      <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
-                        <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">{rowIndex + 1}.</span>
-                      </td>
-                      {visibleColumns.map((column) => (
-                        <td key={column.key} rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
-                          {renderField(column, row, rowIndex)}
-                        </td>
-                      ))}
-                      <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">Planned</td>
-                      {MONTHS.map((month) => (
-                        <td key={`${month.key}_planned`} className="border border-[#D5DFDB] p-0 align-middle">
-                          {renderDateField(row, `${month.key}_planned`, rowIndex)}
-                        </td>
-                      ))}
-                      <td rowSpan={2} className="border border-[#D5DFDB] p-0 align-middle">
-                        <RemarkCell rowIndex={rowIndex} value={row.remark} disabled={disabled} updateRemark={updateRemark} />
-                      </td>
-                      {showChildColumn && (
-                        <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!canCreateChild) return;
-                              onViewChild(rowIndex, row, getRowBiggestFrequency(row));
-                            }}
-                            disabled={!canCreateChild}
-                            className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${
-                              canCreateChild
-                                ? "bg-[#3d606d] hover:bg-[#2B5577] hover:shadow-md active:scale-95"
-                                : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
-                            }`}
-                            title={canCreateChild ? "Create child preventive record" : "Child creation is available only to Initiator at Close Done stage"}
-                          >
-                            {viewChildLabel}
-                          </button>
-                        </td>
+                  return (
+                    <React.Fragment key={rowIndex}>
+                      {visibleIdx > 0 && (
+                        <tr aria-hidden="true">
+                          <td colSpan={emptyColSpan} className="!h-3 !border-0 !p-0 !bg-[#F7FAF8]" />
+                        </tr>
                       )}
-                      <td rowSpan={2} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleDuplicateForFrequency(rowIndex)}
-                            disabled={disabled || (maxRows !== undefined && rows.length >= maxRows)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#4E7585] transition-all duration-200 hover:bg-[#EAF0F4] hover:text-[#2B5577] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
-                            title="Add another frequency for this equipment"
-                            aria-label="Add another frequency for this equipment"
-                          >
-                            <Plus size={14} strokeWidth={2} />
-                          </button>
+
+                      <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+                        <td rowSpan={3} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+                          <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">{rowIndex + 1}.</span>
+                        </td>
+                        {visibleColumns.map((column) => (
+                          <td key={column.key} rowSpan={3} className="border border-[#D5DFDB] p-0 align-middle">
+                            {renderField(column, row, rowIndex)}
+                          </td>
+                        ))}
+                        <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">Planned</td>
+                        {MONTHS.map((month) => (
+                          <td key={`${month.key}_planned`} className="border border-[#D5DFDB] p-0 align-middle">
+                            {renderDateField(row, `${month.key}_planned`, rowIndex)}
+                          </td>
+                        ))}
+                        <td rowSpan={3} className="border border-[#D5DFDB] p-0 align-middle">
+                          <RemarkCell rowIndex={rowIndex} value={row.remark} disabled={disabled} updateRemark={updateRemark} />
+                        </td>
+                        {showChildColumn && (
+                          <td rowSpan={3} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!childEnabled) return;
+                                onViewChild(rowIndex, row, getRowBiggestFrequency(row));
+                              }}
+                              disabled={!childEnabled}
+                              className={`inline-flex h-8 items-center justify-center rounded-md px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4E7585] focus:ring-offset-1 ${
+                                childEnabled
+                                  ? "bg-[#3d606d] hover:bg-[#2B5577] hover:shadow-md active:scale-95"
+                                  : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
+                              }`}
+                              title={
+                                !canCreateChild
+                                  ? "Child creation is available only to Initiator at Close Done stage"
+                                  : !withinPlannedWindow
+                                  ? `Child creation is allowed only within ±${CHILD_WINDOW_DAYS} days of the current month's Planned date`
+                                  : "Create child preventive record"
+                              }
+                            >
+                              {viewChildLabel}
+                            </button>
+                          </td>
+                        )}
+                        <td rowSpan={3} className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
                           <button
                             type="button"
                             onClick={() => handleDeleteRow(rowIndex)}
@@ -722,20 +697,29 @@ const PreventiveGrid = ({
                           >
                             <Trash2 size={14} strokeWidth={1.8} />
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-
-                    <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
-                      <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">Executed</td>
-                      {MONTHS.map((month) => (
-                        <td key={`${month.key}_executed`} className="border border-[#D5DFDB] p-0 align-middle">
-                          {renderDateField(row, `${month.key}_executed`, rowIndex)}
                         </td>
-                      ))}
-                    </tr>
-                  </React.Fragment>
-                ))
+                      </tr>
+
+                      <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+                        <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">Executed</td>
+                        {MONTHS.map((month) => (
+                          <td key={`${month.key}_executed`} className="border border-[#D5DFDB] p-0 align-middle">
+                            {renderDateField(row, `${month.key}_executed`, rowIndex)}
+                          </td>
+                        ))}
+                      </tr>
+
+                      <tr className="bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+                        <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle text-[11px] font-bold text-[#596760]">Frequency</td>
+                        {MONTHS.map((month) => (
+                          <td key={`${month.key}_frequency`} className="border border-[#D5DFDB] p-0 align-middle">
+                            {renderFrequencyField(row, month.key, rowIndex)}
+                          </td>
+                        ))}
+                      </tr>
+                    </React.Fragment>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={emptyColSpan} className="h-[80px] border border-[#D5DFDB] px-5 text-center text-[11px] font-medium text-[#899690]">
@@ -750,7 +734,7 @@ const PreventiveGrid = ({
         <PageLoader visible={isPageChanging} />
       </div>
 
-      {/* ── Pagination — dropdown page selector (scrollable) ── */}
+      {/* ── Pagination ── */}
       {!equipmentLoading && totalPages > 1 && (
         <div className="flex flex-col items-center gap-1.5 border-t border-[#E0E7E4] bg-white px-4 py-3">
           <div className="flex items-center gap-2">

@@ -136,8 +136,49 @@ const ChecklistInput = ({
   value = {},
   onChange,
   disabled = false,
+  onSaveAfterEsign
 }) => {
   const user = useAuthStore((s) => s.user);
+
+  const applySignAndSave = (questionId, columnId, signData) => {
+    const next = {
+      ...answers,
+      [questionId]: {
+        ...(answers[questionId] || {}),
+        [columnId]: signData,
+      },
+    };
+    onChange?.(next);
+    return next;
+  };
+
+  // 👇 REPLACED: unified handler for both simple + authenticated success
+  const handleEsignVerified = async ({ signed_by, signed_at }) => {
+    if (!esignModal) return false;
+    const { questionId, columnId, mode } = esignModal;
+
+    const signData = {
+      checked: true,
+      authenticated: mode === "authenticated",
+      signed_by,
+      signed_at: dayjs(signed_at).format(SIGN_FORMAT),
+    };
+
+    const next = applySignAndSave(questionId, columnId, signData);
+
+    if (onSaveAfterEsign) {
+      const saved = await onSaveAfterEsign(next); // triggers panel save API
+      return saved !== false;
+    }
+    return true;
+  };
+
+  const openSignModal = (questionId, columnId, mode) =>
+    setEsignModal({ questionId, columnId, mode });
+
+  const clearSign = (questionId, columnId) => {
+    setAnswer(questionId, columnId, null);
+  };
 
   // { questionId, columnId } when modal is open
   const [esignModal, setEsignModal] = useState(null);
@@ -191,21 +232,21 @@ const ChecklistInput = ({
     setEsignModal({ questionId, columnId });
   };
 
-  const handleEsignVerified = ({ signed_by, signed_at }) => {
-    if (!esignModal) return;
-    const { questionId, columnId } = esignModal;
-    setAnswer(questionId, columnId, {
-      checked: true,
-      authenticated: true,
-      signed_by,
-      signed_at: dayjs(signed_at).format(SIGN_FORMAT),
-    });
-    setEsignModal(null);
-  };
+  // const handleEsignVerified = ({ signed_by, signed_at }) => {
+  //   if (!esignModal) return;
+  //   const { questionId, columnId } = esignModal;
+  //   setAnswer(questionId, columnId, {
+  //     checked: true,
+  //     authenticated: true,
+  //     signed_by,
+  //     signed_at: dayjs(signed_at).format(SIGN_FORMAT),
+  //   });
+  //   setEsignModal(null);
+  // };
 
-  const clearSign = (questionId, columnId) => {
-    setAnswer(questionId, columnId, null);
-  };
+  // const clearSign = (questionId, columnId) => {
+  //   setAnswer(questionId, columnId, null);
+  // };
 
   /* ── Cell renderer ── */
   const renderCell = (questionId, columnId, cell) => {
@@ -286,25 +327,117 @@ const ChecklistInput = ({
           />
         );
 
+      // case "checkbox": {
+      //   const variant = cell?.checkbox_variant || "normal";
+
+      //   /* Normal checkbox — original behaviour */
+      //   if (variant !== "esign") {
+      //     return (
+      //       <Checkbox
+      //         checked={!!current}
+      //         onChange={(e) => update(e.target.checked)}
+      //         disabled={disabled}
+      //       />
+      //     );
+      //   }
+
+      //   const esignType = cell?.esign_type || "simple";
+      //   const isAuthenticated = esignType === "authenticated";
+      //   const signed = current && typeof current === "object" && current.checked;
+
+      //   /* Already signed — show the badge */
+      //   if (signed) {
+      //     return (
+      //       <SignedDisplay
+      //         signedBy={current.signed_by}
+      //         signedAt={current.signed_at}
+      //         authenticated={isAuthenticated}
+      //         disabled={disabled}
+      //         onClear={() => clearSign(questionId, columnId)}
+      //       />
+      //     );
+      //   }
+
+      //   /* Not yet signed — button */
+      //   return (
+      //     <button
+      //       type="button"
+      //       disabled={disabled}
+      //       onClick={() => {
+      //         if (disabled) return;
+      //         if (isAuthenticated) {
+      //           openAuthenticatedSign(questionId, columnId);
+      //         } else {
+      //           update(buildSignPayload(false));
+      //         }
+      //       }}
+      //       className={`flex w-full items-center gap-2.5 rounded-lg border border-[#D1DBD7] bg-white px-3 py-2.5 text-left transition-all ${
+      //         disabled
+      //           ? "cursor-not-allowed opacity-60"
+      //           : "cursor-pointer hover:border-[#4E7585] hover:bg-[#F5F8F6]"
+      //       }`}
+      //     >
+      //       <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border border-[#B9C4BF] bg-white" />
+      //       <span className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[#263B35]">
+      //         <ShieldCheck size={13} strokeWidth={1.9} className="text-[#4E7585]" />
+      //         {isAuthenticated ? "Authenticate & Sign" : "Sign"}
+      //       </span>
+      //     </button>
+      //   );
+      // }
+
       case "checkbox": {
         const variant = cell?.checkbox_variant || "normal";
 
-        /* Normal checkbox — original behaviour */
+        /* ── Normal checkbox ─────────────────────────────── */
         if (variant !== "esign") {
+          const isChecked =
+            current === true ||
+            (typeof current === "object" && current?.checked === true);
+          const isSigned =
+            typeof current === "object" && current?.checked === true;
+
+          if (isSigned) {
+            return (
+              <div className="flex flex-col gap-1">
+                <Checkbox
+                  checked
+                  disabled={disabled}
+                  onChange={() => {
+                    if (disabled) return;
+                    update(false); // unchecking clears the signature
+                  }}
+                />
+                <p className="text-[9px] font-medium leading-3 text-[#3F8B5C]">
+                  Signed by {current.signed_by}
+                </p>
+              </div>
+            );
+          }
+
           return (
             <Checkbox
-              checked={!!current}
-              onChange={(e) => update(e.target.checked)}
+              checked={isChecked}
+              onChange={(e) => {
+                if (disabled) return;
+                if (e.target.checked) {
+                  // 👇 open simple confirmation modal instead of checking
+                  openSignModal(questionId, columnId, "simple");
+                } else {
+                  update(false);
+                }
+              }}
               disabled={disabled}
             />
           );
         }
 
+        /* ── eSign checkbox ──────────────────────────────── */
         const esignType = cell?.esign_type || "simple";
         const isAuthenticated = esignType === "authenticated";
-        const signed = current && typeof current === "object" && current.checked;
+        const signed =
+          current && typeof current === "object" && current.checked;
 
-        /* Already signed — show the badge */
         if (signed) {
           return (
             <SignedDisplay
@@ -317,18 +450,18 @@ const ChecklistInput = ({
           );
         }
 
-        /* Not yet signed — button */
         return (
           <button
             type="button"
             disabled={disabled}
             onClick={() => {
               if (disabled) return;
-              if (isAuthenticated) {
-                openAuthenticatedSign(questionId, columnId);
-              } else {
-                update(buildSignPayload(false));
-              }
+              // 👇 both simple + authenticated now go through the modal
+              openSignModal(
+                questionId,
+                columnId,
+                isAuthenticated ? "authenticated" : "simple"
+              );
             }}
             className={`flex w-full items-center gap-2.5 rounded-lg border border-[#D1DBD7] bg-white px-3 py-2.5 text-left transition-all ${
               disabled
@@ -344,6 +477,7 @@ const ChecklistInput = ({
           </button>
         );
       }
+
 
       case "single_select":
         return (
@@ -454,13 +588,13 @@ const ChecklistInput = ({
           </h3>
         </div>
 
-        {/* Table */}
-        <div className="w-full overflow-x-auto">
-          <table className="w-full min-w-[800px] border-collapse">
+        {/* ── Table — scrolls horizontally (many columns) AND vertically (many rows) ── */}
+        <div className="w-full max-h-[65vh] overflow-auto">
+          <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-[#EEF3F1]">
+              <tr>
                 {include_serial_number && (
-                  <th className="w-[60px] border-b border-r border-[#D5DFDB] px-3 py-3 text-center text-[11px] font-bold tracking-[0.01em] text-[#43564F]">
+                  <th className="sticky top-0 z-10 w-[60px] min-w-[60px] border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3 py-3 text-center text-[11px] font-bold tracking-[0.01em] text-[#43564F]">
                     Sr. No
                   </th>
                 )}
@@ -468,14 +602,14 @@ const ChecklistInput = ({
                 {question_columns.map((col) => (
                   <th
                     key={col.id}
-                    className="border-b border-r border-[#D5DFDB] px-3 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
+                    className="sticky top-0 z-10 min-w-[200px] border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
                   >
                     {col.column_header}
                   </th>
                 ))}
 
                 {hasAnyFrequency && (
-                  <th className="w-[130px] border-b border-r border-[#D5DFDB] px-3 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]">
+                  <th className="sticky top-0 z-10 w-[130px] min-w-[130px] border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]">
                     Frequency
                   </th>
                 )}
@@ -483,7 +617,7 @@ const ChecklistInput = ({
                 {data_columns.map((col) => (
                   <th
                     key={col.id}
-                    className="border-b border-r border-[#D5DFDB] px-3 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
+                    className="sticky top-0 z-10 min-w-[220px] border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3 py-3 text-left align-middle text-[11px] font-bold tracking-[0.01em] text-[#43564F]"
                   >
                     {col.column_header}
                   </th>
@@ -607,6 +741,7 @@ const ChecklistInput = ({
         isOpen={!!esignModal}
         onClose={() => setEsignModal(null)}
         onSuccess={handleEsignVerified}
+        mode={esignModal?.mode || "authenticated"}
       />
     </>
   );

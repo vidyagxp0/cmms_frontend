@@ -970,7 +970,7 @@ const PreventiveMaintenancePanel = () => {
     }
   };
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async (values, overrideChecklistAnswers ) => {
     if (isSaving || !recordId) return false;
     try {
       setIsSaving(true);
@@ -982,10 +982,11 @@ const PreventiveMaintenancePanel = () => {
       });
 
       const processData = buildProcessData(mergedValues, systemFields);
+      const answersToUse = overrideChecklistAnswers ?? checklistAnswers;
 
       let checklistPayload;
       if (checklistData) {
-        checklistPayload = buildChecklistPayload(checklistData, checklistAnswers);
+        checklistPayload = buildChecklistPayload(checklistData, answersToUse);
       } else if (savedChecklistRaw) {
         checklistPayload = savedChecklistRaw;
       } else {
@@ -1030,6 +1031,16 @@ const PreventiveMaintenancePanel = () => {
       setIsSaving(false);
     }
   };
+
+  const handleSaveAfterEsign = async (newAnswers) => {
+  if (isSaving || isLoading || !recordId) {
+    toast.error("Cannot save right now. Please try again.");
+    return false;
+  }
+  const values = form.getFieldsValue(true);
+  return await handleSubmit(values, newAnswers);
+};
+
 
   const handleActivitySuccess = async () => {
     try {
@@ -1510,6 +1521,7 @@ const PreventiveMaintenancePanel = () => {
                 value={checklistAnswers}
                 onChange={setChecklistAnswers}
                 disabled={!isGeneralEditable}
+                onSaveAfterEsign={handleSaveAfterEsign}
               />
             )}
           </div>

@@ -103,3 +103,8 @@ export const getAddendumPreventivePlannerSingleReportChild = (id) => {
 export const getAddendumPreventiveAuditListingChild = (id, params = {}) => {
     return api.get(`/user/addendum-peventive-management-audit/${id}`, {params});
 };
+
+// Checklist esign verification  Api
+
+// export const eSignChecklist = (payload) =>
+//     api.post("/user/check-user-crendentials", payload);

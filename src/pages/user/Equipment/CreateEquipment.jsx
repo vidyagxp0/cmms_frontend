@@ -14,6 +14,8 @@ import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs"
 import { getProfile } from "../../../services/authApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput"; // 👈 IMPORT ADDED
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
@@ -89,6 +91,11 @@ const CreateEquipment = () => {
     const [checklistConfig, setChecklistConfig] = useState(EMPTY_CHECKLIST);
     const [activeTab, setActiveTab] = useState("instrument");
     const [loginUserId, setLoginUserId] = useState("");
+
+    /* ───────── Unsaved changes ───────── */
+    const [isDirty, setIsDirty] = useState(false);
+    const { showModal, setShowModal, confirmLeave, cancelLeave } =
+        useUnsavedChanges(isDirty);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -291,6 +298,8 @@ const CreateEquipment = () => {
 
             await addEquipment(payload);
 
+            setIsDirty(false);
+            confirmLeave();
             toast.success("Instrument created successfully.");
 
             form.resetFields();
@@ -315,11 +324,31 @@ const CreateEquipment = () => {
     const handleCancel = () => {
         if (isSaving) return;
 
+        if (isDirty) {
+            setShowModal(true);
+            return;
+        }
+
         form.resetFields();
         setChecklistConfig({ ...EMPTY_CHECKLIST });
         setActiveTab("instrument");
 
         navigate("/user/equipment-dashboard");
+    };
+
+    const handleLeaveWithoutSaving = () => {
+        setIsDirty(false);
+        confirmLeave();
+        form.resetFields();
+        setChecklistConfig({ ...EMPTY_CHECKLIST });
+        setActiveTab("instrument");
+        navigate("/user/equipment-dashboard", { replace: true });
+    };
+
+    const handleSaveAndExit = () => {
+        if (isSaving) return;
+        setShowModal(false);
+        form.submit(); // handleSubmit navigates on success
     };
 
     return (
@@ -357,6 +386,7 @@ const CreateEquipment = () => {
                 layout="vertical"
                 requiredMark={false}
                 onFinish={handleSubmit}
+                onValuesChange={() => setIsDirty(true)}
                 className="
                     w-full
                     [&_.ant-form-item-label>label]:!text-[12px]
@@ -747,6 +777,14 @@ const CreateEquipment = () => {
                 isSaving={isSaving}
                 saveLabel="Create"
                 cancelLabel="Cancel"
+            />
+
+            <UnsavedChangesModal
+                open={showModal}
+                isSaving={isSaving}
+                onStay={cancelLeave}
+                onLeaveWithoutSaving={handleLeaveWithoutSaving}
+                onSaveAndLeave={handleSaveAndExit}
             />
         </div>
     );

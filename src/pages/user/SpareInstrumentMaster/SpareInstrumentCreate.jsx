@@ -15,6 +15,8 @@ import { getProfile } from "../../../services/authApi";
 import { addSpareInstrumentMaster } from "../../../services/usersApi/spareInstrumentApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput"; // 👈 IMPORT ADDED
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
@@ -89,6 +91,11 @@ const SpareInstrumentCreate = () => {
     const [checklistConfig, setChecklistConfig] = useState(EMPTY_CHECKLIST);
     const [activeTab, setActiveTab] = useState("instrument");
     const [loginUserId, setLoginUserId] = useState("");
+
+    /* ───────── Unsaved changes ───────── */
+    const [isDirty, setIsDirty] = useState(false);
+    const { showModal, setShowModal, confirmLeave, cancelLeave } =
+        useUnsavedChanges(isDirty);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -286,6 +293,8 @@ const SpareInstrumentCreate = () => {
 
             await addSpareInstrumentMaster(payload);
 
+            setIsDirty(false);
+            confirmLeave();
             toast.success("Instrument created successfully.");
 
             form.resetFields();
@@ -310,11 +319,31 @@ const SpareInstrumentCreate = () => {
     const handleCancel = () => {
         if (isSaving) return;
 
+        if (isDirty) {
+            setShowModal(true);
+            return;
+        }
+
         form.resetFields();
         setChecklistConfig({ ...EMPTY_CHECKLIST });
         setActiveTab("instrument");
 
         navigate("/user/spare-instrument-calibration-master-dashboard");
+    };
+
+    const handleLeaveWithoutSaving = () => {
+        setIsDirty(false);
+        confirmLeave();
+        form.resetFields();
+        setChecklistConfig({ ...EMPTY_CHECKLIST });
+        setActiveTab("instrument");
+        navigate("/user/spare-instrument-calibration-master-dashboard", { replace: true });
+    };
+
+    const handleSaveAndExit = () => {
+        if (isSaving) return;
+        setShowModal(false);
+        form.submit(); // handleSubmit navigates on success
     };
 
     return (
@@ -352,6 +381,7 @@ const SpareInstrumentCreate = () => {
                 layout="vertical"
                 requiredMark={false}
                 onFinish={handleSubmit}
+                onValuesChange={() => setIsDirty(true)}
                 className="
                     w-full
                     [&_.ant-form-item-label>label]:!text-[12px]
@@ -707,6 +737,14 @@ const SpareInstrumentCreate = () => {
                 isSaving={isSaving}
                 saveLabel="Create"
                 cancelLabel="Cancel"
+            />
+
+            <UnsavedChangesModal
+                open={showModal}
+                isSaving={isSaving}
+                onStay={cancelLeave}
+                onLeaveWithoutSaving={handleLeaveWithoutSaving}
+                onSaveAndLeave={handleSaveAndExit}
             />
         </div>
     );

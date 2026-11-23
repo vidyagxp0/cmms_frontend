@@ -29,6 +29,8 @@ import ProcessStage from "../../../components/common/ProcesStageTabs/ProcessStag
 import ProcessActivities from "../../../components/common/ProcesStageTabs/ProcessActivities";
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput"; // 👈 IMPORT ADDED
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 import {
   getFieldInstrumentDetail,
@@ -235,6 +237,11 @@ const FIeldInstrumentsPanel = () => {
   const isImportedRef = useRef(false);
 
   const isFetchingRef = useRef(false);
+
+  /* ── Unsaved changes ── */
+  const [isDirty, setIsDirty] = useState(false);
+  const { showModal, setShowModal, confirmLeave, cancelLeave } =
+    useUnsavedChanges(isDirty);
 
   /* ───────── Departments State & Fetch ───────── */
   const [departments, setDepartments] = useState([]);
@@ -551,7 +558,7 @@ const FIeldInstrumentsPanel = () => {
 
   /* ───────── Submit ───────── */
   const handleSubmit = async (values) => {
-    if (isSaving) return;
+    if (isSaving) return false;
 
     const questionColumnIdMap = {};
     const dataColumnIdMap = {};
@@ -703,17 +710,20 @@ const FIeldInstrumentsPanel = () => {
 
       await updateFieldInstrument(id, payload);
 
+      setIsDirty(false);
       toast.success("Field instrument updated successfully.");
 
       await fetchDetail(false);
       await fetchPermissions();
       await fetchActivityLogs();
+      return true;
     } catch (error) {
       console.error("Failed to update field instrument:", error);
       toast.error(
         error?.response?.data?.message ||
           "Failed to update field instrument. Please try again."
       );
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -739,7 +749,37 @@ const FIeldInstrumentsPanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
+    if (isDirty) {
+      setShowModal(true);
+      return;
+    }
     navigate("/user/field-instruments-dashboard");
+  };
+
+  const handleLeaveWithoutSaving = () => {
+    setIsDirty(false);
+    confirmLeave();
+    navigate("/user/field-instruments-dashboard", { replace: true });
+  };
+
+  const handleSaveAndExit = async () => {
+    if (isSaving) return;
+    setShowModal(false);
+
+    let values;
+    try {
+      values = await form.validateFields();
+    } catch {
+      toast.warning("Please fix the highlighted fields before saving.");
+      return;
+    }
+
+    const success = await handleSubmit({ ...form.getFieldsValue(true), ...values });
+    if (success) {
+      setIsDirty(false);
+      confirmLeave();
+      navigate("/user/field-instruments-dashboard", { replace: true });
+    }
   };
 
   const isCancellationStageActive = Number(activeStageId) === 86;
@@ -811,7 +851,7 @@ const FIeldInstrumentsPanel = () => {
                 canPerformActivity={canPerformActivity}
                 permissionsLoading={permissionsLoading}
                 auditRoute={"/user/field-instruments-audit"}
-                onExit={() => navigate("/user/field-instruments-dashboard")}
+                onExit={handleCancel}
               />
             </div>
           </div>
@@ -832,6 +872,7 @@ const FIeldInstrumentsPanel = () => {
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
+        onValuesChange={() => setIsDirty(true)}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
         {/* ─── TAB 1: FIELD INSTRUMENT INFORMATION ─── */}
@@ -1228,6 +1269,14 @@ const FIeldInstrumentsPanel = () => {
         isSaving={isSaving}
         saveLabel="Update"
         cancelLabel="Cancel"
+      />
+
+      <UnsavedChangesModal
+        open={showModal}
+        isSaving={isSaving}
+        onStay={cancelLeave}
+        onLeaveWithoutSaving={handleLeaveWithoutSaving}
+        onSaveAndLeave={handleSaveAndExit}
       />
     </div>
   );

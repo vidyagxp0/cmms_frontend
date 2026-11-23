@@ -89,27 +89,24 @@ const SymbolicInput = ({
     }
   }, [discipline, unit]);
 
-  const combinedValue = useMemo(() => {
-    const cleanValue = rawValue.trim();
-    if (!cleanValue) return "";
-    if (symbolEnabled && unit) return `${cleanValue} ${unit}`;
-    return cleanValue;
-  }, [rawValue, symbolEnabled, unit]);
-
   // ------------------------------------------------------------------
-  // CRITICAL FIX
-  // Only notify the parent when combinedValue actually differs from the
-  // last value we emitted. This stops:
-  //   1. The mount-time onChange("") that was collapsing split views.
-  //   2. Re-emitting the prop value on every parent re-render (loop).
+  // Notify the parent ONLY from user interactions (event handlers), never
+  // from an effect. Emitting from an effect raced with the prop-sync effect
+  // above: when the parent replaced the value (e.g. form.setFieldsValue after
+  // a save), the stale local value was emitted back, the two values kept
+  // swapping, and React threw "Maximum update depth exceeded".
   // ------------------------------------------------------------------
-  useEffect(() => {
+  const emitChange = (nextRaw, nextEnabled, nextUnit) => {
     if (typeof onChange !== "function") return;
-    const next = combinedValue;
+    const cleanValue = String(nextRaw ?? "").trim();
+    let next = "";
+    if (cleanValue) {
+      next = nextEnabled && nextUnit ? `${cleanValue} ${nextUnit}` : cleanValue;
+    }
     if (next === lastEmittedRef.current) return;
     lastEmittedRef.current = next;
     onChange(next);
-  }, [combinedValue, onChange]);
+  };
 
   const treeData = UNIT_MASTER.map((item) => ({
     title: item.discipline,
@@ -122,19 +119,28 @@ const SymbolicInput = ({
     })),
   }));
 
-  const handleValueChange = (event) => setRawValue(event.target.value);
+  const handleValueChange = (event) => {
+    const nextRaw = event.target.value;
+    setRawValue(nextRaw);
+    emitChange(nextRaw, symbolEnabled, unit);
+  };
 
   const handleToggle = (checked) => {
     setSymbolEnabled(checked);
+    let nextUnit = unit;
     if (checked) {
       setShowSelector(true);
       if (!unit && discipline) {
         const disciplineData = UNIT_MASTER.find((item) => item.discipline === discipline);
-        if (disciplineData?.units?.length === 1) setUnit(disciplineData.units[0]);
+        if (disciplineData?.units?.length === 1) {
+          nextUnit = disciplineData.units[0];
+          setUnit(nextUnit);
+        }
       }
     } else {
       setShowSelector(false);
     }
+    emitChange(rawValue, checked, nextUnit);
   };
 
   const handleTreeSelect = (selectedKeys, info) => {
@@ -149,6 +155,7 @@ const SymbolicInput = ({
     setUnit(selectedUnit);
     setSymbolEnabled(true);
     setShowSelector(false);
+    emitChange(rawValue, true, selectedUnit);
   };
 
   const selectedTreeKeys = discipline && unit ? [`${discipline}__${unit}`] : [];

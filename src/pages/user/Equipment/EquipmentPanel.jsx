@@ -29,6 +29,8 @@ import ProcessStage from "../../../components/common/ProcesStageTabs/ProcessStag
 import ProcessActivities from "../../../components/common/ProcesStageTabs/ProcessActivities";
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 import {
   executeCalibrationActivity,
@@ -234,6 +236,11 @@ const EquipmentPanel = () => {
   const isImportedRef = useRef(false);
 
   const isFetchingRef = useRef(false);
+
+  /* ── Unsaved changes ── */
+  const [isDirty, setIsDirty] = useState(false);
+  const { showModal, setShowModal, confirmLeave, cancelLeave } =
+    useUnsavedChanges(isDirty);
 
   // If imported, we bypass all stage/permission checks and allow editing
   const isStageEditable = (stageId) =>
@@ -467,7 +474,7 @@ const EquipmentPanel = () => {
   };
 
   const handleSubmit = async (values) => {
-    if (isSaving) return;
+    if (isSaving) return false;
 
     const questionColumnIdMap = {};
     const dataColumnIdMap = {};
@@ -608,17 +615,20 @@ const EquipmentPanel = () => {
 
       await updateEquipment(id, payload);
 
+      setIsDirty(false);
       toast.success("Instrument updated successfully.");
 
       await fetchDetail(false);
       await fetchPermissions();
       await fetchActivityLogs();
+      return true;
     } catch (error) {
       console.error("Failed to update instrument:", error);
       toast.error(
         error?.response?.data?.message ||
           "Failed to update instrument. Please try again."
       );
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -641,7 +651,37 @@ const EquipmentPanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
+    if (isDirty) {
+      setShowModal(true);
+      return;
+    }
     navigate("/user/equipment-dashboard");
+  };
+
+  const handleLeaveWithoutSaving = () => {
+    setIsDirty(false);
+    confirmLeave();
+    navigate("/user/equipment-dashboard", { replace: true });
+  };
+
+  const handleSaveAndExit = async () => {
+    if (isSaving) return;
+    setShowModal(false);
+
+    let values;
+    try {
+      values = await form.validateFields();
+    } catch {
+      toast.warning("Please fix the highlighted fields before saving.");
+      return;
+    }
+
+    const success = await handleSubmit({ ...form.getFieldsValue(true), ...values });
+    if (success) {
+      setIsDirty(false);
+      confirmLeave();
+      navigate("/user/equipment-dashboard", { replace: true });
+    }
   };
 
   const isCancellationStageActive = Number(activeStageId) === 81;
@@ -713,7 +753,7 @@ const EquipmentPanel = () => {
                 canPerformActivity={canPerformActivity}
                 permissionsLoading={permissionsLoading}
                 auditRoute={"/user/instrument-master-audit"}
-                onExit={() => navigate("/user/equipment-dashboard")}
+                onExit={handleCancel}
               />
             </div>
           </div>
@@ -734,6 +774,7 @@ const EquipmentPanel = () => {
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
+        onValuesChange={() => setIsDirty(true)}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
         {/* ─── TAB 1: INSTRUMENT INFORMATION ─── */}
@@ -1092,6 +1133,14 @@ const EquipmentPanel = () => {
         isSaving={isSaving}
         saveLabel="Update"
         cancelLabel="Cancel"
+      />
+
+      <UnsavedChangesModal
+        open={showModal}
+        isSaving={isSaving}
+        onStay={cancelLeave}
+        onLeaveWithoutSaving={handleLeaveWithoutSaving}
+        onSaveAndLeave={handleSaveAndExit}
       />
     </div>
   );

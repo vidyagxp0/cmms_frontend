@@ -25,6 +25,8 @@ import ProcessStage from "../../../components/common/ProcesStageTabs/ProcessStag
 import ProcessActivities from "../../../components/common/ProcesStageTabs/ProcessActivities";
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput"; // 👈 ADDED
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 import { addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
 import { getProfile } from "../../../services/authApi";
@@ -236,6 +238,16 @@ const EquipmentMasterPanel = () => {
 
   const isFetchingRef = useRef(false);
 
+  /* ── Unsaved changes ── */
+  const [isDirty, setIsDirty] = useState(false);
+  const { showModal, setShowModal, confirmLeave, cancelLeave } =
+    useUnsavedChanges(isDirty);
+
+  const handleChecklistChange = (next) => {
+    setChecklistConfig(next);
+    setIsDirty(true);
+  };
+
   /* ───────── Departments ───────── */
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
@@ -333,6 +345,7 @@ const EquipmentMasterPanel = () => {
     }
 
     setChecklistConfig(imported);
+    setIsDirty(true);
 
     const eqName =
       selected.equipment_name ||
@@ -650,7 +663,7 @@ const EquipmentMasterPanel = () => {
 
   /* ───────── Submit ───────── */
   const handleSubmit = async (values) => {
-    if (isSaving) return;
+    if (isSaving) return false;
 
     const questionColumnIdMap = {};
     const dataColumnIdMap = {};
@@ -792,17 +805,20 @@ const EquipmentMasterPanel = () => {
 
       await updateEquipmentMaster(id, payload);
 
+      setIsDirty(false);
       toast.success("Equipment Master updated successfully.");
 
       await fetchDetail(false);
       await fetchPermissions();
       await fetchActivityLogs();
+      return true;
     } catch (error) {
       console.error("Failed to update equipment:", error);
       toast.error(
         error?.response?.data?.message ||
           "Failed to update equipment. Please try again."
       );
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -826,7 +842,37 @@ const EquipmentMasterPanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
+    if (isDirty) {
+      setShowModal(true);
+      return;
+    }
     navigate("/user/equipment-master-dashboard");
+  };
+
+  const handleLeaveWithoutSaving = () => {
+    setIsDirty(false);
+    confirmLeave();
+    navigate("/user/equipment-master-dashboard", { replace: true });
+  };
+
+  const handleSaveAndExit = async () => {
+    if (isSaving) return;
+    setShowModal(false);
+
+    let values;
+    try {
+      values = await form.validateFields();
+    } catch {
+      toast.warning("Please fix the highlighted fields before saving.");
+      return;
+    }
+
+    const success = await handleSubmit({ ...form.getFieldsValue(true), ...values });
+    if (success) {
+      setIsDirty(false);
+      confirmLeave();
+      navigate("/user/equipment-master-dashboard", { replace: true });
+    }
   };
 
   /* ───────── Visible tabs ───────── */
@@ -904,7 +950,7 @@ const EquipmentMasterPanel = () => {
                 canPerformActivity={canPerformActivity}
                 permissionsLoading={permissionsLoading}
                 auditRoute={"/user/equipment-master-audit"}
-                onExit={() => navigate("/user/equipment-master-dashboard")}
+                onExit={handleCancel}
               />
             </div>
           </div>
@@ -927,6 +973,7 @@ const EquipmentMasterPanel = () => {
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
+        onValuesChange={() => setIsDirty(true)}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
         {/* ─── TAB 1: GENERAL INFORMATION ─── */}
@@ -1219,7 +1266,7 @@ const EquipmentMasterPanel = () => {
           <div className="mt-5">
             <ChecklistConfiguration
               value={checklistConfig}
-              onChange={setChecklistConfig}
+              onChange={handleChecklistChange}
               description="Define categorical inspection checkpoints for the field engineers."
             />
           </div>
@@ -1332,6 +1379,14 @@ const EquipmentMasterPanel = () => {
         isSaving={isSaving}
         saveLabel="Update"
         cancelLabel="Cancel"
+      />
+
+      <UnsavedChangesModal
+        open={showModal}
+        isSaving={isSaving}
+        onStay={cancelLeave}
+        onLeaveWithoutSaving={handleLeaveWithoutSaving}
+        onSaveAndLeave={handleSaveAndExit}
       />
     </div>
   );

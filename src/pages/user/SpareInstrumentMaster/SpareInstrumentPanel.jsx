@@ -26,6 +26,8 @@ import ProcessStage from "../../../components/common/ProcesStageTabs/ProcessStag
 import ProcessActivities from "../../../components/common/ProcesStageTabs/ProcessActivities";
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput"; // 👈 IMPORT ADDED
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 import { getAllPermissions } from "../../../services/usersApi/equipmentApi";
 import { addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
@@ -229,6 +231,11 @@ const SpareInstrumentPanel = () => {
   const isImportedRef = useRef(false);
 
   const isFetchingRef = useRef(false);
+
+  /* ── Unsaved changes ── */
+  const [isDirty, setIsDirty] = useState(false);
+  const { showModal, setShowModal, confirmLeave, cancelLeave } =
+    useUnsavedChanges(isDirty);
 
   /* ───────── Stage-based editability ───────── */
   const isStageEditable = (stageId) =>
@@ -477,7 +484,7 @@ const SpareInstrumentPanel = () => {
 
   /* ───────── Submit ───────── */
   const handleSubmit = async (values) => {
-    if (isSaving) return;
+    if (isSaving) return false;
 
     const questionColumnIdMap = {};
     const dataColumnIdMap = {};
@@ -617,17 +624,20 @@ const SpareInstrumentPanel = () => {
 
       await updateSpareInstrumentMaster(id, payload);
 
+      setIsDirty(false);
       toast.success("Spare Instrument Master updated successfully.");
 
       await fetchDetail(false);
       await fetchPermissions();
       await fetchActivityLogs();
+      return true;
     } catch (error) {
       console.error("Failed to update instrument:", error);
       toast.error(
         error?.response?.data?.message ||
           "Failed to update instrument. Please try again."
       );
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -651,7 +661,37 @@ const SpareInstrumentPanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
-    navigate("/user/equipment-dashboard");
+    if (isDirty) {
+      setShowModal(true);
+      return;
+    }
+    navigate("/user/spare-instrument-calibration-master-dashboard");
+  };
+
+  const handleLeaveWithoutSaving = () => {
+    setIsDirty(false);
+    confirmLeave();
+    navigate("/user/spare-instrument-calibration-master-dashboard", { replace: true });
+  };
+
+  const handleSaveAndExit = async () => {
+    if (isSaving) return;
+    setShowModal(false);
+
+    let values;
+    try {
+      values = await form.validateFields();
+    } catch {
+      toast.warning("Please fix the highlighted fields before saving.");
+      return;
+    }
+
+    const success = await handleSubmit({ ...form.getFieldsValue(true), ...values });
+    if (success) {
+      setIsDirty(false);
+      confirmLeave();
+      navigate("/user/spare-instrument-calibration-master-dashboard", { replace: true });
+    }
   };
 
   /* ───────── Visible tabs (hide cancellation unless on its stage) ───────── */
@@ -728,7 +768,7 @@ const SpareInstrumentPanel = () => {
                 canPerformActivity={canPerformActivity}
                 permissionsLoading={permissionsLoading}
                 auditRoute={"/user/instrument-master-audit"}
-                onExit={() => navigate("/user/spare-instrument-calibration-master-dashboard")}
+                onExit={handleCancel}
               />
             </div>
           </div>
@@ -751,6 +791,7 @@ const SpareInstrumentPanel = () => {
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
+        onValuesChange={() => setIsDirty(true)}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
         {/* ─── TAB 1: INSTRUMENT INFORMATION ─── */}
@@ -1097,6 +1138,14 @@ const SpareInstrumentPanel = () => {
         isSaving={isSaving}
         saveLabel="Update"
         cancelLabel="Cancel"
+      />
+
+      <UnsavedChangesModal
+        open={showModal}
+        isSaving={isSaving}
+        onStay={cancelLeave}
+        onLeaveWithoutSaving={handleLeaveWithoutSaving}
+        onSaveAndLeave={handleSaveAndExit}
       />
     </div>
   );

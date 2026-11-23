@@ -16,6 +16,8 @@ import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import ChecklistConfiguration from "../../../components/checklist/ChecklistConfig";
 import { addEquipmentMaster } from "../../../services/usersApi/equipmentApi";
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput"; // 👈 ADDED
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 /* ───────────────────────── Tabs config ───────────────────────── */
 
@@ -85,6 +87,16 @@ const EquipmentMasterCreate = () => {
     const [checklistConfig, setChecklistConfig] = useState(EMPTY_CHECKLIST);
     const [activeTab, setActiveTab] = useState("instrument");
     const [loginUserId, setLoginUserId] = useState("");
+
+    /* ───────── Unsaved changes ───────── */
+    const [isDirty, setIsDirty] = useState(false);
+    const { showModal, setShowModal, confirmLeave, cancelLeave } =
+        useUnsavedChanges(isDirty);
+
+    const handleChecklistChange = (next) => {
+        setChecklistConfig(next);
+        setIsDirty(true);
+    };
 
     /* ───────── Profile ───────── */
     useEffect(() => {
@@ -322,6 +334,8 @@ const EquipmentMasterCreate = () => {
 
             await addEquipmentMaster(payload);
 
+            setIsDirty(false);
+            confirmLeave();
             toast.success("Equipment Master created successfully.");
 
             form.resetFields();
@@ -346,11 +360,31 @@ const EquipmentMasterCreate = () => {
     const handleCancel = () => {
         if (isSaving) return;
 
+        if (isDirty) {
+            setShowModal(true);
+            return;
+        }
+
         form.resetFields();
         setChecklistConfig({ ...EMPTY_CHECKLIST });
         setActiveTab("instrument");
 
         navigate("/user/equipment-master-dashboard");
+    };
+
+    const handleLeaveWithoutSaving = () => {
+        setIsDirty(false);
+        confirmLeave();
+        form.resetFields();
+        setChecklistConfig({ ...EMPTY_CHECKLIST });
+        setActiveTab("instrument");
+        navigate("/user/equipment-master-dashboard", { replace: true });
+    };
+
+    const handleSaveAndExit = () => {
+        if (isSaving) return;
+        setShowModal(false);
+        form.submit(); // handleSubmit navigates on success
     };
 
     return (
@@ -388,6 +422,7 @@ const EquipmentMasterCreate = () => {
                 layout="vertical"
                 requiredMark={false}
                 onFinish={handleSubmit}
+                onValuesChange={() => setIsDirty(true)}
                 className="
                     w-full
                     [&_.ant-form-item-label>label]:!text-[12px]
@@ -654,7 +689,7 @@ const EquipmentMasterCreate = () => {
             {activeTab === "checklist" && (
                 <ChecklistConfiguration
                     value={checklistConfig}
-                    onChange={setChecklistConfig}
+                    onChange={handleChecklistChange}
                     description="Build a flexible multi-question inspection checklist with configurable response fields."
                 />
             )}
@@ -667,6 +702,14 @@ const EquipmentMasterCreate = () => {
                 isSaving={isSaving}
                 saveLabel="Create"
                 cancelLabel="Cancel"
+            />
+
+            <UnsavedChangesModal
+                open={showModal}
+                isSaving={isSaving}
+                onStay={cancelLeave}
+                onLeaveWithoutSaving={handleLeaveWithoutSaving}
+                onSaveAndLeave={handleSaveAndExit}
             />
         </div>
     );

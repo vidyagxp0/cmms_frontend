@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Activity } from "lucide-react";
 import { Form, Select } from "antd";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
-import FormInput from "../../../components/common/Form/FormInput";
 import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
@@ -19,9 +18,14 @@ import { formatDate, formatDateTime } from "../../../utils/date";
 
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
 import { addPreventive } from "../../../services/usersApi/preventive";
-import { getRecordNumber, getAllDepartments } from "../../../services/usersApi/workflowCommonApi";
+import {
+  getRecordNumber,
+  getAllDepartments,
+} from "../../../services/usersApi/workflowCommonApi";
 import PreventiveGrid from "./PreventiveGrid";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 const TABS = [
   { id: "general", label: "General Information" },
@@ -30,7 +34,9 @@ const TABS = [
   { id: "qa-review", label: "QA Approval Review" },
 ];
 
-const REQUIRED_FIELDS = [{ name: "shortDescription", label: "Short Description" }];
+const REQUIRED_FIELDS = [
+  { name: "shortDescription", label: "Short Description" },
+];
 
 const normalizePreventivePlannerGridRows = (rows = [], equipmentMap = {}) => {
   return rows.map((row, index) => {
@@ -70,11 +76,6 @@ const buildPreventivePlannerProcessData = (values, systemFields) => [
     label: field.label,
     value: values?.[field.name] || "",
   })),
-  // {
-  //   key: "instrumentType",
-  //   label: "Instrument Type",
-  //   value: values?.instrumentType || null,
-  // },
 
   {
     key: "master_department",
@@ -82,7 +83,11 @@ const buildPreventivePlannerProcessData = (values, systemFields) => [
     value: values?.selectedDeptId ? Number(values.selectedDeptId) : null,
   },
 
-  { key: "short_description", label: "Short Description", value: values?.shortDescription || "" },
+  {
+    key: "short_description",
+    label: "Short Description",
+    value: values?.shortDescription || "",
+  },
   { key: "comment", label: "Comments", value: values?.comments || "" },
   { key: "attachment", label: "Attachment", value: values?.attachment || [] },
   {
@@ -95,7 +100,6 @@ const buildPreventivePlannerProcessData = (values, systemFields) => [
     label: "HOD / Designee Review Attachment",
     value: values?.hodReviewAttachment || [],
   },
-  // 👇 NEW: Select User Department
   {
     key: "user_dept_selected_department",
     label: "Select User Department",
@@ -157,6 +161,12 @@ const PreventivePlannerCreate = () => {
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
+  const [isDirty, setIsDirty] = useState(false);
+  const allowDirtyTrackingRef = useRef(false);
+
+  const { showModal, setShowModal, confirmLeave, cancelLeave } =
+    useUnsavedChanges(isDirty);
+
   const [form] = Form.useForm();
   const location = useLocation();
   const navigate = useNavigate();
@@ -170,14 +180,16 @@ const PreventivePlannerCreate = () => {
       setIsLoading(true);
       setEquipmentLoading(true);
       setDepartmentsLoading(true);
+      allowDirtyTrackingRef.current = false;
 
       try {
-        const [profileRes, recordNumRes, equipmentRes, deptRes] = await Promise.allSettled([
-          getProfile(),
-          processId ? getRecordNumber(processId) : Promise.resolve(null),
-          getAllEquipmentData(),
-          getAllDepartments(),
-        ]);
+        const [profileRes, recordNumRes, equipmentRes, deptRes] =
+          await Promise.allSettled([
+            getProfile(),
+            processId ? getRecordNumber(processId) : Promise.resolve(null),
+            getAllEquipmentData(),
+            getAllDepartments(),
+          ]);
 
         if (!isMounted) return;
 
@@ -197,11 +209,18 @@ const PreventivePlannerCreate = () => {
           console.error("Failed to fetch profile:", profileRes.reason);
         }
 
-        if (recordNumRes.status === "fulfilled" && recordNumRes.value?.data?.data) {
-          generatedRecordNumber = recordNumRes.value.data.data.record_number || "";
+        if (
+          recordNumRes.status === "fulfilled" &&
+          recordNumRes.value?.data?.data
+        ) {
+          generatedRecordNumber =
+            recordNumRes.value.data.data.record_number || "";
           setRecordNumber(generatedRecordNumber);
         } else if (recordNumRes.status === "rejected") {
-          console.error("Failed to generate record number:", recordNumRes.reason);
+          console.error(
+            "Failed to generate record number:",
+            recordNumRes.reason
+          );
           toast.error(
             recordNumRes.reason?.response?.data?.message ||
               "Failed to generate record number."
@@ -221,15 +240,19 @@ const PreventivePlannerCreate = () => {
           selectedDeptId: undefined,
         });
 
-        if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
+        if (
+          equipmentRes.status === "fulfilled" &&
+          equipmentRes.value?.data?.data
+        ) {
           const data = equipmentRes.value.data.data || [];
-          const options = data.map((item) => ({ value: item.id, label: item.name }));
+          const options = data.map((item) => ({
+            value: item.id,
+            label: item.name,
+          }));
           const map = {};
-
           data.forEach((item) => {
             map[item.id] = item;
           });
-
           setEquipmentOptions(options);
           setEquipmentMap(map);
         } else if (equipmentRes.status === "rejected") {
@@ -249,6 +272,8 @@ const PreventivePlannerCreate = () => {
           setIsLoading(false);
           setEquipmentLoading(false);
           setDepartmentsLoading(false);
+          // Allow dirty tracking only after hydration completes
+          allowDirtyTrackingRef.current = true;
         }
       }
     };
@@ -273,7 +298,11 @@ const PreventivePlannerCreate = () => {
     },
     { name: "recordNumber", label: "Record Number", value: recordNumber },
     { name: "initiator", label: "Initiator", value: initiator },
-    { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
+    {
+      name: "dateOfInitiation",
+      label: "Date of Initiation",
+      value: dateOfInitiation,
+    },
     {
       name: "initiationDepartment",
       label: "Initiation Department",
@@ -303,7 +332,9 @@ const PreventivePlannerCreate = () => {
     const missingFields = validatePreventivePlannerForm(form);
 
     if (missingFields.length > 0) {
-      const missingFieldNames = missingFields.map((field) => field.label).join(", ");
+      const missingFieldNames = missingFields
+        .map((field) => field.label)
+        .join(", ");
       toast.error(`Required fields missing: ${missingFieldNames}`);
 
       form.setFields(
@@ -321,12 +352,15 @@ const PreventivePlannerCreate = () => {
   };
 
   const handleSubmit = async (values) => {
-    if (isSaving) return;
+    if (isSaving) return false;
 
     try {
       setIsSaving(true);
 
-      const processData = buildPreventivePlannerProcessData(values, systemFields);
+      const processData = buildPreventivePlannerProcessData(
+        values,
+        systemFields
+      );
       const gridData = normalizePreventivePlannerGridRows(
         preventivePlannerRows,
         equipmentMap
@@ -349,23 +383,26 @@ const PreventivePlannerCreate = () => {
       const response = await addPreventive(payload);
 
       if (response?.data?.success || response?.data?.status === true) {
+        setIsDirty(false);
         toast.success("Preventive Planner created successfully.");
         form.resetFields();
         setPreventivePlannerRows([]);
         setHeaderWeekDates({});
         navigate("/user/preventive-planner-dashboard");
-        return;
+        return true;
       }
 
       toast.error(
         response?.data?.message || "Failed to create Preventive Planner."
       );
+      return false;
     } catch (error) {
       console.error("Preventive Planner submission failed:", error);
       toast.error(
         error?.response?.data?.message ||
           "Failed to create Preventive Planner. Please try again."
       );
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -373,11 +410,53 @@ const PreventivePlannerCreate = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
-
+    if (isDirty) {
+      setShowModal(true);
+      return;
+    }
     form.resetFields();
     setPreventivePlannerRows([]);
     setHeaderWeekDates({});
     navigate("/user/preventive-planner-dashboard");
+  };
+
+  const handleLeaveWithoutSaving = () => {
+    setIsDirty(false);
+    confirmLeave();
+    form.resetFields();
+    setPreventivePlannerRows([]);
+    setHeaderWeekDates({});
+    navigate("/user/preventive-planner-dashboard", { replace: true });
+  };
+
+  const handleSaveAndExit = async () => {
+    if (isSaving) return;
+    setShowModal(false);
+
+    // Validation first — if it fails, stay on the page
+    const missingFields = validatePreventivePlannerForm(form);
+    if (missingFields.length > 0) {
+      const names = missingFields.map((f) => f.label).join(", ");
+      toast.error(`Required fields missing: ${names}`);
+      form.setFields(
+        missingFields.map((f) => ({
+          name: f.name,
+          errors: [`${f.label} is required`],
+        }))
+      );
+      setActiveTab("general");
+      return;
+    }
+
+    try {
+      const values = await form.validateFields();
+      // handleSubmit navigates to the dashboard on success.
+      // On failure, user stays on the page with dirty state intact.
+      await handleSubmit(values);
+    } catch (err) {
+      const firstError = err?.errorFields?.[0]?.errors?.[0];
+      if (firstError) toast.error(firstError);
+    }
   };
 
   return (
@@ -428,6 +507,9 @@ const PreventivePlannerCreate = () => {
           }
         }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
+        onValuesChange={() => {
+          if (allowDirtyTrackingRef.current) setIsDirty(true);
+        }}
       >
         {activeTab === "general" && (
           <section>
@@ -452,9 +534,9 @@ const PreventivePlannerCreate = () => {
                   name="shortDescription"
                   label={
                     <span className="inline-flex items-center">
-                    Short Description
-                    <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
-                  </span>
+                      Short Description
+                      <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
+                    </span>
                   }
                   rules={[
                     {
@@ -463,37 +545,21 @@ const PreventivePlannerCreate = () => {
                       message: "Please enter Short Description",
                     },
                   ]}
-                  className="!mb-4"
+                  className="!mb-4 md:col-span-2"
                 >
-                  <FormInput placeholder="Enter short description" />
-                </Form.Item>
-
-                {/* <Form.Item
-                  name="instrumentType"
-                  label="Select Instrument Type"
-                  className="!mb-4"
-                >
-                  <Select
-                    placeholder="Select Instrument Type"
-                    disabled
-                    options={[
-                      { label: "Master Instrument", value: "Master Instrument" },
-                      { label: "Field Instrument", value: "Field Instrument" },
-                      { label: "Spare Instrument", value: "Spare Instrument" },
-                      { label: "Equipment Master", value: "Equipment Master" },
-                    ]}
+                  <FormTextArea
+                    rows={3}
+                    placeholder="Enter short description"
                   />
-                </Form.Item> */}
+                </Form.Item>
 
                 <Form.Item
                   name="selectedDeptId"
                   label={
                     <span className="inline-flex items-center">
                       Select Department
-                      {/* <RequiredAsterisk message="Department is required to proceed. Please select a department." /> */}
                     </span>
                   }
-                  // rules={[{ required: true, message: "Please select a department" }]}
                   className="!mb-4"
                 >
                   <Select
@@ -505,21 +571,15 @@ const PreventivePlannerCreate = () => {
                         dept.department_name ||
                         dept.dept_name ||
                         "Unnamed Department",
-                      value: dept.id || dept.department_id || dept.dept_id || idx,
+                      value:
+                        dept.id || dept.department_id || dept.dept_id || idx,
                     }))}
                     showSearch
                     optionFilterProp="label"
                     allowClear={false}
-                    // disabled={!isGeneralEditable}
                     disabled
-                    onChange={() => {
-                      userChangedDropdownRef.current = true;
-                      savedRowsCountRef.current = 0;
-                      setPreventiveRows([]);
-                    }}
                   />
                 </Form.Item>
-                
               </div>
             )}
 
@@ -528,13 +588,19 @@ const PreventivePlannerCreate = () => {
 
               <PreventiveGrid
                 value={preventivePlannerRows}
-                onChange={setPreventivePlannerRows}
+                onChange={(rows) => {
+                  setPreventivePlannerRows(rows);
+                  if (allowDirtyTrackingRef.current) setIsDirty(true);
+                }}
                 equipmentOptions={equipmentOptions}
                 equipmentMap={equipmentMap}
                 equipmentLoading={equipmentLoading}
                 showAddButton={false}
                 weekDates={headerWeekDates}
-                onWeekDatesChange={setHeaderWeekDates}
+                onWeekDatesChange={(dates) => {
+                  setHeaderWeekDates(dates);
+                  if (allowDirtyTrackingRef.current) setIsDirty(true);
+                }}
               />
 
               <Form.Item
@@ -542,7 +608,11 @@ const PreventivePlannerCreate = () => {
                 label="Comments"
                 className="!mb-4 md:col-span-2"
               >
-                <FormTextArea rows={5} placeholder="Enter comments..." disabled />
+                <FormTextArea
+                  rows={5}
+                  placeholder="Enter comments..."
+                  disabled
+                />
               </Form.Item>
 
               <Form.Item
@@ -578,21 +648,17 @@ const PreventivePlannerCreate = () => {
                 valuePropName="value"
                 className="!mb-4 md:col-span-2"
               >
-                <FormAttachment disabled/>
+                <FormAttachment disabled />
               </Form.Item>
             </div>
           </section>
         )}
 
-        {/* =====================================================
-            USER DEPARTMENT REVIEW — 👇 NEW: Select User Department
-        ===================================================== */}
         {activeTab === "user-dept-review" && (
           <section>
             <SectionHeader title="QA REVIEW" />
 
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-              {/* 👇 NEW: Select User Department before Comments */}
               <Form.Item
                 name="userDeptSelectedDeptId"
                 label={
@@ -668,6 +734,14 @@ const PreventivePlannerCreate = () => {
         isSaving={isSaving}
         saveLabel="Save"
         cancelLabel="Cancel"
+      />
+
+      <UnsavedChangesModal
+        open={showModal}
+        isSaving={isSaving}
+        onStay={cancelLeave}
+        onLeaveWithoutSaving={handleLeaveWithoutSaving}
+        onSaveAndLeave={handleSaveAndExit}
       />
     </div>
   );

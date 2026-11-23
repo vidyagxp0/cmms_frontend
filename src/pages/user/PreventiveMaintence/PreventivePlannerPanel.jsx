@@ -41,6 +41,8 @@ import PreventiveGrid, {
   createEmptyWeeklyData,
 } from "./PreventiveGrid";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";   // ← ADD
 
 dayjs.extend(customParseFormat);
 
@@ -246,6 +248,13 @@ const PreventivePlannerPanel = () => {
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
+  const [isDirty, setIsDirty] = useState(false);
+  const allowDirtyTrackingRef = useRef(false);
+
+  const { showModal, setShowModal, confirmLeave, cancelLeave } =
+  useUnsavedChanges(isDirty);
+
+
   const userChangedDropdownRef = useRef(false);
 
   const selectedDeptIdWatch = Form.useWatch("selectedDeptId", form);
@@ -401,6 +410,7 @@ const PreventivePlannerPanel = () => {
       if (isFetchingRef.current) return;
       isFetchingRef.current = true;
       try {
+        allowDirtyTrackingRef.current = false;
         if (isInitial) setIsLoading(true);
         const response = await getPreventiveDetail(recordId);
 
@@ -577,6 +587,11 @@ const PreventivePlannerPanel = () => {
       } finally {
         setIsLoading(false);
         isFetchingRef.current = false;
+        setIsDirty(false);
+        allowDirtyTrackingRef.current = false;
+        requestAnimationFrame(() => {
+          allowDirtyTrackingRef.current = true;
+        });
       }
     },
     [recordId, form, tryAutoPopulateOnInitial]
@@ -857,8 +872,56 @@ const PreventivePlannerPanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
+    if (isDirty) {
+      setShowModal(true);
+      return;
+    }
     navigate("/user/preventive-planner-dashboard");
   };
+
+
+const handleLeaveWithoutSaving = () => {
+  setIsDirty(false);
+  confirmLeave();
+  form.resetFields();
+  setPreventiveRows([]);        // ← was setPreventivePlannerRows
+  setHeaderWeekDates({});
+  navigate("/user/preventive-planner-dashboard", { replace: true });
+};
+
+const handleSaveAndExit = async () => {
+  if (isSaving) return;
+  setShowModal(false);
+
+  const missingFields = validatePreventivePlannerForm(
+    form,
+    requiredValuesRef.current            // ← was missing
+  );
+  if (missingFields.length > 0) {
+    const names = missingFields.map((f) => f.label).join(", ");
+    toast.error(`Required fields missing: ${names}`);
+    form.setFields(
+      missingFields.map((f) => ({
+        name: f.name,
+        errors: [`${f.label} is required`],
+      }))
+    );
+    setActiveTab("general");
+    return;
+  }
+
+  try {
+    const values = await form.validateFields();
+    const ok = await handleSubmit(values);
+    if (ok === true) {                   // ← this file's handleSubmit does NOT navigate
+      confirmLeave();
+      navigate("/user/preventive-planner-dashboard", { replace: true });
+    }
+  } catch (err) {
+    const firstError = err?.errorFields?.[0]?.errors?.[0];
+    if (firstError) toast.error(firstError);
+  }
+};
 
   if (isLoading) {
     return (
@@ -902,7 +965,8 @@ const PreventivePlannerPanel = () => {
               auditRoute={"/user/preventive-planner-audit"}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
-              onExit={() => navigate("/user/preventive-planner-dashboard")}
+              // onExit={() => navigate("/user/preventive-planner-dashboard")}
+              onExit={handleCancel}
             />
           </div>
         </div>
@@ -929,6 +993,9 @@ const PreventivePlannerPanel = () => {
           }
         }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
+        onValuesChange={() => {
+          if (allowDirtyTrackingRef.current) setIsDirty(true);
+        }}
       >
         <section style={{ display: activeTab === "general" ? "block" : "none" }}>
           <SectionHeader title="GENERAL INFORMATION" />
@@ -953,11 +1020,12 @@ const PreventivePlannerPanel = () => {
                 </span>
               }
               rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
-              className="!mb-4"
+              className="!mb-4 md:col-span-2"
             >
-              <FormInput
+              <FormTextArea
                 placeholder="Enter short description"
                 disabled={!isGeneralEditable}
+                rows={3}
               />
             </Form.Item>
 
@@ -1000,7 +1068,11 @@ const PreventivePlannerPanel = () => {
           <div className="mt-5">
             <PreventiveGrid
               value={preventiveRows}
-              onChange={setPreventiveRows}
+              // onChange={setPreventiveRows}
+               onChange={(rows) => {
+                setPreventiveRows(rows);
+                if (allowDirtyTrackingRef.current) setIsDirty(true);
+              }}
               equipmentOptions={equipmentOptions}
               equipmentMap={equipmentMap}
               equipmentLoading={equipmentLoading}
@@ -1010,7 +1082,11 @@ const PreventivePlannerPanel = () => {
               canCreateChild={canCreateChild}
               onViewChild={handleViewChild}
               weekDates={headerWeekDates}
-              onWeekDatesChange={setHeaderWeekDates}
+              // onWeekDatesChange={setHeaderWeekDates}
+              onWeekDatesChange={(dates) => {
+                setHeaderWeekDates(dates);
+                if (allowDirtyTrackingRef.current) setIsDirty(true);
+              }}
             />
           </div>
           <Form.Item name="comments" label="Comments" className="!mb-4 md:col-span-2">
@@ -1213,6 +1289,14 @@ const PreventivePlannerPanel = () => {
         saveLabel="Update"
         cancelLabel="Cancel"
       />
+
+      <UnsavedChangesModal
+      open={showModal}
+      isSaving={isSaving}
+      onStay={cancelLeave}
+      onLeaveWithoutSaving={handleLeaveWithoutSaving}
+      onSaveAndLeave={handleSaveAndExit}
+    />
     </div>
   );
 };

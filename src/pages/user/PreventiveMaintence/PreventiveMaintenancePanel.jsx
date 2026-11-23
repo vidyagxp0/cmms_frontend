@@ -40,6 +40,8 @@ import {
 } from "../../../services/usersApi/workflowCommonApi";
 import ChecklistInput from "../../../components/common/ChecklistInput/ChecklistInput";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 dayjs.extend(customParseFormat);
 
@@ -422,6 +424,13 @@ const PreventiveMaintenancePanel = () => {
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [savedChecklistRaw, setSavedChecklistRaw] = useState(null);
 
+  const [isDirty, setIsDirty] = useState(false);
+  const allowDirtyTrackingRef = useRef(false);
+
+  const { showModal, setShowModal, confirmLeave, cancelLeave } =
+  useUnsavedChanges(isDirty);
+
+
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { recordId } = useParams();
@@ -568,6 +577,7 @@ const PreventiveMaintenancePanel = () => {
       if (isFetchingRef.current) return;
       isFetchingRef.current = true;
       try {
+        allowDirtyTrackingRef.current = false;
         if (isInitial) setIsLoading(true);
         const response = await getPreventiveMaintenceDetail(recordId);
         const responseData = response?.data?.data;
@@ -760,6 +770,11 @@ const PreventiveMaintenancePanel = () => {
       } finally {
         setIsLoading(false);
         isFetchingRef.current = false;
+        setIsDirty(false);
+        allowDirtyTrackingRef.current = false;
+        requestAnimationFrame(() => {
+          allowDirtyTrackingRef.current = true;
+        });
       }
     },
     [recordId, form]
@@ -1062,8 +1077,78 @@ const PreventiveMaintenancePanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
+    if (isDirty) {
+    setShowModal(true);
+    return;
+  }
     navigate(-1);
   };
+
+
+const handleLeaveWithoutSaving = () => {
+  setIsDirty(false);
+  confirmLeave();
+  form.resetFields();
+  navigate("/user/preventive-maintenance-dashboard", { replace: true });                    // ← matches handleCancel
+};
+
+const handleSaveAndExit = async () => {
+  if (isSaving) return;
+  setShowModal(false);
+
+  // 1. Required text fields (shortDescription)
+  const missingFields = validatePreventiveMaintenceForm(   // ← correct name
+    form,
+    requiredValuesRef.current
+  );
+  if (missingFields.length > 0) {
+    const names = missingFields.map((f) => f.label).join(", ");
+    toast.error(`Required fields missing: ${names}`);
+    form.setFields(
+      missingFields.map((f) => ({
+        name: f.name,
+        errors: [`${f.label} is required`],
+      }))
+    );
+    setActiveTab("general");
+    return;
+  }
+
+  // 2. Checklist required cells (same check as handleSave)
+  if (checklistData) {
+    const missingChecklist = getEmptyChecklistFields(
+      checklistData,
+      checklistAnswers
+    );
+    if (missingChecklist.length > 0) {
+      const first = missingChecklist[0];
+      const remaining = missingChecklist.length - 1;
+      toast.error(
+        `Checklist field "${first.columnName}" is required for: ${first.questionText}` +
+          (remaining > 0
+            ? ` (+${remaining} more required field${remaining === 1 ? "" : "s"} missing)`
+            : "")
+      );
+      setActiveTab("checklist");
+      return;
+    }
+  }
+
+  // 3. antd form rules, then save
+  try {
+    const values = await form.validateFields();
+    const ok = await handleSubmit(values);
+    if (ok === true) {
+      // handleSubmit only refreshes data; we navigate here
+      confirmLeave();
+      navigate("/user/preventive-maintenance-dashboard", { replace: true });
+    }
+  } catch (err) {
+    const firstError = err?.errorFields?.[0]?.errors?.[0];
+    if (firstError) toast.error(firstError);
+  }
+};
+
 
   useEffect(() => {
     if (isLoading) return;
@@ -1126,7 +1211,8 @@ const PreventiveMaintenancePanel = () => {
               permissionsLoading={permissionsLoading}
               onBeforeActivity={handleSaveBeforeActivity}
               auditRoute={"/user/preventive-maintenance-audit"}
-              onExit={() => navigate(-1)}
+              // onExit={() => navigate(-1)}
+              onExit={handleCancel}
             />
           </div>
         </div>
@@ -1153,6 +1239,9 @@ const PreventiveMaintenancePanel = () => {
           }
         }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
+        onValuesChange={() => {
+        if (allowDirtyTrackingRef.current) setIsDirty(true);
+      }}
       >
         <section style={{ display: activeTab === "general" ? "block" : "none" }}>
           <SectionHeader title="GENERAL INFORMATION" />
@@ -1182,10 +1271,11 @@ const PreventiveMaintenancePanel = () => {
                   message: "Please enter Short Description",
                 },
               ]}
-              className="!mb-4"
+              className="!mb-4 md:col-span-2"
             >
-              <FormInput
+              <FormTextArea
                 placeholder="Enter short description"
+                row={3}
                 disabled={!isGeneralEditable}
               />
             </Form.Item>
@@ -1519,7 +1609,11 @@ const PreventiveMaintenancePanel = () => {
               <ChecklistInput
                 data={checklistData}
                 value={checklistAnswers}
-                onChange={setChecklistAnswers}
+                // onChange={setChecklistAnswers}
+                  onChange={(answers) => {
+                  setChecklistAnswers(answers);
+                  if (allowDirtyTrackingRef.current) setIsDirty(true);
+                }}
                 disabled={!isGeneralEditable}
                 onSaveAfterEsign={handleSaveAfterEsign}
               />
@@ -1599,6 +1693,14 @@ const PreventiveMaintenancePanel = () => {
         saveLabel="Update"
         cancelLabel="Cancel"
       />
+
+      <UnsavedChangesModal
+      open={showModal}
+      isSaving={isSaving}
+      onStay={cancelLeave}
+      onLeaveWithoutSaving={handleLeaveWithoutSaving}
+      onSaveAndLeave={handleSaveAndExit}
+    />
     </div>
   );
 };

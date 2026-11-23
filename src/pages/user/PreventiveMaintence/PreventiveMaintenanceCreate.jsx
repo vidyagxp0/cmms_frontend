@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Activity } from "lucide-react";
 import { Form, DatePicker, Select } from "antd";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -24,6 +24,8 @@ import { getRecordNumber, getAllDepartments } from "../../../services/usersApi/w
 import { formatDateTime } from "../../../utils/date";
 import { addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 dayjs.extend(customParseFormat);
 
@@ -107,6 +109,13 @@ const PreventiveMaintenanceCreate = () => {
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
+  const [isDirty, setIsDirty] = useState(false);
+  const allowDirtyTrackingRef = useRef(false);
+
+  const { showModal, setShowModal, confirmLeave, cancelLeave } =
+    useUnsavedChanges(isDirty);
+
+
   // Prefill sources from the parent row
   const rowEquipmentName = rowData?.equipmentInstrumentName || "";
   const rowEquipmentDbId = rowData?.equipmentDbId || "";
@@ -137,6 +146,7 @@ const PreventiveMaintenanceCreate = () => {
       setIsLoading(true);
       setEquipmentLoading(true);
       setDepartmentsLoading(true);
+      allowDirtyTrackingRef.current = false;
 
       try {
         const [profileRes, recordNumRes, equipmentRes, deptRes] =
@@ -275,6 +285,7 @@ const PreventiveMaintenanceCreate = () => {
           setIsLoading(false);
           setEquipmentLoading(false);
           setDepartmentsLoading(false);
+          allowDirtyTrackingRef.current = true;
         }
       }
     };
@@ -417,7 +428,7 @@ const PreventiveMaintenanceCreate = () => {
   };
 
   const handleSubmit = async (values) => {
-    if (isSaving) return;
+    if (isSaving) return false;
     try {
       setIsSaving(true);
 
@@ -444,21 +455,24 @@ const PreventiveMaintenanceCreate = () => {
       const response = await addPreventiveMaintence(payload);
 
       if (response?.data?.success || response?.data?.status === true) {
+        setIsDirty(false);
         toast.success("Preventive Maintenance created successfully.");
         form.resetFields();
         navigate("/user/preventive-maintenance-dashboard");
-        return;
+        return true;
       }
 
       toast.error(
         response?.data?.message || "Failed to create Preventive Maintenance."
       );
+      return false;
     } catch (error) {
       console.error("Preventive Maintenance submission failed:", error);
       toast.error(
         error?.response?.data?.message ||
           "Failed to create Preventive Maintenance. Please try again."
       );
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -466,9 +480,53 @@ const PreventiveMaintenanceCreate = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
+    if (isDirty) {
+    setShowModal(true);
+    return;
+  }
     form.resetFields();
     navigate(-1);
   };
+
+const handleLeaveWithoutSaving = () => {
+  setIsDirty(false);
+  confirmLeave();
+  form.resetFields();
+  navigate("/user/preventive-maintenance-dashboard", { replace: true });
+};
+
+const handleSaveAndExit = async () => {
+  if (isSaving) return;
+  setShowModal(false);
+
+  // Use the local validator (not validatePreventivePlannerForm)
+  const missingFields = validateCalibrationForm(form);
+  if (missingFields.length > 0) {
+    const names = missingFields.map((f) => f.label).join(", ");
+    toast.error(`Required fields missing: ${names}`);
+    form.setFields(
+      missingFields.map((f) => ({
+        name: f.name,
+        errors: [`${f.label} is required`],
+      }))
+    );
+    setActiveTab("general");
+    return;
+  }
+
+  try {
+    const values = await form.validateFields();
+    const ok = await handleSubmit(values);
+    if (ok === true) {
+      confirmLeave();
+      // handleSubmit already navigated; this is belt-and-braces
+      navigate("/user/preventive-maintenance-dashboard", { replace: true });
+    }
+  } catch (err) {
+    const firstError = err?.errorFields?.[0]?.errors?.[0];
+    if (firstError) toast.error(firstError);
+  }
+};
 
   if (isLoading) {
     return (
@@ -522,6 +580,9 @@ const PreventiveMaintenanceCreate = () => {
         requiredMark={false}
         onFinish={handleSubmit}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
+        onValuesChange={() => {
+        if (allowDirtyTrackingRef.current) setIsDirty(true);
+      }}
       >
         {activeTab === "general" && (
           <section>
@@ -553,9 +614,9 @@ const PreventiveMaintenanceCreate = () => {
                     message: "Please enter Short Description",
                   },
                 ]}
-                className="!mb-4"
+                className="!mb-4 md:col-span-2"
               >
-                <FormInput placeholder="Enter short description" />
+                <FormTextArea rows={3} placeholder="Enter short description" />
               </Form.Item>
             </div>
 
@@ -752,6 +813,14 @@ const PreventiveMaintenanceCreate = () => {
         isSaving={isSaving}
         saveLabel="Save"
         cancelLabel="Cancel"
+      />
+
+        <UnsavedChangesModal
+        open={showModal}
+        isSaving={isSaving}
+        onStay={cancelLeave}
+        onLeaveWithoutSaving={handleLeaveWithoutSaving}
+        onSaveAndLeave={handleSaveAndExit}
       />
     </div>
   );

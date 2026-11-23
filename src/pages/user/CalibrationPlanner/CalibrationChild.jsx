@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Activity } from "lucide-react";
-import { Form, DatePicker } from "antd";
+import { Form, DatePicker, Input } from "antd";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
@@ -23,6 +23,8 @@ import FormAttachment from "../../../components/common/Attachment/FormAttachment
 import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInput";
 import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 dayjs.extend(customParseFormat);
 
@@ -154,6 +156,13 @@ const CalibrationChild = () => {
   const [formInitialValues, setFormInitialValues] = useState({});
   const [allMasterData, setAllMasterData] = useState([])
 
+  const [isDirty, setIsDirty] = useState(false);
+  const allowDirtyTrackingRef = useRef(false); // suppress during initial load
+
+  const { showModal, setShowModal, confirmLeave, cancelLeave } =
+  useUnsavedChanges(isDirty);
+
+
   useEffect(() => {
   if (Array.isArray(passedAllMasterData) && passedAllMasterData.length > 0) {
     setAllMasterData(passedAllMasterData);
@@ -177,6 +186,7 @@ useEffect(() => {
     setIsLoading(true);
     setEquipmentLoading(true);
     setUsersLoading(true);
+    allowDirtyTrackingRef.current = true;
 
     let profileName = "";
     let profileId = "";
@@ -383,6 +393,7 @@ useEffect(() => {
 
       const response = await addCalibrationChild(payload);
       if (response?.data?.success || response?.data?.status === true) {
+        setIsDirty(false);
         toast.success("Child calibration record created successfully.");
         navigate("/user/calibration-management-dashboard");
       } else {
@@ -398,8 +409,27 @@ useEffect(() => {
 
   const handleCancel = () => {
     if (isSaving) return;
+    if (isDirty) {
+    setShowModal(true);
+    return;
+  }
     navigate("/user/calibration-management-dashboard");
   };
+
+    const handleLeaveWithoutSaving = () => {
+    setIsDirty(false);
+    confirmLeave();
+    form.resetFields();
+    setCalibrationRows([]);
+    navigate("/user/engineering-dashboard", { replace: true });
+    };
+
+        const handleSaveAndExit = () => {
+        if (isSaving) return;
+        setShowModal(false);
+        handleSave(); // existing handler — navigates on success
+        };
+
 
   if (isLoading) {
     return (
@@ -443,6 +473,9 @@ useEffect(() => {
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit}
+        onValuesChange={() => {
+        if (allowDirtyTrackingRef.current) setIsDirty(true);
+        }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
         {activeTab === "management" && (
@@ -462,8 +495,8 @@ useEffect(() => {
               <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
             </span>
             }
-              className="!mb-4">
-                <FormInput placeholder="Enter short description" />
+              className="!mb-4 md:col-span-2">
+                <FormTextArea placeholder="Enter short description" rows={3} />
               </Form.Item>
             </div>
 
@@ -554,7 +587,7 @@ useEffect(() => {
             <div className="my-9 h-px w-full bg-slate-200" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item name="comments" label="Remarks" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={4} placeholder="Additional remarks..." />
+                <FormTextArea rows={4} placeholder="Additional remarks..." disabled />
               </Form.Item>
               <Form.Item
                 name="attachment"
@@ -611,6 +644,13 @@ useEffect(() => {
       </Form>
 
       <FloatingActionButtons onSave={handleSave} onCancel={handleCancel} isSaving={isSaving} saveLabel="Create" cancelLabel="Cancel" />
+         <UnsavedChangesModal
+          open={showModal}
+          isSaving={isSaving}
+          onStay={cancelLeave}
+          onLeaveWithoutSaving={handleLeaveWithoutSaving}
+          onSaveAndLeave={handleSaveAndExit}
+          />
     </div>
   );
 };

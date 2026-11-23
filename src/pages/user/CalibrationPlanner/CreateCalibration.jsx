@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Activity, MapPin, Workflow } from "lucide-react";
 import { Form, Input, Select } from "antd";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -34,6 +34,8 @@ import FormAttachment from "../../../components/common/Attachment/FormAttachment
 
 import { getRecordNumber, getAllDepartments } from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 const TABS = [
     { id: "general", label: "General Information" },
@@ -179,6 +181,12 @@ const CreateCalibration = () => {
     const [departments, setDepartments] = useState([]);
     const [departmentsLoading, setDepartmentsLoading] = useState(false);
 
+    const [isDirty, setIsDirty] = useState(false);
+    const allowDirtyTrackingRef = useRef(false); // suppress during initial load
+
+    const { showModal, setShowModal, confirmLeave, cancelLeave } =
+    useUnsavedChanges(isDirty);
+
     const [form] = Form.useForm();
     const location = useLocation();
     const navigate = useNavigate();
@@ -193,6 +201,8 @@ const CreateCalibration = () => {
             setEquipmentLoading(true);
             setUsersLoading(true);
             setDepartmentsLoading(true);
+            // allow future changes to mark the form dirty
+            allowDirtyTrackingRef.current = true;
 
             try {
                 const [profileRes, recordNumRes, equipmentRes, usersRes, deptRes] =
@@ -359,6 +369,7 @@ const CreateCalibration = () => {
             const response = await addCalibration(payload);
 
             if (response?.data?.success) {
+                setIsDirty(false);
                 toast.success("Calibration Planner created successfully.");
                 form.resetFields();
                 setCalibrationRows([]);
@@ -380,10 +391,28 @@ const CreateCalibration = () => {
 
     const handleCancel = () => {
         if (isSaving) return;
+        if (isDirty) {
+            setShowModal(true);
+            return;
+        }
         form.resetFields();
         setCalibrationRows([]);
         navigate("/user/engineering-dashboard");
     };
+
+    const handleLeaveWithoutSaving = () => {
+    setIsDirty(false);
+    confirmLeave();
+    form.resetFields();
+    setCalibrationRows([]);
+    navigate("/user/engineering-dashboard", { replace: true });
+    };
+
+        const handleSaveAndExit = () => {
+        if (isSaving) return;
+        setShowModal(false);
+        handleSave(); // existing handler — navigates on success
+        };
 
     return (
         <div className="w-full min-h-full bg-transparent pb-6">
@@ -439,6 +468,9 @@ const CreateCalibration = () => {
                 requiredMark={false}
                 onFinish={handleSubmit}
                 className="w-full [&_.ant-form-item-label>label]:!text-[11px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1 [&_.ant-form-item-explain-error]:!text-[10px]"
+                onValuesChange={() => {
+                    if (allowDirtyTrackingRef.current) setIsDirty(true);
+                }}
             >
                 {activeTab === "general" && (
                     <>
@@ -477,9 +509,9 @@ const CreateCalibration = () => {
                                                 message: "Please enter Short Description",
                                             },
                                         ]}
-                                        className="!mb-3"
+                                        className="!mb-4 md:col-span-2"
                                     >
-                                        <FormInput placeholder="Enter short description" />
+                                        <FormTextArea placeholder="Enter short description" rows={3} />
                                     </Form.Item>
                                 </div>
                             )}
@@ -491,15 +523,15 @@ const CreateCalibration = () => {
                             <div className="px-1 pb-1 pt-4">
                                 <div className="grid grid-cols-1 gap-x-7 md:grid-cols-2">
                                     <Form.Item name="year" label="Year" className="!mb-3">
-                                        <Input placeholder="Enter Year" />
+                                        <Input placeholder="Enter Year" disabled />
                                     </Form.Item>
 
                                     <Form.Item name="block" label="Block" className="!mb-3">
-                                        <Input placeholder="Enter Block" />
+                                        <Input placeholder="Enter Block" disabled />
                                     </Form.Item>
 
                                     <Form.Item name="area" label="Area" className="!mb-3">
-                                        <Input placeholder="Enter Area" />
+                                        <Input placeholder="Enter Area" disabled />
                                     </Form.Item>
 
                                     <Form.Item name="instrumentType" label="Select Instrument Type" className="!mb-3">
@@ -533,7 +565,11 @@ const CreateCalibration = () => {
                                 <div className="mt-1">
                                     <CalibrationGrid
                                         value={calibrationRows}
-                                        onChange={setCalibrationRows}
+                                        // onChange={setCalibrationRows}
+                                         onChange={(rows) => {
+                                        setCalibrationRows(rows);
+                                        if (allowDirtyTrackingRef.current) setIsDirty(true);
+                                    }}
                                         equipmentOptions={equipmentOptions}
                                         equipmentMap={equipmentMap}
                                         equipmentLoading={equipmentLoading}
@@ -542,7 +578,7 @@ const CreateCalibration = () => {
                                 </div>
 
                                 <Form.Item name="comments" label="Comments" className="!mb-3 mt-4">
-                                    <FormTextArea rows={4} placeholder="Enter comments..." />
+                                    <FormTextArea rows={4} placeholder="Enter comments..." disabled />
                                 </Form.Item>
 
                                 <Form.Item
@@ -663,6 +699,14 @@ const CreateCalibration = () => {
                 isSaving={isSaving}
                 saveLabel="Save"
                 cancelLabel="Cancel"
+            />
+
+            <UnsavedChangesModal
+            open={showModal}
+            isSaving={isSaving}
+            onStay={cancelLeave}
+            onLeaveWithoutSaving={handleLeaveWithoutSaving}
+            onSaveAndLeave={handleSaveAndExit}
             />
         </div>
     );

@@ -37,6 +37,8 @@ import {
 } from "../../../services/usersApi/workflowCommonApi";
 import InstrumentCalibrationGrid from "./InstrumentCalibrationGrid";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 dayjs.extend(customParseFormat);
 
@@ -184,6 +186,13 @@ const InstrumentCalibrationPanel = () => {
   const [hodUsers, setHodUsers] = useState([]);
   const [qaReviewers, setQaReviewers] = useState([]);
   const [userRoles, setUserRoles] = useState([]);
+
+  const [isDirty, setIsDirty] = useState(false);
+  const allowDirtyTrackingRef = useRef(false);
+
+  const { showModal, setShowModal, confirmLeave, cancelLeave } =
+  useUnsavedChanges(isDirty);
+
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { recordId } = useParams();
@@ -343,6 +352,7 @@ const InstrumentCalibrationPanel = () => {
       if (isFetchingRef.current) return;
       isFetchingRef.current = true;
       try {
+        allowDirtyTrackingRef.current = false;
         if (isInitial) setIsLoading(true);
 
         const response = await getInstrumentCalibrationDetail(recordId);
@@ -465,6 +475,11 @@ const InstrumentCalibrationPanel = () => {
       } finally {
         setIsLoading(false);
         isFetchingRef.current = false;
+        setIsDirty(false);
+        allowDirtyTrackingRef.current = false;
+        requestAnimationFrame(() => {
+          allowDirtyTrackingRef.current = true;
+        });
       }
     },
     [recordId, form]
@@ -662,8 +677,37 @@ const InstrumentCalibrationPanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
-    navigate("/user/engineering-dashboard");
+       if (isDirty) {
+      setShowModal(true);
+      return;
+      }
+    navigate("/user/field-instrument-calibration-addendum-dashboard");
   };
+
+  const handleLeaveWithoutSaving = () => {
+  setIsDirty(false);
+  confirmLeave();
+  navigate("/user/field-instrument-calibration-addendum-dashboard", { replace: true });
+};
+
+const handleSaveAndExit = async () => {
+  if (isSaving) return;
+  setShowModal(false);
+
+  try {
+    const values = await form.validateFields();
+    const ok = await handleSubmit(values);
+    if (ok === true) {
+      confirmLeave();
+      navigate("/user/field-instrument-calibration-addendum-dashboard", {
+        replace: true,
+      });
+    }
+  } catch (err) {
+    const firstError = err?.errorFields?.[0]?.errors?.[0];
+    if (firstError) toast.error(firstError);
+  }
+};
 
   if (isLoading) {
     return (
@@ -698,7 +742,8 @@ const InstrumentCalibrationPanel = () => {
               permissionsLoading={permissionsLoading}
               onBeforeActivity={handleSaveBeforeActivity}
               auditRoute={"/user/field-instrument-calibration-addendum-audit"}
-              onExit={() => navigate("/user/field-instrument-calibration-addendum-dashboard")}
+              // onExit={() => navigate("/user/field-instrument-calibration-addendum-dashboard")}
+              onExit={handleCancel}
             />
           </div>
         </div>
@@ -721,6 +766,9 @@ const InstrumentCalibrationPanel = () => {
           }
         }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
+        onValuesChange={() => {
+          if (allowDirtyTrackingRef.current) setIsDirty(true);
+        }}
       >
         <section style={{ display: activeTab === "general" ? "block" : "none" }}>
           <SectionHeader title="GENERAL INFORMATION" />
@@ -739,9 +787,9 @@ const InstrumentCalibrationPanel = () => {
                 </span>
               }
               rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
-              className="!mb-4"
+              className="!mb-4 md:col-span-2"
             >
-              <FormInput placeholder="Enter short description" disabled={!isGeneralEditable} />
+              <FormTextArea rows={3} placeholder="Enter short description" disabled={!isGeneralEditable} />
             </Form.Item>
           </div>
           <div className="my-9 h-px w-full bg-slate-200" />
@@ -758,7 +806,7 @@ const InstrumentCalibrationPanel = () => {
               }
               className="!mb-4"
             >
-              <Input placeholder="Enter Year" disabled={!isGeneralEditable} />
+              <Input placeholder="Enter Year" disabled={!isGeneralEditable} type="number" />
             </Form.Item>
             <Form.Item
               name="block"
@@ -848,7 +896,11 @@ const InstrumentCalibrationPanel = () => {
             <InstrumentCalibrationGrid
               name="Addendum Planner"
               value={calibrationRows}
-              onChange={setCalibrationRows}
+              // onChange={setCalibrationRows}
+              onChange={(rows) => {
+              setCalibrationRows(rows);
+              if (allowDirtyTrackingRef.current) setIsDirty(true);
+            }}
               recordId={recordId}
               disabled={!isGeneralEditable}
               showAddButton={isGeneralEditable}
@@ -1067,6 +1119,15 @@ const InstrumentCalibrationPanel = () => {
         saveLabel="Update"
         cancelLabel="Cancel"
       />
+
+        <UnsavedChangesModal
+        open={showModal}
+        isSaving={isSaving}
+        onStay={cancelLeave}
+        onLeaveWithoutSaving={handleLeaveWithoutSaving}
+        onSaveAndLeave={handleSaveAndExit}
+      />
+
     </div>
   );
 };

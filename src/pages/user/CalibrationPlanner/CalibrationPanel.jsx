@@ -32,6 +32,9 @@ import {
   getAllDepartmentMastersGlobal
 } from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
+import { number } from "zod";
 
 dayjs.extend(customParseFormat);
 
@@ -186,6 +189,12 @@ const CreateCalibrationPanel = () => {
 
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
+
+  const [isDirty, setIsDirty] = useState(false);
+  const allowDirtyTrackingRef = useRef(false);
+
+  const { showModal, setShowModal, confirmLeave, cancelLeave } =
+    useUnsavedChanges(isDirty);
 
   const selectedDeptIdWatch = Form.useWatch("selectedDeptId", form);
 
@@ -404,6 +413,7 @@ const CreateCalibrationPanel = () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
+      allowDirtyTrackingRef.current = false;
       if (isInitial) setIsLoading(true);
       const response = await getCalibrationDetail(recordId);
       const responseData = response?.data?.data;
@@ -519,7 +529,15 @@ const CreateCalibrationPanel = () => {
     } catch (error) {
       console.error("Failed to fetch calibration detail:", error);
       toast.error(error?.response?.data?.message || "Failed to load Calibration Planner record.");
-    } finally { setIsLoading(false); isFetchingRef.current = false; }
+    } finally { setIsLoading(false);
+                isFetchingRef.current = false;
+                setIsDirty(false);
+                // allow future user changes to mark dirty
+                allowDirtyTrackingRef.current = false;
+                requestAnimationFrame(() => {
+                  allowDirtyTrackingRef.current = true;
+                });
+               }
   }, [recordId, form]);
 
   useEffect(() => { fetchCalibrationDetail(true); }, [fetchCalibrationDetail]);
@@ -727,8 +745,54 @@ const CreateCalibrationPanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
+    if (isDirty) {
+  setShowModal(true);
+  return;
+  }
     navigate("/user/engineering-dashboard");
   };
+
+
+  const handleLeaveWithoutSaving = () => {
+  setIsDirty(false);
+  confirmLeave();
+  navigate("/user/engineering-dashboard", { replace: true });
+};
+
+const handleSaveAndExit = async () => {
+  if (isSaving) return;
+  setShowModal(false);
+
+  const missingFields = validateCalibrationForm(
+    form,
+    requiredValuesRef.current,
+    selectedInstrumentType
+  );
+  if (missingFields.length > 0) {
+    const names = missingFields.map((f) => f.label).join(", ");
+    toast.error(`Required fields missing: ${names}`);
+    form.setFields(
+      missingFields.map((f) => ({
+        name: f.name,
+        errors: [`${f.label} is required`],
+      }))
+    );
+    setActiveTab("general");
+    return;
+  }
+
+  try {
+    const values = await form.validateFields();
+    const ok = await handleSubmit(values);
+    if (ok === true) {
+      confirmLeave();
+      navigate("/user/engineering-dashboard", { replace: true });
+    }
+  } catch (err) {
+    const firstError = err?.errorFields?.[0]?.errors?.[0];
+    if (firstError) toast.error(firstError);
+  }
+};
 
   if (isLoading) {
     return (
@@ -762,7 +826,8 @@ const CreateCalibrationPanel = () => {
               onBeforeActivity={handleSaveBeforeActivity}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
-              onExit={() => navigate("/user/engineering-dashboard")}
+              // onExit={() => navigate("/user/engineering-dashboard")}
+              onExit={handleCancel}
             />
           </div>
         </div>
@@ -784,6 +849,9 @@ const CreateCalibrationPanel = () => {
             if (firstError) toast.error(firstError);
           }
         }}
+         onValuesChange={() => {
+          if (allowDirtyTrackingRef.current) setIsDirty(true);
+        }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
         <section style={{ display: activeTab === "general" ? "block" : "none" }}>
@@ -802,9 +870,9 @@ const CreateCalibrationPanel = () => {
               />
               </span>}
               rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
-              className="!mb-4"
+              className="!mb-4 md:col-span-2"
             >
-              <FormInput placeholder="Enter short description" disabled={!isGeneralEditable} />
+              <FormTextArea  placeholder="Enter short description" disabled={!isGeneralEditable} rows={3} />
             </Form.Item>
 
           </div>
@@ -824,6 +892,7 @@ const CreateCalibrationPanel = () => {
                 <Input
                   placeholder="Enter Year"
                   disabled={!isGeneralEditable}
+                  type="number"
                 />
               </Form.Item>
 
@@ -924,7 +993,11 @@ const CreateCalibrationPanel = () => {
           <div className="mt-5">
             <CalibrationGrid
               value={calibrationRows}
-              onChange={setCalibrationRows}
+              // onChange={setCalibrationRows}
+              onChange={(rows) => {
+              setCalibrationRows(rows);
+              if (allowDirtyTrackingRef.current) setIsDirty(true);
+            }}
               equipmentOptions={equipmentOptions}
               equipmentMap={equipmentMap}
               equipmentLoading={equipmentLoading}
@@ -1140,6 +1213,14 @@ const CreateCalibrationPanel = () => {
         isSaving={isSaving || isLoading || usersLoading}
         saveLabel="Update"
         cancelLabel="Cancel"
+      />
+
+      <UnsavedChangesModal
+        open={showModal}
+        isSaving={isSaving}
+        onStay={cancelLeave}
+        onLeaveWithoutSaving={handleLeaveWithoutSaving}
+        onSaveAndLeave={handleSaveAndExit}
       />
     </div>
   );

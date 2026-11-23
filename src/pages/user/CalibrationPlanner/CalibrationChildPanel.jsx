@@ -35,6 +35,8 @@ import SymbolicInput from "../../../components/common/SymbolicInput/SymbolicInpu
 import { getAllActivites, getAllActivityLogs, getAllPermissions, getAllStages } from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import MasterInstrumentsGrid from "./MasterInstrumentsGrid";
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 const TABS = [
   { id: "management", label: "General Information", stageId: 19 },
@@ -253,6 +255,13 @@ const CalibrationChildPanel = () => {
   const [formInitialValues, setFormInitialValues] = useState({});
   const [formReady, setFormReady] = useState(false);
 
+  
+  const [isDirty, setIsDirty] = useState(false);
+  const allowDirtyTrackingRef = useRef(false);
+
+  const { showModal, setShowModal, confirmLeave, cancelLeave } =
+    useUnsavedChanges(isDirty);
+
   const remarksValue = Form.useWatch("remarks", form);
 
   const isFetchingRef = useRef(false);
@@ -372,6 +381,7 @@ const CalibrationChildPanel = () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
+      allowDirtyTrackingRef.current = false;
       if (isInitial) setIsLoading(true);
       const response = await getCalibrationChildDetail(recordId);
       const data = response?.data?.data;
@@ -523,6 +533,12 @@ const CalibrationChildPanel = () => {
     } finally {
       setIsLoading(false);
       isFetchingRef.current = false;
+      setIsDirty(false);
+      // allow future user changes to mark dirty
+      allowDirtyTrackingRef.current = false;
+      requestAnimationFrame(() => {
+        allowDirtyTrackingRef.current = true;
+      });
     }
   }, [recordId, form]);
 
@@ -761,8 +777,72 @@ const CalibrationChildPanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
+    if (isDirty) {
+    setShowModal(true);
+    return;
+    }
     navigate("/user/calibration-management-dashboard");
   };
+
+
+  const handleLeaveWithoutSaving = () => {
+  setIsDirty(false);
+  confirmLeave();
+  navigate("/user/calibration-management-dashboard", { replace: true });
+};
+
+const handleSaveAndExit = async () => {
+  if (isSaving) return;
+  setShowModal(false);
+
+  // Same required-field guard as handleSave (REQUIRED_FIELDS is
+  // currently [] so this is a no-op today, but keeps behaviour aligned)
+  const values = form.getFieldsValue(true);
+  const missing = REQUIRED_FIELDS.filter((field) => {
+    const val = values[field.name];
+    if (typeof val === "string") return !val.trim();
+    return val === undefined || val === null || val === "";
+  });
+
+  if (missing.length > 0) {
+    const names = missing.map((f) => f.label).join(", ");
+    toast.error(`Required fields missing: ${names}`);
+    form.setFields(
+      missing.map((f) => ({
+        name: f.name,
+        errors: [`${f.label} is required`],
+      }))
+    );
+    setActiveTab("management");
+    return;
+  }
+
+  try {
+    const validatedValues = await form.validateFields();
+    const ok = await handleSubmit(validatedValues);
+    if (ok === true) {
+      confirmLeave();
+      navigate("/user/calibration-management-dashboard", { replace: true });
+    }
+  } catch (err) {
+    const firstError = err?.errorFields?.[0];
+    if (firstError?.errors?.[0]) toast.error(firstError.errors[0]);
+    // Jump to the tab that owns the offending field
+    if (firstError?.name?.length) {
+      const fieldName = firstError.name[0];
+      if (["implementorComments", "implementorAttachment"].includes(fieldName)) {
+        setActiveTab("implementor");
+      } else if (
+        ["qaReviewComments", "qaReviewAttachment"].includes(fieldName)
+      ) {
+        setActiveTab("qa-review");
+      } else {
+        setActiveTab("management");
+      }
+    }
+  }
+};
+
 
   if (isLoading) {
     return (
@@ -806,7 +886,8 @@ const CalibrationChildPanel = () => {
               onBeforeActivity={handleSaveBeforeActivity}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
-              onExit={() => navigate("/user/calibration-management-dashboard")}
+              // onExit={() => navigate("/user/calibration-management-dashboard")}
+              onExit={handleCancel}
             />
           </div>
         </div>
@@ -828,6 +909,9 @@ const CalibrationChildPanel = () => {
             const firstError = errorFields[0]?.errors?.[0];
             if (firstError) toast.error(firstError);
           }
+        }}
+        onValuesChange={() => {
+          if (allowDirtyTrackingRef.current) setIsDirty(true);
         }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
       >
@@ -861,9 +945,9 @@ const CalibrationChildPanel = () => {
                   <RequiredAsterisk message="Short Description are required to proceed. Please enter your Short Description." />
                 </span>
               }
-              className="!mb-4"
+              className="!mb-4 md:col-span-2"
             >
-              <FormInput placeholder="Enter short description" disabled={!isManagementEditable} />
+              <FormTextArea rows={3} placeholder="Enter short description" disabled={!isManagementEditable} />
             </Form.Item>
           </div>
 
@@ -930,7 +1014,11 @@ const CalibrationChildPanel = () => {
               description="Parameter-wise calibration results"
               columns={CALIBRATED_BY_COLUMNS}
               value={calibrationResultRows}
-              onChange={setCalibrationResultRows}
+              // onChange={setCalibrationResultRows}
+              onChange={(rows) => {
+              setCalibrationResultRows(rows);
+              if (allowDirtyTrackingRef.current) setIsDirty(true);
+            }}
               allowAdd={isManagementEditable}
               allowDelete={isManagementEditable}
               disabled={!isManagementEditable}
@@ -944,7 +1032,11 @@ const CalibrationChildPanel = () => {
               name="Master Instruments Details"
               masterData={masterData}
               value={calibrationResultTest}
-              onChange={handleCalibrationTestChange}
+              // onChange={handleCalibrationTestChange}
+              onChange={(rows) => {
+              handleCalibrationTestChange(rows);
+              if (allowDirtyTrackingRef.current) setIsDirty(true);
+            }}
               allowAdd={isManagementEditable}
               allowDelete={isManagementEditable}
               disabled={!isManagementEditable}
@@ -1134,6 +1226,14 @@ const CalibrationChildPanel = () => {
         isSaving={isSaving || isLoading || usersLoading}
         saveLabel="Update"
         cancelLabel="Cancel"
+      />
+
+        <UnsavedChangesModal
+        open={showModal}
+        isSaving={isSaving}
+        onStay={cancelLeave}
+        onLeaveWithoutSaving={handleLeaveWithoutSaving}
+        onSaveAndLeave={handleSaveAndExit}
       />
     </div>
   );

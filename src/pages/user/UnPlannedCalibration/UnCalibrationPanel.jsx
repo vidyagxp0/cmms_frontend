@@ -32,6 +32,8 @@ import {
 } from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import UnCalibrationGrid from "./UnCalibrationGrid";
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 dayjs.extend(customParseFormat);
 
@@ -186,6 +188,12 @@ const UnCreateCalibrationPanel = () => {
 
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
+
+  const [isDirty, setIsDirty] = useState(false);
+  const allowDirtyTrackingRef = useRef(false);
+
+  const { showModal, setShowModal, confirmLeave, cancelLeave } =
+  useUnsavedChanges(isDirty);
 
   const selectedDeptIdWatch = Form.useWatch("selectedDeptId", form);
 
@@ -406,6 +414,7 @@ const UnCreateCalibrationPanel = () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
+      allowDirtyTrackingRef.current = false;
       if (isInitial) setIsLoading(true);
       const response = await getUnPlannedCalibrationDetail(recordId);
       const responseData = response?.data?.data;
@@ -523,7 +532,14 @@ const UnCreateCalibrationPanel = () => {
     } catch (error) {
       console.error("Failed to fetch unplanned calibration planner detail:", error);
       toast.error(error?.response?.data?.message || "Failed to load Unplanned Calibration Planner record.");
-    } finally { setIsLoading(false); isFetchingRef.current = false; }
+    } finally { setIsLoading(false);
+                isFetchingRef.current = false;
+                setIsDirty(false);
+                allowDirtyTrackingRef.current = false;
+                requestAnimationFrame(() => {
+                  allowDirtyTrackingRef.current = true;
+                });
+               }
   }, [recordId, form]);
 
   useEffect(() => { fetchCalibrationDetail(true); }, [fetchCalibrationDetail]);
@@ -731,8 +747,37 @@ const UnCreateCalibrationPanel = () => {
 
   const handleCancel = () => {
     if (isSaving) return;
-    navigate("/user/engineering-dashboard");
+    if (isDirty) {
+    setShowModal(true);
+    return;
+    }
+    navigate("/user/unplanned-calibration-dashboard");
   };
+
+  const handleLeaveWithoutSaving = () => {
+  setIsDirty(false);
+  confirmLeave();
+  navigate("/user/unplanned-calibration-dashboard", { replace: true });
+};
+
+const handleSaveAndExit = async () => {
+  if (isSaving) return;
+  setShowModal(false);
+
+  try {
+    const values = await form.validateFields();
+    const ok = await handleSubmit(values);
+    if (ok === true) {
+      confirmLeave();
+      navigate("/user/unplanned-calibration-dashboard", {
+        replace: true,
+      });
+    }
+  } catch (err) {
+    const firstError = err?.errorFields?.[0]?.errors?.[0];
+    if (firstError) toast.error(firstError);
+  }
+};
 
   if (isLoading) {
     return (
@@ -772,7 +817,8 @@ const UnCreateCalibrationPanel = () => {
               onBeforeActivity={handleSaveBeforeActivity}
               canPerformActivity={canPerformActivity}
               permissionsLoading={permissionsLoading}
-              onExit={() => navigate("/user/engineering-dashboard")}
+              // onExit={() => navigate("/user/unplanned-calibration-dashboard")}
+            onExit={handleCancel}
             />
           </div>
         </div>
@@ -795,6 +841,9 @@ const UnCreateCalibrationPanel = () => {
           }
         }}
         className="w-full [&_.ant-form-item-label>label]:!text-[12px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1.5 [&_.ant-form-item-explain-error]:!text-[11px]"
+        onValuesChange={() => {
+        if (allowDirtyTrackingRef.current) setIsDirty(true);
+      }}
       >
         <section style={{ display: activeTab === "general" ? "block" : "none" }}>
           <SectionHeader title="GENERAL INFORMATION" />
@@ -812,9 +861,9 @@ const UnCreateCalibrationPanel = () => {
               />
               </span>}
               rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
-              className="!mb-4"
+              className="!mb-4 md:col-span-2"
             >
-              <FormInput placeholder="Enter short description" disabled={!isGeneralEditable} />
+              <FormTextArea rows={3} placeholder="Enter short description" disabled={!isGeneralEditable} />
             </Form.Item>
           </div>
           <div className="my-9 h-px w-full bg-slate-200" />
@@ -833,6 +882,7 @@ const UnCreateCalibrationPanel = () => {
                 <Input
                   placeholder="Enter Year"
                   disabled={!isGeneralEditable}
+                  type="number"
                 />
               </Form.Item>
 
@@ -931,7 +981,11 @@ const UnCreateCalibrationPanel = () => {
           <div className="mt-5">
             <UnCalibrationGrid
               value={calibrationRows}
-              onChange={setCalibrationRows}
+              // onChange={setCalibrationRows}
+              onChange={(rows) => {
+              setCalibrationRows(rows);
+              if (allowDirtyTrackingRef.current) setIsDirty(true);
+            }}
               equipmentOptions={equipmentOptions}
               equipmentMap={equipmentMap}
               equipmentLoading={equipmentLoading}
@@ -1177,6 +1231,14 @@ const UnCreateCalibrationPanel = () => {
         saveLabel="Update"
         cancelLabel="Cancel"
       />
+
+      <UnsavedChangesModal
+      open={showModal}
+      isSaving={isSaving}
+      onStay={cancelLeave}
+      onLeaveWithoutSaving={handleLeaveWithoutSaving}
+      onSaveAndLeave={handleSaveAndExit}
+    />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
     Activity,
     MapPin,
@@ -42,6 +42,8 @@ import { getRecordNumber, getAllDepartments } from "../../../services/usersApi/w
 import InstrumentCalibrationGrid from "./InstrumentCalibrationGrid";
 import { addInstrumentCalibration } from "../../../services/usersApi/instrumentCalibration";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
+import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 
 const TABS = [
     { id: "general", label: "General Information" },
@@ -159,6 +161,10 @@ const InstrumentCalibrationCreate = () => {
     // Departments
     const [departments, setDepartments] = useState([]);
     const [departmentsLoading, setDepartmentsLoading] = useState(false);
+    const [isDirty, setIsDirty] = useState(false);
+    const allowDirtyTrackingRef = useRef(false);
+    const { showModal, setShowModal, confirmLeave, cancelLeave } =
+    useUnsavedChanges(isDirty);
 
     const [form] = Form.useForm();
     const location = useLocation();
@@ -174,6 +180,7 @@ const InstrumentCalibrationCreate = () => {
             setEquipmentLoading(true);
             setUsersLoading(true);
             setDepartmentsLoading(true);
+            allowDirtyTrackingRef.current = true;
 
             try {
                 const [profileRes, recordNumRes, equipmentRes, usersRes, deptRes] = await Promise.allSettled([
@@ -312,6 +319,7 @@ const InstrumentCalibrationCreate = () => {
             const response = await addInstrumentCalibration(payload);
 
             if (response?.data?.success) {
+                setIsDirty(false);
                 toast.success("Addendum Planner record created successfully.");
                 form.resetFields();
                 setCalibrationRows([]);
@@ -329,10 +337,28 @@ const InstrumentCalibrationCreate = () => {
 
     const handleCancel = () => {
         if (isSaving) return;
+            if (isDirty) {
+            setShowModal(true);
+            return;
+        }
         form.resetFields();
         setCalibrationRows([]);
         navigate("/user/field-instrument-calibration-addendum-dashboard");
     };
+
+    const handleLeaveWithoutSaving = () => {
+    setIsDirty(false);
+    confirmLeave();
+    form.resetFields();
+    setCalibrationRows([]);
+    navigate("/user/field-instrument-calibration-addendum-dashboard", { replace: true });
+    };
+
+        const handleSaveAndExit = () => {
+        if (isSaving) return;
+        setShowModal(false);
+        handleSave(); // existing handler — navigates on success
+        };
 
     return (
         <div className="w-full min-h-full bg-transparent pb-6">
@@ -386,6 +412,9 @@ const InstrumentCalibrationCreate = () => {
                 requiredMark={false}
                 onFinish={handleSubmit}
                 className="w-full [&_.ant-form-item-label>label]:!text-[11px] [&_.ant-form-item-label>label]:!font-semibold [&_.ant-form-item-label]:!pb-1 [&_.ant-form-item-explain-error]:!text-[10px]"
+                onValuesChange={() => {
+                    if (allowDirtyTrackingRef.current) setIsDirty(true);
+                }}
             >
                 {activeTab === "general" && (
                     <>
@@ -410,9 +439,9 @@ const InstrumentCalibrationCreate = () => {
                                         />
                                         </span>}
                                         rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
-                                        className="!mb-3"
+                                        className="!mb-4 md:col-span-2"
                                     >
-                                        <FormInput placeholder="Enter short description" />
+                                        <FormTextArea rows={3} placeholder="Enter short description" />
                                     </Form.Item>
                                 </div>
                             )}
@@ -423,13 +452,13 @@ const InstrumentCalibrationCreate = () => {
                             <div className="px-1 pb-1 pt-4">
                                 <div className="grid grid-cols-1 gap-x-7 md:grid-cols-2">
                                     <Form.Item name="year" label="Year" className="!mb-3">
-                                        <Input placeholder="Enter Year" />
+                                        <Input placeholder="Enter Year" disabled />
                                     </Form.Item>
                                     <Form.Item name="block" label="Block" className="!mb-3">
-                                        <Input placeholder="Enter Block" />
+                                        <Input placeholder="Enter Block" disabled />
                                     </Form.Item>
                                     <Form.Item name="area" label="Area" className="!mb-3">
-                                        <Input placeholder="Enter Area" />
+                                        <Input placeholder="Enter Area" disabled />
                                     </Form.Item>
                                     
                                     <Form.Item name="instrumentType" label="Select Instrument Type" className="!mb-3">
@@ -474,7 +503,7 @@ const InstrumentCalibrationCreate = () => {
                                 </div>
 
                                 <Form.Item name="comments" label="Comments" className="!mb-3 mt-4">
-                                    <FormTextArea rows={4} placeholder="Enter comments..." />
+                                    <FormTextArea rows={4} placeholder="Enter comments..." disabled />
                                 </Form.Item>
 
                                 <Form.Item name="attachment" label="Attachment" valuePropName="value" className="!mb-0">
@@ -600,6 +629,13 @@ const InstrumentCalibrationCreate = () => {
                 isSaving={isSaving}
                 saveLabel="Save"
                 cancelLabel="Cancel"
+            />
+            <UnsavedChangesModal
+            open={showModal}
+            isSaving={isSaving}
+            onStay={cancelLeave}
+            onLeaveWithoutSaving={handleLeaveWithoutSaving}
+            onSaveAndLeave={handleSaveAndExit}
             />
         </div>
     );

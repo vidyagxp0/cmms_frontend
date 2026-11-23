@@ -9,91 +9,64 @@ const FloatingActionButtons = ({
     cancelLabel = "Cancel",
 }) => {
     const [showActions, setShowActions] = useState(false);
-    const [isCancelling, setIsCancelling] = useState(false);
+    // "save" | "cancel" | null — which button the user clicked last
+    const [pendingAction, setPendingAction] = useState(null);
     const containerRef = useRef(null);
 
-    const isBusy = isSaving || isCancelling;
+    // Single source of truth for "the record is busy"
+    const isBusy = isSaving;
 
-    // ================================================================
-    // KEEP LOCAL CANCEL STATE IN SYNC
-    // ================================================================
+    // Keep the panel open while saving; clear `pendingAction` once the
+    // save finishes so a stuck spinner is impossible.
     useEffect(() => {
         if (isSaving) {
             setShowActions(true);
-        }
-
-        if (!isSaving) {
-            setIsCancelling(false);
+        } else {
+            setPendingAction(null);
         }
     }, [isSaving]);
 
-    // ================================================================
-    // CLOSE ON OUTSIDE CLICK
-    //
-    // Outside click is disabled while an action is running.
-    // ================================================================
+    // Close on outside click (disabled while busy)
     useEffect(() => {
         const handleOutsideClick = (event) => {
             if (!showActions || isBusy || !containerRef.current) return;
-
             if (!containerRef.current.contains(event.target)) {
                 setShowActions(false);
             }
         };
-
         document.addEventListener("mousedown", handleOutsideClick);
-
         return () => {
             document.removeEventListener("mousedown", handleOutsideClick);
         };
     }, [showActions, isBusy]);
 
-    // ================================================================
-    // OPEN ACTION PANEL
-    // ================================================================
     const handleOpenActions = () => {
         if (isBusy) return;
         setShowActions(true);
     };
 
-    // ================================================================
-    // SAVE / UPDATE
-    // ================================================================
     const handleSaveClick = () => {
         if (isBusy) return;
-
-        /*
-         * Keep panel OPEN while the save operation runs.
-         * The parent will control isSaving.
-         */
+        setPendingAction("save");
         setShowActions(true);
         onSave?.();
     };
 
-    // ================================================================
-    // CANCEL
-    // ================================================================
     const handleCancelClick = () => {
         if (isBusy) return;
-
-        /*
-         * Keep the panel open while cancellation is being
-         * initiated.
-         */
+        setPendingAction("cancel");
         setShowActions(true);
-        setIsCancelling(true);
         onCancel?.();
     };
 
+    // Only show "Cancelling…" when the in-flight save was triggered
+    // from the Cancel flow (e.g. "Save & Exit"). Otherwise show "Cancel".
+    const showCancellingSpinner = isSaving && pendingAction === "cancel";
+
     return (
         <div ref={containerRef} className="fixed right-0 bottom-[12%] z-20 sm:right-1">
-            {/* =====================================================
-                FLOATING ACTION AREA
-            ====================================================== */}
             <div className="relative flex min-h-[92px] min-w-[124px] items-center justify-end">
-                {/* =================================================
-                    COLLAPSED DONGLE
-                ================================================== */}
+                {/* COLLAPSED DONGLE (unchanged) */}
                 <button
                     type="button"
                     onClick={handleOpenActions}
@@ -123,9 +96,7 @@ const FloatingActionButtons = ({
                     </span>
                 </button>
 
-                {/* =================================================
-                    EXPANDED ACTIONS
-                ================================================== */}
+                {/* EXPANDED ACTIONS */}
                 <div
                     className={`
                         absolute right-0 top-1/2 flex -translate-y-1/2 flex-col gap-2
@@ -137,13 +108,11 @@ const FloatingActionButtons = ({
                         }
                     `}
                 >
-                    {/* =================================================
-                        UPDATE / SAVE
-                    ================================================== */}
+                    {/* SAVE / UPDATE */}
                     <button
                         type="button"
                         onClick={handleSaveClick}
-                        disabled={isSaving || isCancelling}
+                        disabled={isBusy}
                         className="
                             group flex h-[42px] w-[116px] items-center justify-center gap-2
                             rounded-[10px] border border-[#C7D8D0] bg-[#F7FAF8] px-3
@@ -171,13 +140,11 @@ const FloatingActionButtons = ({
                         )}
                     </button>
 
-                    {/* =================================================
-                        CANCEL
-                    ================================================== */}
+                    {/* CANCEL */}
                     <button
                         type="button"
                         onClick={handleCancelClick}
-                        disabled={isSaving || isCancelling}
+                        disabled={isBusy}
                         className="
                             group flex h-[42px] w-[116px] items-center justify-center gap-2
                             rounded-[10px] border border-[#E3CCCC] bg-[#FBF7F7] px-3
@@ -189,7 +156,7 @@ const FloatingActionButtons = ({
                             focus-visible:ring-2 focus-visible:ring-[#E4BDBD] focus-visible:ring-offset-1
                         "
                     >
-                        {isCancelling ? (
+                        {showCancellingSpinner ? (
                             <>
                                 <Loader2 size={14} className="animate-spin" />
                                 <span>Cancelling...</span>

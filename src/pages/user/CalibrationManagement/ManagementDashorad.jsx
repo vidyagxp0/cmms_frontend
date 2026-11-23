@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useRef, useEffect, useMemo, useState, useCallback } from "react";
 import { Eye, Search, Filter } from "lucide-react";
 import { Input, Select, Button, DatePicker } from "antd";
 import dayjs from "dayjs";
@@ -68,7 +68,11 @@ const ManagementDashboard = () => {
     // ================================================================
     // FETCH RECORDS
     // ================================================================
+    // Guards against out-of-order responses (fast typing / filter changes).
+    const latestRequestRef = useRef(0);
+
     const fetchRecords = useCallback(async (page = 1, perPage = 10, filters = {}) => {
+        const requestId = ++latestRequestRef.current;
         try {
             setLoading(true);
 
@@ -82,6 +86,7 @@ const ManagementDashboard = () => {
             }
 
             const response = await getAllCalibrationManagementRecords(params);
+            if (requestId !== latestRequestRef.current) return; // a newer request superseded this one
 
             const paginationData = response?.data?.data;
             const recordsData = paginationData?.data || [];
@@ -95,6 +100,7 @@ const ManagementDashboard = () => {
                 total: paginationData?.total || 0,
             });
         } catch (error) {
+            if (requestId !== latestRequestRef.current) return;
             console.error("Failed to fetch engineering records:", error);
             setRecords([]);
             setPagination({
@@ -104,7 +110,7 @@ const ManagementDashboard = () => {
                 total: 0,
             });
         } finally {
-            setLoading(false);
+            if (requestId === latestRequestRef.current) setLoading(false);
         }
     }, []);
 

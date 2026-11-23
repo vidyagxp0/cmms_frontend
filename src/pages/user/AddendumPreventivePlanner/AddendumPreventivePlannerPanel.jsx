@@ -39,6 +39,7 @@ import {
 
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import AddendumPreventivePlannerGrid from "./AddendumPreventivePlannerGrid";
+import { resolveChildFrequency } from "./addendumChildFrequency";
 
 dayjs.extend(customParseFormat);
 
@@ -616,23 +617,17 @@ const AddendumPreventivePlannerPanel = () => {
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
 
-  const FREQUENCY_CODE_TO_NAME = {
-  M: "monthly",
-  Q: "quarterly",
-  H: "half-yearly",
-  Y: "yearly",
-};
 
   // 👇 NEW — Child navigation
-  const handleViewChild = (rowIndex, rowData) => {
+  // `frequency` is the { code, label } the grid passes as the 3rd argument
+  // (getRowBiggestFrequency(row)). It was read here but never declared,
+  // which threw a ReferenceError whenever a row had no `frequency` value.
+  const handleViewChild = (rowIndex, rowData, frequency) => {
     const shortDesc = form.getFieldValue("shortDescription") || "";
     const rowId = rowData?.row_id ?? rowIndex + 1;
-      const raw =
-      rowData?.frequency || frequency?.code || frequency?.label || "";
 
   // Codes (M/Q/H/Y) → full option names ("monthly", "quarterly", …)
-    const normalizedFrequency =
-      FREQUENCY_CODE_TO_NAME[raw] || raw || "";
+    const normalizedFrequency = resolveChildFrequency(rowData, frequency);
     navigate(`/user/addendum-preventive-management-create/13`, {
       state: {
         rowData,
@@ -730,8 +725,8 @@ const AddendumPreventivePlannerPanel = () => {
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Addendum Preventive updated successfully.");
         await fetchPreventiveDetail();
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
         return true;
       }
       toast.error(
@@ -757,8 +752,8 @@ const AddendumPreventivePlannerPanel = () => {
         await handleSubmit(values);
       } else {
         await fetchPreventiveDetail(false);
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
       }
     } catch (error) {
       console.error("Failed to save addendum preventive after activity:", error);

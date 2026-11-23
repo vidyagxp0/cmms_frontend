@@ -1,14 +1,20 @@
+import { Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
-import AdminRoutes from "./AdminRoutes";
-import UserRoutes from "./UserRoutes";
-import Login from "../pages/auth/Login/Login";
-import NotFound from "../pages/NotFound/NotFound";
+import { lazyPage } from "./lazyPage";
 import ProtectedRoute from "./ProtectedRoute";
 import SessionTimeout from "../components/common/SessionTimeout/SessionTimeout";
 
+// Split by area: a logged-in user never downloads the login animation code,
+// and an admin never downloads the user-module pages (and vice versa).
+const AdminRoutes = lazyPage(() => import("./AdminRoutes"), { prefetch: false });
+const UserRoutes = lazyPage(() => import("./UserRoutes"), { prefetch: false });
+const Login = lazyPage(() => import("../pages/auth/Login/Login"), { prefetch: false });
+const NotFound = lazyPage(() => import("../pages/NotFound/NotFound"), { prefetch: false });
+
 function AppRoutes() {
     return (
+        <Suspense fallback={null}>
         <Routes>
             {/* Default Route */}
             <Route
@@ -63,6 +69,7 @@ function AppRoutes() {
                 element={<Navigate to="/404" replace />}
             />
         </Routes>
+        </Suspense>
     );
 }
 

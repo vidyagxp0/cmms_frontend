@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Eye, Wrench, ArrowUpRight, Search, Filter } from "lucide-react";
@@ -160,7 +160,11 @@ const FieldInstrumetsDashboard = () => {
     // ================================================================
     // FETCH FIELD INSTRUMENTS
     // ================================================================
+    // Guards against out-of-order responses (fast typing / filter changes).
+    const latestRequestRef = useRef(0);
+
     const fetchFieldInstruments = useCallback(async (page = 1, perPage = 10, filters = {}) => {
+        const requestId = ++latestRequestRef.current;
         try {
             setLoading(true);
 
@@ -171,6 +175,7 @@ const FieldInstrumetsDashboard = () => {
             if (filters.department) params.department_id = filters.department; // ✅ NEW
 
             const response = await getAllFieldInstruments(params);
+            if (requestId !== latestRequestRef.current) return; // a newer request superseded this one
 
             const paginationData = response?.data?.data;
             const equipmentData = paginationData?.data || [];
@@ -184,6 +189,7 @@ const FieldInstrumetsDashboard = () => {
                 total: paginationData?.total || 0,
             });
         } catch (error) {
+            if (requestId !== latestRequestRef.current) return;
             console.error("Failed to fetch field instruments:", error);
             setEquipment([]);
             setPagination({
@@ -193,7 +199,7 @@ const FieldInstrumetsDashboard = () => {
                 total: 0,
             });
         } finally {
-            setLoading(false);
+            if (requestId === latestRequestRef.current) setLoading(false);
         }
     }, []);
 

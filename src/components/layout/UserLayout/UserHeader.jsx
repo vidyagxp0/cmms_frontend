@@ -61,7 +61,11 @@ const UserHeader = ({
         const onFocus = () => fetchCount();
         window.addEventListener("focus", onFocus);
 
-        const interval = setInterval(fetchCount, POLL_INTERVAL_MS);
+        // Skip polling while the tab is in the background; the focus
+        // listener above refreshes the count as soon as the user returns.
+        const interval = setInterval(() => {
+            if (!document.hidden) fetchCount();
+        }, POLL_INTERVAL_MS);
 
         return () => {
             cancelled = true;

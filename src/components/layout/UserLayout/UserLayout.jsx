@@ -1,10 +1,20 @@
+import { Suspense, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 
 import UserHeader from "./UserHeader";
 import UserNav from "./UserNav";
+import PageLoader from "../../common/PageLoader/PageLoader";
+import { prefetchAllPages } from "../../../routes/lazyPage";
 
 function UserLayout() {
     const location = useLocation();
+
+    // After the first screen is up, quietly download the other pages so
+    // navigating between modules is instant.
+    useEffect(() => {
+        const timer = setTimeout(prefetchAllPages, 2000);
+        return () => clearTimeout(timer);
+    }, []);
 
     const showNav =
         location.pathname === "/user/cmms-dashboard" ||
@@ -53,7 +63,9 @@ function UserLayout() {
                             : "bg-[var(--color-background)] p-6"
                     }
                 >
-                    <Outlet />
+                    <Suspense fallback={<PageLoader />}>
+                        <Outlet />
+                    </Suspense>
                 </div>
             </main>
         </div>

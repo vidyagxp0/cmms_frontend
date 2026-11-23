@@ -1,15 +1,16 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { lazyPage } from "./lazyPage";
 import AdminLayout from "../components/layout/AdminLayout/AdminLayout";
-import AdminDashboard from "../pages/admin/AdminDashboard/Dashboard";
-import UserManagementList from "../pages/admin/UserManage/UserManagementList";
-import RolesManagementList from "../pages/admin/RolesManage/RolesManagementList";
-import DepartmentManagelist from "../pages/admin/DepartmentManage/DepartmentManagelist";
-import AuditHistory from "../pages/admin/AuditHistory/AuditHistory";
-import AddRole from "../pages/admin/RolesManage/AddRole";
-import EditRole from "../pages/admin/RolesManage/EditRole";
-import AddUser from "../pages/admin/UserManage/AddUser";
-import EditUser from "../pages/admin/UserManage/EditUser";
-import UserMonitoring from "../pages/admin/UserMonitoring/UserMonitoring";
+const AdminDashboard = lazyPage(() => import("../pages/admin/AdminDashboard/Dashboard"));
+const UserManagementList = lazyPage(() => import("../pages/admin/UserManage/UserManagementList"));
+const RolesManagementList = lazyPage(() => import("../pages/admin/RolesManage/RolesManagementList"));
+const DepartmentManagelist = lazyPage(() => import("../pages/admin/DepartmentManage/DepartmentManagelist"));
+const AuditHistory = lazyPage(() => import("../pages/admin/AuditHistory/AuditHistory"));
+const AddRole = lazyPage(() => import("../pages/admin/RolesManage/AddRole"));
+const EditRole = lazyPage(() => import("../pages/admin/RolesManage/EditRole"));
+const AddUser = lazyPage(() => import("../pages/admin/UserManage/AddUser"));
+const EditUser = lazyPage(() => import("../pages/admin/UserManage/EditUser"));
+const UserMonitoring = lazyPage(() => import("../pages/admin/UserMonitoring/UserMonitoring"));
 
 function AdminRoutes() {
   return (

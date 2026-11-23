@@ -416,12 +416,15 @@ useEffect(() => {
     navigate("/user/calibration-management-dashboard");
   };
 
+    // Fixed: this was copied from CreateCalibration and called
+    // setCalibrationRows(), which does not exist here (ReferenceError — the
+    // "Leave without saving" button never navigated). It now goes to the same
+    // dashboard as this page's Cancel button and successful save.
     const handleLeaveWithoutSaving = () => {
     setIsDirty(false);
     confirmLeave();
     form.resetFields();
-    setCalibrationRows([]);
-    navigate("/user/engineering-dashboard", { replace: true });
+    navigate("/user/calibration-management-dashboard", { replace: true });
     };
 
         const handleSaveAndExit = () => {

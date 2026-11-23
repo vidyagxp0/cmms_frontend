@@ -15,6 +15,7 @@ const FloatingActionButtons = ({
 
     // Single source of truth for "the record is busy"
     const isBusy = isSaving;
+    const isSavingRef = useRef(isSaving);
 
     // Keep the panel open while saving; clear `pendingAction` once the
     // save finishes so a stuck spinner is impossible.
@@ -45,8 +46,32 @@ const FloatingActionButtons = ({
         setShowActions(true);
     };
 
+    // Double-click protection. `form.submit()` validates asynchronously before
+    // the page sets isSaving=true, so two quick clicks could both get through
+    // and create the record twice. Lock until the save starts (isSaving flips)
+    // or, if validation fails and no save starts, for a short moment.
+    const saveLockRef = useRef(false);
+    const saveLockTimerRef = useRef(null);
+
+    useEffect(() => {
+        isSavingRef.current = isSaving;
+        if (isSaving) {
+            clearTimeout(saveLockTimerRef.current);
+            saveLockRef.current = true;
+        } else {
+            saveLockRef.current = false;
+        }
+    }, [isSaving]);
+
+    useEffect(() => () => clearTimeout(saveLockTimerRef.current), []);
+
     const handleSaveClick = () => {
-        if (isBusy) return;
+        if (isBusy || saveLockRef.current) return;
+        saveLockRef.current = true;
+        clearTimeout(saveLockTimerRef.current);
+        saveLockTimerRef.current = setTimeout(() => {
+            if (!isSavingRef.current) saveLockRef.current = false;
+        }, 1200);
         setPendingAction("save");
         setShowActions(true);
         onSave?.();

@@ -967,8 +967,8 @@ const AddendumPreventiveChildPanel = () => {
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Addendum Preventive Maintenance updated successfully.");
         await fetchPreventiveMaintenceDetail();
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
         return true;
       }
       toast.error(
@@ -994,8 +994,8 @@ const AddendumPreventiveChildPanel = () => {
         await handleSubmit(values);
       } else {
         await fetchPreventiveMaintenceDetail(false);
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
       }
     } catch (error) {
       console.error(

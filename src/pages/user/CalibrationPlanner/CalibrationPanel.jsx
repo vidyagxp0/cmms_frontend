@@ -718,8 +718,8 @@ const CreateCalibrationPanel = () => {
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Calibration Planner updated successfully.");
         await fetchCalibrationDetail();
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
         return true;
       }
       toast.error(response?.data?.message || "Failed to update Calibration Planner.");
@@ -737,8 +737,8 @@ const CreateCalibrationPanel = () => {
         await handleSubmit(values);
       } else {
         await fetchCalibrationDetail(false);
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
       }
     } catch (error) { console.error("Failed to save calibration after activity:", error); }
   };

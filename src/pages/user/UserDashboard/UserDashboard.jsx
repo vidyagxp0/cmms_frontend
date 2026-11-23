@@ -48,43 +48,46 @@ const AXIS_COLOR = "#88918E";
 const TOOLTIP_BORDER = "#D6D8D3";
 const TOOLTIP_SHADOW = "0 14px 35px rgba(36,50,56,0.12)";
 
+const EMPTY_RECORDS = [];
+
+/* Live clock — isolated so its 1s tick does not re-render the dashboard. */
+const useNow = () => {
+    const [now, setNow] = useState(() => new Date());
+    useEffect(() => {
+        const t = setInterval(() => setNow(new Date()), 1000);
+        return () => clearInterval(t);
+    }, []);
+    return now;
+};
+
+const LiveDate = () => {
+    const now = useNow();
+    return now.toLocaleDateString("en-US", {
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+};
+
+const LiveTime = () => {
+    const now = useNow();
+    return now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+    });
+};
+
 const UserDashboard = () => {
     const [dashboardData, setDashboardData] = useState({});
     const [loading, setLoading] = useState(true);
     const [lastUpdated, setLastUpdated] = useState("");
     const [autoRefreshInterval, setAutoRefreshInterval] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [currentDateTime, setCurrentDateTime] = useState(new Date());
-
-    /* ============================================================
-       LIVE CLOCK
-    ============================================================ */
-    useEffect(() => {
-        const t = setInterval(() => setCurrentDateTime(new Date()), 1000);
-        return () => clearInterval(t);
-    }, []);
-
-    const formattedDate = useMemo(
-        () =>
-            currentDateTime.toLocaleDateString("en-US", {
-                weekday: "short",
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-            }),
-        [currentDateTime]
-    );
-
-    const formattedTime = useMemo(
-        () =>
-            currentDateTime.toLocaleTimeString("en-US", {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: true,
-            }),
-        [currentDateTime]
-    );
+    // LIVE CLOCK moved to <LiveDate/> / <LiveTime/> (bottom of this file) so the
+    // 1-second tick re-renders only the clock text, not every chart on the page.
 
     /* ============================================================
        FETCH – ONLY /user/dashboard-count
@@ -135,7 +138,7 @@ const UserDashboard = () => {
     const instrumentMasters = dashboardData?.instrument_masters || {};
     const processRecords = Array.isArray(dashboardData?.process_records)
         ? dashboardData.process_records
-        : [];
+        : EMPTY_RECORDS; // stable reference so the memos below don't recompute
 
     const masterCount = Number(instrumentMasters.master_instruments || 0);
     const fieldCount = Number(instrumentMasters.field_instruments || 0);
@@ -280,14 +283,14 @@ const UserDashboard = () => {
                         <div className="flex items-center gap-2">
                             <Calendar size={14} strokeWidth={1.8} className="text-[#56766D]" />
                             <span className="text-[10.5px] font-semibold text-[#4F5E5D]">
-                                {formattedDate}
+                                <LiveDate />
                             </span>
                         </div>
                         <div className="h-5 w-px bg-[#D8DBD7]" />
                         <div className="flex items-center gap-2">
                             <Clock size={14} strokeWidth={1.8} className="animate-pulse text-[#A47D45]" />
                             <span className="font-mono text-[10.5px] font-bold tracking-wide text-[#243238]">
-                                {formattedTime}
+                                <LiveTime />
                             </span>
                         </div>
                     </div>

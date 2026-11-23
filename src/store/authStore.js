@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { clearRequestCache } from "../services/requestCache";
 
 export const useAuthStore = create((set) => ({
     user: null,
@@ -22,6 +23,7 @@ export const useAuthStore = create((set) => ({
         }),
 
     clearAuth: () => {
+        clearRequestCache();
         sessionStorage.removeItem("admin_token");
         sessionStorage.removeItem("user_token");
         sessionStorage.removeItem("auth_type");

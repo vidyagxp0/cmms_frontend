@@ -835,8 +835,8 @@ const PreventivePlannerPanel = () => {
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Preventive Planner updated successfully.");
         await fetchPreventiveDetail();
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
         return true;
       }
       toast.error(
@@ -862,8 +862,8 @@ const PreventivePlannerPanel = () => {
         await handleSubmit(values);
       } else {
         await fetchPreventiveDetail(false);
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
       }
     } catch (error) {
       console.error("Failed to save preventive planner after activity:", error);

@@ -471,8 +471,8 @@ const FieldInstrumentsPlannerPanel = () => {
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Field Instrument updated successfully.");
         await fetchCalibrationDetail();
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
         return;
       }
       toast.error(response?.data?.message || "Failed to update Field Instrument.");
@@ -489,8 +489,8 @@ const FieldInstrumentsPlannerPanel = () => {
         await handleSubmit(values);
       } else {
         await fetchCalibrationDetail(false);
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
       }
     } catch (error) { console.error("Failed to save after activity:", error); }
   };

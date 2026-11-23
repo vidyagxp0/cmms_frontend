@@ -808,9 +808,9 @@ const EquipmentMasterPanel = () => {
       setIsDirty(false);
       toast.success("Equipment Master updated successfully.");
 
+      // Detail first: permissions/logs read refs (e.g. isImportedRef) it sets.
       await fetchDetail(false);
-      await fetchPermissions();
-      await fetchActivityLogs();
+      await Promise.all([fetchPermissions(), fetchActivityLogs()]);
       return true;
     } catch (error) {
       console.error("Failed to update equipment:", error);
@@ -831,9 +831,9 @@ const EquipmentMasterPanel = () => {
         const values = form.getFieldsValue(true);
         await handleSubmit(values);
       } else {
+        // Detail first: permissions/logs read refs (e.g. isImportedRef) it sets.
         await fetchDetail(false);
-        await fetchPermissions();
-        await fetchActivityLogs();
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
       }
     } catch (error) {
       console.error("Failed to save equipment after activity:", error);

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Eye, Wrench, ArrowUpRight, Search, Filter, Building2 } from "lucide-react";
@@ -152,7 +152,11 @@ const EquipmentMasterDashboard = () => {
     // ================================================================
     // FETCH EQUIPMENT
     // ================================================================
+    // Guards against out-of-order responses (fast typing / filter changes).
+    const latestRequestRef = useRef(0);
+
     const fetchEquipment = useCallback(async (page = 1, perPage = 10, filters = {}) => {
+        const requestId = ++latestRequestRef.current;
         try {
             setLoading(true);
 
@@ -163,6 +167,7 @@ const EquipmentMasterDashboard = () => {
             if (filters.department) params.department_id = filters.department; // ✅ NEW
 
             const response = await getAllEquipmentMasterRecords(params);
+            if (requestId !== latestRequestRef.current) return; // a newer request superseded this one
 
             const paginationData = response?.data?.data;
             const equipmentData = paginationData?.data || [];
@@ -176,6 +181,7 @@ const EquipmentMasterDashboard = () => {
                 total: paginationData?.total || 0,
             });
         } catch (error) {
+            if (requestId !== latestRequestRef.current) return;
             console.error("Failed to fetch equipment records:", error);
             setEquipment([]);
             setPagination({
@@ -185,7 +191,7 @@ const EquipmentMasterDashboard = () => {
                 total: 0,
             });
         } finally {
-            setLoading(false);
+            if (requestId === latestRequestRef.current) setLoading(false);
         }
     }, []);
 

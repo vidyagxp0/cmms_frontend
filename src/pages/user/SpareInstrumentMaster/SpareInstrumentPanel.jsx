@@ -627,9 +627,9 @@ const SpareInstrumentPanel = () => {
       setIsDirty(false);
       toast.success("Spare Instrument Master updated successfully.");
 
+      // Detail first: permissions/logs read refs (e.g. isImportedRef) it sets.
       await fetchDetail(false);
-      await fetchPermissions();
-      await fetchActivityLogs();
+      await Promise.all([fetchPermissions(), fetchActivityLogs()]);
       return true;
     } catch (error) {
       console.error("Failed to update instrument:", error);
@@ -650,9 +650,9 @@ const SpareInstrumentPanel = () => {
         const values = form.getFieldsValue(true);
         await handleSubmit(values);
       } else {
+        // Detail first: permissions/logs read refs (e.g. isImportedRef) it sets.
         await fetchDetail(false);
-        await fetchPermissions();
-        await fetchActivityLogs();
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
       }
     } catch (error) {
       console.error("Failed to save instrument after activity:", error);

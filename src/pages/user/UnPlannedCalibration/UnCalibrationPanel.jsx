@@ -720,8 +720,8 @@ const UnCreateCalibrationPanel = () => {
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Unplanned Calibration Planner updated successfully.");
         await fetchCalibrationDetail();
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
         return true;
       }
       toast.error(response?.data?.message || "Failed to update Unplanned Calibration Planner.");
@@ -739,8 +739,8 @@ const UnCreateCalibrationPanel = () => {
         await handleSubmit(values);
       } else {
         await fetchCalibrationDetail(false);
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
       }
     } catch (error) { console.error("Failed to save unplanned calibration planner after activity:", error); }
   };

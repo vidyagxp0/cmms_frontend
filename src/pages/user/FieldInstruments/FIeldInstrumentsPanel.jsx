@@ -713,9 +713,9 @@ const FIeldInstrumentsPanel = () => {
       setIsDirty(false);
       toast.success("Field instrument updated successfully.");
 
+      // Detail first: permissions/logs read refs (e.g. isImportedRef) it sets.
       await fetchDetail(false);
-      await fetchPermissions();
-      await fetchActivityLogs();
+      await Promise.all([fetchPermissions(), fetchActivityLogs()]);
       return true;
     } catch (error) {
       console.error("Failed to update field instrument:", error);
@@ -735,9 +735,9 @@ const FIeldInstrumentsPanel = () => {
         const values = form.getFieldsValue(true);
         await handleSubmit(values);
       } else {
+        // Detail first: permissions/logs read refs (e.g. isImportedRef) it sets.
         await fetchDetail(false);
-        await fetchPermissions();
-        await fetchActivityLogs();
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
       }
     } catch (error) {
       console.error(

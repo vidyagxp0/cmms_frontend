@@ -657,8 +657,8 @@ const AddendumCalibrationChildPanel = () => {
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Addendum Calibration updated successfully.");
         await fetchChildDetail();
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
         return true;
       } else {
         toast.error(response?.data?.message || "Failed to update Addendum Calibration.");
@@ -674,8 +674,8 @@ const AddendumCalibrationChildPanel = () => {
   const handleActivitySuccess = async (response, selectedActivity) => {
     try {
       await fetchChildDetail();
-      await fetchPermissions();
-      await fetchActivityLogs();
+      // Independent of each other — fetch together.
+      await Promise.all([fetchPermissions(), fetchActivityLogs()]);
     } catch (error) {
       console.error("Failed to refresh after activity:", error);
     }

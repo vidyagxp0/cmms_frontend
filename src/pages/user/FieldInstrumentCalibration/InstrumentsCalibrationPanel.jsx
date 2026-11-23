@@ -649,8 +649,8 @@ const InstrumentCalibrationPanel = () => {
       if (response?.data?.success || response?.data?.status === true) {
         toast.success("Addendum Planner updated successfully.");
         await fetchCalibrationDetail();
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
         return true;
       }
       toast.error(response?.data?.message || "Failed to update Addendum Planner.");
@@ -669,8 +669,8 @@ const InstrumentCalibrationPanel = () => {
         await handleSubmit(values);
       } else {
         await fetchCalibrationDetail(false);
-        await fetchPermissions();
-        await fetchActivityLogs();
+        // Independent of each other — fetch together.
+        await Promise.all([fetchPermissions(), fetchActivityLogs()]);
       }
     } catch (error) { console.error("Failed to save after activity:", error); }
   };

@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useMemo, useState, useCallback } from "react";
 import { Eye, Search, Filter } from "lucide-react";
+import SrNoLink from "../../../components/common/SrNoLink/SrNoLink";
 import { Input, Select, Button, DatePicker } from "antd";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
@@ -258,13 +259,18 @@ const PreventiveMaintenanceDashboard = () => {
     // =========================================================
     // TABLE COLUMNS
     // =========================================================
+    // Sr. No. shown to users instead of the database ID. Continues across pages
+    // (page 2 starts at perPage + 1). Navigation still uses record.id.
+    const serialOffset =
+        ((Number(pagination.currentPage) || 1) - 1) * (Number(pagination.perPage) || 0);
+
     const columns = useMemo(
         () => [
             // ID
            {
     accessorKey: "id",
-    header: "ID",
-    cell: ({ row, getValue }) => {
+    header: "Sr. No.",
+    cell: ({ row }) => {
         const record = row.original;
 
         const handleClick = () => {
@@ -288,14 +294,7 @@ const PreventiveMaintenanceDashboard = () => {
         };
 
         return (
-            <button
-                type="button"
-                onClick={handleClick}
-                className="inline-flex cursor-pointer items-center rounded-[8px] border border-[#D3E1DB] bg-[#F1F5F2] px-2 py-1.5 font-[var(--font-display)] text-[10px] font-bold tracking-[-0.01em] text-[#56766D] transition-all duration-200 hover:border-[#B9CEC5] hover:bg-[#E8F0EC] hover:text-[#244F4A] focus:outline-none focus:ring-2 focus:ring-[#6E9487]/20"
-                title="View record details"
-            >
-                #{getValue() || "-"}
-            </button>
+            <SrNoLink value={serialOffset + row.index + 1} onClick={handleClick} />
         );
     },
 },
@@ -418,7 +417,7 @@ const PreventiveMaintenanceDashboard = () => {
                 ),
             },
         ],
-        [navigate]
+        [navigate, serialOffset]
     );
 
     /* 👇 UPDATED — include the new filter in "has active" check */

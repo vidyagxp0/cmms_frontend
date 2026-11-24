@@ -465,7 +465,7 @@ const InstrumentCalibrationCreate = () => {
                                         <Select
                                             placeholder="Select Instrument Type"
                                             disabled
-                                            options={[
+                                            options={[  
                                                 { label: "Master Instrument", value: "Master Instrument" },
                                                 { label: "Field Instrument", value: "Field Instrument" },
                                                 { label: "Spare Instrument", value: "Spare Instrument" },

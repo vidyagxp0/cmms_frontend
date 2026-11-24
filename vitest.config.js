@@ -9,6 +9,9 @@ export default defineConfig({
         environment: "jsdom",
         include: ["src/**/*.test.{js,jsx}"],
         setupFiles: ["src/test/setup.js"],
+        // antd-heavy component tests can exceed the 5s default on a busy
+        // machine / CI runner (observed ~8s under load); this is not a hang.
+        testTimeout: 20000,
         restoreMocks: true,
         clearMocks: true,
     },

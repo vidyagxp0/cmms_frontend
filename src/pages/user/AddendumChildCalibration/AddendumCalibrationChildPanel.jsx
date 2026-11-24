@@ -258,27 +258,27 @@ const AddendumCalibrationChildPanel = () => {
     fetchProfile();
   }, []);
 
-  useEffect(() => {
-    const fetchEquipment = async () => {
-      try {
-        setEquipmentLoading(true);
-        const response = await getAllEquipmentData();
-        const data = response?.data?.data || [];
-        const options = data.map((item) => ({
-          value: item.id,
-          label: item.instrument_name || item.name || `Instrument ${item.id}`,
-        }));
-        const map = {};
-        data.forEach((item) => { map[item.id] = item; });
-        setEquipmentOptions(options);
-        setEquipmentMap(map);
-      } catch (error) {
-        console.error("Failed to fetch equipment:", error);
-        toast.error("Could not load equipment list.");
-      } finally { setEquipmentLoading(false); }
-    };
-    fetchEquipment();
-  }, []);
+  // useEffect(() => {
+  //   const fetchEquipment = async () => {
+  //     try {
+  //       setEquipmentLoading(true);
+  //       const response = await getAllEquipmentData();
+  //       const data = response?.data?.data || [];
+  //       const options = data.map((item) => ({
+  //         value: item.id,
+  //         label: item.instrument_name || item.name || `Instrument ${item.id}`,
+  //       }));
+  //       const map = {};
+  //       data.forEach((item) => { map[item.id] = item; });
+  //       setEquipmentOptions(options);
+  //       setEquipmentMap(map);
+  //     } catch (error) {
+  //       console.error("Failed to fetch equipment:", error);
+  //       toast.error("Could not load equipment list.");
+  //     } finally { setEquipmentLoading(false); }
+  //   };
+  //   fetchEquipment();
+  // }, []);
 
   useEffect(() => {
     const fetchCalibrationUsers = async () => {
@@ -766,7 +766,7 @@ const AddendumCalibrationChildPanel = () => {
               }
               className="!mb-4"
             >
-              <FormInput placeholder="Enter short description" disabled={!isManagementEditable} />
+              <FormTextArea row={3} placeholder="Enter short description" disabled={!isManagementEditable} />
             </Form.Item>
           </div>
 
@@ -779,11 +779,12 @@ const AddendumCalibrationChildPanel = () => {
             <Form.Item name="nextCalibrationDate" label="Calibration Next Due Date" className="!mb-4">
               <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
             </Form.Item>
-            <Form.Item name="instrumentName" label="Name" className="!mb-4">
+            <Form.Item name="instrumentName" label="Equipment / Instrument Name" className="!mb-4">
               <FormSelect
                 placeholder={equipmentLoading ? "Loading..." : "Select Instrument"}
-                options={equipmentOptions}
-                disabled={equipmentLoading || !isManagementEditable}
+                // options={equipmentOptions}
+                // disabled={equipmentLoading || !isManagementEditable}
+                disabled
               />
             </Form.Item>
             <Form.Item name="instrumentId" label="ID No." className="!mb-4">
@@ -849,7 +850,6 @@ const AddendumCalibrationChildPanel = () => {
               disabled={!isManagementEditable}
               addButtonLabel="Add Parameter"
               minRows={0}
-              maxRows={2}
               rowKey="_rowId"
             />
           </div>

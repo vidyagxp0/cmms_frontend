@@ -9,7 +9,6 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import FormInput from "../../../components/common/Form/FormInput";
-import FormSelect from "../../../components/common/Form/FormSelect";
 import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
@@ -187,7 +186,6 @@ const AddendumCalibrationChildCreate = () => {
   const [qaReviewers, setQaReviewers] = useState([]);
   const [qaApprovers, setQaApprovers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
-  const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [equipmentMap, setEquipmentMap] = useState({});
   const [equipmentLoading, setEquipmentLoading] = useState(false);
   const [calibrationResultRows, setCalibrationResultRows] = useState([]);
@@ -284,15 +282,10 @@ const AddendumCalibrationChildCreate = () => {
           equipmentRes.value?.data?.data !== undefined
         ) {
           const data = extractArray(equipmentRes.value.data.data);
-          const options = data.map((item) => ({
-            value: item.id,
-            label: item.instrument_name || item.name || "",
-          }));
           const map = {};
           data.forEach((item) => {
             if (item?.id !== undefined && item?.id !== null) map[item.id] = item;
           });
-          setEquipmentOptions(options);
           setEquipmentMap(map);
         } else if (equipmentRes.status === "rejected") {
           console.error("Failed to fetch equipment:", equipmentRes.reason);
@@ -312,14 +305,9 @@ const AddendumCalibrationChildCreate = () => {
       } finally {
         if (!isMounted) return;
 
-        // ── Resolve Instrument ID ────────────────────────────────────
-        const rawInstrumentId =
-          rowData?.equipmentDbId ?? rowData?.equipmentInstrumentName ?? "";
-        const resolvedInstrumentId = (() => {
-          if (rawInstrumentId === "" || rawInstrumentId == null) return "";
-          const num = Number(rawInstrumentId);
-          return Number.isNaN(num) ? rawInstrumentId : num;
-        })();
+        // ── Resolve Instrument Name (the name text, never the DB id) ──
+        const resolvedInstrumentName =
+          rowData?.instrumentName || rowData?.equipmentName || "";
 
         // ✅ Build values UNCONDITIONALLY — never skip on error
         const values = {
@@ -332,7 +320,7 @@ const AddendumCalibrationChildCreate = () => {
             rowData?.initiationDepartment || profileDeptName || "",
           shortDescription: rowData?.shortDescription || parentShortDesc || "",
 
-          instrumentName: resolvedInstrumentId,
+          instrumentName: resolvedInstrumentName,
           instrumentId: rowData?.instrumentId || rowData?.equipmentInstrumentId || "",
 
           location: rowData?.location || "",
@@ -562,7 +550,7 @@ const AddendumCalibrationChildCreate = () => {
                 }
                 className="!mb-4"
               >
-                <FormInput placeholder="Enter short description" />
+                <FormTextArea rows={3} placeholder="Enter short description" />
               </Form.Item>
             </div>
 
@@ -594,18 +582,15 @@ const AddendumCalibrationChildCreate = () => {
                 />
               </Form.Item>
 
-              <Form.Item name="instrumentName" label="Name" className="!mb-4">
-                <FormSelect
-                  placeholder="Select Instrument"
-                  options={equipmentOptions}
-                />
+              <Form.Item name="instrumentName" label="Equipment / Instrument Name" className="!mb-4">
+                <FormInput placeholder="Instrument name" disabled />
               </Form.Item>
               <Form.Item name="instrumentId" label="ID No." className="!mb-4">
-                <FormInput placeholder="e.g. EQ-001" />
+                <FormInput placeholder="e.g. EQ-001" disabled />
               </Form.Item>
 
               <Form.Item name="make" label="Make" className="!mb-4">
-                <FormInput placeholder="e.g. Fluke" />
+                <FormInput placeholder="e.g. Fluke" disabled />
               </Form.Item>
               <Form.Item
                 name="instrumentRange"
@@ -615,11 +600,12 @@ const AddendumCalibrationChildCreate = () => {
                 <SymbolicInput
                   placeholder="e.g. 0-1000 V"
                   defaultDiscipline="Range"
+                  disabled
                 />
               </Form.Item>
 
               <Form.Item name="model" label="Sr.No/ Model No." className="!mb-4">
-                <FormInput placeholder="e.g. 87V" />
+                <FormInput placeholder="e.g. 87V" disabled />
               </Form.Item>
               <Form.Item
                 name="operatingRange"
@@ -629,6 +615,7 @@ const AddendumCalibrationChildCreate = () => {
                 <SymbolicInput
                   placeholder="e.g. 0-500 V"
                   defaultDiscipline="Operating Range"
+                  disabled
                 />
               </Form.Item>
 
@@ -636,12 +623,14 @@ const AddendumCalibrationChildCreate = () => {
                 <SymbolicInput
                   placeholder="e.g. 0.01"
                   defaultDiscipline="Least Count"
+                  disabled
                 />
               </Form.Item>
               <Form.Item name="accuracy" label="Accuracy" className="!mb-4">
                 <SymbolicInput
                   placeholder="e.g. ±0.5%"
                   defaultDiscipline="Accuracy"
+                  disabled
                 />
               </Form.Item>
 
@@ -653,10 +642,11 @@ const AddendumCalibrationChildCreate = () => {
                 <SymbolicInput
                   placeholder="e.g. 0, 50, 100"
                   defaultDiscipline="Test Points"
+                  disabled
                 />
               </Form.Item>
               <Form.Item name="location" label="Location" className="!mb-4">
-                <FormInput placeholder="Lab A, Room 101" />
+                <FormInput placeholder="Lab A, Room 101" disabled />
               </Form.Item>
 
               <Form.Item
@@ -664,7 +654,7 @@ const AddendumCalibrationChildCreate = () => {
                 label="Environmental Condition Temperature"
                 className="!mb-4"
               >
-                <SymbolicInput placeholder="e.g. 25" defaultDiscipline="Temperature" />
+                <SymbolicInput placeholder="e.g. 25" defaultDiscipline="Temperature" disabled />
               </Form.Item>
               <Form.Item
                 name="envHumidity"
@@ -674,6 +664,7 @@ const AddendumCalibrationChildCreate = () => {
                 <SymbolicInput
                   placeholder="e.g. 45% RH ± 5%"
                   defaultDiscipline="Humidity"
+                  disabled
                 />
               </Form.Item>
             </div>
@@ -711,7 +702,7 @@ const AddendumCalibrationChildCreate = () => {
             <div className="my-9 h-px w-full bg-slate-200" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item name="comments" label="Remarks" className="!mb-4 md:col-span-2">
-                <FormTextArea rows={4} placeholder="Additional remarks..." />
+                <FormTextArea rows={4} placeholder="Additional remarks..." disabled />
               </Form.Item>
               <Form.Item
                 name="attachment"

@@ -79,7 +79,6 @@ const AddendumPreventiveChildCreate = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
-  const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [equipmentMap, setEquipmentMap] = useState({});
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
@@ -174,26 +173,21 @@ const AddendumPreventiveChildCreate = () => {
         ) {
           equipmentData = extractArray(equipmentRes.value.data.data);
 
-          const options = equipmentData.map((item) => {
-            const name =
-              item.equipment_name || item.instrument_name || item.name || "";
-            return { value: name, label: name };
-          });
-
           equipmentData.forEach((item) => {
             const name =
               item.equipment_name || item.instrument_name || item.name || "";
             if (name) map[name] = item;
           });
 
-          setEquipmentOptions(options);
           setEquipmentMap(map);
         } else if (equipmentRes.status === "rejected") {
           console.error("Failed to fetch equipment:", equipmentRes.reason);
         }
 
-        // Resolve the equipment name from the parent row
-        if (rowEquipmentName && map[rowEquipmentName]) {
+        // Resolve the equipment name from the parent row. The panel already
+        // passes the name, so use it as-is when it isn't a bare numeric id.
+        const isBareId = /^\d+$/.test(String(rowEquipmentName).trim());
+        if (rowEquipmentName && (map[rowEquipmentName] || !isBareId)) {
           equipmentValue = rowEquipmentName;
         } else if (rowEquipmentName) {
           const found = equipmentData.find(
@@ -516,9 +510,9 @@ const AddendumPreventiveChildCreate = () => {
                     message: "Please enter Short Description",
                   },
                 ]}
-                className="!mb-4"
+              className="!mb-4 md:col-span-2"
               >
-                <FormInput placeholder="Enter short description" />
+                <FormTextArea rows={3} placeholder="Enter short description" />
               </Form.Item>
             </div>
 
@@ -531,9 +525,8 @@ const AddendumPreventiveChildCreate = () => {
                 label="Equipment Name"
                 className="!mb-4"
               >
-                <FormSelect
+                <FormInput
                   placeholder={equipmentLoading ? "Loading..." : "Equipment name"}
-                  options={equipmentOptions}
                   disabled
                 />
               </Form.Item>
@@ -603,7 +596,7 @@ const AddendumPreventiveChildCreate = () => {
             </div>
 
             <Form.Item name="remark" label="Remark" className="!mb-4 md:col-span-2">
-              <FormTextArea rows={4} placeholder="Enter remark..." />
+              <FormTextArea rows={4} placeholder="Enter remark..." disabled />
             </Form.Item>
 
             <Form.Item

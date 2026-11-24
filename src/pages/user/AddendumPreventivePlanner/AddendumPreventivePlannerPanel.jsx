@@ -628,9 +628,19 @@ const AddendumPreventivePlannerPanel = () => {
 
   // Codes (M/Q/H/Y) → full option names ("monthly", "quarterly", …)
     const normalizedFrequency = resolveChildFrequency(rowData, frequency);
+
+    // Always hand the child the equipment NAME (never the DB id). Legacy rows
+    // can still hold the id in equipmentInstrumentName, so resolve it here.
+    const equipment =
+      equipmentMap[String(rowData?.equipmentDbId ?? "")] ||
+      equipmentMap[String(rowData?.equipmentInstrumentName ?? "")];
+    const equipmentName = equipment
+      ? equipment.equipment_name || equipment.instrument_name || equipment.name || ""
+      : rowData?.equipmentInstrumentName || "";
+
     navigate(`/user/addendum-preventive-management-create/13`, {
       state: {
-        rowData,
+        rowData: { ...rowData, equipmentInstrumentName: equipmentName },
         shortDescription: shortDesc,
         processId: 13, // 👈 Static process ID 13
         parentId: recordId,
@@ -864,18 +874,23 @@ const AddendumPreventivePlannerPanel = () => {
                 </span>
               }
               rules={[{ required: true, whitespace: true, message: "Please enter Short Description" }]}
-              className="!mb-4"
+              className="!mb-4 md:col-span-2"
             >
-              <FormInput
+              <FormTextArea
+                rows={3}
                 placeholder="Enter short description"
                 disabled={!isGeneralEditable}
               />
             </Form.Item>
-
-            <Form.Item name="year" label="Year" className="!mb-4">
+          </div>
+          <div className="my-9 h-px w-full bg-slate-200" />
+          <SectionHeader title="ADDENDUM PREVENTIVE INFORMATION" />
+              <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+                <Form.Item name="year" label="Year" className="!mb-4">
               <FormInput
                 placeholder="Enter year"
                 disabled={!isGeneralEditable}
+                type="number"
               />
             </Form.Item>
 
@@ -914,9 +929,8 @@ const AddendumPreventivePlannerPanel = () => {
                 disabled={!isGeneralEditable}
               />
             </Form.Item>
-          </div>
-          <div className="my-9 h-px w-full bg-slate-200" />
-          <SectionHeader title="ADDENDUM PREVENTIVE INFORMATION" />
+            </div>
+
           <div className="mt-5">
             <AddendumPreventivePlannerGrid
               value={preventiveRows}

@@ -458,18 +458,27 @@ const AddendumPreventivePlannerCreate = () => {
                       message: "Please enter Short Description",
                     },
                   ]}
-                  className="!mb-4"
+                  className="!mb-4 md:col-span-2"
                 >
-                  <FormInput placeholder="Enter short description" />
+                  <FormTextArea rows={3} placeholder="Enter short description" />
                 </Form.Item>
 
+                
+
+              
+              </div>
+            )}
+
+            <div className="mt-5">
+              <SectionHeader title="ADDENDUM PREVENTIVE INFORMATION" />
+              <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
                 {/* ✅ NEW: Year (text) */}
                 <Form.Item
                   name="year"
                   label="Year"
                   className="!mb-4"
                 >
-                  <FormInput placeholder="Enter year" />
+                  <FormInput placeholder="Enter year" disabled />
                 </Form.Item>
 
                 {/* ✅ NEW: Block (text) */}
@@ -478,7 +487,7 @@ const AddendumPreventivePlannerCreate = () => {
                   label="Block"
                   className="!mb-4"
                 >
-                  <FormInput placeholder="Enter block" />
+                  <FormInput placeholder="Enter block" disabled />
                 </Form.Item>
 
                 {/* FIELDS - DISABLED ON CREATE */}
@@ -517,11 +526,7 @@ const AddendumPreventivePlannerCreate = () => {
                     disabled
                   />
                 </Form.Item>
-              </div>
-            )}
-
-            <div className="mt-5">
-              <SectionHeader title="ADDENDUM PREVENTIVE INFORMATION" />
+                </div>
 
               <AddendumPreventivePlannerGrid
                 value={preventiveRows}
@@ -539,7 +544,7 @@ const AddendumPreventivePlannerCreate = () => {
                 label="Comments"
                 className="!mb-4 md:col-span-2"
               >
-                <FormTextArea rows={5} placeholder="Enter comments..." />
+                <FormTextArea rows={5} placeholder="Enter comments..." disabled />
               </Form.Item>
 
               <Form.Item

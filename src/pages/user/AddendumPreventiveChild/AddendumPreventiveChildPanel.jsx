@@ -1131,9 +1131,10 @@ const AddendumPreventiveChildPanel = () => {
                   message: "Please enter Short Description",
                 },
               ]}
-              className="!mb-4"
+              className="!mb-4 md:col-span-2"
             >
-              <FormInput
+              <FormTextArea
+              rows={3}
                 placeholder="Enter short description"
                 disabled={!isGeneralEditable}
               />

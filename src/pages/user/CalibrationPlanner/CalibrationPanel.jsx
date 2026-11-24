@@ -1006,6 +1006,9 @@ const handleSaveAndExit = async () => {
               disabled={!isGeneralEditable}
               canCreateChild={canCreateChild}
               showAddButton={false}
+              lockApiFields
+              disableDoneDates
+              disableNextPlannedDate
             />
           </div>
           <Form.Item

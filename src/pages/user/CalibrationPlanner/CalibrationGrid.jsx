@@ -50,6 +50,13 @@ const CalibrationGrid = ({
   canCreateChild = false,
   showAddButton = true,
   pageSize = DEFAULT_PAGE_SIZE, // NEW
+  // Rows are auto-filled from the instrument master API: lock the columns
+  // whose values come from that API so they can't be edited by hand.
+  lockApiFields = false,
+  // Lock the "Calibration Done on" / "Next Calibration Done on" pickers.
+  disableDoneDates = false,
+  // Lock the "Next Planned date" picker.
+  disableNextPlannedDate = false,
 }) => {
   const columns = [
     { key: "equipmentInstrumentName", title: "Instrument Name.", type: "select", placeholder: "Select instrument", required: true, minWidth: 180 },
@@ -255,7 +262,13 @@ const CalibrationGrid = ({
     const { key, type, placeholder, options: colOptions, disabled: columnDisabled } = column;
     const fieldValue = row[key] ?? "";
     const handleChange = (newValue) => updateRow(rowIndex, key, newValue);
-    const isDisabled = disabled || columnDisabled;
+    // Instrument Name always comes from the API; Category is locked only
+    // when the API supplied a value, so a blank one can still be filled in.
+    const isApiLocked =
+      lockApiFields &&
+      (key === "equipmentInstrumentName" || (key === "category" && fieldValue !== ""));
+    const isDisabled = disabled || columnDisabled || isApiLocked;
+    const isDoneDateDisabled = disabled || disableDoneDates;
 
     const commonProps = {
       disabled: isDisabled,
@@ -298,7 +311,7 @@ const CalibrationGrid = ({
             onChange={(date) => updateRow(rowIndex, "calibrationDoneDate", date ? date.format("YYYY-MM-DD") : "")}
             format="DD-MM-YYYY"
             className="!h-8 !w-[140px] !rounded !border-[#D1DBD7] !bg-white !px-2 !text-[10px] !font-medium !text-[#263B35] !shadow-none"
-            disabled={isDisabled}
+            disabled={isDoneDateDisabled}
             disabledDate={(current) => {
               if (!plannedDayjs) return false;
               return current && current.isBefore(plannedDayjs, "day");
@@ -321,7 +334,7 @@ const CalibrationGrid = ({
             onChange={(date) => updateRow(rowIndex, "nextPlannedDate", date ? date.format("YYYY-MM-DD") : "")}
             format="DD-MM-YYYY"
             className="!h-8 !w-[150px] !rounded !border-[#D1DBD7] !bg-white !px-2 !text-[10px] !font-medium !text-[#263B35] !shadow-none"
-            disabled={isDisabled}
+            disabled={isDisabled || disableNextPlannedDate}
           />
           <DatePicker
             value={row.nextCalibrationDoneDate ? dayjs(row.nextCalibrationDoneDate) : null}
@@ -329,7 +342,7 @@ const CalibrationGrid = ({
             onChange={(date) => updateRow(rowIndex, "nextCalibrationDoneDate", date ? date.format("YYYY-MM-DD") : "")}
             format="DD-MM-YYYY"
             className="!h-8 !w-[150px] !rounded !border-[#D1DBD7] !bg-white !px-2 !text-[10px] !font-medium !text-[#263B35] !shadow-none"
-            disabled={isDisabled}
+            disabled={isDoneDateDisabled}
             disabledDate={(current) => {
               if (!nextPlannedDayjs) return false;
               return current && current.isBefore(nextPlannedDayjs, "day");

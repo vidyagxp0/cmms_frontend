@@ -334,7 +334,7 @@ const instrumentOptions = useMemo(
                           date || null
                         )
                       }
-                      disabled={disabled}
+                      disabled
                       className="!h-8 !w-full !px-1 !text-[10px] !font-medium !text-[#263B35] hover:bg-[#F3F6F4] cursor-pointer disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
                     />
                   </td>

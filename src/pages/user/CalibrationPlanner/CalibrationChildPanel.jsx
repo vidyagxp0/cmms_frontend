@@ -643,6 +643,21 @@ const CalibrationChildPanel = () => {
     [calibrationDoneDayjs]
   );
 
+  // Mirror the Master Instruments grid's "Calibration Next Due Date" into the
+  // form's "Calibration Next Due Date" field (first row that has a date).
+  // setFieldsValue does not fire onValuesChange, so this won't mark the form dirty.
+  useEffect(() => {
+    const gridNextDue = asArray(calibrationResultTest)
+      .map((row) => toDayjs(row?.calibrationNextDueDate))
+      .find(Boolean);
+    if (!gridNextDue) return;
+
+    const current = toDayjs(form.getFieldValue("nextCalibrationDate"));
+    if (current && current.isSame(gridNextDue, "day")) return;
+
+    form.setFieldsValue({ nextCalibrationDate: gridNextDue });
+  }, [calibrationResultTest, form]);
+
   const systemValues = {
     documentNumber: "SMLJ/ENG/SOP-GEN/005/F08-02",
     documentType: "Formats",

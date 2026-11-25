@@ -47,12 +47,14 @@ dayjs.extend(customParseFormat);
 
 const TABS = [
   { id: "general", label: "General Information", stageId: 13 },
-  { id: "checklist", label: "Checklist" },
   { id: "user-dept-review", label: "Reviewed By (User Department)", stageId: 14 },
+  { id: "checklist", label: "Checklist", stageId: 84  },
   { id: "engineer-review", label: "Reviewed By (Engineering Department)", stageId: 15 },
   { id: "qa-approval", label: "QA Approval", stageId: 16 },
   { id: "activity", label: "Activity Log", stageId: 17 },
 ];
+
+const PM_STAGE_ORDER = [13, 14, 84, 15, 16, 17];
 
 const REQUIRED_FIELDS = [
   { name: "shortDescription", label: "Short Description" },
@@ -441,6 +443,21 @@ const PreventiveMaintenancePanel = () => {
   const qaRemarkWatch = Form.useWatch("qaRemark", form);
   const showQaComments = qaRemarkWatch === "If Any Other";
 
+    const orderedWorkflowStages = useMemo(() => {
+    const orderMap = new Map(
+        PM_STAGE_ORDER.map((id, index) => [id, index])
+    );
+    return [...workflowStages].sort((a, b) => {
+        const orderA =
+            orderMap.get(Number(a.id)) ??
+            Number.MAX_SAFE_INTEGER;
+        const orderB =
+            orderMap.get(Number(b.id)) ??
+            Number.MAX_SAFE_INTEGER;
+        return orderA - orderB;
+    });
+}, [workflowStages]);
+
   useEffect(() => {
     equipmentMapRef.current = equipmentMap;
   }, [equipmentMap]);
@@ -454,6 +471,7 @@ const PreventiveMaintenancePanel = () => {
   const isUserDeptReviewEditable = isStageEditable(14);
   const isEngineerReviewEditable = isStageEditable(15);
   const isQaApprovalEditable = isStageEditable(16);
+  const isChecklistEditable = isStageEditable(84);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -784,29 +802,33 @@ const PreventiveMaintenancePanel = () => {
     fetchPreventiveMaintenceDetail(true);
   }, [fetchPreventiveMaintenceDetail]);
 
-  useEffect(() => {
+useEffect(() => {
     if (!processId) return;
     const fetchStages = async () => {
-      try {
-        setWorkflowLoading(true);
-        const response = await getAllStages(processId);
-        const stages = response?.data?.data || [];
-        const activeStages = stages.filter(
-          (stage) => stage?.is_active !== false
-        );
-        setWorkflowStages(activeStages);
-      } catch (error) {
-        console.error("Failed to fetch workflow stages:", error);
-        toast.error(
-          error?.response?.data?.message || "Failed to load workflow stages."
-        );
-        setWorkflowStages([]);
-      } finally {
-        setWorkflowLoading(false);
-      }
+        try {
+            setWorkflowLoading(true);
+            const response = await getAllStages(processId);
+            const stages = response?.data?.data || [];
+            const activeStages = stages.filter(
+                (stage) => stage?.is_active !== false
+            );
+            setWorkflowStages(activeStages);
+        } catch (error) {
+            console.error(
+                "Failed to fetch workflow stages:",
+                error
+            );
+            toast.error(
+                error?.response?.data?.message ||
+                "Failed to load workflow stages."
+            );
+            setWorkflowStages([]);
+        } finally {
+            setWorkflowLoading(false);
+        }
     };
     fetchStages();
-  }, [processId]);
+}, [processId]);
 
   useEffect(() => {
     if (!activeStageId) {
@@ -1182,7 +1204,7 @@ const handleSaveAndExit = async () => {
     <div className="w-full">
       <div className="mb-2 space-y-2">
         <ProcessStage
-          stages={workflowStages}
+          stages={orderedWorkflowStages}
           activeStageId={activeStageId}
           loading={workflowLoading}
           cancelledStageId={18}
@@ -1351,7 +1373,7 @@ const handleSaveAndExit = async () => {
               </span>
             }
             className="!mb-4">
-              <FormInput placeholder="Location" disabled />
+              <FormInput placeholder="Location"  />
             </Form.Item>
 
             <Form.Item
@@ -1614,7 +1636,7 @@ const handleSaveAndExit = async () => {
                   setChecklistAnswers(answers);
                   if (allowDirtyTrackingRef.current) setIsDirty(true);
                 }}
-                disabled={!isGeneralEditable}
+                disabled={!isChecklistEditable}
                 onSaveAfterEsign={handleSaveAfterEsign}
               />
             )}

@@ -1,16 +1,15 @@
-import React, { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { getAllMasterDepartments } from "../../../services/usersApi/workflowCommonApi";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import { Plus, Trash2, Table2 } from "lucide-react";
 import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import UserModal from "../../../components/common/UserModal/UserModal";
 import CustomScrollContainer from "../../../components/common/CustomScrollbar/CustomScrollContainer";
-
 dayjs.extend(customParseFormat);
-
 const generateRowId = () =>
   `mir_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-
 /* Robust dayjs parser (mirrors the parent's helper) */
 const toDayjs = (val) => {
   if (!val) return null;
@@ -30,11 +29,9 @@ const toDayjs = (val) => {
   const d = dayjs(val);
   return d.isValid() ? d : null;
 };
-
 const MasterInstrumentsGrid = ({
   name = "Master Instruments Details",
   description = "",
-  masterData = [],
   value = [],
   onChange,
   disabled = false,
@@ -46,31 +43,60 @@ const MasterInstrumentsGrid = ({
 }) => {
   const rows = Array.isArray(value) ? value : [];
   const [deleteIndex, setDeleteIndex] = useState(null);
+  const [masterData, setMasterData] = useState([]);
+  const [masterLoading, setMasterLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchMasterInstruments = async () => {
+        try {
+            setMasterLoading(true);
+            const response = await getAllMasterDepartments();
+            if (!isMounted) return;
+            const data = response?.data?.data;
+            setMasterData(Array.isArray(data) ? data : []);
+        } catch (error) {
+            if (!isMounted) return;
+            setMasterData([]);
+            console.error(
+                "Failed to fetch master instruments:",
+                error
+            );
+            toast.error(
+                error?.response?.data?.message ||
+                "Failed to load master instruments."
+            );
+        } finally {
+            if (isMounted) {
+                setMasterLoading(false);
+            }
+        }
+    };
+    fetchMasterInstruments();
+    return () => {
+        isMounted = false;
+    };
+}, []);
 
   /* Dropdown options — display instrument_name, store id as value */
-/* Dropdown options — display "Name (ID No.)", store id as value */
-const instrumentOptions = useMemo(
-  () =>
-    (masterData || []).map((item) => {
-      const name = item.instrument_name || `Instrument ${item.id}`;
-      const idNo = item.instrument_id_no;
-      return {
+
+  const instrumentOptions = useMemo(() => {
+    return masterData.map((item) => ({
         value: String(item.id),
-        label: idNo ? `${name} (${idNo})` : name,
-        // extra field so the filter can also match on ID
-        searchText: `${name} ${idNo || ""}`.toLowerCase(),
-      };
-    }),
-  [masterData]
-);
+        label: `${item.instrument_name} (${item.instrument_id_no})`,
+        searchText: `${item.instrument_name} ${item.instrument_id_no}`.toLowerCase(),
+    }));
+}, [masterData]);
+
 
   const masterById = useMemo(() => {
-    const m = {};
-    (masterData || []).forEach((it) => {
-      m[String(it.id)] = it;
-    });
-    return m;
-  }, [masterData]);
+    return Object.fromEntries(
+        masterData.map((item) => [
+            String(item.id),
+            item,
+        ])
+    );
+}, [masterData]);
 
   /* Legacy rows may store instrument_name in `name` instead of the id.
      Build a name → item map so the dropdown still resolves correctly. */
@@ -81,18 +107,16 @@ const instrumentOptions = useMemo(
     });
     return m;
   }, [masterData]);
-
   const resolveSelectValue = useCallback(
     (row) => {
       if (!row || !row.name) return undefined;
       const str = String(row.name);
       if (masterById[str]) return str;
       const found = masterByName[str];
-      return found ? String(found.id) : undefined;
+      return found ? String(found.id) : str;
     },
     [masterById, masterByName]
   );
-
   const addRow = () => {
     if (disabled) return;
     if (maxRows !== undefined && rows.length >= maxRows) return;
@@ -109,51 +133,42 @@ const instrumentOptions = useMemo(
       },
     ]);
   };
-
   /* Select instrument → auto-fill IdNo, accuracy, range */
-  const updateRowField = useCallback(
+ const updateRowField = useCallback(
     (rowIndex, key, newValue) => {
-      if (disabled) return;
-      const updated = [...rows];
-      const row = { ...updated[rowIndex] };
+        if (disabled) return;
 
-      if (key === "name") {
-        const item = masterById[String(newValue)];
-        row.name = newValue;
-        if (item) {
-          row.IdNo = item.instrument_id_no || "";
-          row.accuracy = item.accuracy || "";
-          row.range = item.instrument_range || "";
+        const updated = [...rows];
+
+        const row = { ...updated[rowIndex] };
+
+        if (key === "name") {
+            const item = masterById[String(newValue)];
+            row.name = newValue ?? "";
+            row.IdNo = item?.instrument_id_no ?? "";
+            row.accuracy = item?.accuracy ?? "";
+            row.range = item?.instrument_range ?? "";
+            // row.calibrationNextDueDate = null;
         } else {
-          row.IdNo = "";
-          row.accuracy = "";
-          row.range = "";
+            row[key] = newValue;
         }
-      } else {
-        row[key] = newValue;
-      }
-
-      updated[rowIndex] = row;
-      onChange(updated);
+        updated[rowIndex] = row;
+        onChange(updated);
     },
     [disabled, masterById, onChange, rows]
-  );
+);
 
   const handleDeleteClick = (idx) => {
     if (disabled || rows.length <= minRows) return;
     setDeleteIndex(idx);
   };
-
   const confirmDelete = () => {
     if (deleteIndex === null) return;
     onChange(rows.filter((_, i) => i !== deleteIndex));
     setDeleteIndex(null);
   };
-
   const cancelDelete = () => setDeleteIndex(null);
-
   const totalCols = 8;
-
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
       {/* Header */}
@@ -173,7 +188,6 @@ const instrumentOptions = useMemo(
             ) : null}
           </div>
         </div>
-
         {allowAdd && (
           <button
             type="button"
@@ -192,7 +206,6 @@ const instrumentOptions = useMemo(
           </button>
         )}
       </div>
-
       <CustomScrollContainer
         maxHeight="480px"
         direction="both"
@@ -245,7 +258,6 @@ const instrumentOptions = useMemo(
               </th>
             </tr>
           </thead>
-
           <tbody>
             {rows.length === 0 ? (
               <tr>
@@ -267,16 +279,16 @@ const instrumentOptions = useMemo(
                       {rowIndex + 1}.
                     </span>
                   </td>
-
                   <td className="border border-[#D5DFDB] p-0 align-middle">
                     <Select
                       value={resolveSelectValue(row)}
-                      placeholder="Select instrument"
+                      placeholder={masterLoading ? "Loading instruments..." : "Select instrument"}
+                      loading={masterLoading}
                       options={instrumentOptions}
                       onChange={(val) =>
                         updateRowField(rowIndex, "name", val)
                       }
-                      disabled={disabled}
+                      disabled={disabled || masterLoading}
                      showSearch
                     optionFilterProp="searchText"
                     filterOption={(input, option) =>
@@ -285,7 +297,6 @@ const instrumentOptions = useMemo(
                       className="!w-full [&_.ant-select-selector]:!h-8 [&_.ant-select-selector]:!rounded-none [&_.ant-select-selector]:!border-transparent [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-2 [&_.ant-select-selector]:!shadow-none [&_.ant-select-selection-item]:!flex [&_.ant-select-selection-item]:!items-center [&_.ant-select-selection-item]:!text-[11px] [&_.ant-select-selection-item]:!font-medium [&_.ant-select-selection-item]:!text-[#263B35] [&_.ant-select-selection-placeholder]:!flex [&_.ant-select-selection-placeholder]:!items-center [&_.ant-select-selection-placeholder]:!text-[11px] [&_.ant-select-selection-placeholder]:!text-[#9AA6A1]"
                     />
                   </td>
-
                   <td className="border border-[#D5DFDB] p-0 align-middle">
                     <Input
                       value={row.IdNo || ""}
@@ -293,7 +304,6 @@ const instrumentOptions = useMemo(
                       className="!h-8 !w-full !rounded-none !border-transparent !bg-transparent !px-2 !text-[11px] !font-medium !text-[#263B35] !shadow-none disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
                     />
                   </td>
-
                   <td className="border border-[#D5DFDB] p-0 align-middle">
                     <Input
                       value={row.accuracy || ""}
@@ -301,7 +311,6 @@ const instrumentOptions = useMemo(
                       className="!h-8 !w-full !rounded-none !border-transparent !bg-transparent !px-2 !text-[11px] !font-medium !text-[#263B35] !shadow-none disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
                     />
                   </td>
-
                   <td className="border border-[#D5DFDB] p-0 align-middle">
                     <Input
                       value={row.range || ""}
@@ -309,7 +318,6 @@ const instrumentOptions = useMemo(
                       className="!h-8 !w-full !rounded-none !border-transparent !bg-transparent !px-2 !text-[11px] !font-medium !text-[#263B35] !shadow-none disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
                     />
                   </td>
-
                   <td className="border border-[#D5DFDB] p-0 align-middle">
                     <DatePicker
                       value={toDayjs(row.calibrationdoneDATE)}
@@ -320,7 +328,6 @@ const instrumentOptions = useMemo(
                       className="!h-8 !w-full !px-1 !text-[10px] !font-medium !text-[#263B35] disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
                     />
                   </td>
-
                   <td className="border border-[#D5DFDB] p-0 align-middle">
                     <DatePicker
                       value={toDayjs(row.calibrationNextDueDate)}
@@ -338,7 +345,6 @@ const instrumentOptions = useMemo(
                       className="!h-8 !w-full !px-1 !text-[10px] !font-medium !text-[#263B35] hover:bg-[#F3F6F4] cursor-pointer disabled:!cursor-not-allowed disabled:!bg-[#F9FAF9] disabled:!text-[#263B35]"
                     />
                   </td>
-
                   <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
                     <button
                       type="button"
@@ -360,7 +366,6 @@ const instrumentOptions = useMemo(
           </tbody>
         </table>
       </CustomScrollContainer>
-
       <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">
         <span className="text-[10px] font-medium text-[#899690]">
           {rows.length} {rows.length === 1 ? "row" : "rows"}
@@ -371,7 +376,6 @@ const instrumentOptions = useMemo(
           </span>
         )}
       </div>
-
       <UserModal
         isOpen={deleteIndex !== null}
         onClose={cancelDelete}
@@ -405,5 +409,4 @@ const instrumentOptions = useMemo(
     </div>
   );
 };
-
 export default MasterInstrumentsGrid;

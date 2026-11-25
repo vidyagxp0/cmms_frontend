@@ -4,7 +4,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import ProcessStage from "../../../components/common/ProcesStageTabs/ProcessStage";
 import ProcessActivities from "../../../components/common/ProcesStageTabs/ProcessActivities";
@@ -18,7 +17,6 @@ import CalibrationGrid from "./CalibrationGrid";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
 import "../../../components/common/ProcesStageTabs/Scrollerbar.css";
 import "../../../components/ui/disabledFields.css";
-
 import { getProfile } from "../../../services/authApi";
 import { executeCalibrationActivity, getCalibrationDetail, getCalibrationUser, updateCalibration } from "../../../services/usersApi/calibrationApi";
 import { addMultipleAttachments, addSingleAttachment } from "../../../components/common/Attachment/attachmentApi";
@@ -35,9 +33,7 @@ import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
 import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
 import { number } from "zod";
-
 dayjs.extend(customParseFormat);
-
 const TABS = [
   { id: "general", label: "General Information", stageId: 1 },
   { id: "hod", label: "Reviewed By HOD/Designee (Engineering)", stageId: 2 },
@@ -45,7 +41,6 @@ const TABS = [
   { id: "qa-review", label: "QA Approval Review", stageId: 4 },
   { id: "activity", label: "Activity Log", stageId: 5 },
 ];
-
 const getProcessValue = (processData = [], key) => {
   if (Array.isArray(processData)) {
     const field = processData.find((item) => item?.key === key);
@@ -58,7 +53,6 @@ const getProcessValue = (processData = [], key) => {
   }
   return "";
 };
-
 const buildGridPayload = (rows = [], equipmentMap = {}) => {
   return rows.map((row, index) => {
     const rowData = { row_id: row.row_id ?? index + 1 };
@@ -77,7 +71,6 @@ const buildGridPayload = (rows = [], equipmentMap = {}) => {
     return rowData;
   });
 };
-
 const buildRowFromInstrument = (item = {}) => ({
   equipmentInstrumentName: item.id ?? "",
   equipmentInstrumentId: item.instrument_id_no || "",
@@ -94,7 +87,6 @@ const buildRowFromInstrument = (item = {}) => ({
   calibrationDoneDate: "",
   remark: "",
 });
-
 const buildProcessData = (values, systemFields) => [
   ...systemFields.map((field) => ({ key: field.name, label: field.label, value: values?.[field.name] || "" })),
   {
@@ -129,18 +121,14 @@ const buildProcessData = (values, systemFields) => [
   { key: "cancellation_remark", label: "Cancellation Remark", value: values?.cancellationRemark || "" },
   { key: "cancellation_attachment", label: "Cancellation Attachment", value: [] },
 ];
-
 const validateCalibrationForm = (form, storedRequired, currentType) => {
   const values = form.getFieldsValue();
-
   const fieldsToValidate = [
     { name: "shortDescription", label: "Short Description" },
   ];
-
   if (currentType === "Field Instrument") {
     fieldsToValidate.push({ name: "selectedDeptId", label: "Select Department" });
   }
-
   return fieldsToValidate.filter((field) => {
     let value = values?.[field.name];
     if (value === undefined || value === null || value === "") value = storedRequired[field.name];
@@ -148,7 +136,6 @@ const validateCalibrationForm = (form, storedRequired, currentType) => {
     return value === undefined || value === null || value === "";
   });
 };
-
 const CreateCalibrationPanel = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
@@ -169,7 +156,6 @@ const CreateCalibrationPanel = () => {
   const [equipmentMap, setEquipmentMap] = useState({});
   const equipmentMapRef = useRef(equipmentMap);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
-  const [allMasterData, setAllMasterData] = useState([]);
   const [initiator, setInitiator] = useState("");
   const [initiatorId, setInitiatorId] = useState("");
   const [loginUserId, setLoginUserId] = useState("");
@@ -186,71 +172,54 @@ const CreateCalibrationPanel = () => {
   const { recordId } = useParams();
   const isFetchingRef = useRef(false);
   const requiredValuesRef = useRef({ shortDescription: "", selectedDeptId: "" });
-
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
-
   const [isDirty, setIsDirty] = useState(false);
   const allowDirtyTrackingRef = useRef(false);
-
   const { showModal, setShowModal, confirmLeave, cancelLeave } =
     useUnsavedChanges(isDirty);
-
   const selectedDeptIdWatch = Form.useWatch("selectedDeptId", form);
-
   const autoPopulateRowsRef = useRef(false);
-
   useEffect(() => { equipmentMapRef.current = equipmentMap; }, [equipmentMap]);
-
   const REQUIRED_FIELDS = []
-
   useEffect(() => {
     if (!equipmentMap || Object.keys(equipmentMap).length === 0) return;
-
     setCalibrationRows((prev) => {
       let changed = false;
       const next = prev.map((row) => {
         const current = row.equipmentInstrumentName;
         if (!current) return row;
         if (equipmentMap[current]) return row;
-
         const match = Object.values(equipmentMap).find(
           (eq) => eq.instrument_name === current
         );
         if (!match) return row;
-
         changed = true;
         return { ...row, equipmentInstrumentName: match.id };
       });
       return changed ? next : prev;
     });
   }, [equipmentMap]);
-
   const isStageEditable = (stageId) => Number(activeStageId) === Number(stageId) && canPerformActivity === true && permissionsLoading === false;
   const isGeneralEditable = isStageEditable(1);
   const isHodEditable = isStageEditable(2);
   const isUserDeptEditable = isStageEditable(3);
   const isQaReviewEditable = isStageEditable(4);
   const canCreateChild = Number(activeStageId) === 5 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
-
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const response = await getProfile();
         const profile = response?.data?.data;
-
         if (!profile) return;
-
         setLoginUserId(profile?.id || "");
         setUserRoles(Array.isArray(profile?.roles) ? profile.roles : []);
       } catch (error) {
         console.error("Failed to fetch profile:", error);
       }
     };
-
     fetchProfile();
   }, []);
-
   useEffect(() => {
     const fetchDepartments = async () => {
       setDepartmentsLoading(true);
@@ -267,50 +236,37 @@ const CreateCalibrationPanel = () => {
     };
     fetchDepartments();
   }, []);
-
   useEffect(() => {
     let isCurrent = true;
-
     const fetchInstruments = async () => {
       setEquipmentOptions([]);
       setEquipmentMap({});
       equipmentMapRef.current = {};
-      setAllMasterData([]);
-
       const requiresDept = selectedInstrumentType === "Field Instrument";
-
       if (!selectedInstrumentType || (requiresDept && !selectedDeptIdWatch)) {
         setEquipmentLoading(false);
         return;
       }
-
       const typeMap = {
         "Master Instrument": "instrument_masters",
         "Field Instrument": "field_instrument_master",
         "Spare Instrument": "spare_instrument_master",
       };
-
       const apiType = typeMap[selectedInstrumentType];
-
       if (!apiType) {
         setEquipmentLoading(false);
         return;
       }
-
       try {
         setEquipmentLoading(true);
-
         let response;
         if (requiresDept) {
           response = await getAllDepartmentMasters(selectedDeptIdWatch, apiType);
         } else {
           response = await getAllDepartmentMastersGlobal(apiType);
         }
-
         if (!isCurrent) return;
-
         const data = response?.data?.data || [];
-
         const normalizedData = data.map((item) => ({
           ...item,
           instrument_name:
@@ -348,28 +304,22 @@ const CreateCalibrationPanel = () => {
             item.calibrationTestPoints ||
             "",
         }));
-
         const options = normalizedData.map((item) => ({
           value: item.id,
           label: item.instrument_name,
         }));
-
         const map = {};
         normalizedData.forEach((item) => {
           map[item.id] = item;
         });
-
         setEquipmentOptions(options);
         setEquipmentMap(map);
-        setAllMasterData(normalizedData)
         equipmentMapRef.current = map;
-
         if (autoPopulateRowsRef.current) {
           setCalibrationRows(normalizedData.map(buildRowFromInstrument));
         }
       } catch (error) {
         if (!isCurrent) return;
-
         console.error("Failed to fetch instruments:", error);
         toast.error(
           error?.response?.data?.message ||
@@ -382,14 +332,11 @@ const CreateCalibrationPanel = () => {
         }
       }
     };
-
     fetchInstruments();
-
     return () => {
       isCurrent = false;
     };
   }, [selectedInstrumentType, selectedDeptIdWatch]);
-
   useEffect(() => {
     const fetchCalibrationUsers = async () => {
       try {
@@ -407,7 +354,6 @@ const CreateCalibrationPanel = () => {
     };
     fetchCalibrationUsers();
   }, []);
-
   const fetchCalibrationDetail = useCallback(async (isInitial = false) => {
     if (!recordId) { toast.error("Calibration Planner record ID is missing."); return; }
     if (isFetchingRef.current) return;
@@ -447,30 +393,24 @@ const CreateCalibrationPanel = () => {
       const cancellationRemark = getProcessValue(processData, "cancellation_remark");
       const cancellationAttachment = getProcessValue(processData, "cancellation_attachment");
       const instrumentType = getProcessValue(processData, "instrumentType");
-
       setSelectedInstrumentType(instrumentType || "");
-
       const backendInitiatorId =
         responseData?.initiator?.id ??
         responseData?.initiator_id ??
         "";
-
       const backendInitiatorName =
         responseData?.initiator?.name ??
         processInitiator ??
         "";
-
       setInitiatorId(backendInitiatorId);
       setInitiator(backendInitiatorName);
       setDepartmentId(responseData?.department?.id || responseData?.department_id || "");
       setInitiationDepartment(responseData?.department?.name || processDepartment || "");
       setDateOfInitiation(processDateOfInitiation || responseData?.initiation_date || "");
-
       requiredValuesRef.current = {
         shortDescription: shortDescription || "",
         selectedDeptId: masterDepartmentId || null,
       };
-
       form.setFieldsValue({
         recordNumber,
         documentNumber,
@@ -497,7 +437,6 @@ const CreateCalibrationPanel = () => {
         cancellationRemark: cancellationRemark || "",
         cancellationAttachment: cancellationAttachment || [],
       });
-
       const currentEquipmentMap = equipmentMapRef.current;
       const gridRows = (responseData?.grid_records || []).flatMap((record) => record?.grid_data || []);
       const rawRows = gridRows.map((item) => {
@@ -511,7 +450,6 @@ const CreateCalibrationPanel = () => {
         });
         return row;
       });
-
       const normalizedRows = rawRows.map((row) => {
         const newRow = { ...row };
         newRow.monthlyCalibration = row.monthlyCalibration && typeof row.monthlyCalibration === "object" ? row.monthlyCalibration : {};
@@ -539,9 +477,7 @@ const CreateCalibrationPanel = () => {
                 });
                }
   }, [recordId, form]);
-
   useEffect(() => { fetchCalibrationDetail(true); }, [fetchCalibrationDetail]);
-
   useEffect(() => {
     if (!processId) return;
     const fetchStages = async () => {
@@ -561,7 +497,6 @@ const CreateCalibrationPanel = () => {
     };
     fetchStages();
   }, [processId]);
-
   useEffect(() => {
     if (!activeStageId) { setActivities([]); setActivitiesLoading(false); return; }
     const fetchActivities = async () => {
@@ -578,7 +513,6 @@ const CreateCalibrationPanel = () => {
     };
     fetchActivities();
   }, [activeStageId]);
-
   const fetchPermissions = useCallback(async () => {
     if (!recordId) { setCanPerformActivity(false); setPermissionsLoading(false); return; }
     try {
@@ -592,9 +526,7 @@ const CreateCalibrationPanel = () => {
       toast.error(error?.response?.data?.message || "Failed to check activity permissions.");
     } finally { setPermissionsLoading(false); }
   }, [recordId]);
-
   useEffect(() => { fetchPermissions(); }, [fetchPermissions]);
-
   const fetchActivityLogs = useCallback(async () => {
     if (!recordId) { setActivityLogs([]); return; }
     try {
@@ -607,18 +539,15 @@ const CreateCalibrationPanel = () => {
       setActivityLogs([]);
     } finally { setActivityLogsLoading(false); }
   }, [recordId, processId]);
-
   useEffect(() => {
     if (!processId) return;
     fetchActivityLogs();
   }, [processId, fetchActivityLogs]);
-
   useEffect(() => {
     if (!activeStageId) return;
     const matchingTab = TABS.find((tab) => Number(tab.stageId) === Number(activeStageId));
     if (matchingTab) setActiveTab(matchingTab.id);
   }, [activeStageId]);
-
   const systemFields = [
     { name: "documentNumber", label: "Document Number", value: form.getFieldValue("documentNumber") || "" },
     { name: "documentType", label: "Document Type", value: form.getFieldValue("documentType") || "" },
@@ -627,15 +556,13 @@ const CreateCalibrationPanel = () => {
     { name: "dateOfInitiation", label: "Date of Initiation", value: dateOfInitiation },
     { name: "initiationDepartment", label: "Initiation Department", value: initiationDepartment },
   ];
-
   const handleViewChild = (rowIndex, rowData) => {
     const shortDesc = form.getFieldValue("shortDescription") || "";
     const rowId = rowIndex + 1;
     navigate(`/user/calibration-management-create/${5}/${recordId}`, {
-      state: { rowData, shortDescription: shortDesc, processId: 5, parentId: recordId, rowId, childType: "calibration-child", allMasterData },
+      state: { rowData: { ...rowData, equipmentInstrumentName: equipmentMapRef.current[rowData.equipmentInstrumentName]?.instrument_name || rowData.equipmentInstrumentName }, shortDescription: shortDesc, processId: 5, parentId: recordId, rowId, childType: "calibration-child" },
     });
   };
-
   const handleSave = async () => {
     if (isSaving || isLoading || usersLoading) return;
     const missingFields = validateCalibrationForm(form, requiredValuesRef.current, selectedInstrumentType);
@@ -648,37 +575,29 @@ const CreateCalibrationPanel = () => {
     }
     form.submit();
   };
-
   const handleSaveBeforeActivity = async () => {
     if (isSaving || isLoading || usersLoading) {
         return false;
     }
-
     const missingFields = validateCalibrationForm(
         form,
         requiredValuesRef.current,
         selectedInstrumentType
     );
-
     if (missingFields.length > 0) {
         const missingFieldNames = missingFields
             .map((field) => field.label)
             .join(", ");
-
         toast.error(`Required fields missing: ${missingFieldNames}`);
-
         form.setFields(
             missingFields.map((field) => ({
                 name: field.name,
                 errors: [`${field.label} is required`],
             }))
         );
-
         setActiveTab("general");
-
         return false;
     }
-
     try {
         const values = await form.validateFields();
         return await handleSubmit(values);
@@ -690,7 +609,6 @@ const CreateCalibrationPanel = () => {
         return false;
     }
 };
-
   const handleSubmit = async (values) => {
     if (isSaving || !recordId) return;
     try {
@@ -729,7 +647,6 @@ const CreateCalibrationPanel = () => {
       return false;
     } finally { setIsSaving(false); }
   };
-
   const handleActivitySuccess = async () => {
     try {
       const values = form.getFieldsValue(true);
@@ -742,7 +659,6 @@ const CreateCalibrationPanel = () => {
       }
     } catch (error) { console.error("Failed to save calibration after activity:", error); }
   };
-
   const handleCancel = () => {
     if (isSaving) return;
     if (isDirty) {
@@ -751,18 +667,14 @@ const CreateCalibrationPanel = () => {
   }
     navigate("/user/engineering-dashboard");
   };
-
-
   const handleLeaveWithoutSaving = () => {
   setIsDirty(false);
   confirmLeave();
   navigate("/user/engineering-dashboard", { replace: true });
 };
-
 const handleSaveAndExit = async () => {
   if (isSaving) return;
   setShowModal(false);
-
   const missingFields = validateCalibrationForm(
     form,
     requiredValuesRef.current,
@@ -780,7 +692,6 @@ const handleSaveAndExit = async () => {
     setActiveTab("general");
     return;
   }
-
   try {
     const values = await form.validateFields();
     const ok = await handleSubmit(values);
@@ -793,7 +704,6 @@ const handleSaveAndExit = async () => {
     if (firstError) toast.error(firstError);
   }
 };
-
   if (isLoading) {
     return (
       <div className="w-full space-y-6">
@@ -802,7 +712,6 @@ const handleSaveAndExit = async () => {
       </div>
     );
   }
-
   return (
     <div className="w-full">
       <div className="mb-2 space-y-2">
@@ -832,11 +741,9 @@ const handleSaveAndExit = async () => {
           </div>
         </div>
       </div>
-
       <div className="mb-6">
         <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
-
       <Form
         form={form}
         preserve={true}
@@ -874,7 +781,6 @@ const handleSaveAndExit = async () => {
             >
               <FormTextArea  placeholder="Enter short description" disabled={!isGeneralEditable} rows={3} />
             </Form.Item>
-
           </div>
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="CALIBRATION INFORMATION" />
@@ -895,7 +801,6 @@ const handleSaveAndExit = async () => {
                   type="number"
                 />
               </Form.Item>
-
               <Form.Item
                 name="block"
                 label={
@@ -911,7 +816,6 @@ const handleSaveAndExit = async () => {
                   disabled={!isGeneralEditable}
                 />
               </Form.Item>
-
               <Form.Item
                 name="area"
                 label={
@@ -927,7 +831,6 @@ const handleSaveAndExit = async () => {
                   disabled={!isGeneralEditable}
                 />
               </Form.Item>
-
               <Form.Item
                 name="instrumentType"
                 label={
@@ -948,7 +851,6 @@ const handleSaveAndExit = async () => {
                     autoPopulateRowsRef.current = Boolean(nextType);
                     setSelectedInstrumentType(nextType);
                     setCalibrationRows([]);
-
                     if (nextType !== "Field Instrument") {
                       form.setFieldsValue({ selectedDeptId: null });
                     }
@@ -960,7 +862,6 @@ const handleSaveAndExit = async () => {
                   ]}
                 />
               </Form.Item>
-
             {selectedInstrumentType === "Field Instrument" && (
               <Form.Item
                 name="selectedDeptId"
@@ -988,7 +889,6 @@ const handleSaveAndExit = async () => {
                 />
               </Form.Item>
             )}
-
           </div>
           <div className="mt-5">
             <CalibrationGrid
@@ -1043,7 +943,6 @@ const handleSaveAndExit = async () => {
             />
           </Form.Item>
         </section>
-
         <section style={{ display: activeTab === "hod" ? "block" : "none" }}>
           <SectionHeader title="HOD / DESIGNEE REVIEW (ENGINEERING DEPT)" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -1075,7 +974,6 @@ const handleSaveAndExit = async () => {
             </Form.Item>
           </div>
         </section>
-
         {/* =====================================================
             USER DEPT REVIEW — Select User Department
         ===================================================== */}
@@ -1133,7 +1031,6 @@ const handleSaveAndExit = async () => {
             </Form.Item>
           </div>
         </section>
-
         <section style={{ display: activeTab === "qa-review" ? "block" : "none" }}>
           <SectionHeader title="QA REVIEW" />
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -1165,10 +1062,8 @@ const handleSaveAndExit = async () => {
             </Form.Item>
           </div>
         </section>
-
         {/* Cancellation tab removed — cancelled stage is still indicated via
             cancelledStageId={6} on <ProcessStage /> */}
-
         <section style={{ display: activeTab === "activity" ? "block" : "none" }}>
           <SectionHeader title="ACTIVITY LOG" />
           <div className="mt-5 space-y-4">
@@ -1209,7 +1104,6 @@ const handleSaveAndExit = async () => {
           </div>
         </section>
       </Form>
-
       <FloatingActionButtons
         onSave={handleSave}
         onCancel={handleCancel}
@@ -1217,7 +1111,6 @@ const handleSaveAndExit = async () => {
         saveLabel="Update"
         cancelLabel="Cancel"
       />
-
       <UnsavedChangesModal
         open={showModal}
         isSaving={isSaving}
@@ -1228,5 +1121,4 @@ const handleSaveAndExit = async () => {
     </div>
   );
 };
-
 export default CreateCalibrationPanel;

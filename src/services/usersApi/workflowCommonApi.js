@@ -47,3 +47,7 @@ export const getRecordNotifications = (params = {}) => {
         `/user/record-notifications${query ? `?${query}` : ""}`
     );
 };
+
+//Fetch Master Deprtment APi
+export const getAllMasterDepartments = () =>
+    api.get("/user/all-equipment-masters");

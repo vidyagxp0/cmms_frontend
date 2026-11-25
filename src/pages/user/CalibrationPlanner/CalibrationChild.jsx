@@ -5,7 +5,6 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-
 import ProcessTabs from "../../../components/common/ProcesStageTabs/ProcessTabs";
 import SectionHeader from "../../../components/common/SectionHeader/SectionHeader";
 import FormInput from "../../../components/common/Form/FormInput";
@@ -14,9 +13,9 @@ import FormTextArea from "../../../components/common/Form/FormTextArea";
 import FormDisabledInput from "../../../components/common/Form/FormDisabledInput";
 import FloatingActionButtons from "../../../components/ui/FloatingActionButtons";
 import Skeleton from "../../../components/common/Skeleton/Skeleton";
+import MasterInstrumentsGrid from "./MasterInstrumentsGrid";
 import UserDynamicGrid from "../../../components/common/DataTable/UserDynamicGrid";
-import { CALIBRATED_BY_COLUMNS, CALIBRATION_RESULT_GRID } from "./calibrationColumn";
-
+import { CALIBRATED_BY_COLUMNS } from "./calibrationColumn";
 import { getProfile } from "../../../services/authApi";
 import { getCalibrationUser, getAllEquipmentData, addCalibrationChild } from "../../../services/usersApi/calibrationApi";
 import FormAttachment from "../../../components/common/Attachment/FormAttachment";
@@ -25,17 +24,13 @@ import { getRecordNumber } from "../../../services/usersApi/workflowCommonApi";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
 import { useUnsavedChanges } from "../../../components/unSavedChange/useUnsavedChanges";
 import UnsavedChangesModal from "../../../components/unSavedChange/UnsavedChangesModal";
-
 dayjs.extend(customParseFormat);
-
 const TABS = [
   { id: "management", label: "General Information" },
   { id: "implementor", label: "HOD / Designee Review" },
   { id: "qa-review", label: "QA Approval Review" },
 ];
-
 const REQUIRED_FIELDS = [];
-
 const SYSTEM_FIELDS = [
   { key: "documentNumber", label: "Document Number" },
   { key: "documentType", label: "Document Type" },
@@ -44,7 +39,6 @@ const SYSTEM_FIELDS = [
   { key: "dateOfInitiation", label: "Date of Initiation" },
   { key: "initiationDepartment", label: "Initiation Department" },
 ];
-
 const FIELD_LABELS = {
   shortDescription: "Short Description",
   previousCalibrationDate: "Calibration Done Date",
@@ -64,22 +58,18 @@ const FIELD_LABELS = {
   comments: "Remarks",
   attachment: "Attachment",
 };
-
 // ✅ FIXED toDayjs — checks clone method BEFORE isDayjs to handle serialized state
 const toDayjs = (val) => {
   if (!val) return null;
-  
   // Serialized dayjs object from navigate() state — has $d but NO clone method
   if (typeof val === "object" && val.$d !== undefined && typeof val.clone !== "function") {
     const parsed = dayjs(val.$d);
     return parsed.isValid() ? parsed : null;
   }
-  
   // Real dayjs instance
   if (dayjs.isDayjs(val) && typeof val.clone === "function") {
     return val.isValid() ? val.clone() : null;
   }
-  
   // String values
   if (typeof val === "string") {
     const trimmed = val.trim();
@@ -91,12 +81,10 @@ const toDayjs = (val) => {
     const generic = dayjs(trimmed);
     return generic.isValid() ? generic : null;
   }
-  
   // Fallback: Date, number, etc.
   const d = dayjs(val);
   return d.isValid() ? d : null;
 };
-
 const normalizeGridRows = (rows = []) => {
   return rows.map((row, index) => {
     const rowData = { row_id: index + 1 };
@@ -109,7 +97,6 @@ const normalizeGridRows = (rows = []) => {
     return rowData;
   });
 };
-
 const buildChildProcessData = (values, systemValues) => {
   const processData = SYSTEM_FIELDS.map((field) => ({ key: field.key, label: field.label, value: systemValues[field.key] || "" }));
   const fieldsToInclude = [
@@ -125,7 +112,6 @@ const buildChildProcessData = (values, systemValues) => {
   });
   return processData;
 };
-
 const CalibrationChild = () => {
   const { processId: urlProcessId } = useParams();
   const [activeTab, setActiveTab] = useState("management");
@@ -134,10 +120,9 @@ const CalibrationChild = () => {
   const [form] = Form.useForm();
   const location = useLocation();
   const navigate = useNavigate();
-  const { rowData, shortDescription: parentShortDesc, processId: passedProcessId, parentId, rowId: parentRowId, childType, allMasterData: passedAllMasterData } = location.state || {};
+  const { rowData, shortDescription: parentShortDesc, processId: passedProcessId, parentId, rowId: parentRowId, childType } = location.state || {};
   const processId = passedProcessId || urlProcessId;
   const { processName, siteName } = location.state || {};
-
   const [hodUsers, setHodUsers] = useState([]);
   const [qaReviewers, setQaReviewers] = useState([]);
   const [qaApprovers, setQaApprovers] = useState([]);
@@ -154,25 +139,12 @@ const CalibrationChild = () => {
   const [recordNumber, setRecordNumber] = useState("");
   const [dateOfInitiation, setDateOfInitiation] = useState("");
   const [formInitialValues, setFormInitialValues] = useState({});
-  const [allMasterData, setAllMasterData] = useState([])
-
   const [isDirty, setIsDirty] = useState(false);
   const allowDirtyTrackingRef = useRef(false); // suppress during initial load
-
   const { showModal, setShowModal, confirmLeave, cancelLeave } =
   useUnsavedChanges(isDirty);
-
-
-  useEffect(() => {
-  if (Array.isArray(passedAllMasterData) && passedAllMasterData.length > 0) {
-    setAllMasterData(passedAllMasterData);
-  }
-}, [passedAllMasterData]);
-
-
 useEffect(() => {
   let isMounted = true;
-
   if (!rowData) {
     toast.error("No data provided for this calibration item.");
     setIsLoading(false);
@@ -181,20 +153,17 @@ useEffect(() => {
     navigate(-1);
     return;
   }
-
   const loadInitialData = async () => {
     setIsLoading(true);
     setEquipmentLoading(true);
     setUsersLoading(true);
     allowDirtyTrackingRef.current = true;
-
     let profileName = "";
     let profileId = "";
     let profileDeptId = "";
     let profileDeptName = "";
     const now = dayjs().format("DD/MM/YYYY HH:mm:ss");
     let recNum = "";
-
     try {
       const [profileRes, recordNumRes, equipmentRes, usersRes] = await Promise.allSettled([
         getProfile(),
@@ -202,9 +171,7 @@ useEffect(() => {
         getAllEquipmentData(),
         getCalibrationUser(),
       ]);
-
       if (!isMounted) return;
-
       // ---------- Profile ----------
       if (profileRes.status === "fulfilled" && profileRes.value?.data?.data) {
         const profile = profileRes.value.data.data;
@@ -220,7 +187,6 @@ useEffect(() => {
       } else if (profileRes.status === "rejected") {
         console.error("Failed to fetch profile:", profileRes.reason);
       }
-
       // ---------- Record Number ----------
       if (recordNumRes.status === "fulfilled" && recordNumRes.value?.data?.data) {
         recNum = recordNumRes.value.data.data.record_number || "";
@@ -228,7 +194,6 @@ useEffect(() => {
       } else if (recordNumRes.status === "rejected") {
         console.error("Failed to fetch record number:", recordNumRes.reason);
       }
-
       // ---------- Equipment (guarded) ----------
       if (equipmentRes.status === "fulfilled" && equipmentRes.value?.data?.data) {
         const raw = equipmentRes.value.data.data;
@@ -246,7 +211,6 @@ useEffect(() => {
       } else if (equipmentRes.status === "rejected") {
         console.error("Failed to fetch equipment:", equipmentRes.reason);
       }
-
       // ---------- Users (guarded) ----------
       if (usersRes.status === "fulfilled" && usersRes.value?.data?.data) {
         const data = usersRes.value.data.data || {};
@@ -260,19 +224,6 @@ useEffect(() => {
       console.error("❌ Failed to load initial data (unexpected):", error);
     } finally {
       if (!isMounted) return;
-
-      // The parent grid stores the instrument's id (from the department master list
-      // passed as allMasterData). Resolve it to the instrument name for display.
-      const resolveInstrumentName = (raw) => {
-        if (raw === undefined || raw === null || raw === "") return "";
-        const masters = Array.isArray(passedAllMasterData) ? passedAllMasterData : [];
-        const match = masters.find((m) => String(m?.id) === String(raw));
-        if (match) {
-          return match.instrument_name || match.field_instrument_name || match.instrumentName || match.name || String(raw);
-        }
-        return String(raw);
-      };
-
       // ✅ Always build + set values — even if some APIs failed
       const values = {
         documentNumber: "SMLJ/ENG/SOP-GEN/005/F08-02",
@@ -282,7 +233,7 @@ useEffect(() => {
         dateOfInitiation: rowData?.dateOfInitiation || now,
         initiationDepartment: rowData?.initiationDepartment || profileDeptName,
         shortDescription: rowData?.shortDescription || parentShortDesc || "",
-        instrumentName: resolveInstrumentName(rowData?.equipmentInstrumentName || rowData?.instrumentName),
+        instrumentName: rowData?.equipmentInstrumentName || rowData?.instrumentName || "",
         instrumentId: rowData?.equipmentInstrumentId || rowData?.instrumentId || "",
         location: rowData?.location || "",
         make: rowData?.make || "",
@@ -299,27 +250,21 @@ useEffect(() => {
         comments: rowData?.comments || "",
         attachment: rowData?.attachment || [],
       };
-
       setFormInitialValues(values);
       setCalibrationResultRows(Array.isArray(rowData?.calibrationResultRows) ? rowData.calibrationResultRows : []);
       setCalibrationResultTest(Array.isArray(rowData?.calibrationResultTest) ? rowData.calibrationResultTest : []);
-
       setIsLoading(false);
       setEquipmentLoading(false);
       setUsersLoading(false);
     }
   };
-
   loadInitialData();
-
   return () => {
     isMounted = false;
   };
   // ✅ Removed `location.state` — it isn't referentially stable and caused
   // the last in-flight load to be discarded.
 }, [rowData, processId, parentShortDesc, navigate]);
-
-
   const handleTabChange = (tabId) => {
     if (tabId !== "management") {
       toast.warning("Please fill all mandatory fields and save the record before accessing other tabs.");
@@ -327,7 +272,6 @@ useEffect(() => {
     }
     setActiveTab(tabId);
   };
-
   const handleSave = async () => {
     if (isSaving) return;
     const values = form.getFieldsValue();
@@ -344,7 +288,6 @@ useEffect(() => {
     }
     form.submit();
   };
-
   const buildFullProcessData = (values) => {
     const systemValues = {
       documentNumber: values.documentNumber || "SMLJ/ENG/SOP-GEN/005/F08-02",
@@ -356,24 +299,19 @@ useEffect(() => {
     };
     return buildChildProcessData(values, systemValues);
   };
-
   const handleSubmit = async (values) => {
     if (isSaving) return;
     try {
       setIsSaving(true);
       const processData = buildFullProcessData(values);
-
       const normalizedCalibrationRows = normalizeGridRows(calibrationResultRows);
       const normalizedTestRows = normalizeGridRows(calibrationResultTest);
-
       const gridData = [
         { name: "calibrationResults", rows: normalizedCalibrationRows },
         { name: "masterInstrumentsDetails", rows: normalizedTestRows },
       ];
-
       const initiationDate = values.dateOfInitiation || dateOfInitiation;
       const formattedInitiationDate = dayjs(initiationDate, "DD/MM/YYYY HH:mm:ss").format("DD/MM/YYYY HH:mm:ss");
-
       const payload = {
         process_id: 5,
         stage_id: 19,
@@ -388,9 +326,7 @@ useEffect(() => {
         process_data: processData,
         gridData: gridData,
         checklistData: [],
-        allMasterData: allMasterData || [],
       };
-
       const response = await addCalibrationChild(payload);
       if (response?.data?.success || response?.data?.status === true) {
         setIsDirty(false);
@@ -406,7 +342,6 @@ useEffect(() => {
       setIsSaving(false);
     }
   };
-
   const handleCancel = () => {
     if (isSaving) return;
     if (isDirty) {
@@ -415,7 +350,6 @@ useEffect(() => {
   }
     navigate("/user/calibration-management-dashboard");
   };
-
     // Fixed: this was copied from CreateCalibration and called
     // setCalibrationRows(), which does not exist here (ReferenceError — the
     // "Leave without saving" button never navigated). It now goes to the same
@@ -426,14 +360,11 @@ useEffect(() => {
     form.resetFields();
     navigate("/user/calibration-management-dashboard", { replace: true });
     };
-
         const handleSaveAndExit = () => {
         if (isSaving) return;
         setShowModal(false);
         handleSave(); // existing handler — navigates on success
         };
-
-
   if (isLoading) {
     return (
       <div className="w-full space-y-6">
@@ -442,7 +373,6 @@ useEffect(() => {
       </div>
     );
   }
-
   return (
     <div className="w-full">
       <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -465,11 +395,9 @@ useEffect(() => {
           </div>
         </div>
       </div>
-
       <div className="mb-8">
         <ProcessTabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
-
       <Form
         form={form}
         initialValues={formInitialValues}
@@ -502,7 +430,6 @@ useEffect(() => {
                 <FormTextArea placeholder="Enter short description" rows={3} />
               </Form.Item>
             </div>
-
             <div className="my-9 h-px w-full bg-slate-200" />
             <SectionHeader title="INSTRUMENT / EQUIPMENT DETAILS" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
@@ -513,42 +440,36 @@ useEffect(() => {
               <Form.Item name="nextCalibrationDate" label="Calibration Next Due Date" className="!mb-4">
                 <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Select date" disabled />
               </Form.Item>
-              
               <Form.Item name="instrumentName" label="Equipment / Instrument Name" className="!mb-4">
                 <FormInput placeholder="Instrument name" disabled />
               </Form.Item>
               <Form.Item name="instrumentId" label="Equipment / Instrument ID No." className="!mb-4">
                 <FormInput placeholder="e.g. EQ-001" disabled />
               </Form.Item>
-              
               <Form.Item name="make" label="Make" className="!mb-4">
                 <FormInput placeholder="e.g. Fluke" disabled />
               </Form.Item>
               <Form.Item name="instrumentRange" label="Instrument Range" className="!mb-4">
                 <SymbolicInput placeholder="e.g. 0-1000 V" defaultDiscipline="Range" disabled />
               </Form.Item>
-              
               <Form.Item name="model" label="Sr.No/ Model No." className="!mb-4">
                 <FormInput placeholder="e.g. 87V" disabled />
               </Form.Item>
               <Form.Item name="operatingRange" label="Operating Range" className="!mb-4">
                 <SymbolicInput placeholder="e.g. 0-500 V" defaultDiscipline="Operating Range" disabled />
               </Form.Item>
-              
               <Form.Item name="leastCount" label="Least Count" className="!mb-4">
                 <SymbolicInput placeholder="e.g. 0.01" defaultDiscipline="Least Count" disabled />
               </Form.Item>
               <Form.Item name="accuracy" label="Accuracy" className="!mb-4">
                 <SymbolicInput placeholder="e.g. ±0.5%" defaultDiscipline="Accuracy" disabled />
               </Form.Item>
-              
               <Form.Item name="calibrationTestPoints" label="Calibration test points" className="!mb-4">
                 <SymbolicInput placeholder="e.g. 0, 50, 100" defaultDiscipline="Test Points" disabled />
               </Form.Item>
               <Form.Item name="location" label="Location" className="!mb-4">
                 <FormInput placeholder="Lab A, Room 101" disabled />
               </Form.Item>
-              
               <Form.Item name="envTemperature" label="Environmental Condition Temperature" className="!mb-4">
                 <SymbolicInput placeholder="e.g. 25" defaultDiscipline="Temperature" disabled />
               </Form.Item>
@@ -556,7 +477,6 @@ useEffect(() => {
                 <SymbolicInput placeholder="e.g. 45% RH ± 5%" defaultDiscipline="Humidity" disabled />
               </Form.Item>
             </div>
-
             <div className="my-9 h-px w-full bg-slate-200" />
             <SectionHeader title="CALIBRATION RESULT" />
             <div className="mt-4">
@@ -574,19 +494,17 @@ useEffect(() => {
               />
             </div>
             <div className="mt-4">
-              <UserDynamicGrid
+              <MasterInstrumentsGrid
                 name="Master Instruments Details"
-                columns={CALIBRATION_RESULT_GRID}
                 value={calibrationResultTest}
                 onChange={setCalibrationResultTest}
                 allowAdd={true}
                 allowDelete={true}
                 addButtonLabel="Add Parameter"
                 minRows={0}
-                rowKey="_rowId"
+                
               />
             </div>
-
             <div className="my-9 h-px w-full bg-slate-200" />
             <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Form.Item name="comments" label="Remarks" className="!mb-4 md:col-span-2">
@@ -604,7 +522,6 @@ useEffect(() => {
             </div>
           </section>
         )}
-
         {activeTab === "implementor" && (
           <section>
             <SectionHeader title="HOD / DESIGNEE REVIEW" />
@@ -624,7 +541,6 @@ useEffect(() => {
             </div>
           </section>
         )}
-
         {activeTab === "qa-review" && (
           <section>
             <SectionHeader title="QA APPROVAL REVIEW" />
@@ -645,7 +561,6 @@ useEffect(() => {
           </section>
         )}
       </Form>
-
       <FloatingActionButtons onSave={handleSave} onCancel={handleCancel} isSaving={isSaving} saveLabel="Create" cancelLabel="Cancel" />
          <UnsavedChangesModal
           open={showModal}
@@ -657,5 +572,4 @@ useEffect(() => {
     </div>
   );
 };
-
 export default CalibrationChild;

@@ -55,6 +55,7 @@ const FIELD_LABELS = {
   operatingRange: "Operating Range",
   envTemperature: "Environmental Condition Temperature",
   envHumidity: "Environmental Condition Relative Humidity",
+  category: "Category",
   comments: "Remarks",
   attachment: "Attachment",
 };
@@ -102,7 +103,7 @@ const buildChildProcessData = (values, systemValues) => {
   const fieldsToInclude = [
     "shortDescription", "instrumentName", "instrumentId", "location", "make", "model",
     "instrumentRange", "leastCount", "accuracy", "calibrationTestPoints", "operatingRange",
-    "envTemperature", "envHumidity", "previousCalibrationDate", "nextCalibrationDate",
+    "envTemperature", "envHumidity",  "category", "previousCalibrationDate", "nextCalibrationDate",
     "comments", "attachment"
   ];
   fieldsToInclude.forEach((key) => {
@@ -153,6 +154,7 @@ useEffect(() => {
     navigate(-1);
     return;
   }
+  console.log(rowData,"rowData>>>>>>>")
   const loadInitialData = async () => {
     setIsLoading(true);
     setEquipmentLoading(true);
@@ -241,6 +243,7 @@ useEffect(() => {
         instrumentRange: rowData?.instrumentrange || rowData?.instrumentRange || "",
         leastCount: rowData?.leastCount || "",
         accuracy: rowData?.accuracy || "",
+        category: rowData?.category || "",
         calibrationTestPoints: rowData?.calibrationTestPoints || "",
         operatingRange: rowData?.operatingrange || rowData?.operatingRange || "",
         envTemperature: rowData?.envTemperature || "",
@@ -476,6 +479,10 @@ useEffect(() => {
               <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
                 <SymbolicInput placeholder="e.g. 45% RH ± 5%" defaultDiscipline="Humidity" disabled />
               </Form.Item>
+              <Form.Item name="category" label="Category" className="!mb-4">
+                <FormInput placeholder="Category" disabled />
+              </Form.Item>
+
             </div>
             <div className="my-9 h-px w-full bg-slate-200" />
             <SectionHeader title="CALIBRATION RESULT" />
@@ -486,7 +493,7 @@ useEffect(() => {
                 columns={CALIBRATED_BY_COLUMNS}
                 value={calibrationResultRows}
                 onChange={setCalibrationResultRows}
-                allowAdd={true}
+                allowAdd={false}
                 allowDelete={true}
                 addButtonLabel="Add Parameter"
                 minRows={0}
@@ -498,11 +505,10 @@ useEffect(() => {
                 name="Master Instruments Details"
                 value={calibrationResultTest}
                 onChange={setCalibrationResultTest}
-                allowAdd={true}
+                allowAdd={false}
                 allowDelete={true}
                 addButtonLabel="Add Parameter"
                 minRows={0}
-                
               />
             </div>
             <div className="my-9 h-px w-full bg-slate-200" />

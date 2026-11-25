@@ -47,6 +47,12 @@ const ATTACHMENT_KEYS = [
   "implementorAttachment",
   "qaReviewAttachment",
 ];
+
+const CATEGORY_OPTIONS = [
+    { label: "NC", value: "NC" },
+    { label: "C", value: "C" },
+    { label: "Indicative", value: "Indicative" },
+];
 /** Safe array coercion: returns `value` if it's already an array, `[]` otherwise. */
 const asArray = (value) => (Array.isArray(value) ? value : []);
 /** Extract an array from a variety of common API wrapper shapes. */
@@ -148,7 +154,7 @@ const buildProcessData = (values, systemValues) => {
     "envTemperature", "envHumidity", "previousCalibrationDate", "nextCalibrationDate", "remarks",
     "comments", "attachment",
     "implementorComments", "implementorAttachment",
-    "qaReviewComments", "qaReviewAttachment",
+    "qaReviewComments", "qaReviewAttachment", "category"
   ];
   const labelMap = {
     shortDescription: "Short Description",
@@ -164,6 +170,7 @@ const buildProcessData = (values, systemValues) => {
     operatingRange: "Operating Range",
     envTemperature: "Environmental Condition Temperature",
     envHumidity: "Environmental Condition Relative Humidity",
+    category: "Category",
     previousCalibrationDate: "Previous Calibration Date",
     nextCalibrationDate: "Next Calibration Date",
     comments: "Comments",
@@ -360,6 +367,7 @@ const CalibrationChildPanel = () => {
       const instrumentRange = getProcessValue(processData, "instrumentRange");
       const leastCount = getProcessValue(processData, "leastCount");
       const accuracy = getProcessValue(processData, "accuracy");
+      const category = getProcessValue(processData, "category");
       const calibrationTestPoints = getProcessValue(processData, "calibrationTestPoints");
       const operatingRange = getProcessValue(processData, "operatingRange");
       const envTemperature = getProcessValue(processData, "envTemperature");
@@ -408,6 +416,7 @@ const CalibrationChildPanel = () => {
         operatingRange: operatingRange || "",
         envTemperature: envTemperature || "",
         envHumidity: envHumidity || "",
+        category: category || "",
         previousCalibrationDate: toDayjs(prevCalDate),
         nextCalibrationDate: toDayjs(nextCalDate),
         hod: "",
@@ -924,6 +933,17 @@ const handleSaveAndExit = async () => {
             <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
               <SymbolicInput placeholder="e.g. 45% RH ± 5%" defaultDiscipline="Relative Humidity" fixedUnit="%RH" disabled={!isManagementEditable} />
             </Form.Item>
+            <Form.Item
+              name="category"
+              label="Category"
+              className="!mb-4"
+          >
+              <FormSelect
+                  placeholder="Select Category"
+                  options={CATEGORY_OPTIONS}
+                  disabled={!isManagementEditable}
+              />
+          </Form.Item>
           </div>
           <div className="my-9 h-px w-full bg-slate-200" />
           <SectionHeader title="CALIBRATION RESULT" />

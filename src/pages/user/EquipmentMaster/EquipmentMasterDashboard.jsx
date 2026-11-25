@@ -5,7 +5,7 @@ import { Eye, Wrench, ArrowUpRight, Search, Filter, Building2 } from "lucide-rea
 import { Input, Select, Button } from "antd";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
-import { getInstrumentReport } from "../../../services/usersApi/equipmentApi";
+import { getEquipmentMasterReport, getInstrumentReport } from "../../../services/usersApi/equipmentApi";
 import { getAllDepartments } from "../../../services/usersApi/workflowCommonApi"; // ✅ NEW
 import DataTable from "../../../components/common/DataTable/DataTable";
 import { useAuthStore } from "../../../store/authStore";
@@ -223,7 +223,7 @@ const EquipmentMasterDashboard = () => {
             reportWindow.document.write(REPORT_LOADER_HTML);
             reportWindow.document.close();
 
-            const response = await getInstrumentReport(instrumentId);
+            const response = await getEquipmentMasterReport(instrumentId);
             const blob = new Blob([response.data], { type: "application/pdf" });
             const pdfUrl = window.URL.createObjectURL(blob);
 

@@ -1,3 +1,45 @@
+// const CALIBRATED_BY_COLUMNS = [
+//   {
+//     key: "masterInstrumentReadings",
+//     title: "Master Instrument Readings in",
+//     type: "text",
+//     placeholder: "Enter Master Instrument Readings",
+//     minWidth: 180,
+//     symbolic: true,
+//     toggleable: true,
+//     splitFields: [
+//       { key: "masterInstrumentReadings1", placeholder: "Master Instrument Readings 1" },
+//       { key: "masterInstrumentReadings2", placeholder: "Master Instrument Readings 2" }
+//     ]
+//   },
+//   {
+//     key: "unitUnderCalibrationReading",
+//     title: "Unit Under Calibration Readings in",
+//     type: "text",
+//     placeholder: "Enter Unit Under Calibration Readings",
+//     minWidth: 160,
+//     symbolic: true,
+//     toggleable: true,
+//     splitFields: [
+//       { key: "unitUnderCalibrationReading1", placeholder: "Unit Under Calibration Readings 1" },
+//       { key: "unitUnderCalibrationReading2", placeholder: "Unit Under Calibration Readings 2" }
+//     ]
+//   },
+
+
+//   {
+//     key: "errorIn",
+//     title: "Error in",
+//     type: "text",
+//     placeholder: "Auto-calculated",
+//     minWidth: 160,
+//     disabled: true,
+// },
+
+// ];
+
+
+
 const CALIBRATED_BY_COLUMNS = [
   {
     key: "masterInstrumentReadings",
@@ -6,11 +48,18 @@ const CALIBRATED_BY_COLUMNS = [
     placeholder: "Enter Master Instrument Readings",
     minWidth: 180,
     symbolic: true,
+    headerSymbolic: true, // NEW
     toggleable: true,
     splitFields: [
-      { key: "masterInstrumentReadings1", placeholder: "Master Instrument Readings 1" },
-      { key: "masterInstrumentReadings2", placeholder: "Master Instrument Readings 2" }
-    ]
+      {
+        key: "masterInstrumentReadings1",
+        placeholder: "Master Instrument Readings 1",
+      },
+      {
+        key: "masterInstrumentReadings2",
+        placeholder: "Master Instrument Readings 2",
+      },
+    ],
   },
   {
     key: "unitUnderCalibrationReading",
@@ -19,14 +68,19 @@ const CALIBRATED_BY_COLUMNS = [
     placeholder: "Enter Unit Under Calibration Readings",
     minWidth: 160,
     symbolic: true,
+    headerSymbolic: true, // NEW
     toggleable: true,
     splitFields: [
-      { key: "unitUnderCalibrationReading1", placeholder: "Unit Under Calibration Readings 1" },
-      { key: "unitUnderCalibrationReading2", placeholder: "Unit Under Calibration Readings 2" }
-    ]
+      {
+        key: "unitUnderCalibrationReading1",
+        placeholder: "Unit Under Calibration Readings 1",
+      },
+      {
+        key: "unitUnderCalibrationReading2",
+        placeholder: "Unit Under Calibration Readings 2",
+      },
+    ],
   },
-
-
   {
     key: "errorIn",
     title: "Error in",
@@ -34,9 +88,9 @@ const CALIBRATED_BY_COLUMNS = [
     placeholder: "Auto-calculated",
     minWidth: 160,
     disabled: true,
-},
-
+  },
 ];
+
 
 const CALIBRATION_RESULT_GRID = [
   // …unchanged…

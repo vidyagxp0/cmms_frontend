@@ -5,59 +5,58 @@ import { useParams } from "react-router-dom";
 import dayjs from "dayjs";
 import UserModal from "../UserModal/UserModal";
 import CustomScrollContainer from "../CustomScrollbar/CustomScrollContainer";
-import SymbolicInput from "../SymbolicInput/SymbolicInput";
+import SymbolicInput, { UNIT_MASTER, parseValueAndUnit } from "../SymbolicInput/SymbolicInput";
 import { getAllPermissions } from "../../../services/usersApi/workflowCommonApi";
-
 const { TextArea } = Input;
-
-// 👇 Extract the first numeric value out of a string like "100 Bar" or "-0.5 %"
+// Extract a numeric reading, allowing a recognized symbolic unit.
 const extractNumeric = (val) => {
     if (val === null || val === undefined) return null;
-    const str = String(val).trim();
-    if (!str) return null;
-    const match = str.match(/-?\d+(\.\d+)?/);
-    if (!match) return null;
-    const num = parseFloat(match[0]);
-    return isNaN(num) ? null : num;
+    const { rawValue } = parseValueAndUnit(String(val));
+    const str = String(rawValue ?? "").trim();
+    if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(str)) return null;
+    const num = Number(str);
+    return Number.isFinite(num) ? num : null;
 };
-
-// 👇 Error = Master − UUC (change to `u - m` if you want the opposite direction)
+// Error = UUC − Master. Missing or invalid required readings return NA.
 const computeError = (masterVal, uucVal) => {
     const m = extractNumeric(masterVal);
     const u = extractNumeric(uucVal);
-    if (m === null || u === null) return "";
-    const diff = m - u;
-    // Round to 6 decimals to hide float noise, then stringify
+    if (m === null || u === null) return "NA";
+    const diff = u - m;
     const rounded = Math.round(diff * 1e6) / 1e6;
-    return String(rounded);
+    return Number.isFinite(rounded) ? String(rounded) : "NA";
 };
-
-// Split mode: only the 2nd fields are used.
-// Fallback: if only the 1st fields are populated → "NA".
-const computeSplitError = (row) => {
-    const has = (v) => v !== undefined && v !== null && String(v).trim() !== "";
-
-    if (has(row.masterInstrumentReadings2) && has(row.unitUnderCalibrationReading2)) {
-        return computeError(row.masterInstrumentReadings2, row.unitUnderCalibrationReading2);
-    }
-    if (has(row.masterInstrumentReadings1) && has(row.unitUnderCalibrationReading1)) {
-        return "NA";
-    }
-    return "";
+// Independently select the active reading for each column.
+const computeCalibrationError = (row, toggles) => {
+    const master = toggles.masterInstrumentReadings
+        ? row.masterInstrumentReadings2 : row.masterInstrumentReadings;
+    const uuc = toggles.unitUnderCalibrationReading
+        ? row.unitUnderCalibrationReading2 : row.unitUnderCalibrationReading;
+    return computeError(master, uuc);
 };
-
-
+const isCalibrationReadingColumn = (key) =>
+    key === "masterInstrumentReadings" || key === "unitUnderCalibrationReading";
+// Header-controlled units (opt-in per column).
+const getSymbolKeys = (column) => [column.key, ...(column.splitFields || [])
+    .filter(field => field.symbolic ?? column.symbolic).map(field => field.key)];
+const getSavedSymbol = (column, rows) => {
+    const units = new Set(rows.flatMap(row => getSymbolKeys(column)
+        .map(key => parseValueAndUnit(row[key] ?? "").unit).filter(Boolean)));
+    return { enabled: units.size > 0, unit: units.size === 1 ? [...units][0] : "", mixed: units.size > 1 };
+};
+const SYMBOL_OPTIONS = (Array.isArray(UNIT_MASTER) ? UNIT_MASTER :
+    Object.entries(UNIT_MASTER).map(([discipline, units]) => ({ discipline, units })))
+    .map(item => ({ label: item.discipline || item.label || item.name,
+        options: (item.units || []).map(unit => ({ label: unit, value: unit })) }));
 
 const GridSymbolicInput = ({ value, onCommit, ...rest }) => {
     const onCommitRef = useRef(onCommit);
     useEffect(() => {
         onCommitRef.current = onCommit;
     }, [onCommit]);
-
     const stableOnChange = useCallback((next) => {
         onCommitRef.current?.(next);
     }, []);
-
     return (
         <SymbolicInput
             value={value ?? ""}
@@ -66,7 +65,6 @@ const GridSymbolicInput = ({ value, onCommit, ...rest }) => {
         />
     );
 };
-
 const UserDynamicGrid = ({
     name = "Grid",
     description,
@@ -87,22 +85,18 @@ const UserDynamicGrid = ({
 }) => {
     const rows = Array.isArray(value) ? value : [];
     const { recordId } = useParams();
-
     // Stable onChange ref so effects below can call it without re-subscribing
     const onChangeRef = useRef(onChange);
     useEffect(() => {
         onChangeRef.current = onChange;
     }, [onChange]);
-
     // ---- Permission state ----
     const [canPerformAction, setCanPerformAction] = useState(true);
     const [permissionsLoading, setPermissionsLoading] = useState(
         Boolean(checkPermission && recordId)
     );
-
     useEffect(() => {
         let isMounted = true;
-
         const fetchPermissions = async () => {
             if (!checkPermission || !recordId) {
                 if (isMounted) {
@@ -124,17 +118,73 @@ const UserDynamicGrid = ({
                 if (isMounted) setPermissionsLoading(false);
             }
         };
-
         fetchPermissions();
         return () => {
             isMounted = false;
         };
     }, [recordId, checkPermission]);
-
     const isReadOnly = disabled || permissionsLoading || !canPerformAction;
     const effectiveAllowAdd = allowAdd && !isReadOnly;
     const effectiveAllowDelete = allowDelete && !isReadOnly;
-
+    // ---- Header symbol state ----
+    const [columnSymbols, setColumnSymbols] = useState({});
+    useEffect(() => { setColumnSymbols({}); }, [recordId]);
+    const getColumnSymbol = column => columnSymbols[column.key] ?? getSavedSymbol(column, rows);
+    const getActiveUnit = column => {
+        const config = getColumnSymbol(column);
+        return config.enabled ? config.unit : "";
+    };
+    const changeHeaderSymbol = (column, enabled, unit = "") => {
+        if (isReadOnly) return;
+        const keys = getSymbolKeys(column);
+        // Enabling the selector alone must not modify existing readings.
+        if (enabled && !unit) {
+            setColumnSymbols(prev => ({ ...prev, [column.key]: { ...getColumnSymbol(column), enabled: true } }));
+            return;
+        }
+        const changesExistingUnit = rows.some(row => keys.some(key => {
+            const oldUnit = parseValueAndUnit(row[key] ?? "").unit;
+            return oldUnit && oldUnit !== unit;
+        }));
+        if (changesExistingUnit && !window.confirm("Change existing reading symbols? Numeric readings will not be converted.")) return;
+        let changed = false;
+        const updated = rows.map(row => {
+            const next = { ...row };
+            keys.forEach(key => {
+                if (row[key] == null || row[key] === "") return;
+                const parsed = parseValueAndUnit(row[key]);
+                const raw = String(parsed.rawValue ?? "").trim();
+                const value = raw && unit ? `${raw} ${unit}` : raw;
+                if (value !== row[key]) { next[key] = value; changed = true; }
+            });
+            return next;
+        });
+        setColumnSymbols(prev => ({ ...prev, [column.key]: { enabled, unit, mixed: false } }));
+        if (changed) onChange?.(updated);
+    };
+    const renderHeaderSymbol = column => {
+        if (!column.headerSymbolic || !column.symbolic) return null;
+        const config = getColumnSymbol(column);
+        return (
+            <div className="mt-2 flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-medium">Symbol</span>
+                    <Switch size="small" checked={config.enabled} disabled={isReadOnly}
+                        onChange={checked => changeHeaderSymbol(column, checked)} />
+                </div>
+                {config.enabled && <Select size="small" showSearch optionFilterProp="label"
+                    value={config.unit || undefined} placeholder="Select symbol" options={SYMBOL_OPTIONS}
+                    disabled={isReadOnly} onChange={unit => changeHeaderSymbol(column, true, unit)}
+                    className="!w-full" popupMatchSelectWidth={false} />}
+                {config.mixed && <span className="text-[10px] text-amber-600">Mixed existing units</span>}
+            </div>
+        );
+    };
+    const isCalibrationGrid = ["masterInstrumentReadings", "unitUnderCalibrationReading", "errorIn"]
+        .every(key => columns.some(column => column.key === key));
+    // Preserve explicit calibration split choices even when readings are empty.
+    const calibrationSplitOverrides = useRef({});
+    useEffect(() => { calibrationSplitOverrides.current = {}; }, [recordId]);
     // ---- Toggle state ----
     const [columnToggles, setColumnToggles] = useState(() => {
         const initial = {};
@@ -150,7 +200,6 @@ const UserDynamicGrid = ({
         });
         return initial;
     });
-
     useEffect(() => {
         setColumnToggles(prev => {
             const newToggles = { ...prev };
@@ -162,6 +211,11 @@ const UserDynamicGrid = ({
                             row[field.key] !== undefined && row[field.key] !== null && row[field.key] !== ''
                         )
                     );
+                    if (isCalibrationGrid && isCalibrationReadingColumn(col.key) &&
+                        Object.prototype.hasOwnProperty.call(calibrationSplitOverrides.current, col.key)) {
+                        newToggles[col.key] = calibrationSplitOverrides.current[col.key];
+                        return;
+                    }
                     if (newToggles[col.key] !== hasSplitData) {
                         newToggles[col.key] = hasSplitData;
                     }
@@ -169,32 +223,17 @@ const UserDynamicGrid = ({
             });
             return newToggles;
         });
-    }, [rows, columns]);
-
+    }, [rows, columns, isCalibrationGrid, recordId]);
     useEffect(() => {
-    if (!rows.length) return;
-
-    const splitActive =
-        !!columnToggles["masterInstrumentReadings"] ||
-        !!columnToggles["unitUnderCalibrationReading"];
-
+    if (!isCalibrationGrid || !rows.length) return;
     let needsUpdate = false;
-
     const updated = rows.map((row) => {
         const newRow = { ...row };
-
-        const nextError = splitActive
-            ? computeSplitError(row)
-            : computeError(
-                  row.masterInstrumentReadings,
-                  row.unitUnderCalibrationReading
-              );
-
+        const nextError = computeCalibrationError(row, columnToggles);
         if ((row.errorIn ?? "") !== nextError) {
             newRow.errorIn = nextError;
             needsUpdate = true;
         }
-
         // Drop any legacy split-error values left over from earlier sessions
         if (newRow.errorIn1) {
             newRow.errorIn1 = "";
@@ -204,25 +243,19 @@ const UserDynamicGrid = ({
             newRow.errorIn2 = "";
             needsUpdate = true;
         }
-
         return newRow;
     });
-
     if (needsUpdate) onChangeRef.current?.(updated);
-}, [rows, columnToggles]);
-
-
+}, [rows, columnToggles, isCalibrationGrid]);
     // ---- Modal state ----
     const [toggleModalState, setToggleModalState] = useState({ open: false, columnKey: null });
     const [deleteRowIndex, setDeleteRowIndex] = useState(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-
     // ---- Create a new row ----
     const createRow = useCallback(() => {
         const row = {
             [rowKey]: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         };
-
         columns.forEach((column) => {
             if (column.toggleable && column.splitFields) {
                 column.splitFields.forEach(field => {
@@ -236,24 +269,20 @@ const UserDynamicGrid = ({
                 row[column.key] = column.defaultValue !== undefined ? column.defaultValue : "";
             }
         });
-
         return row;
     }, [columns, rowKey]);
-
     const handleAddRow = () => {
         if (!effectiveAllowAdd) return;
         if (maxRows !== undefined && rows.length >= maxRows) return;
         const newRow = createRow();
         onChange?.([...rows, newRow]);
     };
-
     const handleDeleteRow = (rowIndex) => {
         if (!effectiveAllowDelete) return;
         if (rows.length <= minRows) return;
         setDeleteRowIndex(rowIndex);
         setIsDeleteModalOpen(true);
     };
-
     const handleConfirmDelete = async () => {
         if (deleteRowIndex === null || rows.length <= minRows) return;
         const updatedRows = rows.filter((_, index) => index !== deleteRowIndex);
@@ -262,53 +291,43 @@ const UserDynamicGrid = ({
         setDeleteRowIndex(null);
         setIsDeleteModalOpen(false);
     };
-
     const handleCancelDelete = () => {
         setDeleteRowIndex(null);
         setIsDeleteModalOpen(false);
     };
-
     // ---- Cell change handlers (auto-compute errorIn) ----
     const handleCellChange = (rowIndex, columnKey, newValue) => {
         if (isReadOnly) return;
         const updatedRows = rows.map((row, index) => {
             if (index !== rowIndex) return row;
             const newRow = { ...row, [columnKey]: newValue };
-            if (columnKey === "masterInstrumentReadings" || columnKey === "unitUnderCalibrationReading") {
-                newRow.errorIn = computeError(newRow.masterInstrumentReadings, newRow.unitUnderCalibrationReading);
+            if (isCalibrationGrid && isCalibrationReadingColumn(columnKey)) {
+                newRow.errorIn = computeCalibrationError(newRow, columnToggles);
             }
             return newRow;
         });
         onChange?.(updatedRows);
     };
-
 const handleSplitChange = (rowIndex, fieldKey, newValue) => {
     if (isReadOnly) return;
-
     const updatedRows = rows.map((row, index) => {
         if (index !== rowIndex) return row;
-
         const newRow = { ...row, [fieldKey]: newValue };
-
-        if (
+        if (isCalibrationGrid && (
             fieldKey === "masterInstrumentReadings1" ||
             fieldKey === "masterInstrumentReadings2" ||
             fieldKey === "unitUnderCalibrationReading1" ||
             fieldKey === "unitUnderCalibrationReading2"
-        ) {
-            newRow.errorIn = computeSplitError(newRow);
+        )) {
+            newRow.errorIn = computeCalibrationError(newRow, columnToggles);
         }
-
         return newRow;
     });
-
     onChange?.(updatedRows);
 };
-
     // ---- Toggle switch handler with confirmation ----
     const handleToggleChange = (checked, columnKey) => {
     if (isReadOnly) return;
-
     if (!checked) {
         const col = columns.find((c) => c.key === columnKey);
         const hasData = rows.some((row) =>
@@ -319,16 +338,15 @@ const handleSplitChange = (rowIndex, fieldKey, newValue) => {
             return;
         }
     }
-
+    if (isCalibrationGrid && isCalibrationReadingColumn(columnKey)) {
+        calibrationSplitOverrides.current[columnKey] = checked;
+    }
     // Effect above will recompute errorIn when this state changes
     setColumnToggles((prev) => ({ ...prev, [columnKey]: checked }));
 };
-
-
 const handleConfirmToggleOff = () => {
     const { columnKey } = toggleModalState;
     const col = columns.find((c) => c.key === columnKey);
-
     const updatedRows = rows.map((row) => {
         const newRow = { ...row };
         col.splitFields.forEach((field) => {
@@ -336,16 +354,16 @@ const handleConfirmToggleOff = () => {
         });
         return newRow;
     });
-
+    if (isCalibrationGrid && isCalibrationReadingColumn(columnKey)) {
+        calibrationSplitOverrides.current[columnKey] = false;
+    }
     onChange?.(updatedRows);
     setColumnToggles((prev) => ({ ...prev, [columnKey]: false }));
     setToggleModalState({ open: false, columnKey: null });
 };
-
     const handleCancelToggleOff = () => {
         setToggleModalState({ open: false, columnKey: null });
     };
-
     // ---- Visibility and disabled checks ----
     const isColumnVisible = (column, row, rowIndex) => {
         if (typeof column.visible === "function") {
@@ -354,7 +372,6 @@ const handleConfirmToggleOff = () => {
         if (column.visible === false) return false;
         return true;
     };
-
     const isColumnDisabled = (column, row, rowIndex) => {
         if (isReadOnly) return true;
         if (typeof column.disabled === "function") {
@@ -362,13 +379,11 @@ const handleConfirmToggleOff = () => {
         }
         return Boolean(column.disabled);
     };
-
     // ---- Render field ----
     const renderField = (column, row, rowIndex) => {
         const fieldValue = row[column.key];
         const disabled = isColumnDisabled(column, row, rowIndex);
         const toggleOn = column.toggleable && columnToggles[column.key];
-
         // ---- Toggle ON: render two inputs (each can be symbolic) ----
         if (toggleOn && column.splitFields) {
             return (
@@ -376,12 +391,12 @@ const handleConfirmToggleOff = () => {
                     {column.splitFields.map((field) => {
                         const val = row[field.key] ?? "";
                         const useSymbolic = field.symbolic ?? column.symbolic;
-
-                        if (useSymbolic) {
+                        if (useSymbolic && (!column.headerSymbolic || getActiveUnit(column))) {
                             return (
                                 <GridSymbolicInput
                                     key={field.key}
                                     value={val}
+                                    fixedUnit={column.headerSymbolic ? getActiveUnit(column) : ""}
                                     disabled={disabled}
                                     placeholder={field.placeholder || `Enter ${field.key}`}
                                     defaultDiscipline={
@@ -395,7 +410,6 @@ const handleConfirmToggleOff = () => {
                                 />
                             );
                         }
-
                         return (
                             <Input
                                 key={field.key}
@@ -413,12 +427,10 @@ const handleConfirmToggleOff = () => {
                 </div>
             );
         }
-
         // ---- Normal rendering (single field) ----
         const handleChange = (newValue) => {
             handleCellChange(rowIndex, column.key, newValue);
         };
-
         if (column.render) {
             return column.render({
                 value: fieldValue,
@@ -428,11 +440,11 @@ const handleConfirmToggleOff = () => {
                 onChange: handleChange,
             });
         }
-
-        if (column.symbolic) {
+        if (column.symbolic && (!column.headerSymbolic || getActiveUnit(column))) {
             return (
                 <GridSymbolicInput
                     value={fieldValue ?? ""}
+                    fixedUnit={column.headerSymbolic ? getActiveUnit(column) : ""}
                     disabled={disabled}
                     placeholder={column.placeholder || `Enter ${column.title.toLowerCase()}`}
                     defaultDiscipline={column.defaultDiscipline || ""}
@@ -440,7 +452,6 @@ const handleConfirmToggleOff = () => {
                 />
             );
         }
-
         if (column.type === "text" || !column.type) {
             return (
                 <Input
@@ -453,7 +464,6 @@ const handleConfirmToggleOff = () => {
                 />
             );
         }
-
         if (column.type === "textarea") {
             return (
                 <TextArea
@@ -467,7 +477,6 @@ const handleConfirmToggleOff = () => {
                 />
             );
         }
-
         if (column.type === "number") {
             return (
                 <InputNumber
@@ -482,7 +491,6 @@ const handleConfirmToggleOff = () => {
                 />
             );
         }
-
         if (column.type === "select") {
             return (
                 <Select
@@ -495,7 +503,6 @@ const handleConfirmToggleOff = () => {
                 />
             );
         }
-
         if (column.type === "date") {
             const dateValue = fieldValue ? dayjs(fieldValue) : null;
             return (
@@ -509,15 +516,12 @@ const handleConfirmToggleOff = () => {
                 />
             );
         }
-
         return null;
     };
-
     const visibleColumns = useMemo(
         () => columns.filter((column) => column.hidden !== true),
         [columns]
     );
-
     return (
         <div className={`w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)] ${className}`}>
             {/* Header */}
@@ -549,7 +553,6 @@ const handleConfirmToggleOff = () => {
                     </button>
                 )}
             </div>
-
             <CustomScrollContainer maxHeight="520px" direction="both" className="w-full rounded-b-xl">
                 <table className="w-full min-w-[900px] border-collapse">
                     <thead className="sticky top-0 z-[5]">
@@ -557,7 +560,6 @@ const handleConfirmToggleOff = () => {
                             <th className="sticky left-0 z-[7] w-[56px] border-b border-r border-[#D5DFDB] bg-[#EEF3F1] px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]">
                                 S.No
                             </th>
-
                             {visibleColumns.map((column) => (
                                 <th
                                     key={column.key}
@@ -582,9 +584,9 @@ const handleConfirmToggleOff = () => {
                                             />
                                         )}
                                     </div>
+                                    {renderHeaderSymbol(column)}
                                 </th>
                             ))}
-
                             {effectiveAllowDelete && (
                                 <th className="w-[62px] border-b border-[#D5DFDB] px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-[#63736C]">
                                     Action
@@ -592,7 +594,6 @@ const handleConfirmToggleOff = () => {
                             )}
                         </tr>
                     </thead>
-
                     <tbody>
                         {rows.length > 0 ? (
                             rows.map((row, rowIndex) => (
@@ -605,7 +606,6 @@ const handleConfirmToggleOff = () => {
                                             {String(rowIndex + 1).padStart(2, "0")}
                                         </span>
                                     </td>
-
                                     {visibleColumns.map((column) => {
                                         if (!isColumnVisible(column, row, rowIndex)) {
                                             return (
@@ -624,7 +624,6 @@ const handleConfirmToggleOff = () => {
                                             </td>
                                         );
                                     })}
-
                                     {effectiveAllowDelete && (
                                         <td className="border-b border-[#E0E7E4] px-2 py-2.5 text-center align-top">
                                             <button
@@ -655,7 +654,6 @@ const handleConfirmToggleOff = () => {
                     </tbody>
                 </table>
             </CustomScrollContainer>
-
             <div className="flex min-h-[40px] items-center justify-between border-t border-[#E0E7E4] bg-[#FAFBFA] px-4">
                 <span className="text-[10px] font-medium text-[#899690]">
                     {rows.length} {rows.length === 1 ? "row" : "rows"}
@@ -666,7 +664,6 @@ const handleConfirmToggleOff = () => {
                     </span>
                 )}
             </div>
-
             {/* Delete Row Confirmation Modal */}
             <UserModal
                 isOpen={isDeleteModalOpen}
@@ -697,7 +694,6 @@ const handleConfirmToggleOff = () => {
                     </div>
                 </div>
             </UserModal>
-
             {/* Toggle OFF Confirmation Modal */}
             <UserModal
                 isOpen={toggleModalState.open}
@@ -728,7 +724,6 @@ const handleConfirmToggleOff = () => {
                     </div>
                 </div>
             </UserModal>
-
             <style>{`
                 .grid-scroll {
                     scrollbar-width: thin;
@@ -757,8 +752,4 @@ const handleConfirmToggleOff = () => {
         </div>
     );
 };
-
 export default UserDynamicGrid;
-
-
-

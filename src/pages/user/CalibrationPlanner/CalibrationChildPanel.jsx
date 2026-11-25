@@ -1014,10 +1014,10 @@ const handleSaveAndExit = async () => {
               <FormInput placeholder="Lab A, Room 101" disabled={!isManagementEditable} />
             </Form.Item>
             <Form.Item name="envTemperature" label="Environmental Condition Temperature" className="!mb-4">
-              <SymbolicInput placeholder="e.g. 25" defaultDiscipline="Temperature" disabled={!isManagementEditable} />
+              <SymbolicInput placeholder="e.g. 25" defaultDiscipline="Temperature" fixedUnit="°C" disabled={!isManagementEditable} />
             </Form.Item>
             <Form.Item name="envHumidity" label="Environmental Condition Relative Humidity" className="!mb-4">
-              <SymbolicInput placeholder="e.g. 45% RH ± 5%" defaultDiscipline="Humidity" disabled={!isManagementEditable} />
+              <SymbolicInput placeholder="e.g. 45% RH ± 5%" defaultDiscipline="Relative Humidity" fixedUnit="%RH" disabled={!isManagementEditable} />
             </Form.Item>
           </div>
 

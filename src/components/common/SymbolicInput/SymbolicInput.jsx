@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Input, Switch, Tree } from "antd";
 import { DownOutlined } from "@ant-design/icons";
 
-const UNIT_MASTER = [
+export const UNIT_MASTER = [
   { discipline: "Pressure", units: ["Bar", "kg/cm²", "psi", "Mpa", "mBar", "mmHg", "mTorr", "InHg", "Torr", "mmWc", "Pa", "Kpa", "inWc", "cmWc"] },
   { discipline: "Temperature", units: ["°C"] },
   { discipline: "Relative Humidity", units: ["%RH"] },
@@ -34,7 +34,7 @@ const normalizeValue = (value) => {
   return String(value);
 };
 
-const parseValueAndUnit = (value) => {
+export const parseValueAndUnit = (value) => {
   const text = normalizeValue(value).trim();
   if (!text) return { rawValue: "", discipline: "", unit: "" };
   const allUnits = UNIT_MASTER
@@ -56,6 +56,7 @@ const SymbolicInput = ({
   disabled = false,
   className = "",
   compact = false, // hides the "Symbol" text label — handy inside grid cells
+  fixedUnit = "",
 }) => {
   const initial = useMemo(() => parseValueAndUnit(value), [value]);
   const [rawValue, setRawValue] = useState(initial.rawValue);
@@ -122,6 +123,10 @@ const SymbolicInput = ({
   const handleValueChange = (event) => {
     const nextRaw = event.target.value;
     setRawValue(nextRaw);
+      if (fixedUnit) {
+    emitChange(nextRaw, true, fixedUnit);
+    return;
+  }
     emitChange(nextRaw, symbolEnabled, unit);
   };
 
@@ -159,6 +164,42 @@ const SymbolicInput = ({
   };
 
   const selectedTreeKeys = discipline && unit ? [`${discipline}__${unit}`] : [];
+
+// Fixed unit mode: no toggle or symbol selector
+if (fixedUnit) {
+  return (
+    <div className={`w-full ${className}`}>
+      <div className="relative w-full">
+        <Input
+          value={rawValue}
+          onChange={handleValueChange}
+          placeholder={placeholder}
+          disabled={disabled}
+          className="w-full"
+        />
+
+        {rawValue !== "" && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 
+                       flex items-center overflow-hidden px-[11px] 
+                       text-sm whitespace-pre"
+          >
+            {/* Invisible text to measure actual value width */}
+            <span className="invisible shrink-0">
+              {rawValue}
+            </span>
+
+            {/* Fixed symbol immediately after value */}
+            <span className="ml-1 shrink-0 font-medium text-[#263B35]">
+              {fixedUnit}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className={`w-full ${className}`}>

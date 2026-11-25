@@ -162,11 +162,10 @@ function UserRoutes() {
         <Route path="unplanned-calibration-management-create/:processId/:recordId" element={<UnCalibrationChild />} />
         <Route path="unplanned-calibration-management-panel/:recordId" element={<UnCalibrationChildPanel />} />
         {/* <Route path="unplanned-calibration-management-dashboard" element={<ManagementDashboard />} /> */}
-
         {/* <Route path="unplanned-calibration-audit/:recordId" element={<UnPlannedCalibrationAudit />} />  */}
 
         
-        {/* Import Master Equipment Data Routes*/}
+        {/* Import Master Equipment Data and Notifcations Routes*/}
         <Route path="import-master-equipment-data" element={<ImportMasterEquipmentData />} />
         <Route path="notification-list" element={<NotificationList />} />
 

@@ -18,6 +18,10 @@ import {
 } from "lucide-react";
 import { getRecordNotifications } from "../../../services/usersApi/workflowCommonApi";
 import { useNavigate } from "react-router-dom";
+import {
+    resolveNotificationRoute,
+    resolveNotificationModuleLabel,
+} from "../../../utils/notificationRoutes";
 
 
 const NotificationList = () => {
@@ -134,6 +138,11 @@ const NotificationList = () => {
 
     const handleExit = () => {
         navigate("/user/engineering-dashboard")
+    };
+
+    const handleOpenRecord = (item) => {
+        const route = resolveNotificationRoute(item);
+        if (route) navigate(route);
     };
 
     const handlePrevious = () => {
@@ -426,11 +435,23 @@ const NotificationList = () => {
                     <div className="divide-y divide-[#E8ECE7]">
                         {filteredNotifications.map((item) => {
                             const isPending = item.status === "pending";
+                            const targetRoute = resolveNotificationRoute(item);
+                            const moduleLabel = resolveNotificationModuleLabel(item);
 
                             return (
                                 <div
                                     key={item.id}
-                                    className="group grid grid-cols-1 gap-3 border-l-[3px] border-l-transparent px-4 py-5 transition-all duration-200 hover:border-l-[#477568] hover:bg-gradient-to-r hover:from-[#EDF4EF] hover:to-white sm:px-5 md:grid-cols-[minmax(0,1fr)_155px_145px] md:items-center md:gap-4"
+                                    role={targetRoute ? "button" : undefined}
+                                    tabIndex={targetRoute ? 0 : undefined}
+                                    title={targetRoute ? "Open record" : undefined}
+                                    onClick={() => handleOpenRecord(item)}
+                                    onKeyDown={(e) => {
+                                        if (targetRoute && (e.key === "Enter" || e.key === " ")) {
+                                            e.preventDefault();
+                                            handleOpenRecord(item);
+                                        }
+                                    }}
+                                    className={`${targetRoute ? "cursor-pointer focus:outline-none focus-visible:bg-[#EDF4EF]" : ""} group grid grid-cols-1 gap-3 border-l-[3px] border-l-transparent px-4 py-5 transition-all duration-200 hover:border-l-[#477568] hover:bg-gradient-to-r hover:from-[#EDF4EF] hover:to-white sm:px-5 md:grid-cols-[minmax(0,1fr)_155px_145px] md:items-center md:gap-4`}
                                 >
                                     {/* NOTIFICATION DETAILS */}
                                     <div className="flex min-w-0 items-start gap-3">
@@ -457,6 +478,13 @@ const NotificationList = () => {
                                                 <span className="rounded-[5px] border border-[#DCE3DC] bg-white px-1.5 py-0.5 text-[9px] font-semibold text-[#78877F]">
                                                     #{item.id}
                                                 </span>
+
+                                                {targetRoute && (
+                                                    <ArrowUpRight
+                                                        size={13}
+                                                        className="text-[#A0AEA7] opacity-0 transition-opacity group-hover:opacity-100"
+                                                    />
+                                                )}
                                             </div>
 
                                             <p className="mt-1 break-words text-[11px] leading-[18px] text-[#78877F]">
@@ -468,6 +496,13 @@ const NotificationList = () => {
                                                     <FileText size={11} className="text-[#729184]" />
                                                     Record #{item.record_id}
                                                 </span>
+
+                                                {moduleLabel && (
+                                                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#3E6852]">
+                                                        <ShieldCheck size={11} className="text-[#729184]" />
+                                                        {moduleLabel}
+                                                    </span>
+                                                )}
 
                                                 <span className="inline-flex items-center gap-1.5 text-[10px] text-[#89958E]">
                                                     <CalendarDays size={11} className="text-[#729184]" />
@@ -597,12 +632,12 @@ const NotificationList = () => {
             </div>
 
             {/* BOTTOM NOTE */}
-            <div className="mt-4 flex items-center justify-center gap-2 text-center">
+            {/* <div className="mt-4 flex items-center justify-center gap-2 text-center">
                 <ShieldCheck size={12} className="text-[#8AA294]" />
                 <p className="text-[9px] font-medium tracking-wide text-[#9AA69F]">
                     VidyaGxP • Notification Activity Center
                 </p>
-            </div>
+            </div> */}
         </div>
     );
 };

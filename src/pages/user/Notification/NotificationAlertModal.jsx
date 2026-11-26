@@ -18,6 +18,10 @@ import {
     ExternalLink,
 } from "lucide-react";
 import { getRecordNotifications } from "../../../services/usersApi/workflowCommonApi";
+import {
+    resolveNotificationRoute,
+    resolveNotificationModuleLabel as resolveModuleLabel,
+} from "../../../utils/notificationRoutes";
 
 const SESSION_KEY = "vgxp_notification_modal_shown";
 
@@ -46,89 +50,6 @@ const timeAgo = (date) => {
         month: "short",
         year: "numeric",
     });
-};
-
-/* ═════════════════════════════════════════════════════════════════
-   ROUTE RESOLVER
-   Maps a notification → the correct `/user/...` panel route.
-   Uses message text to detect the module, then builds the URL.
-
-   Order matters — match more specific phrases first.
-═════════════════════════════════════════════════════════════════ */
-const resolveNotificationRoute = (item) => {
-    if (!item) return null;
-
-    const recordId = item.record_id;
-    if (!recordId) return null;
-
-    const text = `${item.title || ""} ${item.message || ""}`.toLowerCase();
-
-    // Master data records — record_type based
-    if (item.record_type?.includes("Equipment")) {
-        return `/user/equipment-panel/${recordId}`;
-    }
-
-    // Unplanned calibration child FIRST (before parent calibration)
-    if (text.includes("unplanned calibration")) {
-        // child record detection — message usually mentions "Calibration Child"
-        if (text.includes("child") || text.includes("management")) {
-            return `/user/unplanned-calibration-management-panel/${recordId}`;
-        }
-        return `/user/unplanned-calibration-panel/${recordId}`;
-    }
-
-    if (text.includes("addendum calibration")) {
-        return `/user/addendum-calibration-management-panel/${recordId}`;
-    }
-    if (text.includes("addendum preventive")) {
-        return `/user/addendum-preventive-planner-panel/${recordId}`;
-    }
-    if (text.includes("preventive maintenance")) {
-        // Planner vs execution
-        if (text.includes("planner")) {
-            return `/user/preventive-maintenance-planner-panel/${recordId}`;
-        }
-        return `/user/preventive-maintenance-panel/${recordId}`;
-    }
-    if (text.includes("field instrument calibration")) {
-        return `/user/field-instrument-calibration-addendum-panel/${recordId}`;
-    }
-    if (text.includes("field instrument")) {
-        return `/user/field-instruments-planner-panel/${recordId}`;
-    }
-    if (text.includes("spare instrument")) {
-        return `/user/spare-instrument-calibration-master-panel/${recordId}`;
-    }
-    if (text.includes("equipment master")) {
-        return `/user/equipment-master-panel/${recordId}`;
-    }
-
-    // Calibration — management/child first, then planner
-    if (text.includes("calibration management") || text.includes("calibration child")) {
-        return `/user/calibration-management-panel/${recordId}`;
-    }
-    if (text.includes("calibration planner") || text.includes("calibration")) {
-        return `/user/calibration-planner-panel/${recordId}`;
-    }
-
-    return null;
-};
-
-/* Extract friendly module label for display */
-const resolveModuleLabel = (item) => {
-    const text = `${item.title || ""} ${item.message || ""}`.toLowerCase();
-
-    if (text.includes("unplanned calibration")) return "Unplanned Calibration";
-    if (text.includes("addendum calibration")) return "Addendum Calibration";
-    if (text.includes("addendum preventive")) return "Addendum Preventive";
-    if (text.includes("preventive maintenance")) return "Preventive Maintenance";
-    if (text.includes("field instrument calibration")) return "FI Calibration";
-    if (text.includes("field instrument")) return "Field Instrument";
-    if (text.includes("spare instrument")) return "Spare Instrument";
-    if (text.includes("equipment master")) return "Equipment Master";
-    if (text.includes("calibration")) return "Calibration Planner";
-    if (text.includes("equipment")) return "Equipment";
-    return null;
 };
 
 const NotificationAlertModal = ({

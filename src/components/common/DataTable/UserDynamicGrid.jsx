@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef } from "react";
-import { Plus, Trash2, Table2 } from "lucide-react";
+import { Plus, Trash2, Table2, Loader2 } from "lucide-react";
+import {toast} from "sonner"
 import { Input, InputNumber, Select, DatePicker, Switch } from "antd";
 import { useParams } from "react-router-dom";
 import dayjs from "dayjs";
@@ -8,23 +9,51 @@ import CustomScrollContainer from "../CustomScrollbar/CustomScrollContainer";
 import SymbolicInput, { UNIT_MASTER, parseValueAndUnit } from "../SymbolicInput/SymbolicInput";
 import { getAllPermissions } from "../../../services/usersApi/workflowCommonApi";
 const { TextArea } = Input;
-// Extract a numeric reading, allowing a recognized symbolic unit.
-const extractNumeric = (val) => {
-    if (val === null || val === undefined) return null;
-    const { rawValue } = parseValueAndUnit(String(val));
-    const str = String(rawValue ?? "").trim();
-    if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(str)) return null;
-    const num = Number(str);
-    return Number.isFinite(num) ? num : null;
+// Composite time formats; all other registered units use numeric subtraction.
+const TIME_FORMATS = {
+    "min:sec:1/100 sec": { multipliers: [6000, 100, 1], limits: [Infinity, 60, 100] },
+    "Hr:min:sec:1/100 sec": { multipliers: [360000, 6000, 100, 1], limits: [Infinity, 60, 60, 100] },
+    "Hr:min": { multipliers: [60, 1], limits: [Infinity, 60] },
 };
-// Error = UUC − Master. Missing or invalid required readings return NA.
+const extractNumeric = (val) => {
+    if (val == null) return null;
+    const { rawValue, unit } = parseValueAndUnit(String(val));
+    const raw = String(rawValue ?? "").trim();
+    const symbol = String(unit || "").trim();
+    const format = TIME_FORMATS[symbol];
+    if (format) {
+        const parts = raw.replace(/^[+-]/, "").split(/[.:]/);
+        if (parts.length !== format.multipliers.length || parts.some(p => !/^\d+$/.test(p))) return null;
+        const values = parts.map(Number);
+        if (values.some((v, i) => !Number.isSafeInteger(v) || v >= format.limits[i])) return null;
+        const total = values.reduce((sum, v, i) => sum + v * format.multipliers[i], 0);
+        return Number.isSafeInteger(total) ? { value: raw.startsWith("-") ? -total : total, unit: symbol } : null;
+    }
+    if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(raw)) return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? { value, unit: symbol } : null;
+};
+const formatTimeError = (value, unit) => {
+    let remaining = Math.abs(value);
+    const parts = TIME_FORMATS[unit].multipliers.map(multiplier => {
+        const part = Math.floor(remaining / multiplier);
+        remaining %= multiplier;
+        return String(part).padStart(2, "0");
+    });
+    return `${value < 0 ? "-" : ""}${parts.join(".")}`;
+};
 const computeError = (masterVal, uucVal) => {
-    const m = extractNumeric(masterVal);
-    const u = extractNumeric(uucVal);
-    if (m === null || u === null) return "NA";
-    const diff = u - m;
-    const rounded = Math.round(diff * 1e6) / 1e6;
-    return Number.isFinite(rounded) ? String(rounded) : "NA";
+    const master = extractNumeric(masterVal);
+    const uuc = extractNumeric(uucVal);
+    if (!master || !uuc || master.unit !== uuc.unit) return "NA";
+    const difference = uuc.value - master.value;
+    if (!Number.isFinite(difference)) return "NA";
+    if (TIME_FORMATS[master.unit]) {
+        if (!Number.isSafeInteger(difference)) return "NA";
+        return `${formatTimeError(difference, master.unit)} ${master.unit}`;
+    }
+    const rounded = Number(difference.toFixed(6));
+    return master.unit ? `${rounded} ${master.unit}` : String(rounded);
 };
 // Independently select the active reading for each column.
 const computeCalibrationError = (row, toggles) => {
@@ -37,11 +66,8 @@ const computeCalibrationError = (row, toggles) => {
 const isCalibrationReadingColumn = (key) =>
     key === "masterInstrumentReadings" || key === "unitUnderCalibrationReading";
 // Header-controlled units (opt-in per column).
-const getSymbolKeys = (column) => [column.key, ...(column.splitFields || [])
-    .filter(field => field.symbolic ?? column.symbolic).map(field => field.key)];
-const getSavedSymbol = (column, rows) => {
-    const units = new Set(rows.flatMap(row => getSymbolKeys(column)
-        .map(key => parseValueAndUnit(row[key] ?? "").unit).filter(Boolean)));
+const getSavedSymbol = (fieldKey, rows) => {
+    const units = new Set(rows.map(row => parseValueAndUnit(row[fieldKey] ?? "").unit).filter(Boolean));
     return { enabled: units.size > 0, unit: units.size === 1 ? [...units][0] : "", mixed: units.size > 1 };
 };
 const SYMBOL_OPTIONS = (Array.isArray(UNIT_MASTER) ? UNIT_MASTER :
@@ -129,24 +155,24 @@ const UserDynamicGrid = ({
     // ---- Header symbol state ----
     const [columnSymbols, setColumnSymbols] = useState({});
     useEffect(() => { setColumnSymbols({}); }, [recordId]);
-    const getColumnSymbol = column => columnSymbols[column.key] ?? getSavedSymbol(column, rows);
-    const getActiveUnit = column => {
-        const config = getColumnSymbol(column);
+    const getColumnSymbol = (column, fieldKey = column.key) => columnSymbols[fieldKey] ?? getSavedSymbol(fieldKey, rows);
+    const getActiveUnit = (column, fieldKey = column.key) => {
+        const config = getColumnSymbol(column, fieldKey);
         return config.enabled ? config.unit : "";
     };
-    const changeHeaderSymbol = (column, enabled, unit = "") => {
+    const changeHeaderSymbol = (column, enabled, unit = "", fieldKey = column.key) => {
         if (isReadOnly) return;
-        const keys = getSymbolKeys(column);
+        const keys = [fieldKey];
         // Enabling the selector alone must not modify existing readings.
         if (enabled && !unit) {
-            setColumnSymbols(prev => ({ ...prev, [column.key]: { ...getColumnSymbol(column), enabled: true } }));
+            setColumnSymbols(prev => ({ ...prev, [fieldKey]: { ...getColumnSymbol(column, fieldKey), enabled: true } }));
             return;
         }
         const changesExistingUnit = rows.some(row => keys.some(key => {
             const oldUnit = parseValueAndUnit(row[key] ?? "").unit;
             return oldUnit && oldUnit !== unit;
         }));
-        if (changesExistingUnit && !window.confirm("Change existing reading symbols? Numeric readings will not be converted.")) return;
+        // if (changesExistingUnit && !window.confirm("Change existing reading symbols? Numeric readings will not be converted.")) return;
         let changed = false;
         const updated = rows.map(row => {
             const next = { ...row };
@@ -157,26 +183,35 @@ const UserDynamicGrid = ({
                 const value = raw && unit ? `${raw} ${unit}` : raw;
                 if (value !== row[key]) { next[key] = value; changed = true; }
             });
+            if (isCalibrationGrid) next.errorIn = computeCalibrationError(next, columnToggles);
             return next;
         });
-        setColumnSymbols(prev => ({ ...prev, [column.key]: { enabled, unit, mixed: false } }));
+        setColumnSymbols(prev => ({ ...prev, [fieldKey]: { enabled, unit, mixed: false } }));
         if (changed) onChange?.(updated);
     };
     const renderHeaderSymbol = column => {
         if (!column.headerSymbolic || !column.symbolic) return null;
-        const config = getColumnSymbol(column);
+        const split = column.toggleable && columnToggles[column.key] && column.splitFields;
+        const fields = split ? column.splitFields : [{ key: column.key }];
         return (
-            <div className="mt-2 flex flex-col gap-1.5">
-                <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-medium">Symbol</span>
-                    <Switch size="small" checked={config.enabled} disabled={isReadOnly}
-                        onChange={checked => changeHeaderSymbol(column, checked)} />
-                </div>
-                {config.enabled && <Select size="small" showSearch optionFilterProp="label"
-                    value={config.unit || undefined} placeholder="Select symbol" options={SYMBOL_OPTIONS}
-                    disabled={isReadOnly} onChange={unit => changeHeaderSymbol(column, true, unit)}
-                    className="!w-full" popupMatchSelectWidth={false} />}
-                {config.mixed && <span className="text-[10px] text-amber-600">Mixed existing units</span>}
+            <div className={`mt-2 grid gap-2 ${split ? "grid-cols-2" : "grid-cols-1"}`}>
+                {fields.map((field, index) => {
+                    const config = getColumnSymbol(column, field.key);
+                    return (
+                        <div key={field.key} className="flex min-w-0 flex-col gap-1.5">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-medium">{split ? `Symbol ${index + 1}` : "Symbol"}</span>
+                                <Switch size="small" checked={config.enabled} disabled={isReadOnly}
+                                    onChange={checked => changeHeaderSymbol(column, checked, "", field.key)} />
+                            </div>
+                            {config.enabled && <Select size="small" showSearch optionFilterProp="label"
+                                value={config.unit || undefined} placeholder="Select symbol" options={SYMBOL_OPTIONS}
+                                disabled={isReadOnly} onChange={unit => changeHeaderSymbol(column, true, unit, field.key)}
+                                className="!w-full" popupMatchSelectWidth={false} />}
+                            {config.mixed && <span className="text-[10px] text-amber-600">Mixed existing units</span>}
+                        </div>
+                    );
+                })}
             </div>
         );
     };
@@ -221,11 +256,11 @@ const UserDynamicGrid = ({
                     }
                 }
             });
-            return newToggles;
+            return Object.keys(newToggles).every(key => newToggles[key] === prev[key]) ? prev : newToggles;
         });
     }, [rows, columns, isCalibrationGrid, recordId]);
     useEffect(() => {
-    if (!isCalibrationGrid || !rows.length) return;
+    if (!isCalibrationGrid || !rows.length || isReadOnly) return;
     let needsUpdate = false;
     const updated = rows.map((row) => {
         const newRow = { ...row };
@@ -246,11 +281,14 @@ const UserDynamicGrid = ({
         return newRow;
     });
     if (needsUpdate) onChangeRef.current?.(updated);
-}, [rows, columnToggles, isCalibrationGrid]);
+}, [rows, columnToggles, isCalibrationGrid, isReadOnly]);
     // ---- Modal state ----
     const [toggleModalState, setToggleModalState] = useState({ open: false, columnKey: null });
     const [deleteRowIndex, setDeleteRowIndex] = useState(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+    const [isDeleting, setIsDeleting] = useState(false);
+    const deletingRef = useRef(false);
     // ---- Create a new row ----
     const createRow = useCallback(() => {
         const row = {
@@ -278,23 +316,52 @@ const UserDynamicGrid = ({
         onChange?.([...rows, newRow]);
     };
     const handleDeleteRow = (rowIndex) => {
-        if (!effectiveAllowDelete) return;
-        if (rows.length <= minRows) return;
-        setDeleteRowIndex(rowIndex);
-        setIsDeleteModalOpen(true);
-    };
-    const handleConfirmDelete = async () => {
-        if (deleteRowIndex === null || rows.length <= minRows) return;
-        const updatedRows = rows.filter((_, index) => index !== deleteRowIndex);
+    if (!effectiveAllowDelete || deletingRef.current) return;
+    if (rows.length <= minRows) return;
+    setDeleteRowIndex(rowIndex);
+    setIsDeleteModalOpen(true);
+};
+
+const handleConfirmDelete = async () => {
+    if (
+        deletingRef.current ||
+        !effectiveAllowDelete ||
+        deleteRowIndex === null ||
+        deleteRowIndex >= rows.length ||
+        rows.length <= minRows
+    ) {
+        return;
+    }
+    deletingRef.current = true;
+    setIsDeleting(true);
+    try {
+        const updatedRows = rows.filter(
+            (_, index) => index !== deleteRowIndex
+        );
+        // Wait until the delete API completes
         await deleteRow?.(updatedRows);
+        // Update grid only after successful deletion
         onChange?.(updatedRows);
         setDeleteRowIndex(null);
         setIsDeleteModalOpen(false);
-    };
-    const handleCancelDelete = () => {
-        setDeleteRowIndex(null);
-        setIsDeleteModalOpen(false);
-    };
+    } catch (error) {
+        console.error("Failed to delete row:", error);
+        toast.error(
+            error?.response?.data?.message ||
+            "Failed to delete row. Please try again."
+        );
+    } finally {
+        deletingRef.current = false;
+        setIsDeleting(false);
+    }
+};
+
+const handleCancelDelete = () => {
+    if (deletingRef.current) return;
+    setDeleteRowIndex(null);
+    setIsDeleteModalOpen(false);
+};
+
     // ---- Cell change handlers (auto-compute errorIn) ----
     const handleCellChange = (rowIndex, columnKey, newValue) => {
         if (isReadOnly) return;
@@ -373,7 +440,7 @@ const handleConfirmToggleOff = () => {
         return true;
     };
     const isColumnDisabled = (column, row, rowIndex) => {
-        if (isReadOnly) return true;
+        if (isReadOnly || isDeleting) return true;
         if (typeof column.disabled === "function") {
             return column.disabled({ row, rowIndex });
         }
@@ -391,12 +458,12 @@ const handleConfirmToggleOff = () => {
                     {column.splitFields.map((field) => {
                         const val = row[field.key] ?? "";
                         const useSymbolic = field.symbolic ?? column.symbolic;
-                        if (useSymbolic && (!column.headerSymbolic || getActiveUnit(column))) {
+                        if (useSymbolic && (!column.headerSymbolic || getActiveUnit(column, field.key))) {
                             return (
                                 <GridSymbolicInput
                                     key={field.key}
                                     value={val}
-                                    fixedUnit={column.headerSymbolic ? getActiveUnit(column) : ""}
+                                    fixedUnit={column.headerSymbolic ? getActiveUnit(column, field.key) : ""}
                                     disabled={disabled}
                                     placeholder={field.placeholder || `Enter ${field.key}`}
                                     defaultDiscipline={
@@ -545,7 +612,11 @@ const handleConfirmToggleOff = () => {
                     <button
                         type="button"
                         onClick={handleAddRow}
-                        disabled={maxRows !== undefined && rows.length >= maxRows}
+                        // disabled={maxRows !== undefined && rows.length >= maxRows}
+                        disabled={
+                            isDeleting ||
+                            (maxRows !== undefined && rows.length >= maxRows)
+                        }
                         className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[#2B5577] px-3.5 text-[11px] font-semibold text-white shadow-[0_4px_12px_rgba(43,85,119,0.20)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-[#234766] hover:shadow-[0_7px_16px_rgba(43,85,119,0.25)] active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
                     >
                         <Plus size={14} strokeWidth={2} className="transition-transform duration-200 group-hover:rotate-90" />
@@ -629,11 +700,32 @@ const handleConfirmToggleOff = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => handleDeleteRow(rowIndex)}
-                                                disabled={rows.length <= minRows}
-                                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
-                                                aria-label="Delete row"
+                                                disabled={isDeleting || rows.length <= minRows}
+                                                className={`
+                                                    inline-flex h-8 w-8 items-center justify-center
+                                                    rounded-lg transition-all duration-200
+                                                    disabled:cursor-not-allowed
+                                                    ${
+                                                        isDeleting && deleteRowIndex === rowIndex
+                                                            ? "bg-red-50 text-[#F52F3E]"
+                                                            : "text-[#9AA6A1] hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:opacity-25"
+                                                    }
+                                                `}
+                                                aria-label={
+                                                    isDeleting && deleteRowIndex === rowIndex
+                                                        ? "Deleting row"
+                                                        : "Delete row"
+                                                }
                                             >
-                                                <Trash2 size={14} strokeWidth={1.8} />
+                                                {isDeleting && deleteRowIndex === rowIndex ? (
+                                                    <Loader2
+                                                        size={15}
+                                                        strokeWidth={2}
+                                                        className="animate-spin"
+                                                    />
+                                                ) : (
+                                                    <Trash2 size={14} strokeWidth={1.8} />
+                                                )}
                                             </button>
                                         </td>
                                     )}
@@ -665,35 +757,75 @@ const handleConfirmToggleOff = () => {
                 )}
             </div>
             {/* Delete Row Confirmation Modal */}
-            <UserModal
-                isOpen={isDeleteModalOpen}
-                onClose={handleCancelDelete}
-                title="Delete Row"
-                description="Please confirm this action before continuing."
-                width="max-w-[420px]"
+<UserModal
+    isOpen={isDeleteModalOpen}
+    onClose={handleCancelDelete}
+    title="Delete Row"
+    description={
+        isDeleting
+            ? "Please wait while the row is being deleted."
+            : "Please confirm this action before continuing."
+    }
+    width="max-w-[420px]"
+>
+    <div className="space-y-5" aria-busy={isDeleting}>
+        <p className="text-[13px] leading-6 text-[#596760]">
+            Are you sure you want to delete this row?
+            This action cannot be undone.
+        </p>
+
+        <div className="flex justify-end gap-3 border-t border-[#E8ECEA] pt-4">
+
+            {/* Cancel Button */}
+            <button
+                type="button"
+                onClick={handleCancelDelete}
+                disabled={isDeleting}
+                className="
+                    h-9 rounded-lg border border-[#D5DEDA]
+                    bg-white px-4 text-[12px] font-semibold
+                    text-[#596760] transition-all duration-200
+                    hover:bg-[#F6F8F7] hover:text-[#263B35]
+                    active:scale-[0.98]
+                    disabled:cursor-not-allowed disabled:opacity-50
+                "
             >
-                <div className="space-y-5">
-                    <p className="text-[13px] leading-6 text-[#596760]">
-                        Are you sure you want to delete this row? This action cannot be undone.
-                    </p>
-                    <div className="flex justify-end gap-3 border-t border-[#E8ECEA] pt-4">
-                        <button
-                            type="button"
-                            onClick={handleCancelDelete}
-                            className="h-9 rounded-lg border border-[#D5DEDA] bg-white px-4 text-[12px] font-semibold text-[#596760] transition-all duration-200 hover:bg-[#F6F8F7] hover:text-[#263B35] active:scale-[0.98]"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleConfirmDelete}
-                            className="h-9 rounded-lg bg-[#F52F3E] px-4 text-[12px] font-semibold text-white shadow-[0_4px_12px_rgba(245,47,62,0.20)] transition-all duration-200 hover:bg-[#E52635] hover:shadow-[0_6px_15px_rgba(245,47,62,0.28)] active:scale-[0.98]"
-                        >
-                            Delete Row
-                        </button>
-                    </div>
-                </div>
-            </UserModal>
+                Cancel
+            </button>
+
+            {/* Delete Button */}
+            <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="
+                    inline-flex h-9 min-w-[115px]
+                    items-center justify-center gap-2
+                    rounded-lg bg-[#F52F3E] px-4
+                    text-[12px] font-semibold text-white
+                    shadow-[0_4px_12px_rgba(245,47,62,0.20)]
+                    transition-all duration-200
+                    hover:bg-[#E52635]
+                    active:scale-[0.98]
+                    disabled:cursor-not-allowed disabled:opacity-75
+                "
+            >
+                {isDeleting ? (
+                    <>
+                        <Loader2
+                            size={15}
+                            strokeWidth={2.5}
+                            className="animate-spin"
+                        />
+                        <span>Deleting...</span>
+                    </>
+                ) : (
+                    "Delete Row"
+                )}
+            </button>
+        </div>
+    </div>
+</UserModal>
             {/* Toggle OFF Confirmation Modal */}
             <UserModal
                 isOpen={toggleModalState.open}

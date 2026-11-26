@@ -989,7 +989,7 @@ const handleSaveAndExit = async () => {
               name="remarks"
               label="Remarks"
               className="!mb-4 md:col-span-2"
-              rules={[{ required: true, message: "Please select Pass or Fail" }]}
+              // rules={[{ required: true, message: "Please select Pass or Fail" }]}
               extra={
                 remarksValue === "Pass" ? (
                   <span className="text-[12px] font-medium text-slate-600 mt-1 block">

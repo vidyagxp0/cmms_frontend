@@ -115,10 +115,10 @@ const Login = () => {
   };
 
   return (
-    <div
-      className="relative min-h-screen w-full overflow-x-hidden bg-[#e9e6dc]"
-      style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
-    >
+      <div
+        className="fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#e9e6dc]"
+        style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+      >
       {/* =====================================================
           PAGE BACKGROUND GRID
       ===================================================== */}
@@ -144,7 +144,7 @@ const Login = () => {
           MAIN LAYOUT
       ===================================================== */}
 
-      <div className="relative z-10 flex min-h-screen w-full flex-col lg:flex-row">
+      <div className="relative z-10 flex h-full min-h-0 w-full flex-col overflow-hidden lg:flex-row">
         {/* =====================================================
             LEFT SIDE
         ===================================================== */}
@@ -155,7 +155,7 @@ const Login = () => {
             RIGHT SIDE - LOGIN AREA
         ===================================================== */}
 
-        <div className="relative flex min-h-screen w-full items-center justify-center overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 lg:min-h-screen lg:w-[46%] lg:px-8 lg:py-6">
+        <div className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden px-4 py-3 sm:px-6 lg:w-[46%] lg:px-8">
           {/* =================================================
               MOBILE-ONLY BACKGROUND PHOTO
               (desktop keeps the plain bg color; EquipmentScene
@@ -187,11 +187,14 @@ const Login = () => {
           ================================================= */}
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="relative z-20 w-full max-w-[470px] overflow-hidden rounded-[28px] border border-[#d8dde0] bg-white/95 shadow-[0_24px_65px_rgba(32,45,52,0.12)] backdrop-blur-xl"
-          >
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: 0.7,
+            ease: [0.22, 1, 0.36, 1],
+          }}
+          className="relative z-20 w-full max-w-[470px] shrink-0 overflow-hidden rounded-[28px] border border-[#d8dde0] bg-white/95 shadow-[0_24px_65px_rgba(32,45,52,0.12)] backdrop-blur-xl [@media(max-height:650px)]:scale-90 [@media(max-height:550px)]:scale-75"
+        >
             {/* =================================================
                 CARD TOP BRAND AREA
             ================================================= */}

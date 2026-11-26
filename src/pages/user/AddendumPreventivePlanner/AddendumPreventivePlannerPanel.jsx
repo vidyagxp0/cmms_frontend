@@ -54,7 +54,6 @@ const TABS = [
   { id: "hod", label: "HOD / Designee Review", stageId: 57 },
   { id: "qa-review", label: "QA Approval Review", stageId: 58 },
   { id: "activity", label: "Activity Log", stageId: 59 },
-  { id: "cancellation", label: "Cancellation", stageId: 60 },
 ];
 
 const REQUIRED_FIELDS = [
@@ -220,7 +219,6 @@ const AddendumPreventivePlannerPanel = () => {
   const isGeneralEditable = isStageEditable(56);
   const isHodEditable = isStageEditable(57);
   const isQaReviewEditable = isStageEditable(58);
-  const isCancellationEditable = isStageEditable(60);
 
   // 👇 NEW — Child creation gate (Close Done = stage 58, initiator only)
   const canCreateChild =
@@ -784,11 +782,7 @@ const AddendumPreventivePlannerPanel = () => {
     );
   }
 
-  const isCancellationStageActive = Number(activeStageId) === 60;
-
-  const visibleTabs = isCancellationStageActive
-    ? TABS.filter((tab) => tab.id === "cancellation")
-    : TABS.filter((tab) => tab.id !== "cancellation");
+  const visibleTabs = TABS;
 
   return (
     <div className="w-full">
@@ -1033,30 +1027,6 @@ const AddendumPreventivePlannerPanel = () => {
                 label="QA Review Attachment"
                 uploadApi={addMultipleAttachments}
                 disabled={!isQaReviewEditable}
-              />
-            </Form.Item>
-          </div>
-        </section>
-
-        <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
-          <SectionHeader title="CANCELLATION" />
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item name="cancellationRemark" label="Remark" className="!mb-4 md:col-span-2">
-              <FormTextArea rows={5} placeholder="Enter cancellation remark..." />
-            </Form.Item>
-            <Form.Item
-              name="cancellationAttachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormAttachment
-                multiple={true}
-                recordId={recordId}
-                attachmentField="cancellation_attachment"
-                label="Cancellation Attachment"
-                uploadApi={addMultipleAttachments}
-                disabled={!isCancellationEditable}
               />
             </Form.Item>
           </div>

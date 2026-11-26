@@ -44,7 +44,6 @@ const TABS = [
   { id: "user-dept-review", label: "User Department Review (User Dept)", stageId: 73 },
   { id: "qa-review", label: "QA Approval Review", stageId: 74 },
   { id: "activity", label: "Activity Log", stageId: 75 },
-  { id: "cancellation", label: "Cancellation", stageId: 76 },
 ];
 
 const getProcessValue = (processData = [], key) => {
@@ -233,7 +232,6 @@ const UnCreateCalibrationPanel = () => {
   const isHodEditable = isStageEditable(72);
   const isUserDeptEditable = isStageEditable(73);
   const isQaReviewEditable = isStageEditable(74);
-  const isCancellationEditable = isStageEditable(76);
   const canCreateChild = Number(activeStageId) === 75 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
 
   useEffect(() => {
@@ -788,11 +786,7 @@ const handleSaveAndExit = async () => {
     );
   }
 
-  const isCancellationStageActive = Number(activeStageId) === 76;
-
-  const visibleTabs = isCancellationStageActive
-    ? TABS.filter((tab) => tab.id === "cancellation")
-    : TABS.filter((tab) => tab.id !== "cancellation");
+  const visibleTabs = TABS;
 
   return (
     <div className="w-full">
@@ -1147,37 +1141,6 @@ const handleSaveAndExit = async () => {
                 label="QA Review Attachment"
                 uploadApi={addMultipleAttachments}
                 disabled={!isQaReviewEditable}
-              />
-            </Form.Item>
-          </div>
-        </section>
-
-        <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
-          <SectionHeader title="CANCELLATION" />
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item
-              name="cancellationRemark"
-              label="Remark"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormTextArea
-                rows={5}
-                placeholder="Enter cancellation remark..."
-              />
-            </Form.Item>
-            <Form.Item
-              name="cancellationAttachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormAttachment
-                multiple={true}
-                recordId={recordId}
-                attachmentField="cancellation_attachment"
-                label="Cancellation Attachment"
-                uploadApi={addMultipleAttachments}
-                disabled={!isCancellationEditable}
               />
             </Form.Item>
           </div>

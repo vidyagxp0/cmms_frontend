@@ -49,7 +49,6 @@ const TABS = [
   { id: "hod", label: "HOD / Designee Review ", stageId: 47 },
   { id: "qa-review", label: "QA Approval Review", stageId: 48 },
   { id: "activity", label: "Activity Log", stageId: 49 },
-  { id: "cancellation", label: "Cancellation", stageId: 50 },
 ];
 
 const MASTER_INSTRUMENT_PROCESS_ID = 9;
@@ -255,7 +254,6 @@ const SpareInstrumentPanel = () => {
   const isInstrumentEditable = isImported || isStageEditable(46);
   const isHodEditable = isImported || isStageEditable(47);
   const isQaReviewEditable = isImported || isStageEditable(48);
-  const isCancellationEditable = isImported || isStageEditable(50);
 
   /* ───────── Profile ───────── */
   useEffect(() => {
@@ -704,12 +702,8 @@ const SpareInstrumentPanel = () => {
     }
   };
 
-  /* ───────── Visible tabs (hide cancellation unless on its stage) ───────── */
-  const isCancellationStageActive = Number(activeStageId) === 81;
-
-  let visibleTabs = isCancellationStageActive
-    ? TABS.filter((tab) => tab.id === "cancellation")
-    : TABS.filter((tab) => tab.id !== "cancellation");
+  /* ───────── Visible tabs (cancellation tab hidden) ───────── */
+  let visibleTabs = TABS;
 
   /* ── NEW: hide Activity Log tab when the record is imported ── */
   if (isImported) {
@@ -1137,40 +1131,6 @@ const SpareInstrumentPanel = () => {
                 </div>
               ))
             )}
-          </div>
-        </section>
-
-        {/* ─── TAB 6: CANCELLATION ─── */}
-        <section style={{ display: activeTab === "cancellation" ? "block" : "none" }}>
-          <SectionHeader title="CANCELLATION" />
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Form.Item
-              name="cancellationRemark"
-              label="Remark"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormTextArea
-                rows={5}
-                placeholder="Enter cancellation remark..."
-                disabled={!isCancellationEditable}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="cancellationAttachment"
-              label="Attachment"
-              valuePropName="value"
-              className="!mb-4 md:col-span-2"
-            >
-              <FormAttachment
-                multiple={true}
-                recordId={id}
-                attachmentField="cancellation_attachment"
-                label="Cancellation Attachment"
-                uploadApi={addMultipleAttachments}
-                disabled={!isCancellationEditable}
-              />
-            </Form.Item>
           </div>
         </section>
       </Form>

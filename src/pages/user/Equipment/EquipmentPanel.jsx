@@ -13,7 +13,7 @@ import {
   SlidersHorizontal,
   ClipboardList,
 } from "lucide-react";
-import { Form } from "antd"; 
+import { Form, Select } from "antd"; 
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -200,6 +200,11 @@ const normalizeIncomingChecklist = (raw) => {
   return { ...EMPTY_CHECKLIST };
 };
 
+const CATEGORY_OPTIONS = [
+    { label: "NC", value: "NC" },
+    { label: "C", value: "C" },
+    { label: "Indicative", value: "Indicative" },
+];
 /* ───────────────────────── Component ───────────────────────── */
 
 const EquipmentPanel = () => {
@@ -951,7 +956,7 @@ const EquipmentPanel = () => {
               <SymbolicInput placeholder="Enter Capacity" defaultDiscipline="Capacity" disabled={!isInstrumentEditable} />
             </Form.Item>
 
-            <Form.Item
+            {/* <Form.Item
               name="category"
               label={
                 <span className="flex items-center gap-1.5">
@@ -963,7 +968,41 @@ const EquipmentPanel = () => {
               className="!mb-0"
             >
               <FormInput placeholder="Enter category" disabled={!isInstrumentEditable} />
-            </Form.Item>
+            </Form.Item> */}
+
+            {/* CATEGORY */}
+                <Form.Item
+                    name="category"
+                    label={
+                        <span className="flex items-center gap-1.5">
+                            <Layers3
+                                size={12}
+                                strokeWidth={1.9}
+                                className="text-[#56766D]"
+                            />
+                            Category
+                        </span>
+                    }
+                    rules={
+                        isImported
+                            ? []
+                            : [
+                                  {
+                                      required: true,
+                                      message: "Please select category",
+                                  },
+                              ]
+                    }
+                    className="!mb-0"
+                >
+                    <Select
+                        placeholder="Select category"
+                        options={CATEGORY_OPTIONS}
+                        disabled={!isInstrumentEditable}
+                        className="w-full"
+                        allowClear
+                    />
+                </Form.Item>
           </div>
         </section>
 

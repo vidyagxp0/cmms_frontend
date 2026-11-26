@@ -66,6 +66,12 @@ const SELECTION_TYPES = [
     "multi_select_checkbox",
 ];
 
+const CATEGORY_OPTIONS = [
+    { label: "NC", value: "NC" },
+    { label: "C", value: "C" },
+    { label: "Indicative", value: "Indicative" },
+];
+
 /* ───────────────────────── Validation helper ───────────────────────── */
 
 const validateInstrumentForm = (form) => {
@@ -742,7 +748,7 @@ const CreateFieldInstruments = () => {
                             {/* 👆 SYMBOLIC INPUT REPLACEMENTS END 👆 */}
 
                             {/* CATEGORY */}
-                            <Form.Item
+                            {/* <Form.Item
                                 name="category"
                                 label={
                                 <span className="inline-flex items-center">
@@ -760,6 +766,31 @@ const CreateFieldInstruments = () => {
                                 className="!mb-4"
                             >
                                 <FormInput placeholder="Enter category" />
+                            </Form.Item> */}
+
+                            {/* CATEGORY */}
+                            <Form.Item
+                                name="category"
+                                label={
+                                    <span className="inline-flex items-center">
+                                        Category
+                                        <RequiredAsterisk message="Category is required. Please select the category." />
+                                    </span>
+                                }
+                                rules={[
+                                    {
+                                        required: true,
+                                        message: "Please select category",
+                                    },
+                                ]}
+                                className="!mb-4"
+                            >
+                                <Select
+                                    placeholder="Select category"
+                                    options={CATEGORY_OPTIONS}
+                                    className="w-full"
+                                    allowClear
+                                />
                             </Form.Item>
                         </div>
                     </section>

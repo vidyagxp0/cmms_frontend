@@ -80,6 +80,12 @@ const SELECTION_TYPES = [
   "multi_select_checkbox",
 ];
 
+const CATEGORY_OPTIONS = [
+    { label: "NC", value: "NC" },
+    { label: "C", value: "C" },
+    { label: "Indicative", value: "Indicative" },
+];
+
 /* ───────────────────────── Helpers ───────────────────────── */
 
 const normalizeIncomingChecklist = (raw) => {
@@ -1086,7 +1092,7 @@ const FIeldInstrumentsPanel = () => {
               <SymbolicInput placeholder="Enter Capacity" defaultDiscipline="Capacity" disabled={!isInstrumentEditable} />
             </Form.Item>
             {/* 👆 SYMBOLIC INPUT REPLACEMENTS END 👆 */}
-
+{/* 
             <Form.Item
               name="category"
               label={
@@ -1099,6 +1105,39 @@ const FIeldInstrumentsPanel = () => {
               className="!mb-0"
             >
               <FormInput placeholder="Enter category" disabled={!isInstrumentEditable} />
+            </Form.Item> */}
+
+            {/* CATEGORY */}
+            <Form.Item
+                name="category"
+                label={
+                    <span className="flex items-center gap-1.5">
+                        <Layers3
+                            size={12}
+                            strokeWidth={1.9}
+                            className="text-[#56766D]"
+                        />
+                        Category
+                    </span>
+                }
+                rules={
+                    isImported
+                        ? []
+                        : [
+                              {
+                                  required: true,
+                                  message: "Please select category",
+                              },
+                          ]
+                }
+                className="!mb-0">
+                <Select
+                    placeholder="Select category"
+                    options={CATEGORY_OPTIONS}
+                    disabled={!isInstrumentEditable}
+                    className="w-full"
+                    allowClear
+                />
             </Form.Item>
           </div>
         </section>

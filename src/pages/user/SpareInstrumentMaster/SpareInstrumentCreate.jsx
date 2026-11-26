@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Activity } from "lucide-react";
-import { Form } from "antd";
+import { Form, Select } from "antd";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -42,6 +42,7 @@ const REQUIRED_FIELDS = [
     { name: "calibration_test_points", label: "Calibration Test Points" },
     { name: "asset_code", label: "Asset Code" },
     { name: "capacity", label: "Capacity" },
+    { name: "category", label: "Category" },
 ];
 
 const EMPTY_CHECKLIST = {
@@ -64,6 +65,11 @@ const SELECTION_TYPES = [
     "multi_select_checkbox",
 ];
 
+const CATEGORY_OPTIONS = [
+    { label: "NC", value: "NC" },
+    { label: "C", value: "C" },
+    { label: "Indicative", value: "Indicative" },
+];
 
 /* ───────────────────────── Validation helper ───────────────────────── */
 
@@ -278,6 +284,7 @@ const SpareInstrumentCreate = () => {
                 calibration_test_points: values.calibration_test_points.trim(),
                 asset_code: values.asset_code.trim(),
                 capacity: values.capacity.trim(),
+                category: values.category?.trim() || "",
                 checklist_config: cleanedChecklistConfig,
                 stage_id: 46 || null,
                 process_id: 9 || null,
@@ -295,7 +302,7 @@ const SpareInstrumentCreate = () => {
 
             setIsDirty(false);
             confirmLeave();
-            toast.success("Instrument created successfully.");
+            toast.success("Spare Instrument created successfully.");
 
             form.resetFields();
             setChecklistConfig({ ...EMPTY_CHECKLIST });
@@ -644,6 +651,31 @@ const SpareInstrumentCreate = () => {
                                 <SymbolicInput placeholder="Enter Capacity" defaultDiscipline="Capacity" />
                             </Form.Item>
                             {/* 👆 SYMBOLIC INPUT REPLACEMENTS END 👆 */}
+
+                            {/* CATEGORY */}
+                            <Form.Item
+                                name="category"
+                                label={
+                                    <span className="inline-flex items-center">
+                                        Category
+                                        <RequiredAsterisk message="Category is required. Please select the category." />
+                                    </span>
+                                }
+                                rules={[
+                                    {
+                                        required: true,
+                                        message: "Please select category",
+                                    },
+                                ]}
+                                className="!mb-4"
+                            >
+                                <Select
+                                    placeholder="Select category"
+                                    options={CATEGORY_OPTIONS}
+                                    className="w-full"
+                                    allowClear
+                                />
+                            </Form.Item>
                         </div>
                     </section>
                 )}

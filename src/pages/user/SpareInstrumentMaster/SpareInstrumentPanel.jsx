@@ -10,6 +10,7 @@ import {
   Gauge,
   SlidersHorizontal,
   ClipboardList,
+  Layers3,
 } from "lucide-react";
 import { Form } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
@@ -310,6 +311,7 @@ const SpareInstrumentPanel = () => {
           calibration_test_points: data.calibration_test_points || "",
           asset_code: data.asset_code || "",
           capacity: data.capacity || "",
+          category: data.category || "",
           stage_id: data.stage_id?.id || data.stage_id || null,
           process_id: data.process_id || null,
 
@@ -614,6 +616,7 @@ const SpareInstrumentPanel = () => {
           values.asset_code?.trim() || "",
         capacity:
           values.capacity?.trim() || "",
+        category: values.category?.trim() || "",
         checklist_config: cleanedChecklistConfig,
 
         hod_review_comments: values.hodReviewComments || "",
@@ -635,7 +638,7 @@ const SpareInstrumentPanel = () => {
       console.error("Failed to update instrument:", error);
       toast.error(
         error?.response?.data?.message ||
-          "Failed to update instrument. Please try again."
+          "Failed to update Spare Instrument. Please try again."
       );
       return false;
     } finally {
@@ -968,6 +971,40 @@ const SpareInstrumentPanel = () => {
               <SymbolicInput placeholder="Enter Capacity" defaultDiscipline="Capacity" disabled={!isInstrumentEditable} />
             </Form.Item>
             {/* 👆 SYMBOLIC INPUT REPLACEMENTS END 👆 */}
+
+            {/* CATEGORY */}
+            <Form.Item
+                name="category"
+                label={
+                    <span className="flex items-center gap-1.5">
+                        <Layers3
+                            size={12}
+                            strokeWidth={1.9}
+                            className="text-[#56766D]"
+                        />
+                        Category
+                    </span>
+                }
+                rules={
+                    isImported
+                        ? []
+                        : [
+                              {
+                                  required: true,
+                                  message: "Please select category",
+                              },
+                          ]
+                }
+                className="!mb-0"
+            >
+                <Select
+                    placeholder="Select category"
+                    options={CATEGORY_OPTIONS}
+                    disabled={!isInstrumentEditable}
+                    className="w-full"
+                    allowClear
+                />
+            </Form.Item>
           </div>
         </section>
 

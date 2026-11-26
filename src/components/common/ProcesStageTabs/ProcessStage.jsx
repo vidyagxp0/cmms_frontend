@@ -184,6 +184,7 @@ const ProcessStage = ({
                                             h-[38px]
                                             min-w-[170px]
                                             shrink-0
+                                            ${isCancelledStageActive ? "w-full flex-1" : ""}
                                             items-center
                                             justify-center
                                             overflow-hidden

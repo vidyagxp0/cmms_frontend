@@ -12,7 +12,7 @@ import {
   ClipboardList,
   Layers3,
 } from "lucide-react";
-import { Form } from "antd";
+import { Form, Select } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -73,6 +73,13 @@ const SELECTION_TYPES = [
   "single_select_checkbox",
   "multi_select_checkbox",
 ];
+
+const CATEGORY_OPTIONS = [
+    { label: "NC", value: "NC" },
+    { label: "C", value: "C" },
+    { label: "Indicative", value: "Indicative" },
+];
+
 
 /* ───────────────────────── Helpers ───────────────────────── */
 
@@ -311,7 +318,7 @@ const SpareInstrumentPanel = () => {
           calibration_test_points: data.calibration_test_points || "",
           asset_code: data.asset_code || "",
           capacity: data.capacity || "",
-          category: data.category || "",
+          category: data.category || null,
           stage_id: data.stage_id?.id || data.stage_id || null,
           process_id: data.process_id || null,
 

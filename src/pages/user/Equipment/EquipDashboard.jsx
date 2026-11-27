@@ -232,11 +232,14 @@ const EquipDashboard = () => {
 // ================================================================
 const handleViewCertificate = useCallback(async (instrumentId) => {
     if (!instrumentId) return;
+
     const certificateWindow = window.open("", "_blank");
+
     if (!certificateWindow) {
         alert("Please allow pop-ups to view the certificate.");
         return;
     }
+
     try {
         certificateWindow.document.write(
             REPORT_LOADER_HTML.replace(
@@ -244,25 +247,226 @@ const handleViewCertificate = useCallback(async (instrumentId) => {
                 "Loading your certificate..."
             )
         );
+
         certificateWindow.document.close();
+
+        // STEP 1: Get certificate attachment list
         const response = await getMasterCertificateReport(instrumentId);
+
+        const attachments =
+            response?.data?.data?.attachments ??
+            response?.data?.attachments ??
+            [];
+
         if (certificateWindow.closed) return;
-        const blob = new Blob([response.data], {
-            type: "application/pdf",
+
+        // STEP 2: Check if certificate exists
+        if (!Array.isArray(attachments) || attachments.length === 0) {
+            certificateWindow.document.open();
+
+            certificateWindow.document.write(
+                REPORT_ERROR_HTML
+                    .replace(
+                        "Failed to generate report",
+                        "No Certificate Found"
+                    )
+                    .replace(
+                        "Please close this tab and try again.",
+                        "No certificate attachment is available for this instrument."
+                    )
+            );
+
+            certificateWindow.document.close();
+            return;
+        }
+
+        // STEP 3: Fetch and open actual certificate
+        const openCertificate = async (attachment) => {
+            if (!attachment?.file_name) {
+                throw new Error("Certificate file name is missing.");
+            }
+
+            const fileResponse = await getMasterCertificateReport(
+                instrumentId,
+                attachment.file_name
+            );
+
+            if (certificateWindow.closed) return;
+
+            const contentType =
+                fileResponse.headers?.["content-type"] ||
+                attachment.mime_type ||
+                "application/octet-stream";
+
+            if (contentType.includes("application/json")) {
+                throw new Error("Server returned JSON instead of a file.");
+            }
+
+            const blob = new Blob([fileResponse.data], {
+                type: contentType,
+            });
+
+            const fileUrl = window.URL.createObjectURL(blob);
+
+            certificateWindow.location.href = fileUrl;
+
+            setTimeout(() => {
+                window.URL.revokeObjectURL(fileUrl);
+            }, 60000);
+        };
+
+        // STEP 4: Directly open if only one certificate exists
+        if (attachments.length === 1) {
+            await openCertificate(attachments[0]);
+            return;
+        }
+
+        // STEP 5: Show certificate list if multiple files exist
+        certificateWindow.document.open();
+
+        certificateWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Instrument Certificates</title>
+                <style>
+                    * {
+                        box-sizing: border-box;
+                    }
+
+                    body {
+                        margin: 0;
+                        padding: 40px 20px;
+                        font-family: Arial, sans-serif;
+                        background: #F7F9F8;
+                        color: #263B35;
+                    }
+
+                    .container {
+                        max-width: 700px;
+                        margin: auto;
+                    }
+
+                    h2 {
+                        font-size: 22px;
+                        margin-bottom: 8px;
+                    }
+
+                    .subtitle {
+                        font-size: 13px;
+                        color: #899690;
+                        margin-bottom: 24px;
+                    }
+
+                    .certificate {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 16px;
+                        padding: 18px;
+                        margin-bottom: 12px;
+                        border: 1px solid #D5E0DB;
+                        border-radius: 10px;
+                        background: white;
+                    }
+
+                    .file-name {
+                        font-size: 14px;
+                        font-weight: 600;
+                        overflow-wrap: anywhere;
+                    }
+
+                    .file-type {
+                        font-size: 11px;
+                        color: #899690;
+                        margin-top: 6px;
+                    }
+
+                    button {
+                        flex-shrink: 0;
+                        border: none;
+                        border-radius: 7px;
+                        padding: 10px 16px;
+                        background: #2B5577;
+                        color: white;
+                        font-size: 12px;
+                        font-weight: 600;
+                        cursor: pointer;
+                    }
+
+                    button:hover {
+                        background: #234766;
+                    }
+
+                    button:disabled {
+                        opacity: 0.6;
+                        cursor: not-allowed;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2>Instrument Certificates</h2>
+                    <p class="subtitle">
+                        Select a certificate to view its attachment.
+                    </p>
+                    <div id="certificate-list"></div>
+                </div>
+            </body>
+            </html>
+        `);
+        certificateWindow.document.close();
+        const doc = certificateWindow.document;
+        const listContainer = doc.getElementById("certificate-list");
+        attachments.forEach((attachment) => {
+            const card = doc.createElement("div");
+            card.className = "certificate";
+            const details = doc.createElement("div");
+            const fileName = doc.createElement("div");
+            fileName.className = "file-name";
+            fileName.textContent =
+                attachment.original_name ||
+                attachment.file_name ||
+                "Certificate";
+            const fileType = doc.createElement("div");
+            fileType.className = "file-type";
+            fileType.textContent =
+                attachment.extension?.toUpperCase() ||
+                attachment.mime_type ||
+                "Attachment";
+            const viewButton = doc.createElement("button");
+            viewButton.textContent = "View Certificate";
+            viewButton.onclick = async () => {
+                try {
+                    viewButton.disabled = true;
+                    viewButton.textContent = "Loading...";
+                    await openCertificate(attachment);
+                } catch (error) {
+                    console.error(
+                        "Failed to open certificate:",
+                        error
+                    );
+                    viewButton.disabled = false;
+                    viewButton.textContent = "Try Again";
+                    certificateWindow.alert(
+                        "Failed to open certificate attachment."
+                    );
+                }
+            };
+            details.appendChild(fileName);
+            details.appendChild(fileType);
+            card.appendChild(details);
+            card.appendChild(viewButton);
+            listContainer.appendChild(card);
         });
-        const pdfUrl = window.URL.createObjectURL(blob);
-        certificateWindow.location.href = pdfUrl;
-        setTimeout(() => {
-            window.URL.revokeObjectURL(pdfUrl);
-        }, 10000);
     } catch (error) {
         console.error("Failed to open master certificate:", error);
-        if (certificateWindow && !certificateWindow.closed) {
+        if (!certificateWindow.closed) {
             certificateWindow.document.open();
             certificateWindow.document.write(
                 REPORT_ERROR_HTML.replace(
                     "Failed to generate report",
-                    "Failed to generate certificate"
+                    "Failed to load certificate"
                 )
             );
             certificateWindow.document.close();

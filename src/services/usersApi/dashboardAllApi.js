@@ -76,3 +76,10 @@ export const getAllUnPlannedCalibrationRecords = (params = {}) => {
         params,
     });
 };
+
+
+export const getMasterCertificateReport = (id) => {
+    return api.get(`/user/master-certificate-report/${id}`, {
+        responseType: "blob",
+    });
+};

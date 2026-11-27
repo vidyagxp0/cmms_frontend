@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Eye, Wrench, ArrowUpRight, Search, Filter } from "lucide-react";
+import { Eye, Wrench, ArrowUpRight, Search, Filter, FileBadge } from "lucide-react";
 import { Input, Select, Button } from "antd";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
@@ -11,6 +11,7 @@ import {
 } from "../../../services/usersApi/equipmentApi";
 import DataTable from "../../../components/common/DataTable/DataTable";
 import { useAuthStore } from "../../../store/authStore";
+import { getMasterCertificateReport } from "../../../services/usersApi/dashboardAllApi";
 
 /* ───────────────────────── Report window templates ───────────────────────── */
 
@@ -225,6 +226,50 @@ const EquipDashboard = () => {
         }
     }, []);
 
+
+    // ================================================================
+// VIEW CERTIFICATE
+// ================================================================
+const handleViewCertificate = useCallback(async (instrumentId) => {
+    if (!instrumentId) return;
+    const certificateWindow = window.open("", "_blank");
+    if (!certificateWindow) {
+        alert("Please allow pop-ups to view the certificate.");
+        return;
+    }
+    try {
+        certificateWindow.document.write(
+            REPORT_LOADER_HTML.replace(
+                "Loading your workspace...",
+                "Loading your certificate..."
+            )
+        );
+        certificateWindow.document.close();
+        const response = await getMasterCertificateReport(instrumentId);
+        if (certificateWindow.closed) return;
+        const blob = new Blob([response.data], {
+            type: "application/pdf",
+        });
+        const pdfUrl = window.URL.createObjectURL(blob);
+        certificateWindow.location.href = pdfUrl;
+        setTimeout(() => {
+            window.URL.revokeObjectURL(pdfUrl);
+        }, 10000);
+    } catch (error) {
+        console.error("Failed to open master certificate:", error);
+        if (certificateWindow && !certificateWindow.closed) {
+            certificateWindow.document.open();
+            certificateWindow.document.write(
+                REPORT_ERROR_HTML.replace(
+                    "Failed to generate report",
+                    "Failed to generate certificate"
+                )
+            );
+            certificateWindow.document.close();
+        }
+    }
+}, []);
+
     // ================================================================
     // TABLE COLUMNS
     // ================================================================
@@ -339,27 +384,69 @@ const EquipDashboard = () => {
                     );
                 },
             },
-            {
-                id: "actions",
-                header: "Action",
-                enableSorting: false,
-                cell: ({ row }) => (
-                    <button
-                        type="button"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            handleViewReport(row.original?.id);
-                        }}
-                        className="inline-flex cursor-pointer items-center gap-2 rounded-[9px] border border-[#C9D9D3] bg-[#EEF4F1] px-3 py-1.5 text-[10.5px] font-bold text-[#56766D] shadow-[0_1px_4px_rgba(86,118,109,0.045)] transition-all duration-200 hover:border-[#AFC5BC] hover:bg-[#E2ECE8] hover:text-[#48685F] hover:shadow-[0_3px_9px_rgba(86,118,109,0.09)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-muted)] focus-visible:ring-offset-1"
-                        title="View instrument report"
-                    >
-                        <Eye size={14} strokeWidth={1.9} />
-                        <span>View Report</span>
-                    </button>
-                ),
-            },
+            // {
+            //     id: "actions",
+            //     header: "Action",
+            //     enableSorting: false,
+            //     cell: ({ row }) => (
+            //         <button
+            //             type="button"
+            //             onClick={(event) => {
+            //                 event.stopPropagation();
+            //                 handleViewReport(row.original?.id);
+            //             }}
+            //             className="inline-flex cursor-pointer items-center gap-2 rounded-[9px] border border-[#C9D9D3] bg-[#EEF4F1] px-3 py-1.5 text-[10.5px] font-bold text-[#56766D] shadow-[0_1px_4px_rgba(86,118,109,0.045)] transition-all duration-200 hover:border-[#AFC5BC] hover:bg-[#E2ECE8] hover:text-[#48685F] hover:shadow-[0_3px_9px_rgba(86,118,109,0.09)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-muted)] focus-visible:ring-offset-1"
+            //             title="View instrument report"
+            //         >
+            //             <Eye size={14} strokeWidth={1.9} />
+            //             <span>View Report</span>
+            //         </button>
+
+                    
+            //     ),
+            // },
+
+  {
+    id: "actions",
+    header: "Action",
+    enableSorting: false,
+    cell: ({ row }) => (
+        <div className="flex items-center gap-2 whitespace-nowrap">
+
+            {/* View Report */}
+            <button
+                type="button"
+                onClick={(event) => {
+                    event.stopPropagation();
+                    handleViewReport(row.original?.id);
+                }}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-[9px] border border-[#C9D9D3] bg-[#EEF4F1] px-3 py-1.5 text-[10.5px] font-bold text-[#56766D] shadow-[0_1px_4px_rgba(86,118,109,0.045)] transition-all duration-200 hover:border-[#AFC5BC] hover:bg-[#E2ECE8] hover:text-[#48685F] hover:shadow-[0_3px_9px_rgba(86,118,109,0.09)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-muted)] focus-visible:ring-offset-1"
+                title="View instrument report"
+            >
+                <Eye size={14} strokeWidth={1.9} />
+                <span>View Report</span>
+            </button>
+
+            {/* View Certificate */}
+            <button
+                type="button"
+                onClick={(event) => {
+                    event.stopPropagation();
+                    handleViewCertificate(row.original?.id);
+                }}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-[9px] border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1.5 text-[10.5px] font-bold text-[#2563EB] shadow-[0_1px_4px_rgba(37,99,235,0.045)] transition-all duration-200 hover:border-[#93C5FD] hover:bg-[#DBEAFE] hover:text-[#1D4ED8] hover:shadow-[0_3px_9px_rgba(37,99,235,0.09)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-1"
+                title="View master certificate"
+            >
+                <FileBadge size={14} strokeWidth={1.9} />
+                <span>View Certificate</span>
+            </button>
+
+        </div>
+    ),
+},
+
         ],
-        [navigate, handleViewReport]
+        [navigate, handleViewReport, handleViewCertificate]
     );
 
     // Active filters check

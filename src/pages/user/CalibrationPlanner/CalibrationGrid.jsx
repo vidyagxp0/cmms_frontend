@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Trash2, Table2, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
-import { Input, Select, DatePicker } from "antd";
+import { Input, Select, DatePicker, Checkbox } from "antd";
 import dayjs from "dayjs";
 import UserModal from "../../../components/common/UserModal/UserModal";
 import CustomScrollContainer from "../../../components/common/CustomScrollbar/CustomScrollContainer";
 import { updateCalibration } from "../../../services/usersApi/calibrationApi";
 import "../../../components/ui/disabledFields.css";
 import RequiredAsterisk from "../../../components/ui/RequiredAsterisk";
+import { toast } from "sonner";
 
 const { TextArea } = Input;
 
@@ -82,9 +83,24 @@ const CalibrationGrid = ({
 
   const rows = Array.isArray(value) ? value : [];
 
-  const [deleteRowIndex, setDeleteRowIndex] = useState(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
+  // const [deleteRowIndex, setDeleteRowIndex] = useState(null);
+  // const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  // const [selectedId, setSelectedId] = useState(null);
+
+  const [selectedRows, setSelectedRows] = useState([]);
+const [rowsToDelete, setRowsToDelete] = useState([]);
+const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+const [isDeleting, setIsDeleting] = useState(false);
+
+const deletingRef = useRef(false);
+
+const canSelectRows = !disabled && !equipmentLoading && !isDeleting;
+
+const isAllSelected =
+  rows.length > 0 && selectedRows.length === rows.length;
+
+const isIndeterminate =
+  selectedRows.length > 0 && selectedRows.length < rows.length;
 
   /* ─────────────────────────────────────────────────────────
      NEW: PAGINATION STATE
@@ -156,6 +172,36 @@ const CalibrationGrid = ({
     [safePage, totalPages]
   );
 
+
+  const handleSelectRow = (rowIndex, checked) => {
+  if (!canSelectRows) return;
+
+  setSelectedRows((prev) =>
+    checked
+      ? [...new Set([...prev, rowIndex])]
+      : prev.filter((index) => index !== rowIndex)
+  );
+};
+
+const handleSelectAll = (checked) => {
+  if (!canSelectRows) return;
+
+  setSelectedRows(
+    checked ? rows.map((_, index) => index) : []
+  );
+};
+
+const handleClearSelection = () => {
+  setSelectedRows([]);
+};
+
+// Clear selection when the row collection changes.
+useEffect(() => {
+  setSelectedRows([]);
+  setRowsToDelete([]);
+  setIsDeleteModalOpen(false);
+}, [value, recordId, disabled]);
+
   const addRow = () => {
     if (disabled) return;
     if (maxRows !== undefined && rows.length >= maxRows) return;
@@ -173,35 +219,91 @@ const CalibrationGrid = ({
     if (newPage !== safePage) goToPage(newPage);
   };
 
-  const handleDeleteRow = (rowIndex) => {
-    if (disabled) return;
-    if (rows.length <= minRows) return;
-    setSelectedId(recordId);
-    setDeleteRowIndex(rowIndex);
-    setIsDeleteModalOpen(true);
-  };
+// Individual row deletion
+const handleDeleteRow = (rowIndex) => {
+  if (!canSelectRows) return;
+  if (rows.length <= minRows) return;
 
-  const handleConfirmDelete = async () => {
-    if (deleteRowIndex === null || rows.length <= minRows) return;
-    try {
-      const updatedRows = rows.filter((_, index) => index !== deleteRowIndex);
-      const payload = { gridData: updatedRows };
-      if (selectedId) await updateCalibration(selectedId, payload);
-      onChange(updatedRows);
-      setDeleteRowIndex(null);
-      setIsDeleteModalOpen(false);
-    } catch (error) {
-      console.error("Failed to delete calibration row:", error);
+  setRowsToDelete([rowIndex]);
+  setIsDeleteModalOpen(true);
+};
+
+// Bulk row deletion
+const handleDeleteSelected = () => {
+  if (!canSelectRows || selectedRows.length === 0) return;
+
+  if (rows.length - selectedRows.length < minRows) {
+    toast.error(`At least ${minRows} rows must remain.`);
+    return;
+  }
+  setRowsToDelete([...selectedRows]);
+  setIsDeleteModalOpen(true);
+};
+
+// Common delete confirmation
+const handleConfirmDelete = async () => {
+  if (
+    disabled ||
+    equipmentLoading ||
+    deletingRef.current ||
+    rowsToDelete.length === 0
+  ) {
+    return;
+  }
+  const deleteIndexes = new Set(rowsToDelete);
+  const updatedRows = rows.filter(
+    (_, index) => !deleteIndexes.has(index)
+  );
+
+  if (updatedRows.length < minRows) {
+    toast.error(`At least ${minRows} rows must remain.`);
+    return;
+  }
+
+  const deletedCount = rows.length - updatedRows.length;
+  if (!deletedCount) return;
+  try {
+    deletingRef.current = true;
+    setIsDeleting(true);
+    const payload = {
+      gridData: updatedRows,
+    };
+    // Only one API request for all selected rows
+    if (recordId) {
+      await updateCalibration(recordId, payload);
     }
-  };
-
-  const handleCancelDelete = () => {
-    setDeleteRowIndex(null);
+    onChange(updatedRows);
+    setSelectedRows([]);
+    setRowsToDelete([]);
     setIsDeleteModalOpen(false);
-  };
+
+    toast.success(
+      `${deletedCount} ${
+        deletedCount === 1 ? "row" : "rows"
+      } deleted successfully.`
+    );
+  } catch (error) {
+    console.error("Failed to delete calibration rows:", error);
+
+    toast.error(
+      error?.response?.data?.message ||
+        "Failed to delete selected rows."
+    );
+  } finally {
+    deletingRef.current = false;
+    setIsDeleting(false);
+  }
+};
+
+const handleCancelDelete = () => {
+  if (deletingRef.current) return;
+
+  setRowsToDelete([]);
+  setIsDeleteModalOpen(false);
+};
 
   const updateRow = (rowIndex, key, newValue) => {
-    if (disabled) return;
+    if (disabled || deletingRef.current) return;
     const updated = [...rows];
     const row = { ...updated[rowIndex] };
     row[key] = newValue;
@@ -267,8 +369,8 @@ const CalibrationGrid = ({
     const isApiLocked =
       lockApiFields &&
       (key === "equipmentInstrumentName" || (key === "category" && fieldValue !== ""));
-    const isDisabled = disabled || columnDisabled || isApiLocked;
-    const isDoneDateDisabled = disabled || disableDoneDates;
+    const isDisabled = disabled || isDeleting || columnDisabled || isApiLocked;
+    const isDoneDateDisabled = disabled || isDeleting || disableDoneDates;
 
     const commonProps = {
       disabled: isDisabled,
@@ -392,7 +494,7 @@ const CalibrationGrid = ({
 
   const showChildColumn = typeof onViewChild === "function";
   const today = dayjs().startOf("day");
-  const totalColumns = columns.length + 2 + (showChildColumn ? 1 : 0);
+  const totalColumns = columns.length + 2 + (showChildColumn ? 1 : 0) + (!disabled ? 1 : 0);
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)]">
@@ -417,7 +519,7 @@ const CalibrationGrid = ({
             ) : null}
           </div>
         </div>
-        {showAddButton && (
+        {/* {showAddButton && (
           <button
             type="button"
             onClick={addRow}
@@ -427,7 +529,58 @@ const CalibrationGrid = ({
             <Plus size={14} strokeWidth={2} className="transition-transform duration-200 group-hover:rotate-90" />
             {addButtonLabel}
           </button>
+        )} */}
+
+        <div className="flex shrink-0 items-center gap-2">
+  {!disabled && selectedRows.length > 0 && (
+    <>
+      <span className="rounded-md bg-[#EAF0F4] px-2.5 py-1.5 text-[11px] font-semibold text-[#2B5577]">
+        {selectedRows.length} selected
+      </span>
+
+      <button
+        type="button"
+        onClick={handleClearSelection}
+        disabled={isDeleting}
+        className="px-2 text-[11px] font-medium text-[#65746E] hover:text-[#263B35] disabled:opacity-40"
+      >
+        Clear
+      </button>
+
+      <button
+        type="button"
+        onClick={handleDeleteSelected}
+        disabled={isDeleting || equipmentLoading}
+        className="flex h-9 items-center gap-1.5 rounded-lg bg-[#F52F3E] px-3.5 text-[11px] font-semibold text-white shadow-sm transition-all hover:bg-[#E52635] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isDeleting ? (
+          <Loader2 size={14} className="animate-spin" />
+        ) : (
+          <Trash2 size={14} />
         )}
+
+        Delete Selected ({selectedRows.length})
+      </button>
+    </>
+  )}
+
+  {showAddButton && (
+    <button
+      type="button"
+      onClick={addRow}
+      disabled={
+        disabled ||
+        isDeleting ||
+        equipmentLoading ||
+        (maxRows !== undefined && rows.length >= maxRows)
+      }
+      className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[#2B5577] px-3.5 text-[11px] font-semibold text-white shadow-sm transition-all hover:bg-[#234766] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+    >
+      <Plus size={14} strokeWidth={2} />
+      {addButtonLabel}
+    </button>
+  )}
+</div>
       </div>
 
       {/* NEW: relative wrapper for the loader overlay */}
@@ -436,6 +589,14 @@ const CalibrationGrid = ({
           <table className="w-full min-w-[max-content] border-collapse border border-[#D5DFDB]">
             <thead className="sticky top-0 z-[5]">
               <tr className="bg-[#EEF3F1]">
+                {!disabled && (
+                  <th className="w-[44px] min-w-[44px] border border-[#D5DFDB] px-2 py-2 text-center">
+                    <Checkbox checked={isAllSelected} indeterminate={isIndeterminate}
+                      disabled={!canSelectRows || rows.length === 0}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                      aria-label="Select all rows across all pages" />
+                  </th>
+                )}
                 <th className="w-[50px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Sr. No</th>
                 {columns.map((column) => (
                   <th
@@ -468,6 +629,7 @@ const CalibrationGrid = ({
               {equipmentLoading ? (
                 Array.from({ length: 5 }).map((_, idx) => (
                   <tr key={`skeleton-${idx}`} className="bg-white">
+                    {!disabled && <td className="border border-[#D5DFDB] px-2 py-2"><div className="mx-auto h-4 w-4 animate-pulse rounded bg-[#E5EBE8]" /></td>}
                     <td className="border border-[#D5DFDB] px-2 py-2 text-center align-middle">
                       <div className="mx-auto h-4 w-5 animate-pulse rounded bg-[#E5EBE8]" />
                     </td>
@@ -521,7 +683,14 @@ const CalibrationGrid = ({
                   }
 
                   return (
-                    <tr key={rowIndex} className="group bg-white transition-colors duration-150 hover:bg-[#FAFCFB]">
+                    <tr key={rowIndex} className={`group transition-colors duration-150 ${selectedRows.includes(rowIndex) ? "bg-[#EDF5FA] hover:bg-[#E4EFF7]" : "bg-white hover:bg-[#FAFCFB]"}`}>
+                      {!disabled && (
+                        <td className="border border-[#D5DFDB] px-2 py-1 text-center align-middle">
+                          <Checkbox checked={selectedRows.includes(rowIndex)} disabled={!canSelectRows}
+                            onChange={(e) => handleSelectRow(rowIndex, e.target.checked)}
+                            aria-label={`Select row ${rowIndex + 1}`} />
+                        </td>
+                      )}
                       <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
                         <span className="inline-flex h-6 min-w-6 items-center justify-center text-[11px] font-medium text-[#263B35]">{rowIndex + 1}.</span>
                       </td>
@@ -555,7 +724,7 @@ const CalibrationGrid = ({
                         <button
                           type="button"
                           onClick={() => handleDeleteRow(rowIndex)}
-                          disabled={disabled || rows.length <= minRows}
+                          disabled={!canSelectRows || rows.length <= minRows}
                           className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#9AA6A1] transition-all duration-200 hover:bg-[#FFF1F1] hover:text-[#DF5B5B] active:scale-90 disabled:cursor-not-allowed disabled:opacity-25"
                           aria-label="Delete row"
                         >
@@ -648,12 +817,12 @@ const CalibrationGrid = ({
         )}
       </div>
 
-      <UserModal isOpen={isDeleteModalOpen} onClose={handleCancelDelete} title="Delete Row" description="Please confirm this action before continuing." width="max-w-[420px]">
+      <UserModal isOpen={isDeleteModalOpen} onClose={handleCancelDelete} title={rowsToDelete.length > 1 ? "Delete Selected Rows" : "Delete Row"} description="Please confirm this action before continuing." width="max-w-[420px]">
         <div className="space-y-5">
-          <p className="text-[13px] leading-6 text-[#596760]">Are you sure you want to delete this row? This action cannot be undone.</p>
+          <p className="text-[13px] leading-6 text-[#596760]">Are you sure you want to delete {rowsToDelete.length === 1 ? "this row" : `these ${rowsToDelete.length} selected rows`}? This action cannot be undone.</p>
           <div className="flex justify-end gap-3 border-t border-[#E8ECEA] pt-4">
-            <button type="button" onClick={handleCancelDelete} className="h-9 rounded-lg border border-[#D5DEDA] bg-white px-4 text-[12px] font-semibold text-[#596760] transition-all duration-200 hover:bg-[#F6F8F7] hover:text-[#263B35] active:scale-[0.98]">Cancel</button>
-            <button type="button" onClick={handleConfirmDelete} className="h-9 rounded-lg bg-[#F52F3E] px-4 text-[12px] font-semibold text-white shadow-[0_4px_12px_rgba(245,47,62,0.20)] transition-all duration-200 hover:bg-[#E52635] hover:shadow-[0_6px_15px_rgba(245,47,62,0.28)] active:scale-[0.98]">Delete Row</button>
+            <button type="button" onClick={handleCancelDelete} disabled={isDeleting} className="h-9 rounded-lg border border-[#D5DEDA] bg-white px-4 text-[12px] font-semibold text-[#596760] transition-all duration-200 hover:bg-[#F6F8F7] hover:text-[#263B35] active:scale-[0.98]">Cancel</button>
+            <button type="button" onClick={handleConfirmDelete} disabled={isDeleting} className="inline-flex items-center gap-2 h-9 rounded-lg bg-[#F52F3E] px-4 text-[12px] font-semibold text-white shadow-[0_4px_12px_rgba(245,47,62,0.20)] transition-all duration-200 hover:bg-[#E52635] hover:shadow-[0_6px_15px_rgba(245,47,62,0.28)] active:scale-[0.98]">{isDeleting ? <><Loader2 size={14} className="animate-spin" /> Deleting...</> : `Delete ${rowsToDelete.length} ${rowsToDelete.length === 1 ? "Row" : "Rows"}`}</button>
           </div>
         </div>
       </UserModal>

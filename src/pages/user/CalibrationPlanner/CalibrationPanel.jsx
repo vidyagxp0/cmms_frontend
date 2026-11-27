@@ -53,24 +53,75 @@ const getProcessValue = (processData = [], key) => {
   }
   return "";
 };
+// const buildGridPayload = (rows = [], equipmentMap = {}) => {
+//   return rows.map((row, index) => {
+//     const rowData = { row_id: row.row_id ?? index + 1 };
+//     Object.keys(row).forEach((key) => {
+//       if (key === "monthlyCalibration" || key === "calibrationFrequencyStartDate") {
+//         rowData[key] = row[key];
+//         return;
+//       }
+//       let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
+//       if (key === "previousCalibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
+//       else if (key === "nextCalibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
+//       else if (key === "calibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
+//       if (key === "equipmentInstrumentName" && value && equipmentMap[value]) value = equipmentMap[value]?.instrument_name || value;
+//       rowData[key] = { key, label: key, value };
+//     });
+//     return rowData;
+//   });
+// };
+
+
+
 const buildGridPayload = (rows = [], equipmentMap = {}) => {
   return rows.map((row, index) => {
-    const rowData = { row_id: row.row_id ?? index + 1 };
+    // Preserve existing row ID and repair previously wrapped IDs
+    const existingRowId =
+      typeof row.row_id === "object" && row.row_id !== null
+        ? row.row_id.value
+        : row.row_id;
+    const rowData = {
+      row_id: existingRowId ?? index + 1,
+    };
     Object.keys(row).forEach((key) => {
-      if (key === "monthlyCalibration" || key === "calibrationFrequencyStartDate") {
+      // IMPORTANT: Never convert row_id into a field object
+      if (key === "row_id") {
+        return;
+      }
+      // Preserve existing special field structures
+      if (
+        key === "monthlyCalibration" ||
+        key === "calibrationFrequencyStartDate"
+      ) {
         rowData[key] = row[key];
         return;
       }
-      let value = row[key] !== undefined && row[key] !== null ? row[key] : "";
-      if (key === "previousCalibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
-      else if (key === "nextCalibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
-      else if (key === "calibrationDate" && value) value = dayjs(value).format("DD/MM/YYYY");
-      if (key === "equipmentInstrumentName" && value && equipmentMap[value]) value = equipmentMap[value]?.instrument_name || value;
-      rowData[key] = { key, label: key, value };
+      let value = row[key] ?? "";
+      if (key === "previousCalibrationDate" && value) {
+        value = dayjs(value).format("DD/MM/YYYY");
+      } else if (key === "nextCalibrationDate" && value) {
+        value = dayjs(value).format("DD/MM/YYYY");
+      } else if (key === "calibrationDate" && value) {
+        value = dayjs(value).format("DD/MM/YYYY");
+      }
+      if (
+        key === "equipmentInstrumentName" &&
+        value &&
+        equipmentMap[value]
+      ) {
+        value = equipmentMap[value]?.instrument_name || value;
+      }
+      rowData[key] = {
+        key,
+        label: key,
+        value,
+      };
     });
     return rowData;
   });
 };
+
 const buildRowFromInstrument = (item = {}) => ({
   equipmentInstrumentName: item.id ?? "",
   equipmentInstrumentId: item.instrument_id_no || "",

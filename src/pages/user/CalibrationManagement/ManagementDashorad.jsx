@@ -308,6 +308,39 @@ const ManagementDashboard = () => {
                 ),
             },
 
+
+            // EQUIPMENT / INSTRUMENT NAME
+{
+    id: "instrumentName",
+    header: "Equipment / Instrument Name",
+    accessorFn: (row) => getProcessValue(row, "instrumentName"),
+    cell: ({ getValue }) => (
+        <div className="min-w-[160px] max-w-[250px]">
+            <p
+                className="truncate text-[11.5px] font-semibold text-[#53635E]"
+                title={getValue() || "-"}
+            >
+                {getValue() || "-"}
+            </p>
+        </div>
+    ),
+},
+
+// EQUIPMENT / INSTRUMENT ID
+{
+    id: "instrumentId",
+    header: "Equipment / Instrument ID No.",
+    accessorFn: (row) => getProcessValue(row, "instrumentId"),
+    cell: ({ getValue }) => (
+        <span
+            className="inline-flex whitespace-nowrap rounded-[8px] bg-[#F1F5F3] px-2.5 py-1 font-mono text-[10.5px] font-semibold tracking-[0.02em] text-[#536D64]"
+            title={getValue() || "-"}
+        >
+            {getValue() || "-"}
+        </span>
+    ),
+},
+
             // PROCESS
             {
                 id: "process",

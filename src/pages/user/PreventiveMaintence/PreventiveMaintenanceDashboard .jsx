@@ -311,6 +311,40 @@ const PreventiveMaintenanceDashboard = () => {
                 ),
             },
 
+
+       // EQUIPMENT / INSTRUMENT NAME
+{
+    id: "equipmentInstrumentName",
+    header: "Equipment / Instrument Name",
+    accessorFn: (row) =>
+        getProcessValue(row, "equipmentInstrumentName"),
+    cell: ({ getValue }) => (
+        <div className="min-w-[160px] max-w-[250px]">
+            <p
+                className="truncate font-[var(--font-display)] text-[11px] font-bold tracking-[-0.01em] text-[#344A43]"
+                title={getValue() || "-"}
+            >
+                {getValue() || "-"}
+            </p>
+        </div>
+    ),
+},
+
+// EQUIPMENT / INSTRUMENT ID
+{
+    id: "equipmentInstrumentId",
+    header: "Equipment / Instrument ID No.",
+    accessorFn: (row) =>
+        getProcessValue(row, "equipmentInstrumentId"),
+    cell: ({ getValue }) => (
+        <span
+            className="inline-flex whitespace-nowrap rounded-[8px] bg-[#F1F5F3] px-2.5 py-1 font-mono text-[10.5px] font-semibold tracking-[0.02em] text-[#536D64]"
+            title={getValue() || "-"}
+        >
+            {getValue() || "-"}
+        </span>
+    ),
+},
             // PROCESS
             {
                 id: "process",

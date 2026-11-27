@@ -433,9 +433,9 @@ const UserDashboard = () => {
                 <KPICard
                     title="Equipment Master"
                     value={equipmentCount.toLocaleString("en-IN")}
-                    subtext="Department equipment records"
+                    // subtext="Department equipment records"
                     icon={Factory}
-                    trend={shareOf(equipmentCount)}
+                    // trend={shareOf(equipmentCount)}
                     trendType={equipmentCount > 0 ? "up" : "neutral"}
                     delay={0.05}
                 />
@@ -443,9 +443,9 @@ const UserDashboard = () => {
                 <KPICard
                     title="Field Instruments"
                     value={fieldCount.toLocaleString("en-IN")}
-                    subtext="Instruments installed in the field"
+                    // subtext="Instruments installed in the field"
                     icon={Gauge}
-                    trend={shareOf(fieldCount)}
+                    // trend={shareOf(fieldCount)}
                     trendType={fieldCount > 0 ? "up" : "neutral"}
                     delay={0.1}
                 />
@@ -453,9 +453,9 @@ const UserDashboard = () => {
                 <KPICard
                     title="Master Instruments"
                     value={masterCount.toLocaleString("en-IN")}
-                    subtext="Reference / master instruments"
+                    // subtext="Reference / master instruments"
                     icon={Cpu}
-                    trend={shareOf(masterCount)}
+                    // trend={shareOf(masterCount)}
                     trendType={masterCount > 0 ? "up" : "neutral"}
                     delay={0.15}
                 />
@@ -463,9 +463,9 @@ const UserDashboard = () => {
                 <KPICard
                     title="Spare Instruments"
                     value={spareCount.toLocaleString("en-IN")}
-                    subtext="Spare instruments in stock"
+                    // subtext="Spare instruments in stock"
                     icon={Package}
-                    trend={shareOf(spareCount)}
+                    // trend={shareOf(spareCount)}
                     trendType={spareCount > 0 ? "up" : "neutral"}
                     delay={0.2}
                 />

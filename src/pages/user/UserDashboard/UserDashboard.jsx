@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
     LayoutDashboard,
-    Wrench,
     HardHat,
     Activity,
     CheckCircle2,
@@ -11,6 +10,11 @@ import {
     BarChart2,
     Calendar,
     FileText,
+    Factory,
+    Gauge,
+    Package,
+    ClipboardCheck,
+    ListChecks,
 } from "lucide-react";
 
 import {
@@ -80,6 +84,88 @@ const LiveTime = () => {
     });
 };
 
+const SectionTitle = ({ title, subtitle }) => (
+    <div className="flex items-end justify-between gap-3 pt-1">
+        <div>
+            <h2 className="text-[13px] font-bold uppercase tracking-[0.1em] text-[#4F5E5D]">
+                {title}
+            </h2>
+            {subtitle && (
+                <p className="mt-0.5 text-[11px] font-medium text-[#8A9390]">{subtitle}</p>
+            )}
+        </div>
+    </div>
+);
+
+const StatPill = ({ label, value, dotClass }) => (
+    <div className="rounded-[12px] border border-[#ECEDEA] bg-[#FAFAF8] px-3 py-2">
+        <div className="flex items-center gap-1.5">
+            <span className={`h-[6px] w-[6px] rounded-full ${dotClass}`} />
+            <span className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#87918E]">
+                {label}
+            </span>
+        </div>
+        <p className="mt-1 text-[18px] font-bold leading-none tracking-[-0.03em] text-[#243238]">
+            {value}
+        </p>
+    </div>
+);
+
+const ProcessDetailCard = ({ process }) => {
+    const { name, total, opened, closed, other, completion, share, color } = process;
+    const pct = (n) => (total > 0 ? (n / total) * 100 : 0);
+
+    return (
+        <div className="group relative overflow-hidden rounded-[18px] border border-[#D6D8D3] bg-white p-4 shadow-[0_3px_12px_rgba(36,50,56,0.045)] transition-all duration-300 hover:-translate-y-1 hover:border-[#C4CCC7] hover:shadow-[0_12px_28px_rgba(36,50,56,0.09)]">
+            <span className="absolute left-0 top-0 h-full w-[3px]" style={{ backgroundColor: color }} />
+
+            <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[#C9D8D3] bg-[#E8F0ED] text-[#56766D]">
+                        <ListChecks size={17} strokeWidth={1.9} />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="truncate text-[13px] font-bold text-[#243238]" title={name}>
+                            {name}
+                        </p>
+                        <p className="text-[10.5px] font-medium text-[#8A9390]">
+                            {share}% of all records
+                        </p>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <p className="text-[24px] font-bold leading-none tracking-[-0.04em] text-[#243238]">
+                        {total}
+                    </p>
+                    <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#87918E]">
+                        Total
+                    </p>
+                </div>
+            </div>
+
+            {/* Stacked status bar */}
+            <div className="mt-4 flex h-2 w-full overflow-hidden rounded-full bg-[#EEF0ED]">
+                <div className="h-full bg-[#A47D45]" style={{ width: `${pct(opened)}%` }} title={`Opened: ${opened}`} />
+                <div className="h-full bg-[#9AADA6]" style={{ width: `${pct(other)}%` }} title={`Other stages: ${other}`} />
+                <div className="h-full bg-[#56766D]" style={{ width: `${pct(closed)}%` }} title={`Closed - Done: ${closed}`} />
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-2">
+                <StatPill label="Opened" value={opened} dotClass="bg-[#A47D45]" />
+                <StatPill label="In Progress" value={other} dotClass="bg-[#9AADA6]" />
+                <StatPill label="Closed" value={closed} dotClass="bg-[#56766D]" />
+            </div>
+
+            <div className="mt-3 flex items-center justify-between border-t border-[#ECEDEA] pt-3">
+                <span className="text-[11px] font-medium text-[#7B8584]">Completion</span>
+                <span className="rounded-full border border-[#CFE1D9] bg-[#EEF5F2] px-2.5 py-0.5 text-[10px] font-bold text-[#56766D]">
+                    {completion}%
+                </span>
+            </div>
+        </div>
+    );
+};
+
 const UserDashboard = () => {
     const [dashboardData, setDashboardData] = useState({});
     const [loading, setLoading] = useState(true);
@@ -143,8 +229,13 @@ const UserDashboard = () => {
     const masterCount = Number(instrumentMasters.master_instruments || 0);
     const fieldCount = Number(instrumentMasters.field_instruments || 0);
     const spareCount = Number(instrumentMasters.spare_instruments || 0);
+    const equipmentCount = Number(instrumentMasters.equipment_master || 0);
 
-    const totalInstruments = masterCount + fieldCount + spareCount;
+    const totalInstruments = masterCount + fieldCount + spareCount + equipmentCount;
+    const shareOf = (count) =>
+        totalInstruments > 0
+            ? `${((count / totalInstruments) * 100).toFixed(1)}% Share`
+            : "0% Share";
     const totalProcesses = processRecords.length;
 
     const totalRecords = useMemo(
@@ -179,6 +270,31 @@ const UserDashboard = () => {
             ? Math.round((closedRecords / totalRecords) * 100)
             : 0;
 
+    const otherStageRecords = Math.max(0, totalRecords - openRecords - closedRecords);
+
+    /* Per-process detail (total / opened / closed / other stages) */
+    const processDetails = useMemo(
+        () =>
+            processRecords.map((p, i) => {
+                const total = Number(p.total_records) || 0;
+                const opened = Number(p.Opened_records) || 0;
+                const closed = Number(p["Closed - Done_records"]) || 0;
+                const other = Math.max(0, total - opened - closed);
+                return {
+                    id: p.process_id ?? i,
+                    name: p.process_name || "—",
+                    total,
+                    opened,
+                    closed,
+                    other,
+                    completion: total > 0 ? Math.round((closed / total) * 100) : 0,
+                    share: totalRecords > 0 ? Math.round((total / totalRecords) * 100) : 0,
+                    color: CHART_PALETTE[i % CHART_PALETTE.length],
+                };
+            }),
+        [processRecords, totalRecords]
+    );
+
     /* ============================================================
        CHART DATA
     ============================================================ */
@@ -207,13 +323,14 @@ const UserDashboard = () => {
     /* Instrument masters – donut */
     const instrumentMastersData = useMemo(() => {
         const list = [
-            { name: "Master Instruments", value: masterCount, fill: CHART_PALETTE[0] },
+            { name: "Equipment Master", value: equipmentCount, fill: CHART_PALETTE[3] },
             { name: "Field Instruments", value: fieldCount, fill: CHART_PALETTE[1] },
+            { name: "Master Instruments", value: masterCount, fill: CHART_PALETTE[0] },
             { name: "Spare Instruments", value: spareCount, fill: CHART_PALETTE[2] },
         ];
         const filtered = list.filter((x) => x.value > 0);
         return filtered.length ? filtered : [{ name: "No Data", value: 1, fill: "#D6D8D3" }];
-    }, [masterCount, fieldCount, spareCount]);
+    }, [masterCount, fieldCount, spareCount, equipmentCount]);
 
     /* Records volume – horizontal bar per process (desc) */
     const processVolumeData = useMemo(() => {
@@ -308,20 +425,57 @@ const UserDashboard = () => {
             {/* =====================================================
                 KPI CARDS
             ====================================================== */}
+            <SectionTitle
+                title="Instrument & Equipment Masters"
+                subtitle="Registered assets across each master list"
+            />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
                 <KPICard
-                    title="Total Instruments"
-                    value={totalInstruments}
-                    subtext={`${masterCount} Master · ${fieldCount} Field · ${spareCount} Spare`}
-                    icon={Wrench}
-                    trend={`${totalInstruments} Assets`}
-                    trendType="up"
-                    gradient="from-[#56766D] to-[#7E9D93]"
-                    bgColor="bg-[#E8F0ED]"
-                    iconColor="text-[#56766D]"
+                    title="Equipment Master"
+                    value={equipmentCount.toLocaleString("en-IN")}
+                    subtext="Department equipment records"
+                    icon={Factory}
+                    trend={shareOf(equipmentCount)}
+                    trendType={equipmentCount > 0 ? "up" : "neutral"}
                     delay={0.05}
                 />
 
+                <KPICard
+                    title="Field Instruments"
+                    value={fieldCount.toLocaleString("en-IN")}
+                    subtext="Instruments installed in the field"
+                    icon={Gauge}
+                    trend={shareOf(fieldCount)}
+                    trendType={fieldCount > 0 ? "up" : "neutral"}
+                    delay={0.1}
+                />
+
+                <KPICard
+                    title="Master Instruments"
+                    value={masterCount.toLocaleString("en-IN")}
+                    subtext="Reference / master instruments"
+                    icon={Cpu}
+                    trend={shareOf(masterCount)}
+                    trendType={masterCount > 0 ? "up" : "neutral"}
+                    delay={0.15}
+                />
+
+                <KPICard
+                    title="Spare Instruments"
+                    value={spareCount.toLocaleString("en-IN")}
+                    subtext="Spare instruments in stock"
+                    icon={Package}
+                    trend={shareOf(spareCount)}
+                    trendType={spareCount > 0 ? "up" : "neutral"}
+                    delay={0.2}
+                />
+            </div>
+
+            <SectionTitle
+                title="Workflow Records"
+                subtitle={`Combined status across ${totalProcesses} workflow processes`}
+            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
                 <KPICard
                     title="Process Records"
                     value={totalRecords}
@@ -329,23 +483,27 @@ const UserDashboard = () => {
                     icon={HardHat}
                     trend={`${totalRecords} Records`}
                     trendType="up"
-                    gradient="from-[#6D8B84] to-[#56766D]"
-                    bgColor="bg-[#E8F0ED]"
-                    iconColor="text-[#56766D]"
-                    delay={0.1}
+                    delay={0.25}
                 />
 
                 <KPICard
                     title="Open Records"
                     value={openRecords}
-                    subtext="Records currently in open state"
+                    subtext={`${otherStageRecords} more in other stages`}
                     icon={Activity}
                     trend={`${openRecords} Open`}
                     trendType={openRecords > 0 ? "up" : "neutral"}
-                    gradient="from-[#A47D45] to-[#B3905C]"
-                    bgColor="bg-[#F4EEE4]"
-                    iconColor="text-[#A47D45]"
-                    delay={0.15}
+                    delay={0.3}
+                />
+
+                <KPICard
+                    title="Closed - Done"
+                    value={closedRecords}
+                    subtext="Records fully completed"
+                    icon={ClipboardCheck}
+                    trend={`${closedRecords} Closed`}
+                    trendType={closedRecords > 0 ? "up" : "neutral"}
+                    delay={0.35}
                 />
 
                 <KPICard
@@ -355,12 +513,28 @@ const UserDashboard = () => {
                     icon={CheckCircle2}
                     trend={completionRatePercent > 0 ? "Active Rate" : "Pending"}
                     trendType={completionRatePercent > 0 ? "up" : "neutral"}
-                    gradient="from-[#56766D] to-[#486A62]"
-                    bgColor="bg-[#E8F0ED]"
-                    iconColor="text-[#56766D]"
-                    delay={0.2}
+                    delay={0.4}
                 />
             </div>
+
+            {/* =====================================================
+                PROCESS BREAKDOWN – one detailed card per process
+            ====================================================== */}
+            <SectionTitle
+                title="Process Breakdown"
+                subtitle="Total, opened, closed and in-progress records for each process"
+            />
+            {processDetails.length === 0 ? (
+                <div className="rounded-[18px] border border-[#D6D8D3] bg-white p-6 text-center text-[12px] font-medium text-[#7B8584]">
+                    No process records available.
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
+                    {processDetails.map((p) => (
+                        <ProcessDetailCard key={p.id} process={p} />
+                    ))}
+                </div>
+            )}
 
             {/* =====================================================
                 ROW 1 – Process Status + Process Distribution
@@ -541,7 +715,7 @@ const UserDashboard = () => {
                 <div className="lg:col-span-6">
                     <ChartCard
                         title="Instrument Masters Composition"
-                        subtitle="Master, Field and Spare instrument distribution"
+                        subtitle="Equipment, Field, Master and Spare distribution"
                         icon={Cpu}
                         badgeText={`${totalInstruments} Instruments`}
                         minHeight="h-[360px]"
@@ -591,10 +765,10 @@ const UserDashboard = () => {
 
                             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-8">
                                 <span className="text-[26px] font-bold leading-none tracking-[-0.04em] text-[#243238]">
-                                    {totalInstruments}
+                                    {totalInstruments.toLocaleString("en-IN")}
                                 </span>
                                 <span className="mt-1.5 text-[9px] font-bold uppercase tracking-[0.13em] text-[#87918E]">
-                                    Instruments
+                                    Total Assets
                                 </span>
                             </div>
                         </div>

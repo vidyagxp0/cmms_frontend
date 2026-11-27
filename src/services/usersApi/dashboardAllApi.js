@@ -79,7 +79,7 @@ export const getAllUnPlannedCalibrationRecords = (params = {}) => {
 
 
 export const getMasterCertificateReport = (id) => {
-    return api.get(`/user/master-certificate-report/${id}`, {
+    return api.get(`/user/view-instrument-master-attachment/${id}`, {
         responseType: "blob",
     });
 };

@@ -605,7 +605,7 @@ const handleCancelDelete = () => {
   };
 
   const showChildColumn = typeof onViewChild === "function";
-  const today = dayjs().startOf("day");
+  // const today = dayjs().startOf("day");
   const totalColumns = columns.length + 2 + (showChildColumn ? 1 : 0) + (!disabled ? 1 : 0);
 
   return (
@@ -811,32 +811,81 @@ const handleCancelDelete = () => {
               ) : visibleRows.length > 0 ? (
                 // NEW: iterate visibleRows — rowIndex stays the real index
                 visibleRows.map(({ row, index: rowIndex }) => {
-                  const rowPlannedDate = row.plannedDate ? dayjs(row.plannedDate).startOf("day") : null;
-                  let isWithinDateWindow = false;
-                  let windowStart = null;
-                  let windowEnd = null;
+                  // const rowPlannedDate = row.plannedDate ? dayjs(row.plannedDate).startOf("day") : null;
+                  // let isWithinDateWindow = false;
+                  // let windowStart = null;
+                  // let windowEnd = null;
 
-                  if (rowPlannedDate) {
-                    windowStart = rowPlannedDate.subtract(30, "day").startOf("day");
-                    windowEnd = rowPlannedDate.endOf("day");
+                  // if (rowPlannedDate) {
+                  //   windowStart = rowPlannedDate.subtract(30, "day").startOf("day");
+                  //   windowEnd = rowPlannedDate.endOf("day");
 
-                    isWithinDateWindow =
-                      !today.isBefore(windowStart) && !today.isAfter(windowEnd);
-                  }
+                  //   isWithinDateWindow =
+                  //     !today.isBefore(windowStart) && !today.isAfter(windowEnd);
+                  // }
 
-                  const childButtonEnabled = canCreateChild && isWithinDateWindow;
+                  // const childButtonEnabled = canCreateChild && isWithinDateWindow;
 
+                  // let childButtonTitle = "Create child calibration";
+                  // if (!canCreateChild) {
+                  //   childButtonTitle =
+                  //     "Child creation is available only to Executor at Close Done stage.";
+                  // } else if (!rowPlannedDate) {
+                  //   childButtonTitle =
+                  //     "Please select a Planned date in this row to enable child creation.";
+                  // } else if (!isWithinDateWindow) {
+                  //   childButtonTitle = `Child can only be created between ${windowStart.format(
+                  //     "DD-MM-YYYY"
+                  //   )} and ${windowEnd.format("DD-MM-YYYY")} (30 days before the planned date up to the planned date).`;
+                  // }
+
+                  // Backend-driven child creation validation
+                  const isFirstChildCreated =
+                    row.is_first_child_created === true;
+
+                  const isSecondChildCreated =
+                    row.is_second_child_created === true;
+
+                  const childCount = Number(row.child_count ?? 0);
+
+                  const hasReachedChildLimit =
+                    childCount >= 2 ||
+                    (isFirstChildCreated && isSecondChildCreated);
+
+                  // First child permission
+                  const canCreateFirstChild =
+                    row.can_create_first_child === true &&
+                    !isFirstChildCreated &&
+                    !hasReachedChildLimit;
+
+                  // Second child permission
+                  const canCreateSecondChild =
+                    row.can_create_second_child === true &&
+                    !isSecondChildCreated &&
+                    !hasReachedChildLimit;
+
+                  // Existing Close Done and Executor validation preserved
+                  const childButtonEnabled =
+                    canCreateChild &&
+                    !isDeleting &&
+                    (canCreateFirstChild || canCreateSecondChild);
+
+                  // Dynamic tooltip
                   let childButtonTitle = "Create child calibration";
+
                   if (!canCreateChild) {
                     childButtonTitle =
                       "Child creation is available only to Executor at Close Done stage.";
-                  } else if (!rowPlannedDate) {
+                  } else if (hasReachedChildLimit) {
                     childButtonTitle =
-                      "Please select a Planned date in this row to enable child creation.";
-                  } else if (!isWithinDateWindow) {
-                    childButtonTitle = `Child can only be created between ${windowStart.format(
-                      "DD-MM-YYYY"
-                    )} and ${windowEnd.format("DD-MM-YYYY")} (30 days before the planned date up to the planned date).`;
+                      "Maximum limit reached. Both child records have already been created.";
+                  } else if (canCreateFirstChild) {
+                    childButtonTitle = "Create first child calibration";
+                  } else if (canCreateSecondChild) {
+                    childButtonTitle = "Create second child calibration";
+                  } else {
+                    childButtonTitle =
+                      "Child creation is currently not available for this row.";
                   }
 
                   return (
@@ -857,11 +906,16 @@ const handleCancelDelete = () => {
                         </td>
                       ))}
                       {showChildColumn && (
-                        <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
+                      <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
+                        <span
+                          className="inline-flex"
+                          title={childButtonTitle}
+                        >
                           <button
                             type="button"
                             onClick={() => {
                               if (!childButtonEnabled) return;
+
                               onViewChild(rowIndex, row);
                             }}
                             disabled={!childButtonEnabled}
@@ -870,13 +924,13 @@ const handleCancelDelete = () => {
                                 ? "bg-[#3d606d] hover:bg-[#2B5577] active:scale-95"
                                 : "cursor-not-allowed bg-[#B8C2BE] opacity-50"
                             }`}
-                            aria-label="Create child calibration"
-                            title={childButtonTitle}
+                            aria-label={childButtonTitle}
                           >
                             Child
                           </button>
-                        </td>
-                      )}
+                        </span>
+                      </td>
+                    )}
                       <td className="border border-[#D5DFDB] px-2 py-1 text-center align-top">
                         <button
                           type="button"

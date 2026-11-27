@@ -292,7 +292,8 @@ const CreateEquipment = () => {
                 checklist_config: cleanedChecklistConfig,
                 stage_id: 24 || null,
                 process_id: 3 || null,
-                initiator_id: loginUserId || null, 
+                initiator_id: loginUserId || null,
+                certificate_attachment: values.certificateAttachment || [],
                 // New review fields
                 hod_review_comments: values.hodReviewComments || "",
                 hod_review_attachment: values.hodReviewAttachment || [],
@@ -713,6 +714,16 @@ const CreateEquipment = () => {
                                     className="w-full"
                                     allowClear
                                 />
+                            </Form.Item>
+
+                            {/* CERTIFICATE ATTACHMENT */}
+                            <Form.Item
+                                name="certificateAttachment"
+                                label="Certificate Attachment"
+                                valuePropName="value"
+                                className="!mb-4 md:col-span-2"
+                            >
+                                <FormAttachment disabled />
                             </Form.Item>
 
                         </div>

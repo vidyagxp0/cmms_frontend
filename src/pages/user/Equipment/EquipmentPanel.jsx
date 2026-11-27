@@ -12,6 +12,7 @@ import {
   Gauge,
   SlidersHorizontal,
   ClipboardList,
+  Paperclip,
 } from "lucide-react";
 import { Form, Select } from "antd"; 
 import { useNavigate, useParams } from "react-router-dom";
@@ -314,6 +315,7 @@ const EquipmentPanel = () => {
           asset_code: data.asset_code || "",
           capacity: data.capacity || "",
           category: data.category || data.equipment_type || "",
+          certificateAttachment: data.certificate_attachment || [],
           stage_id: data.stage_id?.id || data.stage_id || null,
           process_id: data.process_id || null,
 
@@ -997,6 +999,28 @@ const EquipmentPanel = () => {
                         allowClear
                     />
                 </Form.Item>
+
+            {/* CERTIFICATE ATTACHMENT */}
+            <Form.Item
+              name="certificateAttachment"
+              label={
+                <span className="flex items-center gap-1.5">
+                  <Paperclip size={12} strokeWidth={1.9} className="text-[#56766D]" />
+                  Certificate Attachment
+                </span>
+              }
+              valuePropName="value"
+              className="!mb-4 !mt-4 md:col-span-2"
+            >
+              <FormAttachment
+                multiple={true}
+                recordId={id}
+                attachmentField="certificate_attachment"
+                label="Certificate Attachment"
+                uploadApi={addMultipleAttachments}
+                disabled={!isInstrumentEditable}
+              />
+            </Form.Item>
           </div>
         </section>
 

@@ -1373,7 +1373,7 @@ const handleSaveAndExit = async () => {
               </span>
             }
             className="!mb-4">
-              <FormInput placeholder="Location"  />
+              <FormInput placeholder="Location" disabled={!isGeneralEditable}  />
             </Form.Item>
 
             <Form.Item

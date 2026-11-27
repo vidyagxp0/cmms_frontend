@@ -808,7 +808,7 @@ const handleSearchChange = useCallback((e) => {
                               }`}
                               title={
                                 !canCreateChild
-                                  ? "Child creation is available only to Initiator at Close Done stage"
+                                  ? "Child creation is available only to Executor at Close Done stage"
                                   : childWindowDays === null
                                   ? "Please select a valid frequency for the current month"
                                   : !withinPlannedWindow

@@ -829,7 +829,7 @@ const handleCancelDelete = () => {
                   let childButtonTitle = "Create child calibration";
                   if (!canCreateChild) {
                     childButtonTitle =
-                      "Child creation is available only to Initiator at Close Done stage.";
+                      "Child creation is available only to Executor at Close Done stage.";
                   } else if (!rowPlannedDate) {
                     childButtonTitle =
                       "Please select a Planned date in this row to enable child creation.";

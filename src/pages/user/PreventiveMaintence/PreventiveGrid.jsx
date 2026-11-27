@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Trash2, Table2, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Table2, Loader2, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Input, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -33,22 +33,38 @@ const MONTHS = [
    date exists AND today is within ±7 days of that date.
    (dayjs().month() is 0-indexed → directly maps to MONTHS[])
    ───────────────────────────────────────────────────────── */
-const CHILD_WINDOW_DAYS = 7;
+
+   const CHILD_WINDOW_DAYS_BY_FREQUENCY = {
+  monthly: 7,
+  quarterly: 7,
+  "half-yearly": 15,
+  yearly: 30,
+  "two-yearly": 30,
+  "five-yearly": 30,
+};
+
+export const getChildWindowDays = (row) => {
+  const currentMonthKey = MONTHS[dayjs().month()]?.key;
+  if (!currentMonthKey) return null;
+  const currentMonthFrequency = row?.[`${currentMonthKey}_frequency`];
+  return CHILD_WINDOW_DAYS_BY_FREQUENCY[currentMonthFrequency] ?? null;
+};
 
 export const isWithinCurrentMonthPlannedWindow = (row) => {
-  const now = dayjs();
+  const now = dayjs().startOf("day");
   const currentMonthKey = MONTHS[now.month()]?.key;
   if (!currentMonthKey) return false;
-
   const plannedValue = row?.[`${currentMonthKey}_planned`];
-  if (!plannedValue) return false;
-
-  const planned = dayjs(plannedValue);
+  const windowDays = getChildWindowDays(row);
+  // Disable child if planned date or frequency is missing
+  if (!plannedValue || windowDays === null) return false;
+  const planned = dayjs(plannedValue).startOf("day");
   if (!planned.isValid()) return false;
-
-  const diffDays = now.startOf("day").diff(planned.startOf("day"), "day");
-  return Math.abs(diffDays) <= CHILD_WINDOW_DAYS;
+  const startDate = planned.subtract(windowDays, "day");
+  const endDate = planned.add(windowDays, "day");
+  return !now.isBefore(startDate) && !now.isAfter(endDate);
 };
+
 
 const FREQUENCY_OPTIONS = [
   { value: "monthly", label: "Monthly" },
@@ -305,18 +321,79 @@ const PreventiveGrid = ({
   /* ── Pagination state ── */
   const [currentPage, setCurrentPage] = useState(1);
   const [isPageChanging, setIsPageChanging] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const changeIdRef = useRef(0);
 
-  const totalRows = rows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
-  const safePage = Math.min(Math.max(1, currentPage), totalPages);
-  const startIndex = (safePage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalRows);
+  // const totalRows = rows.length;
+  // const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  // const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  // const startIndex = (safePage - 1) * pageSize;
+  // const endIndex = Math.min(startIndex + pageSize, totalRows);
 
-  const visibleRows = useMemo(
-    () => rows.slice(startIndex, endIndex).map((row, i) => ({ row, index: startIndex + i })),
-    [rows, startIndex, endIndex]
-  );
+  // const visibleRows = useMemo(
+  //   () => rows.slice(startIndex, endIndex).map((row, i) => ({ row, index: startIndex + i })),
+  //   [rows, startIndex, endIndex]
+  // );
+
+  /* ── Search filter ── */
+const normalizedSearch = searchTerm.trim().toLowerCase();
+
+const filteredRows = useMemo(() => {
+  return rows
+    .map((row, index) => ({
+      row,
+      index,
+    }))
+    .filter(({ row }) => {
+      if (!normalizedSearch) return true;
+
+      const equipmentName = String(
+        row?.equipmentInstrumentName ?? ""
+      ).toLowerCase();
+
+      const equipmentCode = String(
+        row?.equipmentInstrumentId ?? ""
+      ).toLowerCase();
+
+      return (
+        equipmentName.includes(normalizedSearch) ||
+        equipmentCode.includes(normalizedSearch)
+      );
+    });
+}, [rows, normalizedSearch]);
+
+/* ── Pagination based on filtered rows ── */
+const totalRows = filteredRows.length;
+const totalPages = Math.max(
+  1,
+  Math.ceil(totalRows / pageSize)
+);
+
+const safePage = Math.min(
+  Math.max(1, currentPage),
+  totalPages
+);
+
+const startIndex = (safePage - 1) * pageSize;
+const endIndex = Math.min(
+  startIndex + pageSize,
+  totalRows
+);
+
+const visibleRows = useMemo(
+  () => filteredRows.slice(startIndex, endIndex),
+  [filteredRows, startIndex, endIndex]
+);
+
+/* ── Search handler ── */
+const handleSearchChange = useCallback((e) => {
+  setSearchTerm(e.target.value);
+  // Cancel any pending pagination animation
+  changeIdRef.current += 1;
+  setIsPageChanging(false);
+  setCurrentPage(1);
+}, []);
+
 
   const pageOptions = useMemo(
     () =>
@@ -531,7 +608,42 @@ const PreventiveGrid = ({
             ) : null}
           </div>
         </div>
-
+{/* Equipment search filter */}
+<div className="ml-auto w-full max-w-[300px]">
+  <Input
+    value={searchTerm}
+    onChange={handleSearchChange}
+    placeholder="Search Equipment Name or Code..."
+    aria-label="Search Equipment Name or Code"
+    allowClear
+    disabled={equipmentLoading}
+    prefix={
+      <Search
+        size={15}
+        strokeWidth={1.8}
+        className="mr-1 text-[#899690]"
+      />
+    }
+    className="
+      !h-9
+      !w-full
+      !rounded-lg
+      !border-[#D5DEDA]
+      !bg-white
+      !px-3
+      !text-[11px]
+      !font-medium
+      !text-[#263B35]
+      !shadow-none
+      hover:!border-[#A8B9B2]
+      focus-within:!border-[#4E7585]
+      [&_.ant-input]:!text-[11px]
+      [&_.ant-input]:!bg-transparent
+      [&_.ant-input]:placeholder:!text-[#9AA6A1]
+      [&_.ant-input-clear-icon]:!text-[#899690]
+    "
+  />
+</div>
         {showAddButton && (
           <button
             type="button"
@@ -632,6 +744,7 @@ const PreventiveGrid = ({
               ) : visibleRows.length > 0 ? (
                 visibleRows.map(({ row, index: rowIndex }, visibleIdx) => {
                   /* NEW: per-row child button gate (initiator + close done + ±7 days) */
+                  const childWindowDays = getChildWindowDays(row);
                   const withinPlannedWindow = isWithinCurrentMonthPlannedWindow(row);
                   const childEnabled = canCreateChild && withinPlannedWindow;
 
@@ -696,8 +809,10 @@ const PreventiveGrid = ({
                               title={
                                 !canCreateChild
                                   ? "Child creation is available only to Initiator at Close Done stage"
+                                  : childWindowDays === null
+                                  ? "Please select a valid frequency for the current month"
                                   : !withinPlannedWindow
-                                  ? `Child creation is allowed only within ±${CHILD_WINDOW_DAYS} days of the current month's Planned date`
+                                  ? `Child creation is allowed only within ±${childWindowDays} days of the current month's Planned date`
                                   : "Create child preventive record"
                               }
                             >

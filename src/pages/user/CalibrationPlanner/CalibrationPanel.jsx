@@ -256,7 +256,7 @@ const CreateCalibrationPanel = () => {
   const isHodEditable = isStageEditable(2);
   const isUserDeptEditable = isStageEditable(3);
   const isQaReviewEditable = isStageEditable(4);
-  const canCreateChild = Number(activeStageId) === 5 && userRoles.some((role) => String(role).toLowerCase() === "initiator");
+  const canCreateChild = Number(activeStageId) === 5 && userRoles.some((role) => String(role).toLowerCase() === "executor");
   useEffect(() => {
     const fetchProfile = async () => {
       try {

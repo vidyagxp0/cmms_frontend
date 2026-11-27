@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Trash2, Table2, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Table2, Loader2, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Input, Select, DatePicker, Checkbox } from "antd";
 import dayjs from "dayjs";
 import UserModal from "../../../components/common/UserModal/UserModal";
@@ -82,6 +82,7 @@ const CalibrationGrid = ({
   ];
 
   const rows = Array.isArray(value) ? value : [];
+  const [searchTerm, setSearchTerm] = useState("");
 
   // const [deleteRowIndex, setDeleteRowIndex] = useState(null);
   // const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -96,11 +97,11 @@ const deletingRef = useRef(false);
 
 const canSelectRows = !disabled && !equipmentLoading && !isDeleting;
 
-const isAllSelected =
-  rows.length > 0 && selectedRows.length === rows.length;
+// const isAllSelected =
+//   rows.length > 0 && selectedRows.length === rows.length;
 
-const isIndeterminate =
-  selectedRows.length > 0 && selectedRows.length < rows.length;
+// const isIndeterminate =
+//   selectedRows.length > 0 && selectedRows.length < rows.length;
 
   /* ─────────────────────────────────────────────────────────
      NEW: PAGINATION STATE
@@ -109,20 +110,131 @@ const isIndeterminate =
   const [isPageChanging, setIsPageChanging] = useState(false);
   const changeIdRef = useRef(0);
 
-  const totalRows = rows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
-  const safePage = Math.min(Math.max(1, currentPage), totalPages);
-  const startIndex = (safePage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalRows);
+  // const totalRows = rows.length;
+  // const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  // const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  // const startIndex = (safePage - 1) * pageSize;
+  // const endIndex = Math.min(startIndex + pageSize, totalRows);
 
-  const visibleRows = useMemo(
-    () =>
-      rows.slice(startIndex, endIndex).map((row, i) => ({
-        row,
-        index: startIndex + i,
-      })),
-    [rows, startIndex, endIndex]
+  // const visibleRows = useMemo(
+  //   () =>
+  //     rows.slice(startIndex, endIndex).map((row, i) => ({
+  //       row,
+  //       index: startIndex + i,
+  //     })),
+  //   [rows, startIndex, endIndex]
+  // );
+
+  /* ── Instrument Search Filter ── */
+
+const normalizedSearch = searchTerm.trim().toLowerCase();
+
+const instrumentLabelMap = useMemo(() => {
+  return new Map(
+    equipmentOptions.map((option) => [
+      String(option.value),
+      option.label,
+    ])
   );
+}, [equipmentOptions]);
+
+const filteredRows = useMemo(() => {
+  return rows
+    .map((row, index) => ({
+      row,
+      index,
+    }))
+    .filter(({ row }) => {
+      if (!normalizedSearch) return true;
+
+      const rawInstrumentName =
+        row?.equipmentInstrumentName ?? "";
+
+      const equipment =
+        equipmentMap[String(rawInstrumentName)];
+
+      // Resolve actual instrument name from master data
+      const instrumentName = String(
+        instrumentLabelMap.get(String(rawInstrumentName)) ||
+          equipment?.instrument_name ||
+          equipment?.equipment_name ||
+          rawInstrumentName
+      ).toLowerCase();
+
+      const instrumentId = String(
+        row?.equipmentInstrumentId ?? ""
+      ).toLowerCase();
+
+      return (
+        instrumentName.includes(normalizedSearch) ||
+        instrumentId.includes(normalizedSearch)
+      );
+    });
+}, [
+  rows,
+  normalizedSearch,
+  equipmentMap,
+  instrumentLabelMap,
+]);
+
+/* ── Filtered Row Selection ── */
+
+const filteredRowIndexes = useMemo(
+  () => filteredRows.map(({ index }) => index),
+  [filteredRows]
+);
+
+const selectedRowSet = useMemo(
+  () => new Set(selectedRows),
+  [selectedRows]
+);
+
+const selectedFilteredCount = filteredRowIndexes.filter(
+  (index) => selectedRowSet.has(index)
+).length;
+
+const isAllSelected =
+  filteredRows.length > 0 &&
+  selectedFilteredCount === filteredRows.length;
+
+const isIndeterminate =
+  selectedFilteredCount > 0 &&
+  selectedFilteredCount < filteredRows.length;
+
+/* ── Pagination ── */
+const totalRows = filteredRows.length;
+const totalPages = Math.max(
+  1,
+  Math.ceil(totalRows / pageSize)
+);
+
+const safePage = Math.min(
+  Math.max(1, currentPage),
+  totalPages
+);
+
+const startIndex = (safePage - 1) * pageSize;
+const endIndex = Math.min(
+  startIndex + pageSize,
+  totalRows
+);
+
+const visibleRows = useMemo(
+  () => filteredRows.slice(startIndex, endIndex),
+  [filteredRows, startIndex, endIndex]
+);
+
+/* ── Search Change Handler ── */
+
+const handleSearchChange = useCallback((e) => {
+  setSearchTerm(e.target.value);
+  // Cancel pending pagination animation
+  changeIdRef.current += 1;
+  setIsPageChanging(false);
+  setCurrentPage(1);
+  // Prevent accidental deletion of hidden selected rows
+  setSelectedRows([]);
+}, []);
 
   const pageOptions = useMemo(
     () =>
@@ -187,7 +299,7 @@ const handleSelectAll = (checked) => {
   if (!canSelectRows) return;
 
   setSelectedRows(
-    checked ? rows.map((_, index) => index) : []
+    checked ? [...filteredRowIndexes] : []
   );
 };
 
@@ -531,6 +643,44 @@ const handleCancelDelete = () => {
           </button>
         )} */}
 
+
+{/* Instrument Search Filter */}
+<div className="ml-auto w-full max-w-[300px]">
+  <Input
+    value={searchTerm}
+    onChange={handleSearchChange}
+    placeholder="Search Instrument Name or ID No..."
+    aria-label="Search Instrument Name or ID No"
+    allowClear
+    disabled={equipmentLoading || isDeleting || isDeleteModalOpen}
+    prefix={
+      <Search
+        size={15}
+        strokeWidth={1.8}
+        className="mr-1 text-[#899690]"
+      />
+    }
+    className="
+      !h-9
+      !w-full
+      !rounded-lg
+      !border-[#D5DEDA]
+      !bg-white
+      !px-3
+      !text-[11px]
+      !font-medium
+      !text-[#263B35]
+      !shadow-none
+      hover:!border-[#A8B9B2]
+      focus-within:!border-[#4E7585]
+      [&_.ant-input]:!text-[11px]
+      [&_.ant-input]:!bg-transparent
+      [&_.ant-input]:placeholder:!text-[#9AA6A1]
+      [&_.ant-input-clear-icon]:!text-[#899690]
+    "
+  />
+</div>
+
         <div className="flex shrink-0 items-center gap-2">
   {!disabled && selectedRows.length > 0 && (
     <>
@@ -591,10 +741,17 @@ const handleCancelDelete = () => {
               <tr className="bg-[#EEF3F1]">
                 {!disabled && (
                   <th className="w-[44px] min-w-[44px] border border-[#D5DFDB] px-2 py-2 text-center">
-                    <Checkbox checked={isAllSelected} indeterminate={isIndeterminate}
-                      disabled={!canSelectRows || rows.length === 0}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                      aria-label="Select all rows across all pages" />
+                 <Checkbox
+                  checked={isAllSelected}
+                  indeterminate={isIndeterminate}
+                  disabled={!canSelectRows || filteredRows.length === 0}
+                  onChange={(e) => handleSelectAll(e.target.checked)}
+                  aria-label={
+                    normalizedSearch
+                      ? "Select all matching instrument rows"
+                      : "Select all rows across all pages"
+                  }
+                />
                   </th>
                 )}
                 <th className="w-[50px] border border-[#D5DFDB] px-2 py-2 text-center text-[10px] font-bold uppercase text-[#43564F]">Sr. No</th>

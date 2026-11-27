@@ -267,7 +267,7 @@ const PreventivePlannerPanel = () => {
 
   const canCreateChild =
     Number(activeStageId) === 11 &&
-    userRoles.some((role) => String(role).toLowerCase() === "initiator");
+    userRoles.some((role) => String(role).toLowerCase() === "executor");
 
   useEffect(() => {
     equipmentMapRef.current = equipmentMap;

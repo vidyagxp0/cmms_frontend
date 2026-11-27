@@ -91,13 +91,10 @@ export const addSingleAttachment = async ({
 };
 
 
-export const addMultipleAttachments = async ({
-  record_id,
-  attachment_field,
-  label,
-  file,
-  files = [],
-}) => {
+const postMultipleAttachments = (
+  url,
+  { record_id, attachment_field, label, file, files = [] }
+) => {
   if (!record_id) {
     throw new Error("record_id is required for attachment upload.");
   }
@@ -120,13 +117,16 @@ export const addMultipleAttachments = async ({
     fileList: fileListToUpload,
   });
 
-  return api.post(
-    `/user/upload-attachment/${record_id}`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    }
-  );
+  return api.post(`${url}/${record_id}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 };
+
+export const addMultipleAttachments = async (params) =>
+  postMultipleAttachments("/user/upload-attachment", params);
+
+// Instrument Master — Certificate Attachment
+export const addInstrumentMasterAttachments = async (params) =>
+  postMultipleAttachments("/user/instrument-master/attachments", params);

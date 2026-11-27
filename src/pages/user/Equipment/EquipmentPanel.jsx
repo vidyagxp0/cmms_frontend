@@ -39,7 +39,10 @@ import {
   getEquipmentDetail,
   updateEquipment,
 } from "../../../services/usersApi/equipmentApi";
-import { addMultipleAttachments } from "../../../components/common/Attachment/attachmentApi";
+import {
+  addMultipleAttachments,
+  addInstrumentMasterAttachments,
+} from "../../../components/common/Attachment/attachmentApi";
 import { getProfile } from "../../../services/authApi";
 import {
   getAllActivites,
@@ -1017,7 +1020,7 @@ const EquipmentPanel = () => {
                 recordId={id}
                 attachmentField="certificate_attachment"
                 label="Certificate Attachment"
-                uploadApi={addMultipleAttachments}
+                uploadApi={addInstrumentMasterAttachments}
                 disabled={!isInstrumentEditable}
               />
             </Form.Item>

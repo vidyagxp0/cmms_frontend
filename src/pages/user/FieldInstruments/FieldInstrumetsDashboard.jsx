@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Eye, Wrench, Search, Filter } from "lucide-react";
+import { Eye, Wrench, Search, Filter, Building2 } from "lucide-react";
 import SrNoLink from "../../../components/common/SrNoLink/SrNoLink";
 import DepartmentFilter from "../../../components/common/DepartmentFilter/DepartmentFilter";
 import { Input, Select, Button } from "antd";
@@ -261,6 +261,29 @@ const FieldInstrumetsDashboard = () => {
     const serialOffset =
         ((Number(pagination.currentPage) || 1) - 1) * (Number(pagination.perPage) || 0);
 
+    // Department id -> name, used when a record only carries department_id.
+    const departmentNameById = useMemo(() => {
+        const map = {};
+        departments.forEach((dept) => {
+            const deptId = String(dept?.id ?? dept?.department_id ?? dept?.dept_id ?? "");
+            if (!deptId) return;
+            map[deptId] = dept?.name || dept?.department_name || dept?.dept_name || "";
+        });
+        return map;
+    }, [departments]);
+
+    const getDepartmentName = useCallback(
+        (record) =>
+            record?.department?.name ||
+            record?.department?.department_name ||
+            record?.department_name ||
+            (record?.department_id != null
+                ? departmentNameById[String(record.department_id)]
+                : "") ||
+            "",
+        [departmentNameById]
+    );
+
     const columns = useMemo(
         () => [
             {
@@ -323,6 +346,26 @@ const FieldInstrumetsDashboard = () => {
                         {getValue() || "-"}
                     </span>
                 ),
+            },
+
+            // DEPARTMENT
+            {
+                id: "department",
+                header: "Department",
+                accessorFn: (record) => getDepartmentName(record),
+                cell: ({ getValue }) => {
+                    const deptName = getValue() || "-";
+                    return (
+                        <div className="flex max-w-[200px] items-center gap-2">
+                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] border border-[#D5E0DB] bg-[#F7FAF8] text-[#56766D]">
+                                <Building2 size={11} strokeWidth={1.9} />
+                            </div>
+                            <span className="min-w-0 truncate text-[11.5px] font-semibold text-[#566560]" title={deptName}>
+                                {deptName}
+                            </span>
+                        </div>
+                    );
+                },
             },
 
             // CATEGORY
@@ -426,7 +469,7 @@ const FieldInstrumetsDashboard = () => {
                 ),
             },
         ],
-        [navigate, handleViewReport, serialOffset]
+        [navigate, handleViewReport, serialOffset, getDepartmentName]
     );
 
     // ✅ Include department in active filters check

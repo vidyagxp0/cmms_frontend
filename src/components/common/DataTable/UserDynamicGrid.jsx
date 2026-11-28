@@ -15,24 +15,73 @@ const TIME_FORMATS = {
     "Hr:min:sec:1/100 sec": { multipliers: [360000, 6000, 100, 1], limits: [Infinity, 60, 60, 100] },
     "Hr:min": { multipliers: [60, 1], limits: [Infinity, 60] },
 };
+
+const normalizeUnit = (unit) => {
+    const symbol = String(unit ?? "").trim();
+    if (/^%\s*RH$/i.test(symbol)) {
+        return "%RH";
+    }
+    return symbol;
+};
+
 const extractNumeric = (val) => {
     if (val == null) return null;
-    const { rawValue, unit } = parseValueAndUnit(String(val));
-    const raw = String(rawValue ?? "").trim();
-    const symbol = String(unit || "").trim();
+    const text = String(val).trim();
+    if (!text) return null;
+    const parsed = parseValueAndUnit(text);
+    let raw = String(parsed.rawValue ?? "").trim();
+    let symbol = normalizeUnit(parsed.unit);
+    const humidityMatch = text.match(
+        /^([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*%\s*RH$/i
+    );
+    if (humidityMatch) {
+        raw = humidityMatch[1];
+        symbol = "%RH";
+    }
     const format = TIME_FORMATS[symbol];
+    // Existing composite time calculation support
     if (format) {
         const parts = raw.replace(/^[+-]/, "").split(/[.:]/);
-        if (parts.length !== format.multipliers.length || parts.some(p => !/^\d+$/.test(p))) return null;
+        if (
+            parts.length !== format.multipliers.length ||
+            parts.some((p) => !/^\d+$/.test(p))
+        ) {
+            return null;
+        }
         const values = parts.map(Number);
-        if (values.some((v, i) => !Number.isSafeInteger(v) || v >= format.limits[i])) return null;
-        const total = values.reduce((sum, v, i) => sum + v * format.multipliers[i], 0);
-        return Number.isSafeInteger(total) ? { value: raw.startsWith("-") ? -total : total, unit: symbol } : null;
+        if (
+            values.some(
+                (v, i) =>
+                    !Number.isSafeInteger(v) ||
+                    v >= format.limits[i]
+            )
+        ) {
+            return null;
+        }
+        const total = values.reduce(
+            (sum, v, i) => sum + v * format.multipliers[i],
+            0
+        );
+        return Number.isSafeInteger(total)
+            ? {
+                  value: raw.startsWith("-") ? -total : total,
+                  unit: symbol,
+              }
+            : null;
     }
-    if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(raw)) return null;
+    // Normal numeric calculation
+    if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(raw)) {
+        return null;
+    }
     const value = Number(raw);
-    return Number.isFinite(value) ? { value, unit: symbol } : null;
+    return Number.isFinite(value)
+        ? {
+              value,
+              unit: symbol,
+          }
+        : null;
 };
+
 const formatTimeError = (value, unit) => {
     let remaining = Math.abs(value);
     const parts = TIME_FORMATS[unit].multipliers.map(multiplier => {
@@ -42,6 +91,7 @@ const formatTimeError = (value, unit) => {
     });
     return `${value < 0 ? "-" : ""}${parts.join(".")}`;
 };
+
 const computeError = (masterVal, uucVal) => {
     const master = extractNumeric(masterVal);
     const uuc = extractNumeric(uucVal);
@@ -55,10 +105,12 @@ const computeError = (masterVal, uucVal) => {
     const rounded = Number(difference.toFixed(6));
     return master.unit ? `${rounded} ${master.unit}` : String(rounded);
 };
+
 // Calculate matching pairs when both reading columns are split.
 const bothReadingsSplit = (toggles) => Boolean(
     toggles.masterInstrumentReadings && toggles.unitUnderCalibrationReading
 );
+
 const computeCalibrationErrors = (row, toggles) => {
     if (bothReadingsSplit(toggles)) {
         return {
@@ -76,6 +128,7 @@ const computeCalibrationErrors = (row, toggles) => {
         errorIn2: "",
     };
 };
+
 const isCalibrationReadingColumn = (key) =>
     key === "masterInstrumentReadings" || key === "unitUnderCalibrationReading";
 // Header-controlled units (opt-in per column).
@@ -604,18 +657,88 @@ const handleConfirmToggleOff = () => {
         }
         return null;
     };
-    const visibleColumns = useMemo(() => columns
-        .filter(column => column.hidden !== true)
-        .flatMap(column => {
-            if (!isCalibrationGrid || column.key !== "errorIn") return [column];
-            const base = { ...column, toggleable: false, splitFields: undefined, disabled: true };
-            if (!bothReadingsSplit(columnToggles)) return [base];
-            return [1, 2].map(index => ({
-                ...base,
-                key: `errorIn${index}`,
-                title: `Error in ${index}`,
-            }));
-        }), [columns, isCalibrationGrid, columnToggles]);
+
+const visibleColumns = useMemo(() => {
+    // Get the selected or saved symbol fo a reading field
+    const getReadingUnit = (fieldKey) => {
+        const config =
+            columnSymbols[fieldKey] ??
+            getSavedSymbol(fieldKey, rows);
+        return config.enabled
+            ? normalizeUnit(config.unit)
+            : "";
+    };
+    // Only show a symbol when both reading units match
+    const getErrorUnit = (masterKey, uucKey) => {
+        const masterUnit = getReadingUnit(masterKey);
+        const uucUnit = getReadingUnit(uucKey);
+        return masterUnit && masterUnit === uucUnit
+            ? masterUnit
+            : "";
+    };
+    const getErrorTitle = (masterKey, uucKey) => {
+        const unit = getErrorUnit(masterKey, uucKey);
+        return unit ? `Error in ${unit}` : "Error in";
+    };
+    return columns
+        .filter((column) => column.hidden !== true)
+        .flatMap((column) => {
+            if (!isCalibrationGrid || column.key !== "errorIn") {
+                return [column];
+            }
+            const base = {
+                ...column,
+                toggleable: false,
+                splitFields: undefined,
+                disabled: true,
+                symbolic: false,
+                headerSymbolic: false,
+            };
+            // Both reading columns split ON
+            if (bothReadingsSplit(columnToggles)) {
+                return [
+                    {
+                        ...base,
+                        key: "errorIn1",
+                        title: getErrorTitle(
+                            "masterInstrumentReadings1",
+                            "unitUnderCalibrationReading1"
+                        ),
+                    },
+                    {
+                        ...base,
+                        key: "errorIn2",
+                        title: getErrorTitle(
+                            "masterInstrumentReadings2",
+                            "unitUnderCalibrationReading2"
+                        ),
+                    },
+                ];
+            }
+            // Both split OFF or only one split ON
+            const masterKey =
+                columnToggles.masterInstrumentReadings
+                    ? "masterInstrumentReadings2"
+                    : "masterInstrumentReadings";
+            const uucKey =
+                columnToggles.unitUnderCalibrationReading
+                    ? "unitUnderCalibrationReading2"
+                    : "unitUnderCalibrationReading";
+            return [
+                {
+                    ...base,
+                    title: getErrorTitle(masterKey, uucKey),
+                },
+            ];
+        });
+}, [
+    columns,
+    isCalibrationGrid,
+    columnToggles,
+    columnSymbols,
+    rows,
+]);
+
     return (
         <div className={`w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)] ${className}`}>
             {/* Header */}

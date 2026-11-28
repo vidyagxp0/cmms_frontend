@@ -34,9 +34,19 @@ const normalizeValue = (value) => {
   return String(value);
 };
 
+export const formatValueAndUnit = (value, unit) => {
+  const raw = normalizeValue(value).trim();
+  if (!raw) return "";
+  if (!unit) return raw;
+  return unit === "±" ? `±${raw}` : `${raw} ${unit}`;
+};
+
 export const parseValueAndUnit = (value) => {
   const text = normalizeValue(value).trim();
   if (!text) return { rawValue: "", discipline: "", unit: "" };
+  if (text.startsWith("±")) {
+    return { rawValue: text.slice(1).trim(), discipline: "Accuracy", unit: "±" };
+  }
   const allUnits = UNIT_MASTER
     .flatMap((item) => item.units.map((unit) => ({ discipline: item.discipline, unit })))
     .sort((a, b) => b.unit.length - a.unit.length);
@@ -102,7 +112,7 @@ const SymbolicInput = ({
     const cleanValue = String(nextRaw ?? "").trim();
     let next = "";
     if (cleanValue) {
-      next = nextEnabled && nextUnit ? `${cleanValue} ${nextUnit}` : cleanValue;
+      next = formatValueAndUnit(cleanValue, nextEnabled ? nextUnit : "");
     }
     if (next === lastEmittedRef.current) return;
     lastEmittedRef.current = next;
@@ -175,10 +185,11 @@ if (fixedUnit) {
           onChange={handleValueChange}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full"
+          className={`w-full ${fixedUnit === "±" ? "[&_.ant-input-prefix]:!mr-0" : ""}`}
+          prefix={fixedUnit === "±" ? <span className="font-medium text-[#263B35]">±</span> : null}
         />
 
-        {rawValue !== "" && (
+        {fixedUnit !== "±" && rawValue !== "" && (
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 
@@ -210,9 +221,10 @@ if (fixedUnit) {
             onChange={handleValueChange}
             placeholder={placeholder}
             disabled={disabled}
-            className="w-full"
+            className={`w-full ${symbolEnabled && unit === "±" ? "[&_.ant-input-prefix]:!mr-0" : ""}`}
+            prefix={symbolEnabled && unit === "±" ? <span className="font-medium text-[#263B35]">±</span> : null}
           />
-          {symbolEnabled && unit && rawValue && (
+          {symbolEnabled && unit && unit !== "±" && rawValue && (
             <span
               className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-sm font-medium text-[#263B35]"
               style={{ left: `${Math.max(12, rawValue.length * 8 + 16)}px` }}
@@ -245,13 +257,16 @@ if (fixedUnit) {
             </button>
           </div>
           <div className="max-h-[240px] overflow-y-auto">
-            <Tree
+           <Tree
               showLine
+              blockNode
+              expandAction="click"
               switcherIcon={<DownOutlined />}
               treeData={treeData}
               selectedKeys={selectedTreeKeys}
               onSelect={handleTreeSelect}
-            />
+              className="symbolic-unit-tree"
+          />
           </div>
         </div>
       )}

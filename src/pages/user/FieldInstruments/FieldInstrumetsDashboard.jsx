@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { Eye, Wrench, Search, Filter } from "lucide-react";
 import SrNoLink from "../../../components/common/SrNoLink/SrNoLink";
+import DepartmentFilter from "../../../components/common/DepartmentFilter/DepartmentFilter";
 import { Input, Select, Button } from "antd";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
@@ -458,60 +459,6 @@ const FieldInstrumetsDashboard = () => {
             <main className="min-h-0 flex-1 overflow-hidden px-0 pb-0 pt-[58px]">
                 <section className="flex h-full min-h-0 flex-col overflow-hidden bg-transparent">
 
-                    {/* ───────────── ✅ NEW: DEPARTMENT TABS (pill chips) ───────────── */}
-                    <div className="shrink-0 border-b border-gray-100 bg-white px-4 py-2.5 overflow-x-auto">
-                        <div className="flex items-center gap-2 min-w-max">
-                            <span className="mr-1 shrink-0 text-[10px] font-bold uppercase tracking-[0.08em] text-[#8A9992]">
-                                Department
-                            </span>
-
-                            {/* ALL chip */}
-                            <button
-                                type="button"
-                                onClick={() => setSelectedDepartmentId("")}
-                                className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition-all duration-150 ${
-                                    !selectedDepartmentId
-                                        ? "bg-[#2B5577] text-white shadow-[0_2px_6px_rgba(43,85,119,0.25)]"
-                                        : "border border-[#D5E0DB] bg-[#F1F5F3] text-[#56766D] hover:border-[#B7CAC2] hover:bg-[#E5EEEA]"
-                                }`}
-                            >
-                                All
-                            </button>
-
-                            {/* Department chips */}
-                            {departmentsLoading ? (
-                                <span className="text-[11px] font-medium text-[#8A9691]">Loading departments…</span>
-                            ) : departments.length === 0 ? (
-                                <span className="text-[11px] font-medium text-[#8A9691]">No departments</span>
-                            ) : (
-                                departments.map((dept) => {
-                                    const deptId = String(dept.id || dept.department_id || dept.dept_id || "");
-                                    const deptName =
-                                        dept.name ||
-                                        dept.department_name ||
-                                        dept.dept_name ||
-                                        "Unnamed Department";
-                                    const isActive = selectedDepartmentId === deptId;
-                                    return (
-                                        <button
-                                            key={deptId || deptName}
-                                            type="button"
-                                            onClick={() => setSelectedDepartmentId(deptId)}
-                                            title={deptName}
-                                            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold transition-all duration-150 ${
-                                                isActive
-                                                    ? "bg-[#2B5577] text-white shadow-[0_2px_6px_rgba(43,85,119,0.25)]"
-                                                    : "border border-[#D5E0DB] bg-[#F1F5F3] text-[#56766D] hover:border-[#B7CAC2] hover:bg-[#E5EEEA]"
-                                            }`}
-                                        >
-                                            {deptName}
-                                        </button>
-                                    );
-                                })
-                            )}
-                        </div>
-                    </div>
-
                     {/* ───────────── EXISTING COMPACT FILTER BAR ───────────── */}
                     <div className="flex shrink-0 flex-nowrap items-center gap-2 px-4 py-3 border-b border-gray-100 bg-[#FAFBFA] overflow-x-auto">
 
@@ -531,6 +478,14 @@ const FieldInstrumetsDashboard = () => {
                                 height: "30px",
                                 fontSize: "12px",
                             }}
+                        />
+
+                        {/* Department filter (compact, searchable) */}
+                        <DepartmentFilter
+                            departments={departments}
+                            loading={departmentsLoading}
+                            value={selectedDepartmentId}
+                            onChange={setSelectedDepartmentId}
                         />
 
                         {/* Stage Select */}

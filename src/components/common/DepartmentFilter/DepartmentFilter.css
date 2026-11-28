@@ -1,0 +1,53 @@
+/*
+ * Thin, subtle scrollbar for the department dropdown list.
+ *
+ * antd 6 renders the option list with @rc-component/virtual-list, whose
+ * scrollbar is a custom <div> (not a native scrollbar) with an inline
+ * `width: 8px`. Classes are `<prefix>-select-dropdown-list-scrollbar*`,
+ * so we match on the class suffix and override the inline size with
+ * !important.
+ */
+
+/* Track (vertical) */
+.dept-filter-popup [class*="-list-scrollbar-vertical"] {
+    width: 4px !important;
+    right: 3px !important;
+    top: 4px !important;
+    bottom: 4px !important;
+    background: transparent !important;
+}
+
+/* Thumb */
+.dept-filter-popup [class*="-list-scrollbar-thumb"] {
+    background: #C5D1CC !important;
+    border-radius: 999px !important;
+    transition: background-color 0.15s ease;
+}
+
+.dept-filter-popup [class*="-list-scrollbar-thumb"]:hover,
+.dept-filter-popup [class*="-list-scrollbar-thumb-moving"] {
+    background: #93A8A0 !important;
+}
+
+/* Native scrollbar fallback (used when the list is not virtualised) */
+.dept-filter-popup [class*="-list-holder"] {
+    scrollbar-width: thin;
+    scrollbar-color: #C5D1CC transparent;
+}
+
+.dept-filter-popup [class*="-list-holder"]::-webkit-scrollbar {
+    width: 4px;
+}
+
+.dept-filter-popup [class*="-list-holder"]::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dept-filter-popup [class*="-list-holder"]::-webkit-scrollbar-thumb {
+    background: #C5D1CC;
+    border-radius: 999px;
+}
+
+.dept-filter-popup [class*="-list-holder"]::-webkit-scrollbar-thumb:hover {
+    background: #93A8A0;
+}

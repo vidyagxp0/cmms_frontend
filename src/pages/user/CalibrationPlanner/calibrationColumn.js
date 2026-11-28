@@ -48,7 +48,7 @@ const CALIBRATED_BY_COLUMNS = [
     placeholder: "Enter Master Instrument Readings",
     minWidth: 180,
     symbolic: true,
-    headerSymbolic: true, // NEW
+    headerSymbolic: true,
     toggleable: true,
     splitFields: [
       {
@@ -68,7 +68,7 @@ const CALIBRATED_BY_COLUMNS = [
     placeholder: "Enter Unit Under Calibration Readings",
     minWidth: 160,
     symbolic: true,
-    headerSymbolic: true, // NEW
+    headerSymbolic: true,
     toggleable: true,
     splitFields: [
       {
@@ -88,8 +88,30 @@ const CALIBRATED_BY_COLUMNS = [
     placeholder: "Auto-calculated",
     minWidth: 160,
     disabled: true,
+
+    // Automatically split when both reading columns are split.
+    autoSplitWhen: [
+      "masterInstrumentReadings",
+      "unitUnderCalibrationReading",
+    ],
+
+    splitFields: [
+      {
+        key: "errorIn1",
+        title: "Error in 1",
+        placeholder: "Auto-calculated",
+        disabled: true,
+      },
+      {
+        key: "errorIn2",
+        title: "Error in 2",
+        placeholder: "Auto-calculated",
+        disabled: true,
+      },
+    ],
   },
 ];
+
 
 
 const CALIBRATION_RESULT_GRID = [

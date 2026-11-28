@@ -55,13 +55,26 @@ const computeError = (masterVal, uucVal) => {
     const rounded = Number(difference.toFixed(6));
     return master.unit ? `${rounded} ${master.unit}` : String(rounded);
 };
-// Independently select the active reading for each column.
-const computeCalibrationError = (row, toggles) => {
-    const master = toggles.masterInstrumentReadings
-        ? row.masterInstrumentReadings2 : row.masterInstrumentReadings;
-    const uuc = toggles.unitUnderCalibrationReading
-        ? row.unitUnderCalibrationReading2 : row.unitUnderCalibrationReading;
-    return computeError(master, uuc);
+// Calculate matching pairs when both reading columns are split.
+const bothReadingsSplit = (toggles) => Boolean(
+    toggles.masterInstrumentReadings && toggles.unitUnderCalibrationReading
+);
+const computeCalibrationErrors = (row, toggles) => {
+    if (bothReadingsSplit(toggles)) {
+        return {
+            errorIn: "",
+            errorIn1: computeError(row.masterInstrumentReadings1, row.unitUnderCalibrationReading1),
+            errorIn2: computeError(row.masterInstrumentReadings2, row.unitUnderCalibrationReading2),
+        };
+    }
+    return {
+        errorIn: computeError(
+            toggles.masterInstrumentReadings ? row.masterInstrumentReadings2 : row.masterInstrumentReadings,
+            toggles.unitUnderCalibrationReading ? row.unitUnderCalibrationReading2 : row.unitUnderCalibrationReading
+        ),
+        errorIn1: "",
+        errorIn2: "",
+    };
 };
 const isCalibrationReadingColumn = (key) =>
     key === "masterInstrumentReadings" || key === "unitUnderCalibrationReading";
@@ -183,7 +196,7 @@ const UserDynamicGrid = ({
                 const value = raw && unit ? `${raw} ${unit}` : raw;
                 if (value !== row[key]) { next[key] = value; changed = true; }
             });
-            if (isCalibrationGrid) next.errorIn = computeCalibrationError(next, columnToggles);
+            if (isCalibrationGrid) Object.assign(next, computeCalibrationErrors(next, columnToggles));
             return next;
         });
         setColumnSymbols(prev => ({ ...prev, [fieldKey]: { enabled, unit, mixed: false } }));
@@ -260,28 +273,25 @@ const UserDynamicGrid = ({
         });
     }, [rows, columns, isCalibrationGrid, recordId]);
     useEffect(() => {
-    if (!isCalibrationGrid || !rows.length || isReadOnly) return;
-    let needsUpdate = false;
-    const updated = rows.map((row) => {
-        const newRow = { ...row };
-        const nextError = computeCalibrationError(row, columnToggles);
-        if ((row.errorIn ?? "") !== nextError) {
-            newRow.errorIn = nextError;
+        if (!isCalibrationGrid || !rows.length || isReadOnly) return;
+        // Wait for saved split data to hydrate before recalculating.
+        const pendingSplitHydration = columns.some(col =>
+            isCalibrationReadingColumn(col.key) &&
+            !Object.prototype.hasOwnProperty.call(calibrationSplitOverrides.current, col.key) &&
+            Boolean(columnToggles[col.key]) !== rows.some(row =>
+                col.splitFields?.some(field => row[field.key] != null && row[field.key] !== "")
+            )
+        );
+        if (pendingSplitHydration) return;
+        let needsUpdate = false;
+        const updated = rows.map(row => {
+            const errors = computeCalibrationErrors(row, columnToggles);
+            if (Object.keys(errors).every(key => (row[key] ?? "") === errors[key])) return row;
             needsUpdate = true;
-        }
-        // Drop any legacy split-error values left over from earlier sessions
-        if (newRow.errorIn1) {
-            newRow.errorIn1 = "";
-            needsUpdate = true;
-        }
-        if (newRow.errorIn2) {
-            newRow.errorIn2 = "";
-            needsUpdate = true;
-        }
-        return newRow;
-    });
-    if (needsUpdate) onChangeRef.current?.(updated);
-}, [rows, columnToggles, isCalibrationGrid, isReadOnly]);
+            return { ...row, ...errors };
+        });
+        if (needsUpdate) onChangeRef.current?.(updated);
+    }, [rows, columns, columnToggles, isCalibrationGrid, isReadOnly]);
     // ---- Modal state ----
     const [toggleModalState, setToggleModalState] = useState({ open: false, columnKey: null });
     const [deleteRowIndex, setDeleteRowIndex] = useState(null);
@@ -313,7 +323,7 @@ const UserDynamicGrid = ({
         if (!effectiveAllowAdd) return;
         if (maxRows !== undefined && rows.length >= maxRows) return;
         const newRow = createRow();
-        onChange?.([...rows, newRow]);
+        onChange?.([...rows, isCalibrationGrid ? { ...newRow, ...computeCalibrationErrors(newRow, columnToggles) } : newRow]);
     };
     const handleDeleteRow = (rowIndex) => {
     if (!effectiveAllowDelete || deletingRef.current) return;
@@ -369,7 +379,7 @@ const handleCancelDelete = () => {
             if (index !== rowIndex) return row;
             const newRow = { ...row, [columnKey]: newValue };
             if (isCalibrationGrid && isCalibrationReadingColumn(columnKey)) {
-                newRow.errorIn = computeCalibrationError(newRow, columnToggles);
+                Object.assign(newRow, computeCalibrationErrors(newRow, columnToggles));
             }
             return newRow;
         });
@@ -386,7 +396,7 @@ const handleSplitChange = (rowIndex, fieldKey, newValue) => {
             fieldKey === "unitUnderCalibrationReading1" ||
             fieldKey === "unitUnderCalibrationReading2"
         )) {
-            newRow.errorIn = computeCalibrationError(newRow, columnToggles);
+            Object.assign(newRow, computeCalibrationErrors(newRow, columnToggles));
         }
         return newRow;
     });
@@ -409,7 +419,11 @@ const handleSplitChange = (rowIndex, fieldKey, newValue) => {
         calibrationSplitOverrides.current[columnKey] = checked;
     }
     // Effect above will recompute errorIn when this state changes
-    setColumnToggles((prev) => ({ ...prev, [columnKey]: checked }));
+    const nextToggles = { ...columnToggles, [columnKey]: checked };
+    setColumnToggles(nextToggles);
+    if (isCalibrationGrid && isCalibrationReadingColumn(columnKey)) {
+        onChange?.(rows.map(row => ({ ...row, ...computeCalibrationErrors(row, nextToggles) })));
+    }
 };
 const handleConfirmToggleOff = () => {
     const { columnKey } = toggleModalState;
@@ -424,8 +438,11 @@ const handleConfirmToggleOff = () => {
     if (isCalibrationGrid && isCalibrationReadingColumn(columnKey)) {
         calibrationSplitOverrides.current[columnKey] = false;
     }
-    onChange?.(updatedRows);
-    setColumnToggles((prev) => ({ ...prev, [columnKey]: false }));
+    const nextToggles = { ...columnToggles, [columnKey]: false };
+    onChange?.(isCalibrationGrid && isCalibrationReadingColumn(columnKey)
+        ? updatedRows.map(row => ({ ...row, ...computeCalibrationErrors(row, nextToggles) }))
+        : updatedRows);
+    setColumnToggles(nextToggles);
     setToggleModalState({ open: false, columnKey: null });
 };
     const handleCancelToggleOff = () => {
@@ -448,7 +465,9 @@ const handleConfirmToggleOff = () => {
     };
     // ---- Render field ----
     const renderField = (column, row, rowIndex) => {
-        const fieldValue = row[column.key];
+        const fieldValue = isCalibrationGrid && ["errorIn", "errorIn1", "errorIn2"].includes(column.key)
+            ? computeCalibrationErrors(row, columnToggles)[column.key]
+            : row[column.key];
         const disabled = isColumnDisabled(column, row, rowIndex);
         const toggleOn = column.toggleable && columnToggles[column.key];
         // ---- Toggle ON: render two inputs (each can be symbolic) ----
@@ -585,10 +604,18 @@ const handleConfirmToggleOff = () => {
         }
         return null;
     };
-    const visibleColumns = useMemo(
-        () => columns.filter((column) => column.hidden !== true),
-        [columns]
-    );
+    const visibleColumns = useMemo(() => columns
+        .filter(column => column.hidden !== true)
+        .flatMap(column => {
+            if (!isCalibrationGrid || column.key !== "errorIn") return [column];
+            const base = { ...column, toggleable: false, splitFields: undefined, disabled: true };
+            if (!bothReadingsSplit(columnToggles)) return [base];
+            return [1, 2].map(index => ({
+                ...base,
+                key: `errorIn${index}`,
+                title: `Error in ${index}`,
+            }));
+        }), [columns, isCalibrationGrid, columnToggles]);
     return (
         <div className={`w-full overflow-hidden rounded-xl border border-[#CCD8D3] bg-white shadow-[0_5px_20px_rgba(38,53,46,0.055)] ${className}`}>
             {/* Header */}

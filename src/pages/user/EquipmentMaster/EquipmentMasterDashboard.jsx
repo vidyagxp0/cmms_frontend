@@ -1,7 +1,8 @@
 import React, { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Eye, Wrench, ArrowUpRight, Search, Filter, Building2 } from "lucide-react";
+import { Eye, Wrench, Search, Filter, Building2 } from "lucide-react";
+import SrNoLink from "../../../components/common/SrNoLink/SrNoLink";
 import { Input, Select, Button } from "antd";
 
 import DashboardActionBar from "../../../components/common/DashboardActionBar/DashboardActionBar";
@@ -245,27 +246,39 @@ const EquipmentMasterDashboard = () => {
     // ================================================================
     // TABLE COLUMNS
     // ================================================================
+    // Sr. No. shown to users instead of the database ID. Continues across pages
+    // (page 2 starts at perPage + 1). Navigation still uses record.id.
+    const serialOffset =
+        ((Number(pagination.currentPage) || 1) - 1) * (Number(pagination.perPage) || 0);
+
     const columns = useMemo(
         () => [
+            {
+                accessorKey: "id",
+                header: "Sr. No.",
+                enableSorting: false,
+                cell: ({ row }) => {
+                    const record = row.original;
+                    const handleClick = () => {
+                        if (!record?.id) return;
+                        navigate(`/user/equipment-master-panel/${record.id}`);
+                    };
+
+                    return (
+                        <SrNoLink value={serialOffset + row.index + 1} onClick={handleClick} />
+                    );
+                },
+            },
             // EQUIPMENT CODE (clickable)
             {
                 accessorKey: "equipment_id_no",
                 header: "Equipment Code",
-                cell: ({ row, getValue }) => {
+                cell: ({ getValue }) => {
                     const value = getValue();
                     return (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                if (!row.original?.id) return;
-                                navigate(`/user/equipment-master-panel/${row.original.id}`);
-                            }}
-                            className="group inline-flex cursor-pointer items-center gap-1.5 rounded-[9px] border border-[#D5E0DB] bg-[#F0F5F2] px-2.5 py-1.5 font-mono text-[10.5px] font-bold tracking-[0.03em] text-[#536D64] shadow-[0_1px_4px_rgba(36,50,56,0.035)] transition-all duration-200 hover:border-[#B7CAC2] hover:bg-[#E5EEEA] hover:text-[#405F55] hover:shadow-[0_3px_8px_rgba(86,118,109,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-muted)] focus-visible:ring-offset-1"
-                            title="View equipment details"
-                        >
-                            <span>{value || "-"}</span>
-                            <ArrowUpRight size={11} strokeWidth={2} className="opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
-                        </button>
+                        <span className="inline-flex items-center rounded-[9px] border border-[#E3E8E5] bg-[#F7F9F8] px-2.5 py-1.5 font-mono text-[10.5px] font-bold tracking-[0.03em] text-[#536D64]">
+                            {value || "-"}
+                        </span>
                     );
                 },
             },
@@ -423,7 +436,7 @@ const EquipmentMasterDashboard = () => {
                 ),
             },
         ],
-        [navigate, handleViewReport]
+        [navigate, handleViewReport, serialOffset]
     );
 
     // ✅ Include department in active filters check
